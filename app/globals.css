@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Fabricator OS — design system
+   Look: workshop-premium. Brushed-aluminium neutrals (cool grey,
+   not warm), steel-shadow dark ground, one disciplined cut-mark
+   orange accent, glass-blue + money-green as semantic tints.
+   Token-level theming: light + dark are both first-class.
+   ============================================================ */
+
+:root {
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", "Liberation Mono", monospace;
+
+  /* light — brushed aluminium in daylight */
+  --bg: #e9edf1;
+  --surface: #ffffff;
+  --surface-2: #f2f5f8;
+  --surface-3: #e8ecf1;
+  --ink: #161b22;
+  --ink-2: #4a5462;
+  --ink-3: #79838f;
+  --line: #d7dde4;
+  --steel: #c3ccd6;
+
+  --accent: #e1550c;
+  --accent-2: #f2732b;
+  --accent-soft: rgba(225, 85, 12, 0.10);
+  --glass: #2c63d6;
+  --glass-soft: rgba(44, 99, 214, 0.10);
+  --good: #1b9250;
+  --good-soft: rgba(27, 146, 80, 0.11);
+  --warn: #b9791b;
+  --warn-soft: rgba(185, 121, 27, 0.12);
+  --bad: #d63232;
+  --bad-soft: rgba(214, 50, 50, 0.10);
+
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(20, 30, 45, 0.05), 0 8px 26px rgba(20, 30, 45, 0.07);
+  --shadow-lg: 0 2px 6px rgba(20, 30, 45, 0.06), 0 20px 50px rgba(20, 30, 45, 0.12);
+  --shadow-accent: 0 6px 18px rgba(225, 85, 12, 0.30);
+  --ring: rgba(225, 85, 12, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1015;
+    --surface: #161a21;
+    --surface-2: #1c222b;
+    --surface-3: #232a34;
+    --ink: #e8edf3;
+    --ink-2: #a6b1bf;
+    --ink-3: #6c7885;
+    --line: #262d37;
+    --steel: #39424e;
+
+    --accent: #ff7a36;
+    --accent-2: #ff9052;
+    --accent-soft: rgba(255, 122, 54, 0.14);
+    --glass: #5e93f6;
+    --glass-soft: rgba(94, 147, 246, 0.14);
+    --good: #33c87b;
+    --good-soft: rgba(51, 200, 123, 0.14);
+    --warn: #e0a64a;
+    --warn-soft: rgba(224, 166, 74, 0.14);
+    --bad: #ff6b6b;
+    --bad-soft: rgba(255, 107, 107, 0.14);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 34px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 24px 60px rgba(0, 0, 0, 0.5);
+    --shadow-accent: 0 6px 20px rgba(255, 122, 54, 0.28);
+    --ring: rgba(255, 122, 54, 0.4);
+  }
+}
+
+/* explicit toggle wins over the OS preference, in both directions */
+:root[data-theme="light"] {
+  --bg: #e9edf1; --surface: #ffffff; --surface-2: #f2f5f8; --surface-3: #e8ecf1;
+  --ink: #161b22; --ink-2: #4a5462; --ink-3: #79838f; --line: #d7dde4; --steel: #c3ccd6;
+  --accent: #e1550c; --accent-2: #f2732b; --accent-soft: rgba(225, 85, 12, 0.10);
+  --glass: #2c63d6; --glass-soft: rgba(44, 99, 214, 0.10);
+  --good: #1b9250; --good-soft: rgba(27, 146, 80, 0.11);
+  --warn: #b9791b; --warn-soft: rgba(185, 121, 27, 0.12); --bad: #d63232; --bad-soft: rgba(214, 50, 50, 0.10);
+  --shadow: 0 1px 2px rgba(20, 30, 45, 0.05), 0 8px 26px rgba(20, 30, 45, 0.07);
+  --shadow-lg: 0 2px 6px rgba(20, 30, 45, 0.06), 0 20px 50px rgba(20, 30, 45, 0.12);
+  --shadow-accent: 0 6px 18px rgba(225, 85, 12, 0.30); --ring: rgba(225, 85, 12, 0.35);
+}
+:root[data-theme="dark"] {
+  --bg: #0d1015; --surface: #161a21; --surface-2: #1c222b; --surface-3: #232a34;
+  --ink: #e8edf3; --ink-2: #a6b1bf; --ink-3: #6c7885; --line: #262d37; --steel: #39424e;
+  --accent: #ff7a36; --accent-2: #ff9052; --accent-soft: rgba(255, 122, 54, 0.14);
+  --glass: #5e93f6; --glass-soft: rgba(94, 147, 246, 0.14);
+  --good: #33c87b; --good-soft: rgba(51, 200, 123, 0.14);
+  --warn: #e0a64a; --warn-soft: rgba(224, 166, 74, 0.14); --bad: #ff6b6b; --bad-soft: rgba(255, 107, 107, 0.14);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 34px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 6px 20px rgba(255, 122, 54, 0.28); --ring: rgba(255, 122, 54, 0.4);
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html { background: var(--bg); color-scheme: light dark; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ---- surfaces ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card-flat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.hairline { height: 1px; background: var(--line); border: 0; }
+
+/* ---- buttons ---- */
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius);
+  font-weight: 700;
+  transition: transform 0.08s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  box-shadow: var(--shadow-accent);
+}
+.btn-primary:hover { filter: brightness(1.04); }
+.btn-primary:active { transform: scale(0.985); }
+.btn-primary:disabled { opacity: 0.45; box-shadow: none; filter: none; }
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: border-color 0.12s ease, transform 0.08s ease, background-color 0.16s ease;
+}
+.btn-ghost:hover { border-color: var(--steel); background: var(--surface-2); }
+.btn-ghost:active { transform: scale(0.985); }
+
+.btn-dark {
+  background: var(--ink); color: var(--surface); border: 0; border-radius: var(--radius);
+  font-weight: 700; transition: transform 0.08s ease, filter 0.16s ease;
+}
+.btn-dark:hover { filter: brightness(1.08); }
+.btn-dark:active { transform: scale(0.985); }
+
+/* ---- chips ---- */
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: all 0.12s ease;
+  cursor: pointer;
+  color: var(--ink);
+}
+.chip:hover { border-color: var(--steel); background: var(--surface-2); }
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* ---- badges ---- */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+  padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
+}
+
+/* ---- inputs ---- */
+.dim-input, .field {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.dim-input::placeholder, .field::placeholder { color: var(--ink-3); }
+.dim-input:focus, .field:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* keyboard focus visibility */
+:where(button, a, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px;
+}
+
+/* ---- motion ---- */
+.fade-up { animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.slide-in { animation: slideIn 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.99); } to { opacity: 1; transform: none; } }
+.scan-line {
+  position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: var(--accent); box-shadow: 0 0 10px var(--accent);
+  animation: scan 1.1s ease-in-out infinite;
+}
+@keyframes scan { 0% { top: 0; } 50% { top: calc(100% - 2px); } 100% { top: 0; } }
+.pulse-ring { animation: pulseRing 1.8s ease-out infinite; }
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 var(--ring); }
+  70% { box-shadow: 0 0 0 14px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .slide-in, .rise, .pulse-ring { animation: none !important; }
+  * { scroll-behavior: auto !important; }
+}
+
+/* ---- utility ---- */
+.glass-tint { background: var(--glass-soft); color: var(--glass); }
+.money-tint { background: var(--good-soft); color: var(--good); }
+.tabnum { font-variant-numeric: tabular-nums; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #111; }
+  .card { box-shadow: none; border: 1px solid #ddd; }
+}
+
+/* Quotation print: show ONLY the quotation document, nothing else. */
+@media print {
+  body.printing-quote .result-view > *:not(.quote-doc) { display: none !important; }
+  body.printing-quote .quote-doc { display: block !important; border: 0 !important; }
+  body.printing-quote { background: #fff; }
+}
+
+/* Workshop / Vendor sheet print: show ONLY that sheet. */
+@media print {
+  body.printing-sheet .result-view > *:not(.print-sheet) { display: none !important; }
+  body.printing-sheet .print-sheet .no-print { display: none !important; }
+  body.printing-sheet { background: #fff; }
+  .print-sheet .card { break-inside: avoid; }
+}
