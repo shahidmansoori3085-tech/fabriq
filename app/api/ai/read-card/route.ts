@@ -4,8 +4,7 @@
  * shop profile as structured JSON. Never invents data — only what is printed.
  */
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { AI_MODEL } from "@/lib/ai/client";
+import { resolveAnthropicClient } from "@/lib/ai/client";
 
 const CARD_SCHEMA = {
   type: "object" as const,
@@ -34,17 +33,17 @@ export async function POST(req: NextRequest) {
   const { image, mediaType, apiKey } = (await req.json()) as {
     image: string; mediaType: string; apiKey?: string;
   };
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  const resolved = resolveAnthropicClient(apiKey);
+  if (!resolved) {
     return NextResponse.json(
       { error: "no_key", message: "Add an AI key in Settings to scan the card." },
       { status: 400 },
     );
   }
   try {
-    const client = new Anthropic({ apiKey: key });
+    const { client, model } = resolved;
     const response = await client.messages.create({
-      model: AI_MODEL,
+      model,
       max_tokens: 1024,
       system: SYSTEM,
       output_config: { format: { type: "json_schema", schema: CARD_SCHEMA } },

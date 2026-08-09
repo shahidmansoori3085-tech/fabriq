@@ -43,7 +43,8 @@ export function Copilot() {
     if (!q || busy) return;
     setErr(null);
     const cfg = readAIConfig();
-    if (!cfg.apiKey) { setErr("Settings me AI key daalo — tab Copilot chalega."); return; }
+    // no client-side key gate: the server falls back to its own AI key or
+    // AWS Bedrock credentials when Settings has no key configured.
     const next: Msg[] = [...msgs, { role: "user", content: q }];
     setMsgs(next);
     setInput("");

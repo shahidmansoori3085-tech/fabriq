@@ -5,8 +5,7 @@
  * calculates — raw values + confidence only (D2).
  */
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { AI_MODEL } from "@/lib/ai/client";
+import { resolveAnthropicClient } from "@/lib/ai/client";
 
 const EXTRACT_SCHEMA = {
   type: "object" as const,
@@ -66,8 +65,8 @@ export async function POST(req: NextRequest) {
     image: string; mediaType: string; apiKey?: string;
   };
 
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  const resolved = resolveAnthropicClient(apiKey);
+  if (!resolved) {
     return NextResponse.json(
       { error: "no_key", message: "AI photo padhne ke liye API key chahiye — Settings (⚙) mein daalo." },
       { status: 400 }
@@ -75,9 +74,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const client = new Anthropic({ apiKey: key });
+    const { client, model } = resolved;
     const response = await client.messages.create({
-      model: AI_MODEL,
+      model,
       max_tokens: 4096,
       system: SYSTEM,
       output_config: { format: { type: "json_schema", schema: EXTRACT_SCHEMA } },

@@ -5,8 +5,7 @@
  * ANTHROPIC_API_KEY is present. AI never changes numbers (D2).
  */
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { AI_MODEL } from "@/lib/ai/client";
+import { resolveAnthropicClient } from "@/lib/ai/client";
 import type { ReviewFinding } from "@/lib/engine/types";
 
 const REVIEW_SCHEMA = {
@@ -52,15 +51,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { items, summary, deterministicFindings, apiKey } = body;
 
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  const resolved = resolveAnthropicClient(apiKey);
+  if (!resolved) {
     return NextResponse.json({ findings: [], source: "none" });
   }
 
   try {
-    const client = new Anthropic({ apiKey: key });
+    const { client, model } = resolved;
     const response = await client.messages.create({
-      model: AI_MODEL,
+      model,
       max_tokens: 2048,
       system: SYSTEM,
       output_config: { format: { type: "json_schema", schema: REVIEW_SCHEMA } },

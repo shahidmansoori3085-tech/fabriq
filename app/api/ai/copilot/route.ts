@@ -9,6 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { chatComplete, type ChatMsg, type Provider } from "@/lib/ai/gateway";
+import { hasBedrockCreds } from "@/lib/ai/client";
 
 const SYSTEM = `You are FabriQ Copilot — an expert Indian aluminium-fabrication (aluminium-glass) master.
 You help small fabricators with windows, doors, partitions, mesh/jali, glass and hardware.
@@ -26,19 +27,20 @@ export async function POST(req: NextRequest) {
     messages: ChatMsg[]; apiKey?: string; provider?: Provider; model?: string;
   };
   const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  if (!key && !hasBedrockCreds()) {
     return NextResponse.json({ error: "no_key", message: "Add an AI key in Settings to use the Copilot." }, { status: 400 });
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "no_messages" }, { status: 400 });
   }
+  const resolvedProvider = provider ?? (key ? "anthropic" : "bedrock");
   try {
     const reply = await chatComplete({
       system: SYSTEM,
       messages: messages.slice(-10), // keep recent context
-      apiKey: key,
-      provider: provider ?? "anthropic",
-      model: model || "claude-sonnet-5",
+      apiKey: key || "",
+      provider: resolvedProvider,
+      model: model || (resolvedProvider === "bedrock" ? undefined : "claude-sonnet-5"),
       maxTokens: 700,
     });
     return NextResponse.json({ reply });

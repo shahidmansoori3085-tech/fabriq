@@ -5,8 +5,7 @@
  * Falls back to deterministic rules when no ANTHROPIC_API_KEY.
  */
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { AI_MODEL } from "@/lib/ai/client";
+import { resolveAnthropicClient } from "@/lib/ai/client";
 import { generateQuestions, type Question } from "@/lib/engine/questions";
 import { formatFtInSut } from "@/lib/engine/units";
 
@@ -82,15 +81,15 @@ export async function POST(req: NextRequest) {
   // Deterministic fallback — always works
   const fallback = generateQuestions({ type, width, height, qty, known });
 
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  const resolved = resolveAnthropicClient(apiKey);
+  if (!resolved) {
     return NextResponse.json({ questions: fallback, source: "rules" });
   }
 
   try {
-    const client = new Anthropic({ apiKey: key });
+    const { client, model } = resolved;
     const response = await client.messages.create({
-      model: AI_MODEL,
+      model,
       max_tokens: 2048,
       system: SYSTEM,
       output_config: { format: { type: "json_schema", schema: QUESTION_SCHEMA } },

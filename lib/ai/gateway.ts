@@ -9,9 +9,10 @@
  * cost matter most.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { AI_MODEL } from "./client";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
+import { AI_MODEL, BEDROCK_MODEL, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION } from "./client";
 
-export type Provider = "anthropic" | "openrouter";
+export type Provider = "anthropic" | "openrouter" | "bedrock";
 
 export interface ChatMsg { role: "user" | "assistant"; content: string }
 
@@ -49,6 +50,25 @@ export async function chatComplete(opts: ChatOpts): Promise<string> {
     const text = data?.choices?.[0]?.message?.content;
     if (typeof text !== "string") throw new Error("openrouter_no_text");
     return text.trim();
+  }
+
+  if (provider === "bedrock") {
+    // AWS credentials come from server env (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) —
+    // no client-entered key needed, so opts.apiKey is ignored here.
+    const awsAccessKey = AWS_ACCESS_KEY();
+    const awsSecretKey = AWS_SECRET_KEY();
+    if (!awsAccessKey || !awsSecretKey) throw new Error("bedrock_no_creds");
+    const client = new AnthropicBedrock({ awsRegion: AWS_REGION(), awsAccessKey, awsSecretKey });
+    const response = await client.messages.create({
+      model: opts.model || BEDROCK_MODEL,
+      max_tokens: maxTokens,
+      system: opts.system,
+      messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
+    });
+    if (response.stop_reason === "refusal") throw new Error("refusal");
+    const block = response.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") throw new Error("bedrock_no_text");
+    return block.text.trim();
   }
 
   // default: Anthropic native
