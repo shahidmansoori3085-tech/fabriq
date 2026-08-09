@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reply });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
+    console.error("[copilot]", msg);
     const friendly = msg.includes("401") || msg.toLowerCase().includes("auth") || msg.includes("_401")
       ? "API key looks wrong — check Settings."
       : "Copilot abhi jawab nahi de paaya — dobara try karo.";
