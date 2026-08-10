@@ -14,7 +14,7 @@ import { getSection, SECTIONS } from "@/lib/engine/sections";
 import { costJob, inr, type JobCost } from "@/lib/engine/pricing";
 import { findOffcuts, loadOffcuts, addOffcuts, removeOffcut, totalOffcutFt, type Offcut, type OffcutCandidate } from "@/lib/engine/offcuts";
 import type {
-  JobItem, MaterialList, OpeningType, SystemId,
+  JobItem, MaterialList, OpeningType, SystemId, PackedBar, CutPiece,
 } from "@/lib/engine/types";
 import { WindowDiagram, TrackDiagram, CuttingGuide, PartitionDiagram, PartitionBayDiagram, PartitionRowDiagram, MiniElevation } from "@/components/diagrams";
 import { SectionProfile, SectionDrawing } from "@/components/section-profiles";
@@ -1473,7 +1473,11 @@ function AddMore({
 
 /* ————————————————— RESULT ————————————————— */
 
-type Tab = "aluminium" | "cutting" | "drawing" | "offcuts" | "glass" | "hardware" | "vendor" | "threed" | "quote";
+/** Five outputs only — one tab per job the fabricator actually does.
+ *  Glass/jali now live at the bottom of Material; engineering drawings live
+ *  inside Workshop next to the cutting list; the vendor order is a share
+ *  action on Material rather than its own tab. */
+type Tab = "aluminium" | "cutting" | "offcuts" | "threed" | "quote";
 
 /** Customer-facing name + spec line for a job item (no engineering jargon). */
 function itemName(it: JobItem): string {
@@ -1647,19 +1651,9 @@ function Result({ items, onNew, initialTab }: { items: JobItem[]; onNew: () => v
       {/* tabs */}
       <div className="no-print flex gap-1 overflow-x-auto rounded-xl p-1" style={{ background: "var(--surface-2)" }}>
         {([
-          ["aluminium", "Aluminium"],
-          ["cutting", "Cutting"],
-          ["drawing", "📐 Drawing"],
+          ["aluminium", "Material"],
+          ["cutting", "🔧 Workshop"],
           ["offcuts", `♻️ Offcuts${offcutCandidates.length ? ` (${offcutCandidates.length})` : ""}`],
-          ["glass", (() => {
-            const parts: string[] = [];
-            if (list.glass.length > 0) parts.push("Glass");
-            if (list.mesh.panels.length > 0) parts.push("Jali");
-            if (list.sheet.panels.length > 0) parts.push("Sheet");
-            return parts.length ? parts.join("+") : "Glass+Jali";
-          })()],
-          ["hardware", "Hardware"],
-          ["vendor", "📦 Order"],
           ["threed", "✨ 3D"],
           ["quote", "💰 Quotation"],
         ] as [Tab, string][]).map(([t, label]) => (
@@ -1673,24 +1667,9 @@ function Result({ items, onNew, initialTab }: { items: JobItem[]; onNew: () => v
         ))}
       </div>
 
-      {tab === "aluminium" && <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} />}
-      {tab === "cutting" && <CuttingPanel list={list} shop={shop} />}
-      {tab === "drawing" && (
-        <div className="print-sheet flex flex-col gap-4">
-          <div className="no-print flex items-center justify-between">
-            <div>
-              <div className="display font-bold">Engineering Drawings</div>
-              <div className="text-xs" style={{ color: "var(--ink-3)" }}>Har opening ki dimensioned drawing — elevation + sections + parts</div>
-            </div>
-            <button onClick={printSheet} className="btn-primary px-4 py-2 text-sm">🖨️ Print</button>
-          </div>
-          {items.map((it) => (
-            <EngineeringSheet key={it.id} item={it} list={list} shop={shop} />
-          ))}
-        </div>
-      )}
+      {tab === "aluminium" && <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} waText={waText} />}
+      {tab === "cutting" && <CuttingPanel list={list} shop={shop} items={items} />}
       {tab === "offcuts" && <OffcutsPanel candidates={offcutCandidates} aluRate={aluRate} jobLabel={items[0] ? itemName(items[0]) : undefined} />}
-      {tab === "glass" && <GlassPanelView list={list} />}
       {tab === "threed" && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -1716,8 +1695,6 @@ function Result({ items, onNew, initialTab }: { items: JobItem[]; onNew: () => v
           </p>
         </div>
       )}
-      {tab === "hardware" && <HardwarePanel list={list} />}
-      {tab === "vendor" && <VendorSheet list={list} shop={shop} waText={waText} />}
       {tab === "quote" && (
         <QuotePanel
           items={items} shop={shop} customer={customer} setCustomer={setCustomer}
@@ -1917,13 +1894,15 @@ function ShopModal({ shop, onSave, onClose }: { shop: ShopProfile; onSave: (s: S
 /* —— result sub-panels —— */
 
 function AluminiumPanel({
-  list, cost, aluRate, onRate,
+  list, cost, aluRate, onRate, waText,
 }: {
   list: MaterialList;
   cost: JobCost | null;
   aluRate: number;
   onRate: (v: number) => void;
+  waText: string;
 }) {
+  const [showCatalogue, setShowCatalogue] = useState(false);
   const costBySection = useMemo(() => {
     const m = new Map<string, number>();
     cost?.sections.forEach((c) => m.set(c.sectionId, c.scrapCost));
@@ -1933,42 +1912,39 @@ function AluminiumPanel({
 
   const totalPipes = list.totals.bars16 + list.totals.bars8 * 0.5;
 
+  if (showCatalogue) return <CataloguePanel list={list} onBack={() => setShowCatalogue(false)} />;
+
   return (
     <div className="flex flex-col gap-3">
       {/* money-visible scrap strip */}
       <MoneyScrap cost={cost} aluRate={aluRate} onRate={onRate} totalWastePct={list.totals.wastePct} />
 
-      {/* premium per-section cards */}
+      {/* premium per-section cards — pipe ka NAAM, size nahi */}
       {list.sections.map((s) => {
         const sec = getSection(s.sectionId);
         const barFt = sec.barLengthFt ?? 16;
+        const halfFt = Math.round(barFt / 2);
         const pipes = s.bars16 + s.bars8 * 0.5;
         const scrapRs = costBySection.get(s.sectionId) ?? 0;
         return (
           <div key={s.sectionId} className="card p-3.5">
-            <div className="flex items-center gap-3">
-              <span className="shrink-0 rounded-lg p-1.5" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-                <SectionProfile sectionId={s.sectionId} />
-              </span>
+            <div className="flex items-center gap-3.5">
+              <SectionProfile sectionId={s.sectionId} w={78} h={54} />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-bold">{sec.label}</div>
-                <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-                  {sec.size}mm{barFt !== 16 ? ` · ${barFt}' bar` : ""}
-                </div>
+                <div className="font-bold leading-tight">{sec.label}</div>
               </div>
               <div className="shrink-0 text-right">
                 <div className="display text-2xl font-extrabold leading-none tabnum" style={{ color: "var(--accent)" }}>
                   {fmtPipes(pipes)}
                 </div>
                 <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                  {barFt}&apos; pipe
+                  pipe
                 </div>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              <MetricChip label={`${barFt}'`} value={s.bars16} />
-              <MetricChip label={`${Math.round(barFt / 2)}'`} value={s.bars8 || "—"} />
-              <MetricChip label="Pieces" value={s.totalPieces} />
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <MetricChip label={`${barFt}' pipe`} value={s.bars16} />
+              <MetricChip label={`${halfFt}' pipe`} value={s.bars8 || "—"} />
               <MetricChip label="Scrap" value={`${s.wastePct}%`} tone={s.wastePct > 20 ? "warn" : undefined} />
             </div>
             {priced && scrapRs > 0 && (
@@ -1987,13 +1963,110 @@ function AluminiumPanel({
         <div>
           <div className="eyebrow" style={{ color: "var(--accent)" }}>Total Aluminium</div>
           <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>
-            {list.totals.bars16}×16&apos;{list.totals.bars8 ? ` + ${list.totals.bars8}×8'` : ""} · {list.pieces.length} pieces · scrap {list.totals.wastePct}%
+            {list.totals.bars16} × 16&apos;{list.totals.bars8 ? ` + ${list.totals.bars8} × 8'` : ""} · scrap {list.totals.wastePct}%
           </div>
         </div>
         <div className="text-right">
           <div className="display text-3xl font-extrabold tabnum" style={{ color: "var(--accent)" }}>{fmtPipes(totalPipes)}</div>
           <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>pipes</div>
         </div>
+      </div>
+
+      {/* glass / jali / sheet — same list, neeche */}
+      <GlassBlock list={list} />
+
+      {/* supplier actions */}
+      <div className="no-print grid grid-cols-2 gap-2">
+        <button onClick={() => setShowCatalogue(true)} className="btn-dark flex items-center justify-center gap-2 py-3.5 text-sm">
+          📖 Catalogue bhejo
+        </button>
+        <a href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noreferrer"
+          className="btn-primary flex items-center justify-center gap-2 py-3.5 text-sm">
+          📦 Order bhejo
+        </a>
+      </div>
+
+      <EngineVerified />
+    </div>
+  );
+}
+
+/** Supplier catalogue — har section ki badi engineering drawing + naam + kitni
+ *  pipe. Dukaandaar ko exact pipe pehchanne ke liye; print/WhatsApp ready. */
+function CataloguePanel({ list, onBack }: { list: MaterialList; onBack: () => void }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="no-print flex items-center justify-between">
+        <div>
+          <div className="display font-bold">Section Catalogue</div>
+          <div className="text-xs" style={{ color: "var(--ink-3)" }}>
+            Supplier ko bhejo — har pipe ka naam aur exact cross-section
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => window.print()} className="btn-primary px-4 py-2 text-sm">🖨️ Print</button>
+          <button onClick={onBack} className="btn-ghost px-4 py-2 text-sm">← Wapas</button>
+        </div>
+      </div>
+      {list.sections.map((s) => {
+        const sec = getSection(s.sectionId);
+        const barFt = sec.barLengthFt ?? 16;
+        return (
+          <div key={s.sectionId} className="card p-4">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <div className="display text-lg font-extrabold">{sec.label}</div>
+              <div className="text-sm font-bold tabnum" style={{ color: "var(--accent)" }}>
+                {s.bars16 ? `${s.bars16} × ${barFt}'` : ""}
+                {s.bars8 ? `${s.bars16 ? " + " : ""}${s.bars8} × ${Math.round(barFt / 2)}'` : ""}
+              </div>
+            </div>
+            <SectionDrawing sectionId={s.sectionId} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Glass / jali / sheet sizes — Material list ke neeche, alag tab ki zaroorat nahi. */
+function GlassBlock({ list }: { list: MaterialList }) {
+  const rows: { title: string; sub: string; panels: { itemId: string; width: Um; height: Um; count: number }[] }[] = [];
+  if (list.glass.length) rows.push({ title: "Glass", sub: `${list.glassSqft.toFixed(1)} sqft`, panels: list.glass });
+  if (list.mesh.panels.length) rows.push({ title: "Jali / Mesh", sub: `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, panels: list.mesh.panels });
+  if (list.sheet.panels.length) rows.push({ title: "Sheet", sub: `${list.sheet.sqft.toFixed(1)} sqft`, panels: list.sheet.panels });
+  if (!rows.length) return null;
+
+  return (
+    <>
+      {rows.map((r) => (
+        <div key={r.title} className="card overflow-hidden">
+          <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
+            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>{r.title}</span>
+            <span className="text-[11px] font-semibold tabnum" style={{ color: "var(--ink-2)" }}>{r.sub}</span>
+          </div>
+          {r.panels.map((g, i) => (
+            <div key={i} className="flex items-center justify-between border-t px-4 py-3 text-sm" style={{ borderColor: "var(--surface-2)" }}>
+              <span className="font-semibold">{g.itemId}</span>
+              <span className="tabnum">{formatFtInSut(g.width)} × {formatFtInSut(g.height)}</span>
+              <span className="font-bold tabnum">{g.count} pcs</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Trust strip — har number deterministic engine se aata hai, AI se nahi. */
+function EngineVerified() {
+  return (
+    <div className="rounded-xl px-4 py-3" style={{ background: "var(--surface-2)" }}>
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--good)" }}>
+        ✓ Engine Verified
+      </div>
+      <div className="text-[11px] leading-relaxed" style={{ color: "var(--ink-3)" }}>
+        Deterministic calculation · catalogue profiles checked · cutting plan validated.
+        Koi bhi measurement AI se generate nahi hui.
       </div>
     </div>
   );
@@ -2209,13 +2282,7 @@ function OffcutsPanel({
   );
 }
 
-const WIN_COLORS = ["#3b82f6", "#f97316", "#10b981", "#a855f7", "#ef4444", "#eab308"];
-function winColor(itemId: string): string {
-  const m = itemId.match(/\d+/);
-  return WIN_COLORS[m ? (parseInt(m[0]) - 1) % WIN_COLORS.length : 0];
-}
-
-/** Branded header shared by the Workshop Cutting Sheet & Vendor Order List. */
+/** Branded header for the Workshop Cutting Sheet. */
 function SheetHeader({ shop, title, stats }: { shop: ShopProfile; title: string; stats?: React.ReactNode }) {
   const date = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   return (
@@ -2259,7 +2326,59 @@ function printSheet() {
   setTimeout(cleanup, 1500);
 }
 
-function CuttingPanel({ list, shop }: { list: MaterialList; shop: ShopProfile }) {
+/** "S1 Bearing Top" / "S3 Handle (Jali)" → "Bearing Top" / "Handle" — shutter
+ *  number aur glass/jali qualifier hata ke role ka asli naam. */
+function baseRole(role: string): string {
+  return role.replace(/^S\d+\s+/, "").replace(/\s*\((Jali|Glass|Sheet)\)\s*$/i, "").trim();
+}
+
+/** Same-length tukde ek hi row me — "57\" × 5", paanch alag rows nahi. */
+function groupCuts(bars: PackedBar[]) {
+  const map = new Map<number, { count: number; roles: Set<string>; items: Set<string> }>();
+  for (const b of bars) for (const p of b.pieces) {
+    const e = map.get(p.length) ?? { count: 0, roles: new Set<string>(), items: new Set<string>() };
+    e.count += 1; e.roles.add(baseRole(p.role)); e.items.add(p.itemId);
+    map.set(p.length, e);
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([len, e]) => {
+      const roles = [...e.roles];
+      const shown = roles.slice(0, 3).join(" · ") + (roles.length > 3 ? ` +${roles.length - 3}` : "");
+      return {
+        key: String(len),
+        label: formatFtInSut(len),
+        count: e.count,
+        forWhat: `${shown} — ${[...e.items].join(", ")}`,
+      };
+    });
+}
+
+/** Ek pipe ki packing ek line me: 57" ×3 + 42" */
+function packLine(pieces: CutPiece[]) {
+  const map = new Map<number, number>();
+  for (const p of pieces) map.set(p.length, (map.get(p.length) ?? 0) + 1);
+  return [...map.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([len, n]) => `${formatFtInSut(len)}${n > 1 ? ` ×${n}` : ""}`)
+    .join("  +  ");
+}
+
+/** Numbered divider that turns the workshop sheet into one readable document. */
+function StepBar({ n, title, sub }: { n: number; title: string; sub: string }) {
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-extrabold text-white"
+        style={{ background: "var(--ink)" }}>{n}</span>
+      <div>
+        <div className="display text-base font-extrabold leading-tight">{title}</div>
+        <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopProfile; items: JobItem[] }) {
   const sectionGroups = useMemo(() => {
     const map = new Map<string, typeof list.bars>();
     for (const b of list.bars) {
@@ -2293,7 +2412,16 @@ function CuttingPanel({ list, shop }: { list: MaterialList; shop: ShopProfile })
         </>
       } />
 
-      <button onClick={printSheet} className="btn-primary no-print w-full py-3.5 display">🖨️ Cutting Sheet Print karo</button>
+      <button onClick={printSheet} className="btn-primary no-print w-full py-3.5 display">🖨️ Poori Workshop Sheet Print karo</button>
+
+      {/* STEP 1 — kya banana hai: har opening ki dimensioned drawing + parts */}
+      <StepBar n={1} title="Kya banana hai" sub="Har opening ki drawing, sections aur parts" />
+      {items.map((it) => (
+        <EngineeringSheet key={it.id} item={it} list={list} shop={shop} />
+      ))}
+
+      {/* STEP 2 — kaise kaatna hai: section-wise saw plan */}
+      <StepBar n={2} title="Kaise kaatna hai" sub="Section-wise cut list aur pipe se packing" />
 
       {hasNormal && <CuttingGuide system="normal" />}
       {hasDomal && <CuttingGuide system="domal" />}
@@ -2318,10 +2446,7 @@ function CuttingPanel({ list, shop }: { list: MaterialList; shop: ShopProfile })
         return (
           <div key={sectionId} className="card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--surface-2)" }}>
-              <div>
-                <div className="display font-bold">{sec.label}</div>
-                <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size}mm</div>
-              </div>
+              <div className="display font-bold">{sec.label}</div>
               <div className="text-right">
                 <div className="display text-lg font-extrabold" style={{ color: "var(--accent)" }}>{bars.length}</div>
                 <div className="text-[10px] font-bold" style={{ color: "var(--ink-3)" }}>
@@ -2333,229 +2458,55 @@ function CuttingPanel({ list, shop }: { list: MaterialList; shop: ShopProfile })
             <div className="border-b px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
               <SectionDrawing sectionId={sectionId} />
             </div>
-            {/* professional cutting table */}
+            {/* CUT LIST — ek length ek hi baar, qty ke saath (5 baar 57" nahi) */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 420 }}>
                 <thead>
                   <tr style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                    {["Pipe", "#", "Length", "For window", "✓ mark"].map((h, i) => (
+                    {["Length", "Tukde", "Kis kaam ka", "✓ mark"].map((h, i) => (
                       <th key={h} className="px-3 py-2 text-[11px] font-bold uppercase tracking-wide"
-                        style={{ textAlign: i === 2 ? "right" : "left" }}>{h}</th>
+                        style={{ textAlign: i === 1 ? "center" : "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {bars.map((bar, bi) =>
-                    bar.pieces.map((p, pi) => (
-                      <tr key={`${bi}-${pi}`} style={{ borderBottom: "1px solid var(--surface-2)" }}>
-                        <td className="px-3 py-2 text-xs" style={{ color: "var(--ink-3)" }}>
-                          {pi === 0 ? `${bi + 1} · ${Math.round(toFeet(bar.barLength))}'` : ""}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className="inline-grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold text-white"
-                            style={{ background: winColor(p.itemId) }}>{pi + 1}</span>
-                        </td>
-                        <td className="px-3 py-2 text-right mono font-bold" style={{ color: "var(--accent)" }}>{formatFtInSut(p.length)}</td>
-                        <td className="px-3 py-2 text-xs" style={{ color: "var(--ink-2)" }}>{p.itemId} · {p.role}</td>
-                        <td className="px-3 py-2"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
-                      </tr>
-                    ))
-                  )}
+                  {groupCuts(bars).map((g) => (
+                    <tr key={g.key} style={{ borderBottom: "1px solid var(--surface-2)" }}>
+                      <td className="px-3 py-2.5 mono text-base font-bold" style={{ color: "var(--accent)" }}>{g.label}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="display text-lg font-extrabold tabnum">{g.count}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs" style={{ color: "var(--ink-2)" }}>{g.forWhat}</td>
+                      <td className="px-3 py-2.5"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-            {bars.some((b) => b.waste > 0) && (
-              <div className="px-4 py-2 text-[11px]" style={{ color: "var(--ink-3)", background: "var(--surface-2)" }}>
-                Bachat (offcut): {bars.filter((b) => b.waste > 0).map((b, i) => (
-                  <span key={i} className="mono">{i > 0 ? " · " : ""}Pipe {bars.indexOf(b) + 1}: {formatFtInSut(b.waste)}</span>
+            {/* pipe-wise packing — ek pipe ek line, taaki scrap kam rahe */}
+            <div className="border-t px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
+              <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+                Konsi pipe se kya kaatna
+              </div>
+              <div className="flex flex-col gap-1">
+                {bars.map((bar, bi) => (
+                  <div key={bi} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+                    <span className="font-bold" style={{ color: "var(--ink-2)" }}>
+                      Pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
+                    </span>
+                    <span className="mono" style={{ color: "var(--ink)" }}>
+                      {packLine(bar.pieces)}
+                    </span>
+                    {bar.waste > 0 && (
+                      <span className="mono" style={{ color: "var(--ink-3)" }}>· bachat {formatFtInSut(bar.waste)}</span>
+                    )}
+                  </div>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/** Consolidated VENDOR ORDER LIST — everything the supplier needs, one sheet. */
-function VendorSheet({ list, shop, waText }: { list: MaterialList; shop: ShopProfile; waText: string }) {
-  const totalBars = list.totals.bars16 + list.totals.bars8;
-  const hwCount = list.hardware.reduce((a, h) => a + h.qty, 0);
-  return (
-    <div className="print-sheet flex flex-col gap-4">
-      <SheetHeader shop={shop} title="VENDOR ORDER LIST" stats={
-        <>
-          <SheetStat label="Aluminium" value={`${totalBars} bars`} tone="var(--accent)" />
-          {list.glassSqft > 0 && <SheetStat label="Glass" value={`${list.glassSqft.toFixed(0)} sqft`} tone="var(--glass)" />}
-          {list.mesh.sqft > 0 && <SheetStat label="Jali" value={`${list.mesh.sqft.toFixed(0)} sqft`} />}
-          {hwCount > 0 && <SheetStat label="Hardware" value={`${hwCount} pcs`} />}
-        </>
-      } />
-
-      <div className="no-print flex gap-3">
-        <a href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noopener noreferrer"
-          className="btn-primary flex flex-1 items-center justify-center gap-2 py-3.5 display"
-          style={{ background: "#25d366", boxShadow: "0 4px 14px rgba(37,211,102,.35)" }}>
-          WhatsApp pe order bhejo
-        </a>
-        <button onClick={printSheet} className="btn-ghost px-5 py-3.5" style={{ background: "var(--surface)" }}>🖨️ Print</button>
-      </div>
-
-      {/* Aluminium sections */}
-      <div className="card overflow-hidden">
-        <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-          Aluminium Sections
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 460 }}>
-            <thead>
-              <tr style={{ color: "var(--ink-3)" }}>
-                {["Section", "Profile", "Full (16')", "Half (8')", "Total"].map((h, i) => (
-                  <th key={h} className="px-3 py-2 text-[11px] font-bold uppercase tracking-wide"
-                    style={{ textAlign: i >= 2 ? "right" : "left", borderBottom: "1px solid var(--surface-2)" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {list.sections.map((s) => {
-                const sec = getSection(s.sectionId);
-                const full = sec.barLengthFt ?? 16;
-                const totalFt = s.bars16 * full + s.bars8 * (full / 2);
-                return (
-                  <tr key={s.sectionId} style={{ borderBottom: "1px solid var(--surface-2)" }}>
-                    <td className="px-3 py-2.5">
-                      <div className="font-semibold">{sec.label}</div>
-                      <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size}mm</div>
-                    </td>
-                    <td className="px-3 py-2.5"><SectionProfile sectionId={s.sectionId} w={52} h={30} /></td>
-                    <td className="px-3 py-2.5 text-right mono font-bold">{s.bars16 || "—"}</td>
-                    <td className="px-3 py-2.5 text-right mono">{s.bars8 || "—"}</td>
-                    <td className="px-3 py-2.5 text-right mono" style={{ color: "var(--ink-3)" }}>{totalFt}′</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: "var(--surface-2)" }}>
-                <td className="px-3 py-2.5 font-bold" colSpan={2}>Total pipes</td>
-                <td className="px-3 py-2.5 text-right mono font-extrabold" style={{ color: "var(--accent)" }}>{list.totals.bars16}</td>
-                <td className="px-3 py-2.5 text-right mono font-extrabold" style={{ color: "var(--accent)" }}>{list.totals.bars8}</td>
-                <td className="px-3 py-2.5 text-right mono font-bold">{list.totals.totalPipeFt}′</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      {/* Glass / Sheet / Jali */}
-      {[
-        { title: "Glass", panels: list.glass, sqft: list.glassSqft, extra: "" as string },
-        { title: "Sheet", panels: list.sheet.panels, sqft: list.sheet.sqft, extra: "" },
-        { title: "Jali (Mesh)", panels: list.mesh.panels, sqft: list.mesh.sqft, extra: `spline ${list.mesh.splineFt} rft` },
-      ].filter((b) => b.panels.length > 0).map((b) => (
-        <div key={b.title} className="card overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-wide"
-            style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-            <span>{b.title}</span>
-            <span className="mono" style={{ color: "var(--ink)" }}>{b.sqft.toFixed(1)} sqft{b.extra ? ` · ${b.extra}` : ""}</span>
-          </div>
-          <div className="flex flex-col">
-            {b.panels.map((p, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-2 text-sm" style={{ borderBottom: "1px solid var(--surface-2)" }}>
-                <span className="mono">{formatFtInSut(p.width)} × {formatFtInSut(p.height)}</span>
-                <span className="text-xs" style={{ color: "var(--ink-3)" }}>{p.count} pcs</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Hardware */}
-      {list.hardware.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-            Hardware &amp; Consumables
-          </div>
-          <div className="flex flex-col">
-            {list.hardware.map((h, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-2 text-sm" style={{ borderBottom: "1px solid var(--surface-2)" }}>
-                <span className="font-semibold">{h.name}</span>
-                <span className="mono" style={{ color: "var(--accent)" }}>{h.qty} {h.unit}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <p className="no-print text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-        Ye poori list supplier ko WhatsApp ya print karke do — sab kuch ek jagah.
-      </p>
-    </div>
-  );
-}
-
-function GlassPanelView({ list }: { list: MaterialList }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="card overflow-hidden">
-        <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-          Glass — total {list.glassSqft.toFixed(1)} sqft
-        </div>
-        {list.glass.map((g, i) => (
-          <div key={i} className="flex items-center justify-between border-t px-4 py-3 text-sm" style={{ borderColor: "var(--surface-2)" }}>
-            <span className="font-semibold">{g.itemId}</span>
-            <span>{formatFtInSut(g.width)} × {formatFtInSut(g.height)}</span>
-            <span className="font-bold">{g.count} pcs</span>
-          </div>
-        ))}
-        {list.glass.length === 0 && <Empty label="Koi glass panel nahi" />}
-      </div>
-      <div className="card overflow-hidden">
-        <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-          Jali / Mesh — {list.mesh.sqft.toFixed(1)} sqft · spline {list.mesh.splineFt} rft
-        </div>
-        {list.mesh.panels.map((g, i) => (
-          <div key={i} className="flex items-center justify-between border-t px-4 py-3 text-sm" style={{ borderColor: "var(--surface-2)" }}>
-            <span className="font-semibold">{g.itemId}</span>
-            <span>{formatFtInSut(g.width)} × {formatFtInSut(g.height)}</span>
-            <span className="font-bold">{g.count} pcs</span>
-          </div>
-        ))}
-        {list.mesh.panels.length === 0 && <Empty label="Koi jali nahi" />}
-      </div>
-      {list.sheet.panels.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-            Sheet — {list.sheet.sqft.toFixed(1)} sqft
-          </div>
-          {list.sheet.panels.map((g, i) => (
-            <div key={i} className="flex items-center justify-between border-t px-4 py-3 text-sm" style={{ borderColor: "var(--surface-2)" }}>
-              <span className="font-semibold">{g.itemId}</span>
-              <span>{formatFtInSut(g.width)} × {formatFtInSut(g.height)}</span>
-              <span className="font-bold">{g.count} pcs</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HardwarePanel({ list }: { list: MaterialList }) {
-  return (
-    <div className="card overflow-hidden">
-      {list.hardware.map((h, i) => (
-        <div key={i} className={`flex items-center justify-between px-4 py-3.5 text-sm ${i > 0 ? "border-t" : ""}`}
-          style={{ borderColor: "var(--surface-2)" }}>
-          <div>
-            <div className="font-semibold">{h.name}</div>
-            <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{h.formula}</div>
-          </div>
-          <div className="display text-lg font-bold">
-            {h.qty} <span className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>{h.unit}</span>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -2610,12 +2561,6 @@ function Spinner({ tiny }: { tiny?: boolean }) {
       <circle cx="12" cy="12" r="10" fill="none" stroke="var(--steel)" strokeWidth="3" />
       <path d="M12 2 a10 10 0 0 1 10 10" fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" />
     </svg>
-  );
-}
-
-function Empty({ label }: { label: string }) {
-  return (
-    <div className="px-4 py-6 text-center text-sm" style={{ color: "var(--ink-3)" }}>{label}</div>
   );
 }
 

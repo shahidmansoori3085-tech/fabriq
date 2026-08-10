@@ -124,17 +124,25 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
   );
 }
 
+/** "S1 Bearing Top" / "S3 Handle (Jali)" → "Bearing Top" / "Handle" — drops the
+ *  shutter number and the glass/jali qualifier so identical cuts can merge. */
+function baseRole(role: string): string {
+  return role.replace(/^S\d+\s+/, "").replace(/\s*\((Jali|Glass|Sheet)\)\s*$/i, "").trim();
+}
+
 /** Full engineering sheet: title block + elevation + sections + parts schedule. */
 export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: MaterialList; shop?: { name?: string } }) {
   const sec = getSection;
-  // parts for THIS opening, grouped by section+role
+  // Parts for THIS opening. Identical cuts collapse into one row with a qty —
+  // "Handle × 3 @ 58\"3s", not three near-identical S1/S2/S3 lines.
   const parts = list.pieces.filter((p) => p.itemId === item.id);
   const grouped = new Map<string, { section: string; role: string; len: number; qty: number }>();
   for (const p of parts) {
-    const k = `${p.sectionId}|${p.role}`;
+    const role = baseRole(p.role);
+    const k = `${p.sectionId}|${role}|${p.length}`;
     const g = grouped.get(k);
     if (g) g.qty += 1;
-    else grouped.set(k, { section: sec(p.sectionId).label, role: p.role, len: p.length, qty: 1 });
+    else grouped.set(k, { section: sec(p.sectionId).label, role, len: p.length, qty: 1 });
   }
   const rows = [...grouped.values()];
   // unique sections used → show their real cross-sections
@@ -196,7 +204,9 @@ export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: Ma
               {rows.map((r, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${LINE}` }}>
                   <td style={{ padding: "7px 10px", fontWeight: 600 }}>{r.section}</td>
-                  <td style={{ padding: "7px 10px", color: "#4a5460" }}>{r.role}</td>
+                  <td style={{ padding: "7px 10px", color: "#4a5460" }}>
+                    {r.role.toLowerCase() === r.section.toLowerCase() ? "—" : r.role}
+                  </td>
                   <td style={{ padding: "7px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.qty}</td>
                   <td style={{ padding: "7px 10px", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatFtInSut(r.len)}</td>
                 </tr>
