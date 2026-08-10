@@ -13,6 +13,10 @@ import { estimate } from "@/lib/engine/estimator";
 import { getSection, SECTIONS } from "@/lib/engine/sections";
 import { costJob, inr, type JobCost } from "@/lib/engine/pricing";
 import { findOffcuts, loadOffcuts, addOffcuts, removeOffcut, totalOffcutFt, type Offcut, type OffcutCandidate } from "@/lib/engine/offcuts";
+import {
+  loadProjects, saveProject, patchProject, removeProject, newProjectId, autoTitle, totalSqft,
+  type ProjectRec,
+} from "@/lib/projects";
 import type {
   JobItem, MaterialList, OpeningType, SystemId, PackedBar, CutPiece,
 } from "@/lib/engine/types";
@@ -122,6 +126,10 @@ export default function FabriQ() {
   const [shop, setShop] = useState<ShopProfile>({ name: "" });
   const [loaded, setLoaded] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
+  /** id of the saved project this session is editing. A ref, not state: it must
+   *  be readable synchronously when a job is built, before Result mounts. */
+  const projectId = useRef<string | null>(null);
+  const ensureProject = () => (projectId.current ??= newProjectId());
 
   useEffect(() => {
     setApiKey(localStorage.getItem("fabriq_api_key"));
@@ -283,6 +291,7 @@ export default function FabriQ() {
         shutters,
         meta: next,
       };
+      ensureProject();
       setItems((prev) => [...prev, item]);
       // If we're mid photo-batch, move on to the next extracted row's questions
       // (only its MISSING info); otherwise land on the add-more screen.
@@ -295,7 +304,43 @@ export default function FabriQ() {
     }
   }, [answers, qIndex, questions, items, draft, width, height, qSource, photoQueue, startPhotoItem]);
 
+  /* —— autosave: every job the fabricator builds survives a refresh ——
+     Writes localStorage only (no setState), so it is safe inside an effect and
+     catches all three entry paths: wizard, questions and photo batch. */
+  useEffect(() => {
+    if (items.length === 0) return;
+    const id = projectId.current;
+    if (!id) return;
+    const prev = loadProjects().find((p) => p.id === id);
+    saveProject({
+      id,
+      title: prev?.title || autoTitle(items),
+      created: prev?.created ?? Date.now(),
+      updated: Date.now(),
+      items,
+      sqft: totalSqft(items),
+      // Preserve figures the result screen reported; never reset them to 0.
+      scrapPct: prev?.scrapPct ?? 0,
+      amount: prev?.amount ?? 0,
+      customer: prev?.customer,
+    });
+  }, [items]);
+
+  /** Result reports the real scrap / quote numbers as they are computed. */
+  const onSnapshot = useCallback((s: { scrapPct?: number; amount?: number; customer?: string }) => {
+    const id = projectId.current;
+    if (id) patchProject(id, s);
+  }, []);
+
+  const openProject = (p: ProjectRec) => {
+    projectId.current = p.id;
+    setItems(p.items);
+    setIntent(p.amount > 0 ? "quote" : "list");
+    setStep("result");
+  };
+
   const reset = () => {
+    projectId.current = null;
     setItems([]); setDraft(EMPTY_DRAFT); setAnswers({}); setQuestions([]);
     setQIndex(0); setStep("home");
   };
@@ -326,6 +371,7 @@ export default function FabriQ() {
           apiKey={apiKey}
           onOpenSettings={() => setShowSettings(true)}
           onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
+          onOpenProject={openProject}
         />
       )}
       {step === "offcutbank" && <OffcutBank onBack={() => setStep("home")} />}
@@ -345,7 +391,7 @@ export default function FabriQ() {
       {step === "entry" && (
         <Entry
           startId={items.length}
-          onBuild={(built) => { setItems((prev) => [...prev, ...built]); setStep("result"); }}
+          onBuild={(built) => { ensureProject(); setItems((prev) => [...prev, ...built]); setStep("result"); }}
           onBack={() => setStep(items.length ? "addmore" : "home")}
         />
       )}
@@ -366,7 +412,10 @@ export default function FabriQ() {
           onRemove={(id) => setItems((p) => p.filter((x) => x.id !== id))}
         />
       )}
-      {step === "result" && <Result items={items} onNew={reset} apiKey={apiKey} initialTab={intent === "quote" ? "quote" : "aluminium"} />}
+      {step === "result" && (
+        <Result items={items} onNew={reset} apiKey={apiKey}
+          initialTab={intent === "quote" ? "quote" : "aluminium"} onSnapshot={onSnapshot} />
+      )}
       <Copilot />
     </main>
   );
@@ -503,10 +552,27 @@ function Onboarding({
 
 /* ————————————————— DASHBOARD (home) ————————————————— */
 
-interface ProjectRec { id: string; title: string; date: number; items: number; sqft: number; scrapPct: number; amount: number }
-function loadProjects(): ProjectRec[] {
-  try { const a = JSON.parse(localStorage.getItem("fabriq_projects") || "[]"); return Array.isArray(a) ? a : []; }
-  catch { return []; }
+
+/** "12 min pehle" / "kal" / "12 Aug" — a fabricator reads recency, not dates. */
+function timeAgo(ts: number): string {
+  const min = Math.floor((Date.now() - ts) / 60000);
+  if (min < 1) return "abhi";
+  if (min < 60) return `${min} min pehle`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} ghante pehle`;
+  if (hr < 48) return "kal";
+  return new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+
+function StageChip({ done, label }: { done?: boolean; label: string }) {
+  return (
+    <span className="badge" style={{
+      background: done ? "var(--good-soft)" : "var(--surface-2)",
+      color: done ? "var(--good)" : "var(--ink-3)",
+    }}>
+      {done ? "● " : "○ "}{label}
+    </span>
+  );
 }
 
 /* ————————————————— OFFCUT BANK (standalone) ————————————————— */
@@ -584,16 +650,21 @@ function OffcutBank({ onBack }: { onBack: () => void }) {
 
 function Home({
   shop, theme, onToggleTheme, onStart, onStartQuote, onOffcutBank, apiKey, onOpenSettings, onExtracted,
+  onOpenProject,
 }: {
   shop: ShopProfile; theme: Theme; onToggleTheme: () => void;
   onStart: () => void; onStartQuote: () => void; onOffcutBank: () => void; apiKey: string | null;
   onOpenSettings: () => void; onExtracted: (rows: ExtractedItem[]) => void;
+  onOpenProject: (p: ProjectRec) => void;
 }) {
-  const projects = useMemo(loadProjects, []);
+  const [projects, setProjects] = useState<ProjectRec[]>([]);
+  useEffect(() => { setProjects(loadProjects()); }, []);
   const nProjects = projects.length;
   const timeSavedHrs = (nProjects * 14) / 60;
-  const avgScrap = nProjects ? projects.reduce((a, p) => a + p.scrapPct, 0) / nProjects : 0;
-  const scrapSaved = nProjects ? Math.max(0, 25 - avgScrap) : 0; // vs a 25% manual baseline
+  // Only average jobs that actually reported a figure, so one un-opened job
+  // cannot drag the average to zero.
+  const scrapJobs = projects.filter((p) => p.scrapPct > 0);
+  const avgScrap = scrapJobs.length ? scrapJobs.reduce((a, p) => a + p.scrapPct, 0) / scrapJobs.length : 0;
   const valueQuoted = projects.reduce((a, p) => a + (p.amount || 0), 0);
 
   const dark = theme === "dark" || (theme === "system" &&
@@ -602,18 +673,21 @@ function Home({
   const bank = useMemo(() => loadOffcuts(), []);
   const bankFt = totalOffcutFt(bank);
 
+  // Every tile is a measured number from this shop's own jobs. No assumed
+  // baselines, no projections — a dash until we have actually earned the figure.
   const stats: [React.ReactNode, string, string, string][] = [
-    [<Ic.TrendDown size={18} key="a" />, "Scrap Reduced", nProjects ? `${scrapSaved.toFixed(0)}%` : "—", "vs manual cutting"],
+    [<Ic.TrendDown size={18} key="a" />, "Avg Scrap", avgScrap > 0 ? `${avgScrap.toFixed(0)}%` : "—", "aapke apne jobs par"],
     [<Ic.Clock size={18} key="b" />, "Time Saved", nProjects ? `${timeSavedHrs.toFixed(1)}h` : "—", "≈14 min / job"],
-    [<Ic.Rupee size={18} key="c" />, "Value Quoted", nProjects ? `₹${Math.round(valueQuoted / 1000)}k` : "—", "all quotations"],
+    [<Ic.Rupee size={18} key="c" />, "Value Quoted", valueQuoted > 0 ? `₹${Math.round(valueQuoted / 1000)}k` : "—", "all quotations"],
     [<Ic.Folder size={18} key="d" />, "Projects", `${nProjects}`, "lifetime"],
   ];
 
+  // Every card below must describe something that actually ships today.
   const features: [React.ReactNode, string, string][] = [
-    [<Ic.Layers size={20} key="1" />, "Instant Material List", "Sizes → pipes, glass, hardware in seconds"],
-    [<Ic.Scissors size={20} key="2" />, "Workshop Cutting Sheets", "Exact cut lengths & angles, engineering drawings"],
-    [<Ic.FileText size={20} key="3" />, "Vendor Order List", "Clean supplier list, WhatsApp-ready"],
-    [<Ic.Cube size={20} key="4" />, "Live 3D Configurator", "Colour & glass preview for your customer"],
+    [<Ic.Layers size={20} key="1" />, "Instant Material List", "Sizes → kitni pipe, glass aur jali — seconds me"],
+    [<Ic.Scissors size={20} key="2" />, "Workshop Cutting Sheets", "Cut lengths + engineering drawings, ek hi sheet"],
+    [<Ic.FileText size={20} key="3" />, "Supplier Catalogue", "Har pipe ka naam + cross-section, WhatsApp-ready"],
+    [<Ic.Cube size={20} key="4" />, "Live 3D Configurator", "Customer ko colour aur glass live dikhao"],
   ];
 
   return (
@@ -685,15 +759,15 @@ function Home({
         <span style={{ color: "#E4C77E" }}><Ic.ArrowRight size={20} /></span>
       </button>
 
-      {/* copilot — can do everything */}
+      {/* copilot — advice, not actions: the engine owns every number */}
       <div className="card p-4">
         <div className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><Ic.Sparkle size={18} /></span>
           <div className="display text-[15px] font-bold">Ask FabriQ — aapka Copilot</div>
         </div>
         <p className="mt-2 text-[12px]" style={{ color: "var(--ink-2)" }}>
-          Neeche <b>“Ask FabriQ”</b> button se sab kuch: photo/drawing padho · material list · quotation ·
-          workshop cutting sheet · 3D · engineering drawing — bas bolo ya likho.
+          Fabrication ka koi bhi sawaal — konsa section, kitne track, interlock kahan, glass ya jali.
+          Neeche <b>“Ask FabriQ”</b> se poochho. <b>Naap aur cutting hamesha engine deta hai</b>, Copilot nahi.
         </p>
       </div>
 
@@ -702,7 +776,7 @@ function Home({
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl" style={{ background: "var(--good-soft)", color: "var(--good)" }}><Ic.Recycle size={24} /></span>
         <div className="flex-1">
           <div className="display text-[15px] font-bold">♻️ Offcut Bank {bank.length > 0 && <span className="text-xs font-semibold" style={{ color: "var(--good)" }}>· {bankFt.toFixed(0)}&apos; stock</span>}</div>
-          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Workshop me pade leftover tukde daalo — agle material/cutting list me apne aap lag jayenge</div>
+          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Har job ke bache tukde yahan jama karo — kaunsa tukda kis kaam aa sakta hai, dikh jayega</div>
         </div>
         <span style={{ color: "var(--ink-3)" }}><Ic.ArrowRight size={20} /></span>
       </button>
@@ -733,7 +807,6 @@ function Home({
               </span>
               <div className="display mt-2.5 text-[14px] font-bold leading-tight">{title}</div>
               <div className="mt-1 text-[11.5px] leading-snug" style={{ color: "var(--ink-3)" }}>{sub}</div>
-              {i === 3 && <span className="badge mt-2 glass-tint">Soon</span>}
             </div>
           ))}
         </div>
@@ -753,17 +826,34 @@ function Home({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {projects.slice(0, 5).map((p) => (
-              <div key={p.id} className="card flex items-center justify-between p-3.5">
-                <div className="min-w-0">
+            {projects.slice(0, 6).map((p) => (
+              <div key={p.id} className="card flex items-center gap-2 p-3.5">
+                <button onClick={() => onOpenProject(p)} className="min-w-0 flex-1 text-left">
                   <div className="truncate text-sm font-semibold">{p.title}</div>
                   <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-                    {new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} · {p.items} items · {p.sqft.toFixed(0)} sqft
+                    {timeAgo(p.updated)} · {p.sqft.toFixed(0)} sqft
+                    {p.customer ? ` · ${p.customer}` : ""}
                   </div>
-                </div>
-                <div className="text-right">
-                  {p.amount > 0 && <div className="text-sm font-bold tabnum" style={{ color: "var(--good)" }}>₹{Math.round(p.amount).toLocaleString("en-IN")}</div>}
-                  <span className="badge" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>{p.scrapPct.toFixed(0)}% scrap</span>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    <StageChip done label="Material" />
+                    <StageChip done={p.amount > 0} label={p.amount > 0 ? "Quoted" : "Quotation pending"} />
+                    {p.scrapPct > 0 && (
+                      <span className="badge" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                        {p.scrapPct.toFixed(0)}% scrap
+                      </span>
+                    )}
+                  </div>
+                </button>
+                <div className="shrink-0 text-right">
+                  {p.amount > 0 && (
+                    <div className="text-sm font-bold tabnum" style={{ color: "var(--good)" }}>
+                      ₹{Math.round(p.amount).toLocaleString("en-IN")}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => { if (confirm(`"${p.title}" hata dein?`)) setProjects(removeProject(p.id)); }}
+                    className="btn-ghost mt-1 grid h-7 w-7 place-items-center rounded-full text-xs"
+                    title="Hatao">✕</button>
                 </div>
               </div>
             ))}
@@ -1510,7 +1600,11 @@ function sizeFtIn(um: Um): string {
   return `${ft}'${i ? i + '"' : ""}`;
 }
 
-function Result({ items, onNew, initialTab }: { items: JobItem[]; onNew: () => void; apiKey: string | null; initialTab?: Tab }) {
+function Result({ items, onNew, initialTab, onSnapshot }: {
+  items: JobItem[]; onNew: () => void; apiKey: string | null; initialTab?: Tab;
+  /** reports real computed figures back so the saved project card is truthful */
+  onSnapshot?: (s: { scrapPct?: number; amount?: number; customer?: string }) => void;
+}) {
   const [tab, setTab] = useState<Tab>(initialTab ?? "aluminium");
   const [threedIdx, setThreedIdx] = useState(0);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
@@ -1612,6 +1706,12 @@ function Result({ items, onNew, initialTab }: { items: JobItem[]; onNew: () => v
   });
   const quoteTotal = quoteLines.reduce((a, l) => a + l.amount, 0);
   const grandPayable = Math.round(quoteTotal * (1 - discountPct / 100) * (1 + gstPct / 100));
+
+  // Report real figures up so the saved project card shows earned numbers only.
+  const scrapPct = list.totals.wastePct;
+  useEffect(() => {
+    onSnapshot?.({ scrapPct, amount: grandPayable, customer: customer.trim() || undefined });
+  }, [scrapPct, grandPayable, customer, onSnapshot]);
 
   return (
     <div className="result-view fade-up flex flex-col gap-4">
