@@ -850,17 +850,27 @@ const WIN_SYS: [SystemId | "normal", string, string][] = [
   ["domal", "Domal", "27–29mm — premium"],
   ["z_section", "Z-Section", "Hinge-openable"],
 ];
+const NORMAL_VAR: [string, string][] = [["2", "2 Track"], ["3", "3 Track"], ["4", "4 Track"]];
 const DOMAL_VAR: [string, string][] = [["no", "Bina Fix"], ["yes", "Upar Fix"]];
 const Z_TYPE: [string, string][] = [
   ["openable", "Openable"], ["combo", "Fix + Openable"], ["fixed", "Poora Fixed"], ["door", "Door"],
 ];
+
+/** Parse a size honouring the chosen unit — a bare number becomes inches in
+ *  "inch" mode; every explicit format (4'6", 4-6-4 sut, 1372mm) still works. */
+function parseWithUnit(raw: string, unit: "feet" | "inch"): Um | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (unit === "inch" && /^\d+(?:\.\d+)?$/.test(s)) return parseDimension(`${s}"`);
+  return parseDimension(s);
+}
 const DOOR_PALLA: [string, string][] = [["60", "60×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
 const DOOR_CHOKHAT: [string, string][] = [["needed", "Frame + Palla"], ["existing", "Sirf Palla"]];
 const PART_VAR: [string, string][] = [["no", "Sirf panels"], ["yes", "Door ke saath"]];
 
 const toggleArr = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number }
+interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number; unit: "feet" | "inch" }
 interface Bucket { key: string; type: OpeningType; meta: Record<string, string>; label: string; rows: SizeRow[] }
 
 /** Multi-select chip row. */
@@ -897,6 +907,7 @@ function Entry({ startId, onBuild, onBack }: {
   const [cfgIdx, setCfgIdx] = useState(0);
   // window config
   const [winSys, setWinSys] = useState<string[]>([]);
+  const [normTracks, setNormTracks] = useState<string[]>([]);
   const [domalVar, setDomalVar] = useState<string[]>([]);
   const [zTypes, setZTypes] = useState<string[]>([]);
   // door config
@@ -907,37 +918,36 @@ function Entry({ startId, onBuild, onBack }: {
   // sizes phase
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [bIdx, setBIdx] = useState(0);
-  const [widthRaw, setWidthRaw] = useState("");
-  const [heightRaw, setHeightRaw] = useState("");
-  const [qty, setQty] = useState(1);
+  const [unit, setUnit] = useState<"feet" | "inch">("feet");
   const rid = useRef(1);
+  const blank = (): SizeRow => ({ id: rid.current++, widthRaw: "", heightRaw: "", qty: 1, unit });
+  const isBlank = (r: SizeRow) => !r.widthRaw.trim() && !r.heightRaw.trim();
 
   const ordered = (["window", "door", "partition"] as OpeningType[]).filter((t) => types.includes(t));
   const curType = ordered[cfgIdx];
 
-  const w = parseDimension(widthRaw);
-  const h = parseDimension(heightRaw);
-  const oversized = Boolean((w && toFeet(w) > 20) || (h && toFeet(h) > 20));
-  const pendingOk = Boolean(w && h && w > 0 && h > 0 && !oversized);
-
-  /* —— build buckets from the config selections —— */
+  /* —— build buckets from the config selections (each starts with 1 blank row) —— */
   const computeBuckets = (): Bucket[] => {
     const bs: Bucket[] = [];
     const push = (type: OpeningType, meta: Record<string, string>, label: string) =>
-      bs.push({ key: `b${bs.length}`, type, meta, label, rows: [] });
+      bs.push({ key: `b${bs.length}`, type, meta, label, rows: [blank()] });
 
     if (types.includes("window")) {
       const sys = winSys.length ? winSys : ["normal"];
       for (const s of ["normal", "domal", "z_section"]) {
         if (!sys.includes(s)) continue;
-        if (s === "domal") {
+        if (s === "normal") {
+          if (normTracks.length) {
+            for (const [t, tl] of NORMAL_VAR) if (normTracks.includes(t)) push("window", { system: "normal", tracks: t }, `Normal · ${tl}`);
+          } else {
+            push("window", { system: "normal" }, "Normal Sliding");
+          }
+        } else if (s === "domal") {
           const vs = domalVar.length ? domalVar : ["no"];
           for (const [v, vl] of DOMAL_VAR) if (vs.includes(v)) push("window", { system: "domal", domalFix: v }, `Domal · ${vl}`);
-        } else if (s === "z_section") {
+        } else {
           const zs = zTypes.length ? zTypes : ["openable"];
           for (const [z, zl] of Z_TYPE) if (zs.includes(z)) push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
-        } else {
-          push("window", { system: "normal" }, "Normal Sliding");
         }
       }
     }
@@ -962,24 +972,32 @@ function Entry({ startId, onBuild, onBack }: {
   const goConfigNext = () => {
     if (cfgIdx < ordered.length - 1) { setCfgIdx(cfgIdx + 1); return; }
     setBuckets(computeBuckets());
-    setBIdx(0); setWidthRaw(""); setHeightRaw(""); setQty(1);
+    setBIdx(0);
     setPhase("sizes");
   };
 
-  const addRow = () => {
-    if (!pendingOk) return;
-    setBuckets((bs) => bs.map((b, i) => i === bIdx
-      ? { ...b, rows: [...b.rows, { id: rid.current++, widthRaw, heightRaw, qty }] } : b));
-    setWidthRaw(""); setHeightRaw(""); setQty(1);
+  /* —— inline rows: keep exactly ONE trailing blank so a new empty row
+     appears automatically as soon as the last one gets any value —— */
+  const normalizeRows = (rows: SizeRow[]): SizeRow[] => {
+    let r = rows.filter((row, idx) => !(isBlank(row) && idx !== rows.length - 1));
+    if (r.length === 0 || !isBlank(r[r.length - 1])) r = [...r, blank()];
+    return r;
   };
+  const patchRow = (rowId: number, patch: Partial<SizeRow>) =>
+    setBuckets((bs) => bs.map((b, i) => i === bIdx
+      ? { ...b, rows: normalizeRows(b.rows.map((r) => r.id === rowId ? { ...r, ...patch } : r)) } : b));
   const removeRow = (rowId: number) =>
-    setBuckets((bs) => bs.map((b, i) => i === bIdx ? { ...b, rows: b.rows.filter((r) => r.id !== rowId) } : b));
+    setBuckets((bs) => bs.map((b, i) => i === bIdx
+      ? { ...b, rows: normalizeRows(b.rows.filter((r) => r.id !== rowId)) } : b));
+
+  const filledRows = (b: Bucket) =>
+    b.rows.filter((r) => parseWithUnit(r.widthRaw, r.unit) && parseWithUnit(r.heightRaw, r.unit));
 
   const finalize = (bsIn: Bucket[]) => {
     const items: JobItem[] = [];
     let n = startId;
     for (const b of bsIn) for (const r of b.rows) {
-      const rw = parseDimension(r.widthRaw); const rh = parseDimension(r.heightRaw);
+      const rw = parseWithUnit(r.widthRaw, r.unit); const rh = parseWithUnit(r.heightRaw, r.unit);
       if (!rw || !rh) continue;
       items.push(buildJobItem(++n, b.type, rw, rh, r.qty, { ...b.meta }));
     }
@@ -987,14 +1005,8 @@ function Entry({ startId, onBuild, onBack }: {
   };
 
   const goSizesNext = () => {
-    let bs = buckets;
-    if (pendingOk) {
-      bs = buckets.map((b, i) => i === bIdx
-        ? { ...b, rows: [...b.rows, { id: rid.current++, widthRaw, heightRaw, qty }] } : b);
-      setBuckets(bs); setWidthRaw(""); setHeightRaw(""); setQty(1);
-    }
-    if (bIdx < bs.length - 1) setBIdx(bIdx + 1);
-    else finalize(bs);
+    if (bIdx < buckets.length - 1) setBIdx(bIdx + 1);
+    else finalize(buckets);
   };
 
   const back = () => {
@@ -1003,7 +1015,7 @@ function Entry({ startId, onBuild, onBack }: {
     onBack();
   };
 
-  const totalSizes = buckets.reduce((a, b) => a + b.rows.length, 0) + (pendingOk ? 1 : 0);
+  const totalSizes = buckets.reduce((a, b) => a + filledRows(b).length, 0);
   const isLastBucket = bIdx >= buckets.length - 1;
   const anySizes = totalSizes > 0;
 
@@ -1046,6 +1058,13 @@ function Entry({ startId, onBuild, onBack }: {
                 <ChipGroup options={WIN_SYS.map(([v, l, hnt]) => [v as string, l, hnt])} selected={winSys}
                   onToggle={(v) => setWinSys((p) => toggleArr(p, v))} />
               </div>
+              {winSys.includes("normal") && (
+                <div>
+                  <Label>Normal — track</Label>
+                  <ChipGroup options={NORMAL_VAR.map(([v, l]) => [v, l])} selected={normTracks}
+                    onToggle={(v) => setNormTracks((p) => toggleArr(p, v))} />
+                </div>
+              )}
               {winSys.includes("domal") && (
                 <div>
                   <Label>Domal — fix patti?</Label>
@@ -1092,92 +1111,103 @@ function Entry({ startId, onBuild, onBack }: {
     );
   }
 
-  /* ————— PHASE 3 · sizes (per bucket) ————— */
+  /* ————— PHASE 3 · sizes (per bucket, inline auto-expanding rows) ————— */
   const cur = buckets[bIdx];
+  const rows = cur?.rows ?? [];
+  const placeholder = unit === "inch" ? `54  ·  4'6"  ·  4-6-4` : `6  ·  4'6"  ·  54"  ·  4-6-4`;
   return (
     <div className="fade-up flex flex-col gap-5">
       <Header
         title={cur ? `${TYPE_META[cur.type].icon} ${cur.label}` : "Sizes"}
-        sub={`Bucket ${bIdx + 1} / ${buckets.length} · sizes ek ke niche ek daalo`}
+        sub={`Bucket ${bIdx + 1} / ${buckets.length} · size daalte hi neeche naya row aa jayega`}
         onBack={back}
       />
 
       {/* bucket progress dots */}
       {buckets.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
-          {buckets.map((b, i) => (
-            <span key={b.key} className="rounded-full px-2 py-1 text-[10px] font-bold"
+          {buckets.map((b, i) => {
+            const n = filledRows(b).length;
+            return (
+              <button key={b.key} onClick={() => setBIdx(i)}
+                className="rounded-full px-2.5 py-1 text-[10px] font-bold"
+                style={{
+                  background: i === bIdx ? "var(--accent)" : "var(--surface-2)",
+                  color: i === bIdx ? "#fff" : "var(--ink-3)",
+                }}>
+                {b.label.split(" · ").slice(-1)[0]}{n ? ` ·${n}` : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* unit toggle */}
+      <div className="flex items-center gap-3">
+        <Label>Unit</Label>
+        <div className="flex overflow-hidden rounded-lg border-2" style={{ borderColor: "var(--steel)" }}>
+          {(["feet", "inch"] as const).map((u) => (
+            <button key={u} onClick={() => setUnit(u)}
+              className="px-4 py-1.5 text-sm font-bold"
               style={{
-                background: i === bIdx ? "var(--accent)" : "var(--surface-2)",
-                color: i === bIdx ? "#fff" : "var(--ink-3)",
+                background: unit === u ? "var(--accent)" : "var(--surface-2)",
+                color: unit === u ? "#fff" : "var(--ink-2)",
               }}>
-              {b.label.split(" · ").pop()}{b.rows.length ? ` ·${b.rows.length}` : ""}
-            </span>
+              {u === "feet" ? "Feet" : "Inch"}
+            </button>
           ))}
         </div>
-      )}
-
-      {/* added rows for current bucket */}
-      {cur && cur.rows.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {cur.rows.map((r, i) => (
-            <div key={r.id} className="card flex items-center gap-3 p-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-bold" style={{ background: "var(--surface-2)" }}>{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] tabnum font-semibold" style={{ color: "var(--ink-2)" }}>
-                  {formatFtInSut(parseDimension(r.widthRaw)!)} × {formatFtInSut(parseDimension(r.heightRaw)!)} · ×{r.qty}
-                </div>
-              </div>
-              <button onClick={() => removeRow(r.id)}
-                className="btn-ghost grid h-8 w-8 place-items-center rounded-full text-sm" title="Hatao">✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* size composer */}
-      <div className="card p-5 flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Width (chaudai)</Label>
-            <input inputMode="text" placeholder={`6  ·  4'6"  ·  4-6-4`} value={widthRaw}
-              onChange={(e) => setWidthRaw(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && pendingOk && addRow()}
-              className="dim-input mt-1.5 w-full px-3 py-3 text-lg font-semibold" />
-            <Parsed um={w} raw={widthRaw} />
-          </div>
-          <div>
-            <Label>Height (unchai)</Label>
-            <input inputMode="text" placeholder={`6  ·  1372mm`} value={heightRaw}
-              onChange={(e) => setHeightRaw(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && pendingOk && addRow()}
-              className="dim-input mt-1.5 w-full px-3 py-3 text-lg font-semibold" />
-            <Parsed um={h} raw={heightRaw} />
-          </div>
-        </div>
-        <p className="-mt-3 text-[11px]" style={{ color: "var(--ink-3)" }}>
-          Feet default — &quot;6&quot; = 6 feet · inch ke liye 72&quot; · sut ke liye 4-6-4
-        </p>
-
-        {oversized && (
-          <p className="rounded-lg px-3 py-2.5 text-xs font-semibold" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
-            ⚠️ Ye size bahut bada hai. Inch/mm ki jagah feet likha lagta hai — 66 inch ke liye 66&quot; likho.
-          </p>
-        )}
-
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label>Quantity</Label>
-            <div className="mt-2"><Stepper value={qty} onChange={setQty} /></div>
-          </div>
-          <button onClick={addRow} disabled={!pendingOk}
-            className="btn-dark flex items-center gap-2 self-end px-5 py-3 disabled:opacity-40">
-            <Ic.Plus size={16} /> Size jodo
-          </button>
-        </div>
+        <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>· sut: 4-6-4 likho</span>
       </div>
 
-      <button onClick={goSizesNext} disabled={!isLastBucket ? false : !anySizes}
+      {/* inline size rows */}
+      <div className="flex flex-col gap-2">
+        {rows.map((r, i) => {
+          const rw = parseWithUnit(r.widthRaw, r.unit);
+          const rh = parseWithUnit(r.heightRaw, r.unit);
+          const empty = isBlank(r);
+          const over = Boolean((rw && toFeet(rw) > 20) || (rh && toFeet(rh) > 20));
+          const touched = r.widthRaw.trim() || r.heightRaw.trim();
+          return (
+            <div key={r.id} className="card flex flex-col gap-1.5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-bold"
+                  style={{ background: "var(--surface-2)", color: empty ? "var(--ink-3)" : "var(--ink)" }}>{i + 1}</span>
+                <input inputMode="text" placeholder={i === 0 ? placeholder.split("·")[0].trim() : "W"} value={r.widthRaw}
+                  onChange={(e) => patchRow(r.id, { widthRaw: e.target.value, unit })}
+                  className="dim-input min-w-0 flex-1 px-2.5 py-2.5 text-base font-semibold" />
+                <span className="shrink-0 text-sm" style={{ color: "var(--ink-3)" }}>×</span>
+                <input inputMode="text" placeholder="H" value={r.heightRaw}
+                  onChange={(e) => patchRow(r.id, { heightRaw: e.target.value, unit })}
+                  className="dim-input min-w-0 flex-1 px-2.5 py-2.5 text-base font-semibold" />
+                <div className="flex shrink-0 items-center overflow-hidden rounded-lg border" style={{ borderColor: "var(--line)" }}>
+                  <button className="px-2 py-2 text-base font-bold" style={{ background: "var(--surface-2)" }}
+                    onClick={() => patchRow(r.id, { qty: Math.max(1, r.qty - 1) })}>−</button>
+                  <span className="w-7 text-center text-sm font-bold tabnum">{r.qty}</span>
+                  <button className="px-2 py-2 text-base font-bold" style={{ background: "var(--surface-2)" }}
+                    onClick={() => patchRow(r.id, { qty: Math.min(50, r.qty + 1) })}>+</button>
+                </div>
+                {!empty && (
+                  <button onClick={() => removeRow(r.id)}
+                    className="btn-ghost grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm" title="Hatao">✕</button>
+                )}
+              </div>
+              {touched && (
+                <div className="pl-10 text-[11px] font-semibold"
+                  style={{ color: rw && rh && !over ? "var(--good)" : "var(--bad)" }}>
+                  {rw && rh
+                    ? over
+                      ? "⚠️ bahut bada — feet ki jagah inch mode try karo"
+                      : `= ${formatFtInSut(rw)} × ${formatFtInSut(rh)}${r.qty > 1 ? ` · ×${r.qty}` : ""} · ${r.unit === "inch" ? "inch" : "feet"}`
+                    : "width & height dono daalo"}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <button onClick={goSizesNext} disabled={isLastBucket && !anySizes}
         className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
         {isLastBucket
           ? (totalSizes > 0 ? `Material List banao → (${totalSizes})` : "Material List banao →")
@@ -1193,18 +1223,6 @@ function Parsed({ um, raw }: { um: Um | null; raw: string }) {
     <div className="mt-1 h-5 text-xs font-semibold"
       style={{ color: um ? "var(--good)" : "var(--bad)" }}>
       {um ? `= ${formatFtInSut(um)}` : "samajh nahi aaya — 6 ya 4'6\" likho"}
-    </div>
-  );
-}
-
-function Stepper({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  return (
-    <div className="flex items-center overflow-hidden rounded-xl border-2" style={{ borderColor: "var(--steel)" }}>
-      <button className="px-4 py-2 text-xl font-bold" style={{ background: "var(--surface-2)" }}
-        onClick={() => onChange(Math.max(1, value - 1))}>−</button>
-      <span className="w-12 text-center text-lg font-bold">{value}</span>
-      <button className="px-4 py-2 text-xl font-bold" style={{ background: "var(--surface-2)" }}
-        onClick={() => onChange(Math.min(50, value + 1))}>+</button>
     </div>
   );
 }
