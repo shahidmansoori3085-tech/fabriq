@@ -344,7 +344,8 @@ export default function FabriQ() {
       )}
       {step === "entry" && (
         <Entry
-          onSubmit={confirmExtracted}
+          startId={items.length}
+          onBuild={(built) => { setItems((prev) => [...prev, ...built]); setStep("result"); }}
           onBack={() => setStep(items.length ? "addmore" : "home")}
         />
       )}
@@ -775,7 +776,6 @@ function Home({
 
 /* ————————————————— ENTRY ————————————————— */
 
-interface CartRow { id: number; type: OpeningType; widthRaw: string; heightRaw: string; qty: number }
 const TYPE_META: Record<OpeningType, { icon: string; label: string; plural: string }> = {
   window: { icon: "🪟", label: "Window", plural: "windows" },
   door: { icon: "🚪", label: "Door", plural: "doors" },
@@ -783,79 +783,360 @@ const TYPE_META: Record<OpeningType, { icon: string; label: string; plural: stri
 };
 
 /**
- * Item Cart — add MANY sizes in one go (type · size · qty), then create the
- * material list for all at once. Each row later flows through the (minimal)
- * question engine via the same proven queue the photo path uses.
+ * Build a finished JobItem from a resolved meta map — mirrors the per-item
+ * build logic in `answer()` so the wizard can create items directly (no
+ * questions step). Un-asked details fall back to the same defaults the old
+ * flow used, plus a width-aware track default. The engine is never touched.
  */
-function Entry({ onSubmit, onBack }: { onSubmit: (rows: ExtractedItem[]) => void; onBack: () => void }) {
-  const [rows, setRows] = useState<CartRow[]>([]);
-  const [type, setType] = useState<OpeningType>("window");
+function buildJobItem(
+  idNum: number, type: OpeningType, width: Um, height: Um, qty: number,
+  metaIn: Record<string, string>,
+): JobItem {
+  const next: Record<string, string> = { ...metaIn };
+  let sys: SystemId;
+  let shutters: JobItem["shutters"];
+
+  if (type === "door") {
+    sys = "door_single";
+    next.chokhat = next.chokhat ?? "needed";
+    next.rails = next.rails ?? "2";
+    next.zonemix = next.zonemix ?? (next.rails === "3" ? "SSSJ" : "SSJ");
+    shutters = doorMixToZones(next.zonemix);
+  } else if (type === "partition") {
+    sys = "partition";
+    next.partDoor = next.partDoor ?? "no";
+    if (next.partDoor === "yes") next.partDoorW = next.partDoorW ?? "3";
+    next.partSheetFt = next.partSheetFt ?? "0";
+    next.partBayFt = next.partBayFt ?? "2.5";
+    next.partRowFt = next.partRowFt ?? "3.5";
+    shutters = [];
+  } else if (next.system === "z_section") {
+    sys = "z_section";
+    const zType = next.zType ?? "openable";
+    next.zSize = next.zSize ?? "light";
+    next.zDoor = zType === "door" ? "yes" : "no";
+    next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : "openable";
+    if (zType === "combo") {
+      next.zComboDir = next.zComboDir ?? "top";
+      next.zFixedFt = next.zFixedFt ?? "2";
+    }
+    if (zType === "openable" || zType === "combo") next.zSashCount = next.zSashCount ?? "2";
+    const n = zType === "fixed" || zType === "door"
+      ? 1
+      : Math.max(1, parseInt(next.zSashCount ?? "2", 10));
+    shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
+  } else {
+    // Normal Sliding or Domal — track/mix default (track is width-aware).
+    const wide = width >= mm(1500);
+    const tracks = next.tracks ?? (wide ? "3" : "2");
+    next.tracks = tracks;
+    sys = next.system === "domal" ? "domal" : tracks === "3" ? "normal_3t" : "normal_2t";
+    if (next.system === "domal") {
+      next.domalFix = next.domalFix ?? "no";
+      if (next.domalFix === "yes") next.domalFixFt = next.domalFixFt ?? "2";
+    }
+    next.handle = next.handle ?? "std";
+    const mix = next.mix ?? (tracks === "4" ? "GGGJ" : tracks === "3" ? "GGJ" : "GG");
+    next.mix = mix;
+    shutters = mixToShutters(mix);
+  }
+
+  return { id: `W${idNum}`, type, width, height, qty, system: sys, shutters, meta: next };
+}
+
+/* —— wizard option tables —— */
+const WIN_SYS: [SystemId | "normal", string, string][] = [
+  ["normal", "Normal Sliding", "18mm — sabse common"],
+  ["domal", "Domal", "27–29mm — premium"],
+  ["z_section", "Z-Section", "Hinge-openable"],
+];
+const DOMAL_VAR: [string, string][] = [["no", "Bina Fix"], ["yes", "Upar Fix"]];
+const Z_TYPE: [string, string][] = [
+  ["openable", "Openable"], ["combo", "Fix + Openable"], ["fixed", "Poora Fixed"], ["door", "Door"],
+];
+const DOOR_PALLA: [string, string][] = [["60", "60×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
+const DOOR_CHOKHAT: [string, string][] = [["needed", "Frame + Palla"], ["existing", "Sirf Palla"]];
+const PART_VAR: [string, string][] = [["no", "Sirf panels"], ["yes", "Door ke saath"]];
+
+const toggleArr = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number }
+interface Bucket { key: string; type: OpeningType; meta: Record<string, string>; label: string; rows: SizeRow[] }
+
+/** Multi-select chip row. */
+function ChipGroup({ options, selected, onToggle }: {
+  options: [string, string, string?][]; selected: string[]; onToggle: (v: string) => void;
+}) {
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      {options.map(([val, label, hint]) => (
+        <button key={val} onClick={() => onToggle(val)}
+          className={`chip flex flex-col items-start gap-0.5 px-3 py-3 text-left ${selected.includes(val) ? "selected" : ""}`}>
+          <span className="text-sm font-semibold">{label}</span>
+          {hint && <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>{hint}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Guided wizard — the manual entry flow.
+ *   1. Types      : pick Window / Door / Partition (multi-select).
+ *   2. Config     : per chosen type, pick system + variant (multi-select) —
+ *                   each combination becomes a "bucket".
+ *   3. Sizes      : per bucket, stack many (size · qty) rows.
+ * Buckets carry a fully-resolved meta map, so items are built directly via
+ * buildJobItem — the questions step is skipped entirely for manual entry.
+ */
+function Entry({ startId, onBuild, onBack }: {
+  startId: number; onBuild: (items: JobItem[]) => void; onBack: () => void;
+}) {
+  const [phase, setPhase] = useState<"types" | "config" | "sizes">("types");
+  const [types, setTypes] = useState<OpeningType[]>([]);
+  const [cfgIdx, setCfgIdx] = useState(0);
+  // window config
+  const [winSys, setWinSys] = useState<string[]>([]);
+  const [domalVar, setDomalVar] = useState<string[]>([]);
+  const [zTypes, setZTypes] = useState<string[]>([]);
+  // door config
+  const [doorPalla, setDoorPalla] = useState<string[]>([]);
+  const [doorChokhat, setDoorChokhat] = useState<string[]>(["needed"]);
+  // partition config
+  const [partVar, setPartVar] = useState<string[]>([]);
+  // sizes phase
+  const [buckets, setBuckets] = useState<Bucket[]>([]);
+  const [bIdx, setBIdx] = useState(0);
   const [widthRaw, setWidthRaw] = useState("");
   const [heightRaw, setHeightRaw] = useState("");
   const [qty, setQty] = useState(1);
-  const nextId = useRef(1);
+  const rid = useRef(1);
+
+  const ordered = (["window", "door", "partition"] as OpeningType[]).filter((t) => types.includes(t));
+  const curType = ordered[cfgIdx];
 
   const w = parseDimension(widthRaw);
   const h = parseDimension(heightRaw);
-  const valid = Boolean(w && h && w > 0 && h > 0);
   const oversized = Boolean((w && toFeet(w) > 20) || (h && toFeet(h) > 20));
-  const pendingOk = valid && !oversized;
+  const pendingOk = Boolean(w && h && w > 0 && h > 0 && !oversized);
+
+  /* —— build buckets from the config selections —— */
+  const computeBuckets = (): Bucket[] => {
+    const bs: Bucket[] = [];
+    const push = (type: OpeningType, meta: Record<string, string>, label: string) =>
+      bs.push({ key: `b${bs.length}`, type, meta, label, rows: [] });
+
+    if (types.includes("window")) {
+      const sys = winSys.length ? winSys : ["normal"];
+      for (const s of ["normal", "domal", "z_section"]) {
+        if (!sys.includes(s)) continue;
+        if (s === "domal") {
+          const vs = domalVar.length ? domalVar : ["no"];
+          for (const [v, vl] of DOMAL_VAR) if (vs.includes(v)) push("window", { system: "domal", domalFix: v }, `Domal · ${vl}`);
+        } else if (s === "z_section") {
+          const zs = zTypes.length ? zTypes : ["openable"];
+          for (const [z, zl] of Z_TYPE) if (zs.includes(z)) push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
+        } else {
+          push("window", { system: "normal" }, "Normal Sliding");
+        }
+      }
+    }
+    if (types.includes("door")) {
+      const ps = doorPalla.length ? doorPalla : ["60"];
+      const cs = doorChokhat.length ? doorChokhat : ["needed"];
+      for (const [p, pl] of DOOR_PALLA) if (ps.includes(p))
+        for (const [c, cl] of DOOR_CHOKHAT) if (cs.includes(c))
+          push("door", { palla: p, chokhat: c }, `Door · ${pl} · ${cl}`);
+    }
+    if (types.includes("partition")) {
+      const vs = partVar.length ? partVar : ["no"];
+      for (const [v, vl] of PART_VAR) if (vs.includes(v)) push("partition", { partDoor: v }, `Partition · ${vl}`);
+    }
+    return bs;
+  };
+
+  const cfgOk = curType === "window" ? winSys.length > 0
+    : curType === "door" ? doorPalla.length > 0
+    : partVar.length > 0;
+
+  const goConfigNext = () => {
+    if (cfgIdx < ordered.length - 1) { setCfgIdx(cfgIdx + 1); return; }
+    setBuckets(computeBuckets());
+    setBIdx(0); setWidthRaw(""); setHeightRaw(""); setQty(1);
+    setPhase("sizes");
+  };
 
   const addRow = () => {
     if (!pendingOk) return;
-    setRows((p) => [...p, { id: nextId.current++, type, widthRaw, heightRaw, qty }]);
-    setWidthRaw(""); setHeightRaw(""); setQty(1); // keep type for fast repeats
+    setBuckets((bs) => bs.map((b, i) => i === bIdx
+      ? { ...b, rows: [...b.rows, { id: rid.current++, widthRaw, heightRaw, qty }] } : b));
+    setWidthRaw(""); setHeightRaw(""); setQty(1);
   };
-  const toExtracted = (r: { type: OpeningType; widthRaw: string; heightRaw: string; qty: number }): ExtractedItem => ({
-    type: r.type, width_raw: r.widthRaw, height_raw: r.heightRaw, unit_guess: "feet", qty: r.qty, confidence: "high",
-  });
-  const submit = () => {
-    const all = rows.map(toExtracted);
-    if (pendingOk) all.push(toExtracted({ type, widthRaw, heightRaw, qty })); // fold in the un-added last row
-    if (all.length) onSubmit(all);
+  const removeRow = (rowId: number) =>
+    setBuckets((bs) => bs.map((b, i) => i === bIdx ? { ...b, rows: b.rows.filter((r) => r.id !== rowId) } : b));
+
+  const finalize = (bsIn: Bucket[]) => {
+    const items: JobItem[] = [];
+    let n = startId;
+    for (const b of bsIn) for (const r of b.rows) {
+      const rw = parseDimension(r.widthRaw); const rh = parseDimension(r.heightRaw);
+      if (!rw || !rh) continue;
+      items.push(buildJobItem(++n, b.type, rw, rh, r.qty, { ...b.meta }));
+    }
+    if (items.length) onBuild(items);
   };
 
-  const totalOpenings = rows.reduce((a, r) => a + r.qty, 0) + (pendingOk ? qty : 0);
-  const canSubmit = rows.length > 0 || pendingOk;
+  const goSizesNext = () => {
+    let bs = buckets;
+    if (pendingOk) {
+      bs = buckets.map((b, i) => i === bIdx
+        ? { ...b, rows: [...b.rows, { id: rid.current++, widthRaw, heightRaw, qty }] } : b);
+      setBuckets(bs); setWidthRaw(""); setHeightRaw(""); setQty(1);
+    }
+    if (bIdx < bs.length - 1) setBIdx(bIdx + 1);
+    else finalize(bs);
+  };
 
+  const back = () => {
+    if (phase === "sizes") { if (bIdx > 0) { setBIdx(bIdx - 1); } else { setPhase("config"); setCfgIdx(ordered.length - 1); } return; }
+    if (phase === "config") { if (cfgIdx > 0) setCfgIdx(cfgIdx - 1); else setPhase("types"); return; }
+    onBack();
+  };
+
+  const totalSizes = buckets.reduce((a, b) => a + b.rows.length, 0) + (pendingOk ? 1 : 0);
+  const isLastBucket = bIdx >= buckets.length - 1;
+  const anySizes = totalSizes > 0;
+
+  /* ————— PHASE 1 · types ————— */
+  if (phase === "types") {
+    return (
+      <div className="fade-up flex flex-col gap-5">
+        <Header title="Kya-kya banana hai?" sub="Ek ya zyada chuno — sab ek saath" onBack={back} />
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(TYPE_META) as OpeningType[]).map((t) => (
+            <button key={t} onClick={() => setTypes((p) => toggleArr(p, t))}
+              className={`chip flex flex-col items-center gap-1 py-4 ${types.includes(t) ? "selected" : ""}`}>
+              <span className="text-2xl">{TYPE_META[t].icon}</span>
+              <span className="text-sm font-semibold">{TYPE_META[t].label}</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => { setCfgIdx(0); setPhase("config"); }} disabled={types.length === 0}
+          className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
+          Aage → System chuno
+        </button>
+      </div>
+    );
+  }
+
+  /* ————— PHASE 2 · config (per type) ————— */
+  if (phase === "config") {
+    return (
+      <div className="fade-up flex flex-col gap-5">
+        <Header
+          title={`${TYPE_META[curType].icon} ${TYPE_META[curType].label} — system`}
+          sub={`Step ${cfgIdx + 1} / ${ordered.length} · ek ya zyada chuno`}
+          onBack={back}
+        />
+        <div className="card p-5 flex flex-col gap-5">
+          {curType === "window" && (
+            <>
+              <div>
+                <Label>System</Label>
+                <ChipGroup options={WIN_SYS.map(([v, l, hnt]) => [v as string, l, hnt])} selected={winSys}
+                  onToggle={(v) => setWinSys((p) => toggleArr(p, v))} />
+              </div>
+              {winSys.includes("domal") && (
+                <div>
+                  <Label>Domal — fix patti?</Label>
+                  <ChipGroup options={DOMAL_VAR.map(([v, l]) => [v, l])} selected={domalVar}
+                    onToggle={(v) => setDomalVar((p) => toggleArr(p, v))} />
+                </div>
+              )}
+              {winSys.includes("z_section") && (
+                <div>
+                  <Label>Z-Section — type</Label>
+                  <ChipGroup options={Z_TYPE.map(([v, l]) => [v, l])} selected={zTypes}
+                    onToggle={(v) => setZTypes((p) => toggleArr(p, v))} />
+                </div>
+              )}
+            </>
+          )}
+          {curType === "door" && (
+            <>
+              <div>
+                <Label>Palla (shutter) size</Label>
+                <ChipGroup options={DOOR_PALLA.map(([v, l]) => [v, l])} selected={doorPalla}
+                  onToggle={(v) => setDoorPalla((p) => toggleArr(p, v))} />
+              </div>
+              <div>
+                <Label>Chokhat (frame)</Label>
+                <ChipGroup options={DOOR_CHOKHAT.map(([v, l]) => [v, l])} selected={doorChokhat}
+                  onToggle={(v) => setDoorChokhat((p) => toggleArr(p, v))} />
+              </div>
+            </>
+          )}
+          {curType === "partition" && (
+            <div>
+              <Label>Partition type</Label>
+              <ChipGroup options={PART_VAR.map(([v, l]) => [v, l])} selected={partVar}
+                onToggle={(v) => setPartVar((p) => toggleArr(p, v))} />
+            </div>
+          )}
+        </div>
+        <button onClick={goConfigNext} disabled={!cfgOk}
+          className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
+          {cfgIdx < ordered.length - 1 ? "Aage →" : "Aage → Sizes daalo"}
+        </button>
+      </div>
+    );
+  }
+
+  /* ————— PHASE 3 · sizes (per bucket) ————— */
+  const cur = buckets[bIdx];
   return (
     <div className="fade-up flex flex-col gap-5">
-      <Header title="Naya kaam" sub="Ek saath saari sizes daalo — phir ek baar me material list" onBack={onBack} />
+      <Header
+        title={cur ? `${TYPE_META[cur.type].icon} ${cur.label}` : "Sizes"}
+        sub={`Bucket ${bIdx + 1} / ${buckets.length} · sizes ek ke niche ek daalo`}
+        onBack={back}
+      />
 
-      {/* added rows */}
-      {rows.length > 0 && (
+      {/* bucket progress dots */}
+      {buckets.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {buckets.map((b, i) => (
+            <span key={b.key} className="rounded-full px-2 py-1 text-[10px] font-bold"
+              style={{
+                background: i === bIdx ? "var(--accent)" : "var(--surface-2)",
+                color: i === bIdx ? "#fff" : "var(--ink-3)",
+              }}>
+              {b.label.split(" · ").pop()}{b.rows.length ? ` ·${b.rows.length}` : ""}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* added rows for current bucket */}
+      {cur && cur.rows.length > 0 && (
         <div className="flex flex-col gap-2">
-          {rows.map((r, i) => (
+          {cur.rows.map((r, i) => (
             <div key={r.id} className="card flex items-center gap-3 p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg" style={{ background: "var(--surface-2)" }}>{TYPE_META[r.type].icon}</span>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-bold" style={{ background: "var(--surface-2)" }}>{i + 1}</span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-bold">{i + 1}. {TYPE_META[r.type].label}</div>
-                <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>
+                <div className="text-[11px] tabnum font-semibold" style={{ color: "var(--ink-2)" }}>
                   {formatFtInSut(parseDimension(r.widthRaw)!)} × {formatFtInSut(parseDimension(r.heightRaw)!)} · ×{r.qty}
                 </div>
               </div>
-              <button onClick={() => setRows((p) => p.filter((x) => x.id !== r.id))}
+              <button onClick={() => removeRow(r.id)}
                 className="btn-ghost grid h-8 w-8 place-items-center rounded-full text-sm" title="Hatao">✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* composer */}
+      {/* size composer */}
       <div className="card p-5 flex flex-col gap-5">
-        <div>
-          <Label>{rows.length ? "Aur size jodo" : "Kya banana hai?"}</Label>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {(Object.keys(TYPE_META) as OpeningType[]).map((t) => (
-              <button key={t} onClick={() => setType(t)}
-                className={`chip flex flex-col items-center gap-1 py-3 ${type === t ? "selected" : ""}`}>
-                <span className="text-2xl">{TYPE_META[t].icon}</span>
-                <span className="text-sm font-semibold">{TYPE_META[t].label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Width (chaudai)</Label>
@@ -886,20 +1167,21 @@ function Entry({ onSubmit, onBack }: { onSubmit: (rows: ExtractedItem[]) => void
 
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label>Kitni {TYPE_META[type].plural}?</Label>
+            <Label>Quantity</Label>
             <div className="mt-2"><Stepper value={qty} onChange={setQty} /></div>
           </div>
           <button onClick={addRow} disabled={!pendingOk}
             className="btn-dark flex items-center gap-2 self-end px-5 py-3 disabled:opacity-40">
-            <Ic.Plus size={16} /> List me jodo
+            <Ic.Plus size={16} /> Size jodo
           </button>
         </div>
       </div>
 
-      {/* create */}
-      <button onClick={submit} disabled={!canSubmit}
+      <button onClick={goSizesNext} disabled={!isLastBucket ? false : !anySizes}
         className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
-        {totalOpenings > 0 ? `Material List banao → (${totalOpenings})` : "Material List banao →"}
+        {isLastBucket
+          ? (totalSizes > 0 ? `Material List banao → (${totalSizes})` : "Material List banao →")
+          : "Aage → agla system"}
       </button>
     </div>
   );
