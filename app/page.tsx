@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import QRCode from "qrcode";
 import {
-  parseDimension, formatFtInSut, Um, toFeet, sqft,
+  parseDimension, formatFtInSut, Um, toFeet, sqft, UM_PER_INCH, UM_PER_SUT,
 } from "@/lib/engine/units";
 import {
   generateQuestions, mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
@@ -856,12 +856,20 @@ const Z_TYPE: [string, string][] = [
   ["openable", "Openable"], ["combo", "Fix + Openable"], ["fixed", "Poora Fixed"], ["door", "Door"],
 ];
 
-/** Parse a size honouring the chosen unit — a bare number becomes inches in
- *  "inch" mode; every explicit format (4'6", 4-6-4 sut, 1372mm) still works. */
-function parseWithUnit(raw: string, unit: "feet" | "inch"): Um | null {
+/** Parse a size honouring the chosen unit — no feet here, sirf mm aur inch(+sut).
+ *  mm mode: bare number = mm.
+ *  inch mode: bare number = inches; "54-4" = 54 inch + 4 sut (1 inch = 8 sut).
+ *  Explicit suffixed formats (1372mm, 54", 4'6") still work in either mode. */
+function parseWithUnit(raw: string, unit: "mm" | "inch"): Um | null {
   const s = raw.trim();
   if (!s) return null;
-  if (unit === "inch" && /^\d+(?:\.\d+)?$/.test(s)) return parseDimension(`${s}"`);
+  if (unit === "mm") {
+    if (/^\d+(?:\.\d+)?$/.test(s)) return mm(parseFloat(s));
+    return parseDimension(s);
+  }
+  const is = s.match(/^(\d+)-(\d+)$/); // inch-sut, no feet part
+  if (is) return parseInt(is[1], 10) * UM_PER_INCH + parseInt(is[2], 10) * UM_PER_SUT;
+  if (/^\d+(?:\.\d+)?$/.test(s)) return Math.round(parseFloat(s) * UM_PER_INCH);
   return parseDimension(s);
 }
 const DOOR_PALLA: [string, string][] = [["60", "60×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
@@ -870,7 +878,7 @@ const PART_VAR: [string, string][] = [["no", "Sirf panels"], ["yes", "Door ke sa
 
 const toggleArr = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number; unit: "feet" | "inch" }
+interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number; unit: "mm" | "inch" }
 interface Bucket { key: string; type: OpeningType; meta: Record<string, string>; label: string; rows: SizeRow[] }
 
 /** Multi-select chip row. */
@@ -918,7 +926,7 @@ function Entry({ startId, onBuild, onBack }: {
   // sizes phase
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [bIdx, setBIdx] = useState(0);
-  const [unit, setUnit] = useState<"feet" | "inch">("feet");
+  const [unit, setUnit] = useState<"mm" | "inch">("inch");
   const rid = useRef(1);
   const blank = (): SizeRow => ({ id: rid.current++, widthRaw: "", heightRaw: "", qty: 1, unit });
   const isBlank = (r: SizeRow) => !r.widthRaw.trim() && !r.heightRaw.trim();
@@ -1114,7 +1122,7 @@ function Entry({ startId, onBuild, onBack }: {
   /* ————— PHASE 3 · sizes (per bucket, inline auto-expanding rows) ————— */
   const cur = buckets[bIdx];
   const rows = cur?.rows ?? [];
-  const placeholder = unit === "inch" ? `54  ·  4'6"  ·  4-6-4` : `6  ·  4'6"  ·  54"  ·  4-6-4`;
+  const placeholder = unit === "inch" ? `54  ·  54-4 (54"4s)` : `1372  ·  1372mm`;
   return (
     <div className="fade-up flex flex-col gap-5">
       <Header
@@ -1146,18 +1154,20 @@ function Entry({ startId, onBuild, onBack }: {
       <div className="flex items-center gap-3">
         <Label>Unit</Label>
         <div className="flex overflow-hidden rounded-lg border-2" style={{ borderColor: "var(--steel)" }}>
-          {(["feet", "inch"] as const).map((u) => (
+          {(["mm", "inch"] as const).map((u) => (
             <button key={u} onClick={() => setUnit(u)}
               className="px-4 py-1.5 text-sm font-bold"
               style={{
                 background: unit === u ? "var(--accent)" : "var(--surface-2)",
                 color: unit === u ? "#fff" : "var(--ink-2)",
               }}>
-              {u === "feet" ? "Feet" : "Inch"}
+              {u === "mm" ? "MM" : "Inch"}
             </button>
           ))}
         </div>
-        <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>· sut: 4-6-4 likho</span>
+        <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+          {unit === "inch" ? "· sut ke liye 54-4 (1 inch = 8 sut)" : "· sirf mm daalo"}
+        </span>
       </div>
 
       {/* inline size rows */}
@@ -1197,8 +1207,8 @@ function Entry({ startId, onBuild, onBack }: {
                   style={{ color: rw && rh && !over ? "var(--good)" : "var(--bad)" }}>
                   {rw && rh
                     ? over
-                      ? "⚠️ bahut bada — feet ki jagah inch mode try karo"
-                      : `= ${formatFtInSut(rw)} × ${formatFtInSut(rh)}${r.qty > 1 ? ` · ×${r.qty}` : ""} · ${r.unit === "inch" ? "inch" : "feet"}`
+                      ? "⚠️ ye size bahut bada lag raha hai — unit check karo"
+                      : `= ${formatFtInSut(rw)} × ${formatFtInSut(rh)}${r.qty > 1 ? ` · ×${r.qty}` : ""} · ${r.unit === "inch" ? "inch" : "mm"}`
                     : "width & height dono daalo"}
                 </div>
               )}
