@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import QRCode from "qrcode";
 import {
@@ -1577,6 +1578,23 @@ function AddMore({
  *  action on Material rather than its own tab. */
 type Tab = "aluminium" | "cutting" | "offcuts" | "threed" | "quote";
 
+/** Renders into <body>, so `position: fixed` is measured against the viewport
+ *  even when an ancestor has a transform (our fade-up animation does). */
+function BodyPortal({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
+  return ready ? createPortal(children, document.body) : null;
+}
+
+/** [id, icon, desktop label, mobile label] — one source for both switchers. */
+const TAB_DEFS: [Tab, string, string, string][] = [
+  ["aluminium", "📦", "Material", "Material"],
+  ["cutting", "🔧", "🔧 Workshop", "Workshop"],
+  ["offcuts", "♻️", "♻️ Offcuts", "Offcuts"],
+  ["threed", "✨", "✨ 3D", "3D"],
+  ["quote", "💰", "💰 Quotation", "Quote"],
+];
+
 /** Customer-facing name + spec line for a job item (no engineering jargon). */
 function itemName(it: JobItem): string {
   if (it.type === "door") return "Aluminium Door";
@@ -1750,7 +1768,7 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
   }, [scrapPct, grandPayable, customer, onSnapshot]);
 
   return (
-    <div className="result-view fade-up flex flex-col gap-4">
+    <div className="result-view fade-up flex flex-col gap-4 pb-24 sm:pb-0">
       {tab === "quote" ? (
         <div className="no-print flex items-center justify-between">
           <div>
@@ -1796,24 +1814,45 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         </>
       )}
 
-      {/* tabs */}
-      <div className="no-print flex gap-1 overflow-x-auto rounded-xl p-1" style={{ background: "var(--surface-2)" }}>
-        {([
-          ["aluminium", "Material"],
-          ["cutting", "🔧 Workshop"],
-          ["offcuts", `♻️ Offcuts${offcutCandidates.length ? ` (${offcutCandidates.length})` : ""}`],
-          ["threed", "✨ 3D"],
-          ["quote", "💰 Quotation"],
-        ] as [Tab, string][]).map(([t, label]) => (
+      {/* Output switcher. On a phone the top strip cut the last two tabs off
+          screen — Quotation, the tab that wins the customer, was undiscoverable.
+          So on mobile it moves to a fixed bottom bar (all five visible, within
+          thumb reach) and the top strip is desktop-only. */}
+      <div className="no-print hidden gap-1 overflow-x-auto rounded-xl p-1 sm:flex" style={{ background: "var(--surface-2)" }}>
+        {TAB_DEFS.map(([t, , label]) => (
           <button key={t} onClick={() => setTab(t)}
             className="whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-all"
             style={tab === t
               ? { background: "var(--surface)", boxShadow: "var(--shadow)", color: "var(--ink)" }
               : { color: "var(--ink-2)" }}>
-            {label}
+            {label}{t === "offcuts" && offcutCandidates.length ? ` (${offcutCandidates.length})` : ""}
           </button>
         ))}
       </div>
+
+      {/* Portalled to <body>: .result-view runs a fade-up transform, which would
+          make it the containing block and pin this bar to the bottom of the
+          CONTENT instead of the screen. */}
+      <BodyPortal>
+        <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 sm:hidden"
+          style={{
+            background: "var(--surface)", borderTop: "1px solid var(--line)",
+            paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 20px rgba(0,0,0,.10)",
+          }}>
+          {TAB_DEFS.map(([t, icon, , short]) => (
+            <button key={t} onClick={() => { setTab(t); window.scrollTo({ top: 0 }); }}
+              className="relative flex flex-col items-center gap-0.5 py-2.5"
+              style={{ color: tab === t ? "var(--accent)" : "var(--ink-3)" }}>
+              <span className="text-[17px] leading-none">{icon}</span>
+              <span className="text-[10px] font-bold leading-none">{short}</span>
+              {t === "offcuts" && offcutCandidates.length > 0 && (
+                <span className="absolute right-3 top-1.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white"
+                  style={{ background: "var(--good)" }}>{offcutCandidates.length}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+      </BodyPortal>
 
       {tab === "aluminium" && (
         <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} waText={waText}
@@ -2836,12 +2875,16 @@ function CuttingPanel({ list, shop, items, plan }: {
             </div>
             {/* CUT LIST — har row batati hai maal kahan se aayega, taaki cutter
                 galti se naya pipe na kaat de */}
+            {/* No minWidth and no tick column on a phone: a cut list that needs
+                sideways scrolling is useless standing at the saw. The tick box
+                comes back on wider screens and in print. */}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 460 }}>
+              <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
                     {["Length", "Tukde", "Kahan se kaatna", "Kis kaam ka", "✓ mark"].map((h, i) => (
-                      <th key={h} className="px-3 py-2 text-[11px] font-bold uppercase tracking-wide"
+                      <th key={h}
+                        className={`px-2 py-2 text-[11px] font-bold uppercase tracking-wide sm:px-3 ${i === 4 ? "hidden sm:table-cell" : ""}`}
                         style={{ textAlign: i === 1 ? "center" : "left" }}>{h}</th>
                     ))}
                   </tr>
@@ -2852,16 +2895,16 @@ function CuttingPanel({ list, shop, items, plan }: {
                       borderBottom: "1px solid var(--surface-2)",
                       background: g.fromLeftover ? "var(--good-soft)" : undefined,
                     }}>
-                      <td className="px-3 py-2.5 mono text-base font-bold" style={{ color: "var(--accent)" }}>{g.label}</td>
-                      <td className="px-3 py-2.5 text-center">
+                      <td className="px-2 py-2.5 mono text-base font-bold sm:px-3" style={{ color: "var(--accent)" }}>{g.label}</td>
+                      <td className="px-2 py-2.5 text-center sm:px-3">
                         <span className="display text-lg font-extrabold tabnum">{g.count}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] font-bold"
+                      <td className="px-2 py-2.5 text-[11.5px] font-bold sm:px-3"
                         style={{ color: g.fromLeftover ? "var(--good)" : "var(--ink-2)" }}>
-                        {g.fromLeftover ? "♻️ Bache hue tukde se" : "Naye pipe se"}
+                        {g.fromLeftover ? "♻️ Bache tukde se" : "Naye pipe se"}
                       </td>
-                      <td className="px-3 py-2.5 text-xs" style={{ color: "var(--ink-2)" }}>{g.forWhat}</td>
-                      <td className="px-3 py-2.5"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
+                      <td className="px-2 py-2.5 text-xs sm:px-3" style={{ color: "var(--ink-2)" }}>{g.forWhat}</td>
+                      <td className="hidden px-3 py-2.5 sm:table-cell"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -192,7 +192,7 @@ export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: Ma
       <div style={{ padding: "0 16px 14px" }}>
         <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, margin: "6px 0 8px" }}>Parts Schedule (per unit)</div>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 340 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#f6f8fa", color: DIM }}>
                 {["Part / Section", "Position", "Qty", "Cut length"].map((h, i) => (

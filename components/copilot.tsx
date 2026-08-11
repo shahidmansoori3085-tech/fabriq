@@ -66,16 +66,16 @@ export function Copilot() {
       {/* launcher */}
       {!open && (
         <button onClick={() => setOpen(true)}
-          className="no-print fixed z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-lg"
-          style={{ right: 16, bottom: 16, background: "linear-gradient(180deg,var(--accent-2),var(--accent))", boxShadow: "var(--shadow-accent)" }}>
+          className="copilot-float no-print fixed z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-lg"
+          style={{ right: 16, background: "linear-gradient(180deg,var(--accent-2),var(--accent))", boxShadow: "var(--shadow-accent)" }}>
           <SparkIcon /> Ask FabriQ
         </button>
       )}
 
       {/* chat panel */}
       {open && (
-        <div className="no-print fixed z-40 flex flex-col overflow-hidden rounded-2xl"
-          style={{ right: 16, bottom: 16, width: "min(400px, calc(100vw - 32px))", height: "min(560px, calc(100vh - 90px))",
+        <div className="copilot-float no-print fixed z-40 flex flex-col overflow-hidden rounded-2xl"
+          style={{ right: 16, width: "min(400px, calc(100vw - 32px))", height: "min(560px, calc(100vh - 90px))",
             background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }}>
           {/* header */}
           <div className="flex items-center justify-between px-4 py-3" style={{ background: "linear-gradient(120deg,#14181d,#232a34)", color: "#fff" }}>

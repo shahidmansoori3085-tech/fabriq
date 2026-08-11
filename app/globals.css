@@ -252,3 +252,10 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.02em
   body.printing-sheet { background: #fff; }
   .print-sheet .card { break-inside: avoid; }
 }
+
+/* Floating Copilot sits 16px off the bottom — except on a phone inside a job,
+   where the output bottom-bar lives there. Then it rides above the bar. */
+.copilot-float { bottom: calc(16px + env(safe-area-inset-bottom)); }
+@media (max-width: 639px) {
+  body:has(.result-view) .copilot-float { bottom: calc(74px + env(safe-area-inset-bottom)); }
+}
