@@ -13,6 +13,7 @@ import { estimate } from "@/lib/engine/estimator";
 import { getSection, SECTIONS } from "@/lib/engine/sections";
 import { costJob, inr, type JobCost } from "@/lib/engine/pricing";
 import { findOffcuts, loadOffcuts, addOffcuts, removeOffcut, totalOffcutFt, type Offcut, type OffcutCandidate } from "@/lib/engine/offcuts";
+import { planOffcutUse, EMPTY_PLAN, type OffcutPlan } from "@/lib/offcut-plan";
 import {
   loadProjects, saveProject, patchProject, removeProject, newProjectId, autoTitle, totalSqft,
   type ProjectRec,
@@ -598,7 +599,7 @@ function OffcutBank({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="fade-up flex flex-col gap-5">
-      <Header title="♻️ Offcut Bank" sub="Workshop me pade leftover tukde — agle kaam me apne aap lag jayenge" onBack={onBack} />
+      <Header title="♻️ Offcut Bank" sub="Pade hue tukde — agli material list me apne aap lag jayenge" onBack={onBack} />
 
       <div className="card flex items-center justify-between p-4" style={{ background: "var(--good-soft)" }}>
         <div>
@@ -776,7 +777,7 @@ function Home({
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl" style={{ background: "var(--good-soft)", color: "var(--good)" }}><Ic.Recycle size={24} /></span>
         <div className="flex-1">
           <div className="display text-[15px] font-bold">♻️ Offcut Bank {bank.length > 0 && <span className="text-xs font-semibold" style={{ color: "var(--good)" }}>· {bankFt.toFixed(0)}&apos; stock</span>}</div>
-          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Har job ke bache tukde yahan jama karo — kaunsa tukda kis kaam aa sakta hai, dikh jayega</div>
+          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Bache tukde yahan jama karo — agli material list me apne aap lagenge, utni pipe kam khareedni padegi</div>
         </div>
         <span style={{ color: "var(--ink-3)" }}><Ic.ArrowRight size={20} /></span>
       </button>
@@ -1677,6 +1678,33 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
   const cost = useMemo(() => (list ? costJob(list, aluRate) : null), [list, aluRate]);
   const offcutCandidates = useMemo(() => (list ? findOffcuts(list.bars) : []), [list]);
 
+  // What the saved bank can serve for THIS job. Recomputed when the bank
+  // changes (bankVer) so confirming a use immediately refreshes the plan.
+  const [bankVer, setBankVer] = useState(0);
+  const rawPlan = useMemo(
+    () => (list ? planOffcutUse(list.pieces, loadOffcuts()) : EMPTY_PLAN),
+    [list, bankVer],
+  );
+  /** Using shop stock is the fabricator's decision, not ours — until he turns
+   *  it on, every list shows plain "buy it all" numbers. Once on, BOTH the
+   *  material list and the workshop sheet switch to the stock-aware plan. */
+  const [useStock, setUseStock] = useState(false);
+  const offcutPlan = useStock ? rawPlan : EMPTY_PLAN;
+  /** Fabricator confirms he actually cut from the bank: consume those pieces
+   *  and put any still-usable remainder back. Never silent — always his call. */
+  const applyOffcutPlan = () => {
+    for (const id of offcutPlan.consumedIds) removeOffcut(id);
+    if (offcutPlan.leftovers.length) {
+      addOffcuts(
+        offcutPlan.leftovers.map((l, i) => ({
+          key: `cut-${Date.now()}-${i}`, sectionId: l.sectionId, length: l.length, barNo: 0,
+        })),
+        "Bank se kaata",
+      );
+    }
+    setBankVer((v) => v + 1);
+  };
+
   if (error || !list) {
     const friendly = error?.startsWith("Piece longer than 16 feet")
       ? `${error} — ye size shayad galat unit mein daali gayi hai. Feet ki jagah agar inch chahiye tha, wapas jaake number ke aage " lagao (jaise 66").`
@@ -1737,14 +1765,26 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
             <button onClick={onNew} className="btn-ghost px-4 py-2 text-sm no-print">✚ Naya</button>
           </div>
 
-          {/* big numbers */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="16' Pipes" value={list.totals.bars16} />
-            <Stat label="8' Pipes" value={list.totals.bars8} />
-            <Stat label="Total Pipes" value={fmtPipes(list.totals.bars16 + list.totals.bars8 * 0.5)} tone="accent" />
-            <Stat label="Scrap" value={`${list.totals.wastePct}%`}
-              tone={list.totals.wastePct > 20 ? "warn" : "good"} />
-          </div>
+          {/* big numbers — the hero is what to actually BUY, with the full
+              requirement shown underneath so nothing is hidden */}
+          {(() => {
+            const need = list.totals.bars16 + list.totals.bars8 * 0.5;
+            const buy = Math.max(0, need - offcutPlan.pipesSaved);
+            return (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat label="16' Pipes" value={list.totals.bars16} />
+                <Stat label="8' Pipes" value={list.totals.bars8} />
+                {offcutPlan.pipesSaved > 0 ? (
+                  <Stat label="Khareedo" value={fmtPipes(buy)} tone="good"
+                    sub={`${fmtPipes(need)} chahiye · ${fmtPipes(offcutPlan.pipesSaved)} bank se`} />
+                ) : (
+                  <Stat label="Total Pipes" value={fmtPipes(need)} tone="accent" />
+                )}
+                <Stat label="Scrap" value={`${list.totals.wastePct}%`}
+                  tone={list.totals.wastePct > 20 ? "warn" : "good"} />
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -1767,8 +1807,12 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         ))}
       </div>
 
-      {tab === "aluminium" && <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} waText={waText} />}
-      {tab === "cutting" && <CuttingPanel list={list} shop={shop} items={items} />}
+      {tab === "aluminium" && (
+        <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} waText={waText}
+          plan={offcutPlan} rawPlan={rawPlan} useStock={useStock} onToggleStock={setUseStock}
+          onUseBank={applyOffcutPlan} />
+      )}
+      {tab === "cutting" && <CuttingPanel list={list} shop={shop} items={items} plan={offcutPlan} />}
       {tab === "offcuts" && <OffcutsPanel candidates={offcutCandidates} aluRate={aluRate} jobLabel={items[0] ? itemName(items[0]) : undefined} />}
       {tab === "threed" && (
         <div className="flex flex-col gap-3">
@@ -1994,15 +2038,25 @@ function ShopModal({ shop, onSave, onClose }: { shop: ShopProfile; onSave: (s: S
 /* —— result sub-panels —— */
 
 function AluminiumPanel({
-  list, cost, aluRate, onRate, waText,
+  list, cost, aluRate, onRate, waText, plan, rawPlan, useStock, onToggleStock, onUseBank,
 }: {
   list: MaterialList;
   cost: JobCost | null;
   aluRate: number;
   onRate: (v: number) => void;
   waText: string;
+  plan: OffcutPlan;
+  rawPlan: OffcutPlan;
+  useStock: boolean;
+  onToggleStock: (v: boolean) => void;
+  onUseBank: () => void;
 }) {
   const [showCatalogue, setShowCatalogue] = useState(false);
+  const planBySection = useMemo(() => {
+    const m = new Map<string, (typeof plan.sections)[number]>();
+    for (const s of plan.sections) m.set(s.sectionId, s);
+    return m;
+  }, [plan]);
   const costBySection = useMemo(() => {
     const m = new Map<string, number>();
     cost?.sections.forEach((c) => m.set(c.sectionId, c.scrapCost));
@@ -2018,6 +2072,10 @@ function AluminiumPanel({
     <div className="flex flex-col gap-3">
       {/* money-visible scrap strip */}
       <MoneyScrap cost={cost} aluRate={aluRate} onRate={onRate} totalWastePct={list.totals.wastePct} />
+
+      {/* stock offer / applied plan */}
+      <OffcutSavings plan={plan} rawPlan={rawPlan} useStock={useStock}
+        onToggleStock={onToggleStock} aluRate={aluRate} onUseBank={onUseBank} />
 
       {/* premium per-section cards — pipe ka NAAM, size nahi */}
       {list.sections.map((s) => {
@@ -2047,6 +2105,23 @@ function AluminiumPanel({
               <MetricChip label={`${halfFt}' pipe`} value={s.bars8 || "—"} />
               <MetricChip label="Scrap" value={`${s.wastePct}%`} tone={s.wastePct > 20 ? "warn" : undefined} />
             </div>
+            {(() => {
+              const sp = planBySection.get(s.sectionId);
+              if (!sp) return null;
+              const saved = Math.max(0, sp.pipesBefore - sp.pipesAfter);
+              const cuts = sp.uses.reduce((a, u) => a + u.pieces.length, 0);
+              return (
+                <div className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-[11px]"
+                  style={{ background: "var(--good-soft)" }}>
+                  <span style={{ color: "var(--ink-2)" }}>
+                    ♻️ {cuts} cutting bache hue tukdon se — sirf {fmtPipes(sp.pipesAfter)} pipe khareedo
+                  </span>
+                  {saved > 0 && (
+                    <span className="mono font-bold" style={{ color: "var(--good)" }}>−{fmtPipes(saved)} pipe</span>
+                  )}
+                </div>
+              );
+            })()}
             {priced && scrapRs > 0 && (
               <div className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-[11px]"
                 style={{ background: s.wastePct > 20 ? "var(--warn-soft)" : "var(--surface-2)" }}>
@@ -2058,19 +2133,34 @@ function AluminiumPanel({
         );
       })}
 
-      {/* grand total */}
-      <div className="card flex items-center justify-between p-4" style={{ background: "var(--accent-soft)" }}>
-        <div>
-          <div className="eyebrow" style={{ color: "var(--accent)" }}>Total Aluminium</div>
-          <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>
-            {list.totals.bars16} × 16&apos;{list.totals.bars8 ? ` + ${list.totals.bars8} × 8'` : ""} · scrap {list.totals.wastePct}%
+      {/* grand total — hero is what to buy once the bank is counted */}
+      {(() => {
+        const buy = Math.max(0, totalPipes - plan.pipesSaved);
+        const saving = plan.pipesSaved > 0;
+        return (
+          <div className="card flex items-center justify-between p-4"
+            style={{ background: saving ? "var(--good-soft)" : "var(--accent-soft)" }}>
+            <div>
+              <div className="eyebrow" style={{ color: saving ? "var(--good)" : "var(--accent)" }}>
+                {saving ? "Khareedna kitna hai" : "Total Aluminium"}
+              </div>
+              <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>
+                {list.totals.bars16} × 16&apos;{list.totals.bars8 ? ` + ${list.totals.bars8} × 8'` : ""} · scrap {list.totals.wastePct}%
+              </div>
+              {saving && (
+                <div className="text-[11px] font-semibold" style={{ color: "var(--good)" }}>
+                  {fmtPipes(totalPipes)} chahiye — {fmtPipes(plan.pipesSaved)} bank se aa jayegi
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="display text-3xl font-extrabold tabnum"
+                style={{ color: saving ? "var(--good)" : "var(--accent)" }}>{fmtPipes(buy)}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>pipes</div>
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <div className="display text-3xl font-extrabold tabnum" style={{ color: "var(--accent)" }}>{fmtPipes(totalPipes)}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>pipes</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* glass / jali / sheet — same list, neeche */}
       <GlassBlock list={list} />
@@ -2154,6 +2244,118 @@ function GlassBlock({ list }: { list: MaterialList }) {
         </div>
       ))}
     </>
+  );
+}
+
+/**
+ * Offcut Bank ka asli faayda — kitni pipe kam khareedni padegi.
+ * Sirf tab dikhta hai jab bank se sach me kuch kaam aa raha ho, aur ₹ tabhi
+ * jab fabricator ne apna rate diya ho. Koi bana hua number nahi.
+ */
+function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseBank }: {
+  plan: OffcutPlan; rawPlan: OffcutPlan; useStock: boolean;
+  onToggleStock: (v: boolean) => void; aluRate: number; onUseBank: () => void;
+}) {
+  // Snapshot at confirm time: once the bank is consumed the plan goes empty,
+  // but the fabricator must still see what he just did.
+  const [applied, setApplied] = useState<{ cuts: number; pipes: number; rupees: number } | null>(null);
+
+  const cuts = plan.uses.reduce((a, u) => a + u.pieces.length, 0);
+  // ₹ is on pipe NOT bought — not on the metal pulled out of the bank.
+  const rupees = aluRate > 0 ? Math.round(plan.feetSaved * aluRate) : 0;
+
+  // Stock available but not switched on yet — offer it, don't force it.
+  if (!useStock && !applied) {
+    if (!rawPlan.uses.length) return null;
+    const offerCuts = rawPlan.uses.reduce((a, u) => a + u.pieces.length, 0);
+    const offerRs = aluRate > 0 ? Math.round(rawPlan.feetSaved * aluRate) : 0;
+    return (
+      <div className="card p-4" style={{ background: "var(--good-soft)", border: "1px solid var(--good)" }}>
+        <div className="display text-[15px] font-extrabold">
+          ♻️ Dukaan me pade tukdon se {offerCuts} {offerCuts === 1 ? "cutting" : "cutting"} nikal jayegi
+        </div>
+        <div className="mt-1 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
+          Pichle kaam ke jo tukde bach gaye the, unme se {offerCuts} cutting nikal sakti hai —
+          phir <b style={{ color: "var(--good)" }}>{fmtPipes(rawPlan.pipesSaved)} pipe kam</b> khareedni padegi
+          {offerRs > 0 ? `, lagbhag ${inr(offerRs)} ki bachat` : ""}.
+          Material list aur cutting list dono usi hisaab se ban jayengi.
+        </div>
+        <button onClick={() => onToggleStock(true)} className="btn-dark mt-3 w-full py-3 text-sm">
+          Bache hue tukde laga kar list banao
+        </button>
+      </div>
+    );
+  }
+
+  if (applied) {
+    return (
+      <div className="card p-3.5" style={{ background: "var(--good-soft)" }}>
+        <div className="text-[12.5px] font-bold" style={{ color: "var(--good)" }}>
+          ✓ Bank se {applied.cuts} {applied.cuts === 1 ? "tukda" : "tukde"} kaat liye
+        </div>
+        <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
+          {fmtPipes(applied.pipes)} pipe kam khareedni padi{applied.rupees > 0 ? ` — ${inr(applied.rupees)} bachi` : ""}.
+          Bank update ho gaya, kaam layak bacha hua tukda wapas jama ho gaya.
+        </div>
+      </div>
+    );
+  }
+
+  if (!plan.uses.length) return null;
+
+  return (
+    <div className="card p-4" style={{ background: "var(--good-soft)", border: "1px solid var(--good)" }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="display text-[15px] font-extrabold">
+            ♻️ Bache hue tukde lag gaye — dono list update ho gayi
+          </div>
+          <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
+            {cuts} {cuts === 1 ? "cutting" : "cutting"} ({plan.feetFromBank}′) pade hue maal se ho jayegi —{" "}
+            {fmtPipes(plan.pipesSaved)} pipe kam khareedni padegi
+            {rupees > 0 ? `, lagbhag ${inr(rupees)} bachat` : ""}.
+            Cutting list me har line par likha hai ki wo tukda naye pipe se kaatna hai ya bache hue se.
+          </div>
+        </div>
+        {plan.pipesSaved > 0 && (
+          <div className="shrink-0 text-right">
+            <div className="display text-2xl font-extrabold tabnum" style={{ color: "var(--good)" }}>
+              −{fmtPipes(plan.pipesSaved)}
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>pipe</div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-1">
+        {plan.uses.map((u, i) => (
+          <div key={i} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+            <span className="font-bold" style={{ color: "var(--ink-2)" }}>
+              {getSection(u.offcut.sectionId).label} · {formatFtInSut(u.offcut.length)}
+            </span>
+            <span className="mono" style={{ color: "var(--ink)" }}>
+              → {u.pieces.map((p) => formatFtInSut(p.length)).join(" + ")}
+            </span>
+            {u.leftover > 0 && (
+              <span className="mono" style={{ color: "var(--ink-3)" }}>· bachega {formatFtInSut(u.leftover)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        <button onClick={() => onToggleStock(false)} className="btn-ghost px-4 py-3 text-sm">
+          Hatao
+        </button>
+        <button onClick={() => { setApplied({ cuts, pipes: plan.pipesSaved, rupees }); onUseBank(); }}
+          className="btn-dark flex-1 py-3 text-sm">
+          Kaat liye — bank se hata do
+        </button>
+      </div>
+      <p className="mt-1.5 text-center text-[10.5px]" style={{ color: "var(--ink-3)" }}>
+        Ye tabhi dabaye jab tukde sach me kaat liye ho — tabhi wo bank se hatenge.
+      </p>
+    </div>
   );
 }
 
@@ -2432,26 +2634,51 @@ function baseRole(role: string): string {
   return role.replace(/^S\d+\s+/, "").replace(/\s*\((Jali|Glass|Sheet)\)\s*$/i, "").trim();
 }
 
-/** Same-length tukde ek hi row me — "57\" × 5", paanch alag rows nahi. */
-function groupCuts(bars: PackedBar[]) {
+interface CutRow {
+  key: string; label: string; count: number; forWhat: string;
+  /** true = ye tukde dukaan me pade bache hue maal se kaatne hain */
+  fromLeftover: boolean;
+}
+
+function rollUp(pieces: CutPiece[]) {
   const map = new Map<number, { count: number; roles: Set<string>; items: Set<string> }>();
-  for (const b of bars) for (const p of b.pieces) {
+  for (const p of pieces) {
     const e = map.get(p.length) ?? { count: 0, roles: new Set<string>(), items: new Set<string>() };
     e.count += 1; e.roles.add(baseRole(p.role)); e.items.add(p.itemId);
     map.set(p.length, e);
   }
-  return [...map.entries()]
-    .sort((a, b) => b[0] - a[0])
-    .map(([len, e]) => {
-      const roles = [...e.roles];
-      const shown = roles.slice(0, 3).join(" · ") + (roles.length > 3 ? ` +${roles.length - 3}` : "");
-      return {
-        key: String(len),
-        label: formatFtInSut(len),
-        count: e.count,
-        forWhat: `${shown} — ${[...e.items].join(", ")}`,
-      };
+  return map;
+}
+
+/**
+ * Ek cut list — same length ek hi row me ("57\" × 5", paanch rows nahi), aur
+ * har row batati hai maal kahan se aayega: naya pipe ya dukaan me pada tukda.
+ * Dono ek hi table me hain taaki cutter se koi row chhoot na jaye.
+ */
+function buildCutRows(bars: PackedBar[], leftoverPieces: CutPiece[]): CutRow[] {
+  const fresh = rollUp(bars.flatMap((b) => b.pieces));
+  const used = rollUp(leftoverPieces);
+
+  const rows: CutRow[] = [];
+  const push = (len: number, e: { count: number; roles: Set<string>; items: Set<string> }, fromLeftover: boolean) => {
+    const roles = [...e.roles];
+    const shown = roles.slice(0, 3).join(" · ") + (roles.length > 3 ? ` +${roles.length - 3}` : "");
+    rows.push({
+      key: `${fromLeftover ? "L" : "N"}${len}`,
+      label: formatFtInSut(len),
+      count: e.count,
+      forWhat: `${shown} — ${[...e.items].join(", ")}`,
+      fromLeftover,
     });
+  };
+  for (const [len, e] of used) push(len, e, true);
+  for (const [len, e] of fresh) push(len, e, false);
+
+  // lambe tukde pehle; ek hi length par pade-maal wali row upar
+  return rows.sort((a, b) => {
+    const la = parseFloat(a.key.slice(1)), lb = parseFloat(b.key.slice(1));
+    return lb - la || (a.fromLeftover === b.fromLeftover ? 0 : a.fromLeftover ? -1 : 1);
+  });
 }
 
 /** Ek pipe ki packing ek line me: 57" ×3 + 42" */
@@ -2478,7 +2705,14 @@ function StepBar({ n, title, sub }: { n: number; title: string; sub: string }) {
   );
 }
 
-function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopProfile; items: JobItem[] }) {
+function CuttingPanel({ list, shop, items, plan }: {
+  list: MaterialList; shop: ShopProfile; items: JobItem[]; plan: OffcutPlan;
+}) {
+  const planBySection = useMemo(() => {
+    const m = new Map<string, (typeof plan.sections)[number]>();
+    for (const s of plan.sections) m.set(s.sectionId, s);
+    return m;
+  }, [plan]);
   const sectionGroups = useMemo(() => {
     const map = new Map<string, typeof list.bars>();
     for (const b of list.bars) {
@@ -2498,14 +2732,21 @@ function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopPro
       !s.sectionId.startsWith("door_") &&
       !s.sectionId.startsWith("partition_")
   );
-  const totalBars = list.totals.bars16 + list.totals.bars8;
   const totalPieces = list.bars.reduce((a, b) => a + b.pieces.length, 0);
+  // Pipes the shop actually buys, in the same full-bar units the material list
+  // uses — so both sheets always quote the same number.
+  const needPipes = list.totals.bars16 + list.totals.bars8 * 0.5;
+  const buyPipes = Math.max(0, needPipes - plan.pipesSaved);
+  const stockCuts = plan.uses.reduce((a, u) => a + u.pieces.length, 0);
 
   return (
     <div className="print-sheet flex flex-col gap-4">
       <SheetHeader shop={shop} title="WORKSHOP CUTTING SHEET" stats={
         <>
-          <SheetStat label="Total Pipes" value={String(totalBars)} tone="var(--accent)" />
+          <SheetStat label={stockCuts ? "Naye Pipe" : "Total Pipes"} value={fmtPipes(buyPipes)} tone="var(--accent)" />
+          {stockCuts > 0 && (
+            <SheetStat label="Bache tukdon se" value={`${stockCuts} cutting`} tone="var(--good)" />
+          )}
           <SheetStat label="Cut Pieces" value={String(totalPieces)} />
           <SheetStat label="Sections" value={String(sectionGroups.length)} />
           <SheetStat label="Scrap" value={`${list.totals.wastePct}%`} tone={list.totals.wastePct > 20 ? "var(--warn)" : "var(--good)"} />
@@ -2539,8 +2780,13 @@ function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopPro
         </div>
       )}
 
-      {sectionGroups.map(([sectionId, bars]) => {
+      {sectionGroups.map(([sectionId, engineBars]) => {
         const sec = getSection(sectionId);
+        const sp = planBySection.get(sectionId);
+        // With shop stock switched on, the workshop follows the re-packed plan:
+        // some cuts come off stock pieces, the rest off fewer fresh bars.
+        const bars = sp ? sp.barsAfter : engineBars;
+        const stockPieces = sp ? sp.uses.flatMap((u) => u.pieces) : [];
         const b16 = bars.filter((b) => Math.round(toFeet(b.barLength)) >= 15).length;
         const b8 = bars.length - b16;
         return (
@@ -2558,23 +2804,31 @@ function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopPro
             <div className="border-b px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
               <SectionDrawing sectionId={sectionId} />
             </div>
-            {/* CUT LIST — ek length ek hi baar, qty ke saath (5 baar 57" nahi) */}
+            {/* CUT LIST — har row batati hai maal kahan se aayega, taaki cutter
+                galti se naya pipe na kaat de */}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 420 }}>
+              <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 460 }}>
                 <thead>
                   <tr style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                    {["Length", "Tukde", "Kis kaam ka", "✓ mark"].map((h, i) => (
+                    {["Length", "Tukde", "Kahan se kaatna", "Kis kaam ka", "✓ mark"].map((h, i) => (
                       <th key={h} className="px-3 py-2 text-[11px] font-bold uppercase tracking-wide"
                         style={{ textAlign: i === 1 ? "center" : "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {groupCuts(bars).map((g) => (
-                    <tr key={g.key} style={{ borderBottom: "1px solid var(--surface-2)" }}>
+                  {buildCutRows(bars, stockPieces).map((g) => (
+                    <tr key={g.key} style={{
+                      borderBottom: "1px solid var(--surface-2)",
+                      background: g.fromLeftover ? "var(--good-soft)" : undefined,
+                    }}>
                       <td className="px-3 py-2.5 mono text-base font-bold" style={{ color: "var(--accent)" }}>{g.label}</td>
                       <td className="px-3 py-2.5 text-center">
                         <span className="display text-lg font-extrabold tabnum">{g.count}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-[11.5px] font-bold"
+                        style={{ color: g.fromLeftover ? "var(--good)" : "var(--ink-2)" }}>
+                        {g.fromLeftover ? "♻️ Bache hue tukde se" : "Naye pipe se"}
                       </td>
                       <td className="px-3 py-2.5 text-xs" style={{ color: "var(--ink-2)" }}>{g.forWhat}</td>
                       <td className="px-3 py-2.5"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
@@ -2583,16 +2837,30 @@ function CuttingPanel({ list, shop, items }: { list: MaterialList; shop: ShopPro
                 </tbody>
               </table>
             </div>
-            {/* pipe-wise packing — ek pipe ek line, taaki scrap kam rahe */}
+
+            {/* kaunsa maal uthana hai — pade tukde pehle, phir naye pipe */}
             <div className="border-t px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
               <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                Konsi pipe se kya kaatna
+                Kaunsa maal uthao, usme se kya kaatna
               </div>
               <div className="flex flex-col gap-1">
+                {sp?.uses.map((u, i) => (
+                  <div key={`l${i}`} className="flex flex-wrap items-baseline gap-x-2 rounded px-1.5 py-0.5 text-[11px]"
+                    style={{ background: "var(--good-soft)" }}>
+                    <span className="font-bold" style={{ color: "var(--good)" }}>
+                      ♻️ Bacha hua {formatFtInSut(u.offcut.length)} ka tukda
+                      {u.offcut.jobLabel ? ` — ${u.offcut.jobLabel}` : ""}
+                    </span>
+                    <span className="mono font-bold" style={{ color: "var(--ink)" }}>{packLine(u.pieces)}</span>
+                    {u.leftover > 0 && (
+                      <span className="mono" style={{ color: "var(--ink-3)" }}>· phir bhi bachega {formatFtInSut(u.leftover)}</span>
+                    )}
+                  </div>
+                ))}
                 {bars.map((bar, bi) => (
-                  <div key={bi} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+                  <div key={`n${bi}`} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
                     <span className="font-bold" style={{ color: "var(--ink-2)" }}>
-                      Pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
+                      Naya pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
                     </span>
                     <span className="mono" style={{ color: "var(--ink)" }}>
                       {packLine(bar.pieces)}
@@ -2635,7 +2903,9 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "good" | "warn" | "accent" }) {
+function Stat({ label, value, tone, sub }: {
+  label: string; value: string | number; tone?: "good" | "warn" | "accent"; sub?: string;
+}) {
   return (
     <div className="card px-2 py-3.5 text-center">
       <div className="display text-2xl font-extrabold"
@@ -2645,6 +2915,9 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
       <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
         {label}
       </div>
+      {sub && (
+        <div className="mt-0.5 text-[10px] leading-tight" style={{ color: "var(--ink-3)" }}>{sub}</div>
+      )}
     </div>
   );
 }
