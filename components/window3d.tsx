@@ -351,3 +351,137 @@ export default function Window3D({ item, onCapture }: { item: JobItem; onCapture
     </div>
   );
 }
+
+/* ————————————————— customer showcase ————————————————— */
+
+/**
+ * Full-screen, customer-facing view. The fabricator turns the phone around and
+ * the customer sees only his own window: finish, glass, size and — if a rate is
+ * set — the price for this item.
+ *
+ * SAFETY RULE: nothing on this screen may reveal the shop's private numbers.
+ * No cost, no aluminium rate, no scrap %, no offcut bank, no margins. Only the
+ * customer-facing price is ever shown, and it is hidden entirely when unpriced
+ * rather than shown as zero.
+ */
+export function CustomerShowcase({
+  item, shopName, tagline, title, price, onExit, finish, glass, onFinish, onGlass,
+}: {
+  item: JobItem;
+  shopName?: string;
+  tagline?: string;
+  title: string;
+  /** customer-facing amount for this item; omit/0 to show nothing */
+  price?: number;
+  onExit: () => void;
+  /** Controlled by the caller so whatever the customer picks in front of the
+   *  fabricator is already the finish the quotation goes out with. */
+  finish: Finish;
+  glass: GlassKind;
+  onFinish: (f: Finish) => void;
+  onGlass: (g: GlassKind) => void;
+}) {
+  const [spin, setSpin] = useState(true);
+
+  const ft = (v: number) => (v / 304800).toFixed(1);
+  const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: "linear-gradient(180deg,#0e1116,#171c23)", color: "#fff" }}>
+      {/* brand bar */}
+      <div className="flex items-start justify-between px-5 pt-4">
+        <div className="min-w-0">
+          <div className="display truncate text-lg font-extrabold tracking-tight">
+            {shopName || "FabriQ"}
+          </div>
+          {tagline && (
+            <div className="truncate text-[11px]" style={{ color: "rgba(255,255,255,.55)" }}>{tagline}</div>
+          )}
+        </div>
+        <button onClick={onExit} aria-label="Band karo"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg"
+          style={{ background: "rgba(255,255,255,.1)", color: "#fff" }}>✕</button>
+      </div>
+
+      {/* the window itself — takes all the room it can */}
+      <div className="relative min-h-0 flex-1">
+        <Canvas shadows dpr={[1, 2]} camera={{ position: [1.4, 0.6, 2.3], fov: 40 }}>
+          <Studio />
+          <Spin on={spin}>
+            <Center>
+              <WindowModel item={item} finish={finish} glass={glass} />
+            </Center>
+          </Spin>
+          <OrbitControls enablePan={false} minDistance={1.3} maxDistance={4.5} enableDamping
+            onStart={() => setSpin(false)} />
+        </Canvas>
+        <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px]"
+          style={{ color: "rgba(255,255,255,.5)" }}>
+          Ghumane ke liye ungli se ghumaiye
+        </div>
+      </div>
+
+      {/* customer-facing details */}
+      <div className="px-5 pb-6 pt-2">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <div className="display text-xl font-extrabold leading-tight">{title}</div>
+            <div className="mt-0.5 text-[13px] tabnum" style={{ color: "rgba(255,255,255,.6)" }}>
+              {ft(item.width)}′ × {ft(item.height)}′{item.qty > 1 ? ` · ${item.qty} nag` : ""}
+            </div>
+          </div>
+          {price && price > 0 ? (
+            <div className="shrink-0 text-right">
+              <div className="display text-2xl font-extrabold tabnum" style={{ color: "#e4c77e" }}>
+                {inr(price)}
+              </div>
+              <div className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,.45)" }}>
+                is item ka
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <Swatches label="Colour" options={(Object.keys(FINISHES) as Finish[]).map((f) => ({
+            key: f, label: FINISHES[f].label, swatch: FINISHES[f].swatch,
+          }))} active={finish} onPick={(k) => onFinish(k as Finish)} />
+          <Swatches label="Glass" options={(Object.keys(GLASSES) as GlassKind[]).map((g) => ({
+            key: g, label: GLASSES[g].label, swatch: GLASSES[g].swatch,
+          }))} active={glass} onPick={(k) => onGlass(k as GlassKind)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Big, finger-friendly swatch row — the customer taps these, not the fabricator. */
+function Swatches({ label, options, active, onPick }: {
+  label: string;
+  options: { key: string; label: string; swatch: string }[];
+  active: string;
+  onPick: (key: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest"
+        style={{ color: "rgba(255,255,255,.45)" }}>{label}</div>
+      <div className="flex flex-wrap gap-2.5">
+        {options.map((o) => (
+          <button key={o.key} onClick={() => onPick(o.key)}
+            className="flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-[12.5px] font-semibold transition-all"
+            style={{
+              border: `1.5px solid ${active === o.key ? "#e4c77e" : "rgba(255,255,255,.16)"}`,
+              background: active === o.key ? "rgba(228,199,126,.14)" : "rgba(255,255,255,.05)",
+              color: "#fff",
+            }}>
+            <span className="h-6 w-6 rounded-full"
+              style={{ background: o.swatch, border: "1px solid rgba(255,255,255,.25)" }} />
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

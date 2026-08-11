@@ -55,6 +55,13 @@ const Window3DThumb = dynamic(() => import("@/components/window3d").then((m) => 
   loading: () => <div className="grid place-items-center rounded-xl text-[10px]"
     style={{ width: 150, height: 150, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--ink-3)" }}>3D…</div>,
 });
+const CustomerShowcase = dynamic(() => import("@/components/window3d").then((m) => ({ default: m.CustomerShowcase })), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 grid place-items-center text-sm"
+      style={{ background: "#0e1116", color: "rgba(255,255,255,.6)" }}>3D taiyar ho raha hai…</div>
+  ),
+});
 
 const FINISH_OPTS: [Finish, string, string][] = [
   ["black", "Matte Black", "#1c1c1e"], ["white", "Ivory White", "#eef0f2"],
@@ -1608,6 +1615,7 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
 }) {
   const [tab, setTab] = useState<Tab>(initialTab ?? "aluminium");
   const [threedIdx, setThreedIdx] = useState(0);
+  const [showcase, setShowcase] = useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
   const [quoteFinish, setQuoteFinish] = useState<Finish>("black");
   const [quoteGlass, setQuoteGlass] = useState<GlassKind>("clear");
@@ -1834,6 +1842,10 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
             item={items[Math.min(threedIdx, items.length - 1)]}
             onCapture={(url) => setSnapshots((s) => ({ ...s, [items[Math.min(threedIdx, items.length - 1)].id]: url }))}
           />
+          <button onClick={() => setShowcase(true)}
+            className="btn-dark w-full py-4 text-base display">
+            👤 Customer ko dikhao — full screen
+          </button>
           <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
             📸 &quot;Save to Quotation&quot; dabao — ye 3D view quotation ke us item pe lag jayega
           </p>
@@ -1913,6 +1925,24 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
       )}
 
       {showShop && <ShopModal shop={shop} onSave={(s) => { setShop(s); try { localStorage.setItem("fabriq_shop", JSON.stringify(s)); } catch { /* ignore */ } setShowShop(false); }} onClose={() => setShowShop(false)} />}
+
+      {/* Customer-facing full screen — shop ke private numbers yahan kabhi nahi */}
+      {showcase && items.length > 0 && (() => {
+        const it = items[Math.min(threedIdx, items.length - 1)];
+        const rate = rateFor(it);
+        return (
+          <CustomerShowcase
+            item={it}
+            shopName={shop.name}
+            tagline={shop.tagline}
+            title={itemName(it)}
+            price={rate > 0 ? sqft(it.width, it.height) * it.qty * rate : 0}
+            finish={quoteFinish} glass={quoteGlass}
+            onFinish={setQuoteFinish} onGlass={setQuoteGlass}
+            onExit={() => setShowcase(false)}
+          />
+        );
+      })()}
     </div>
   );
 }
