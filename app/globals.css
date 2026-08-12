@@ -259,3 +259,15 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.02em
 @media (max-width: 639px) {
   body:has(.result-view) .copilot-float { bottom: calc(74px + env(safe-area-inset-bottom)); }
 }
+
+/* Save-as-PDF for ONE document (aluminium order, glass order, …). The target
+   subtree stays visible, everything else is hidden by visibility so nested
+   documents still work. `.pdf-only` sheets never show on screen. */
+.pdf-only { display: none; }
+@media print {
+  .pdf-only { display: block; }
+  body.printing-doc .result-view * { visibility: hidden; }
+  body.printing-doc .print-target,
+  body.printing-doc .print-target * { visibility: visible; }
+  body.printing-doc .print-target { position: absolute; left: 0; top: 0; width: 100%; }
+}

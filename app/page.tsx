@@ -15,6 +15,7 @@ import { getSection, SECTIONS } from "@/lib/engine/sections";
 import { costJob, inr, type JobCost } from "@/lib/engine/pricing";
 import { findOffcuts, loadOffcuts, addOffcuts, removeOffcut, totalOffcutFt, type Offcut, type OffcutCandidate } from "@/lib/engine/offcuts";
 import { planOffcutUse, EMPTY_PLAN, type OffcutPlan } from "@/lib/offcut-plan";
+import { buildOrderPdf, sharePdfToWhatsApp, type PdfBlock } from "@/lib/pdf";
 import {
   loadProjects, saveProject, patchProject, removeProject, newProjectId, autoTitle, totalSqft,
   type ProjectRec,
@@ -1744,7 +1745,6 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
     );
   }
 
-  const waText = buildWhatsAppText(items, list);
 
   const quoteLines: QuoteLine[] = items.map((it) => {
     const area = sqft(it.width, it.height) * it.qty;
@@ -1855,7 +1855,7 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
       </BodyPortal>
 
       {tab === "aluminium" && (
-        <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} waText={waText}
+        <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} shop={shop}
           plan={offcutPlan} rawPlan={rawPlan} useStock={useStock} onToggleStock={setUseStock}
           onUseBank={applyOffcutPlan} />
       )}
@@ -1899,22 +1899,9 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         />
       )}
 
-      {/* actions (material-list) — hidden on the quotation tab */}
-      {tab !== "quote" && (
-        <div className="no-print sticky bottom-4 mt-2 flex gap-3">
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
-            target="_blank" rel="noopener noreferrer"
-            className="btn-primary flex flex-1 items-center justify-center gap-2 py-4 display"
-            style={{ background: "#25d366", boxShadow: "0 4px 14px rgba(37,211,102,.35)" }}
-          >
-            WhatsApp pe bhejo
-          </a>
-          <button onClick={() => window.print()} className="btn-ghost px-5 py-4" style={{ background: "var(--surface)" }}>
-            🖨️ Print
-          </button>
-        </div>
-      )}
+      {/* No global "WhatsApp pe bhejo" any more: a fabricator sends different
+          documents to different people (aluminium supplier, glass supplier,
+          his own karigar, the customer). Each tab carries its own send action. */}
 
       {/* 3D colour/glass picker — auto-renders each opening into the quotation */}
       {tab === "quote" && quoteTotal > 0 && (
@@ -2062,10 +2049,10 @@ function QuotePanel({
       </div>
 
       <button onClick={onPrint} className="btn-primary w-full py-4 text-lg display" disabled={total <= 0}>
-        📄 Quotation PDF banao
+        📄 Customer ke liye quotation PDF save karo
       </button>
       <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-        Neeche live preview hai — button dabao, Print/Save-as-PDF karke party ko WhatsApp pe bhej do
+        Neeche live preview hai — PDF save karke party ko WhatsApp pe bhej do
       </p>
     </div>
   );
@@ -2107,20 +2094,22 @@ function ShopModal({ shop, onSave, onClose }: { shop: ShopProfile; onSave: (s: S
 /* —— result sub-panels —— */
 
 function AluminiumPanel({
-  list, cost, aluRate, onRate, waText, plan, rawPlan, useStock, onToggleStock, onUseBank,
+  list, cost, aluRate, onRate, shop, plan, rawPlan, useStock, onToggleStock, onUseBank,
 }: {
   list: MaterialList;
   cost: JobCost | null;
   aluRate: number;
   onRate: (v: number) => void;
-  waText: string;
+  shop: ShopProfile;
   plan: OffcutPlan;
   rawPlan: OffcutPlan;
   useStock: boolean;
   onToggleStock: (v: boolean) => void;
   onUseBank: () => void;
 }) {
-  const [showCatalogue, setShowCatalogue] = useState(false);
+  const shopName = shop.name || undefined;
+  const tagline = shop.tagline || undefined;
+  const hasGlass = list.glass.length > 0 || list.mesh.panels.length > 0 || list.sheet.panels.length > 0;
   const planBySection = useMemo(() => {
     const m = new Map<string, (typeof plan.sections)[number]>();
     for (const s of plan.sections) m.set(s.sectionId, s);
@@ -2135,7 +2124,6 @@ function AluminiumPanel({
 
   const totalPipes = list.totals.bars16 + list.totals.bars8 * 0.5;
 
-  if (showCatalogue) return <CataloguePanel list={list} onBack={() => setShowCatalogue(false)} />;
 
   return (
     <div className="flex flex-col gap-3">
@@ -2234,55 +2222,103 @@ function AluminiumPanel({
       {/* glass / jali / sheet — same list, neeche */}
       <GlassBlock list={list} />
 
-      {/* supplier actions */}
-      <div className="no-print grid grid-cols-2 gap-2">
-        <button onClick={() => setShowCatalogue(true)} className="btn-dark flex items-center justify-center gap-2 py-3.5 text-sm">
-          📖 Catalogue bhejo
-        </button>
-        <a href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noreferrer"
-          className="btn-primary flex items-center justify-center gap-2 py-3.5 text-sm">
-          📦 Order bhejo
-        </a>
-      </div>
+      {/* Two suppliers, two orders. The aluminium dealer and the glass shop are
+          different people — they get different sheets, never one combined list. */}
+      <SendOrder
+        label="Aluminium supplier ko bhejo"
+        sub={`${list.sections.length} section · ${fmtPipes(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))} pipe`}
+        filename="aluminium-order.pdf"
+        text={aluminiumWaText(list, plan, shopName)}
+        build={() => buildOrderPdf({
+          title: "Aluminium Order", shopName, tagline,
+          blocks: [{
+            rows: list.sections.map((s) => {
+              const sec = getSection(s.sectionId);
+              const full = sec.barLengthFt ?? 16;
+              const parts: string[] = [];
+              if (s.bars16) parts.push(`${s.bars16} x ${full}'`);
+              if (s.bars8) parts.push(`${s.bars8} x ${full / 2}'`);
+              return { left: sec.label, right: parts.join("  +  ") };
+            }),
+          }],
+          total: `${fmtPipes(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))} pipe`,
+          note: "FabriQ se bana — sizes deterministic engine se, AI se nahi.",
+        })}
+      />
+
+      {hasGlass && (
+        <SendOrder
+          label="Glass / Jali supplier ko bhejo"
+          sub={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`}
+          filename="glass-order.pdf"
+          text={glassWaText(list, shopName)}
+          build={() => buildOrderPdf({
+            title: "Glass / Jali Order", shopName, tagline,
+            blocks: [
+              glassBlock("Glass", `${list.glassSqft.toFixed(1)} sqft`, list.glass),
+              glassBlock("Jali / Mesh", `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, list.mesh.panels),
+              glassBlock("Sheet", `${list.sheet.sqft.toFixed(1)} sqft`, list.sheet.panels),
+            ].filter((b): b is PdfBlock => b !== null),
+            note: "Har size finished panel ka hai — FabriQ se bana.",
+          })}
+        />
+      )}
 
       <EngineVerified />
     </div>
   );
 }
 
-/** Supplier catalogue — har section ki badi engineering drawing + naam + kitni
- *  pipe. Dukaandaar ko exact pipe pehchanne ke liye; print/WhatsApp ready. */
-function CataloguePanel({ list, onBack }: { list: MaterialList; onBack: () => void }) {
+function glassBlock(heading: string, sub: string, panels: { width: Um; height: Um; count: number }[]): PdfBlock | null {
+  if (!panels.length) return null;
+  return {
+    heading, sub,
+    rows: panels.map((p) => ({
+      left: `${formatFtInSut(p.width)}  x  ${formatFtInSut(p.height)}`,
+      right: `${p.count} pcs`,
+    })),
+  };
+}
+
+/**
+ * One supplier, one sheet. Tapping this builds the PDF, saves it, and hands
+ * that same file to WhatsApp — on a phone through the native share sheet, on
+ * desktop by downloading it and opening the chat (a wa.me link cannot carry a
+ * file, so we never pretend it was attached automatically).
+ */
+function SendOrder({ label, sub, filename, text, build }: {
+  label: string; sub: string; filename: string; text: string; build: () => Blob;
+}) {
+  const [state, setState] = useState<"idle" | "working" | "shared" | "downloaded">("idle");
+
+  const go = async () => {
+    setState("working");
+    try {
+      setState(await sharePdfToWhatsApp(build(), filename, text));
+    } catch {
+      setState("idle");
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="no-print flex items-center justify-between">
-        <div>
-          <div className="display font-bold">Section Catalogue</div>
-          <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-            Supplier ko bhejo — har pipe ka naam aur exact cross-section
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => window.print()} className="btn-primary px-4 py-2 text-sm">🖨️ Print</button>
-          <button onClick={onBack} className="btn-ghost px-4 py-2 text-sm">← Wapas</button>
-        </div>
-      </div>
-      {list.sections.map((s) => {
-        const sec = getSection(s.sectionId);
-        const barFt = sec.barLengthFt ?? 16;
-        return (
-          <div key={s.sectionId} className="card p-4">
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <div className="display text-lg font-extrabold">{sec.label}</div>
-              <div className="text-sm font-bold tabnum" style={{ color: "var(--accent)" }}>
-                {s.bars16 ? `${s.bars16} × ${barFt}'` : ""}
-                {s.bars8 ? `${s.bars16 ? " + " : ""}${s.bars8} × ${Math.round(barFt / 2)}'` : ""}
-              </div>
-            </div>
-            <SectionDrawing sectionId={s.sectionId} />
-          </div>
-        );
-      })}
+    <div className="no-print">
+      <button onClick={go} disabled={state === "working"}
+        className="btn-primary flex w-full items-center justify-between gap-3 px-4 py-3.5 disabled:opacity-60"
+        style={{ background: "#25d366", boxShadow: "0 4px 14px rgba(37,211,102,.30)" }}>
+        <span className="text-left">
+          <span className="block text-sm font-bold">{state === "working" ? "PDF ban raha hai…" : label}</span>
+          <span className="block text-[11px] opacity-90">{sub} · PDF</span>
+        </span>
+        <span className="text-lg">↗</span>
+      </button>
+      {state === "downloaded" && (
+        <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
+          PDF save ho gaya aur WhatsApp khul gaya — chat me wahi file attach kar do.
+        </p>
+      )}
+      {state === "shared" && (
+        <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--good)" }}>✓ PDF bhej diya</p>
+      )}
     </div>
   );
 }
@@ -2822,7 +2858,11 @@ function CuttingPanel({ list, shop, items, plan }: {
         </>
       } />
 
-      <button onClick={printSheet} className="btn-primary no-print w-full py-3.5 display">🖨️ Poori Workshop Sheet Print karo</button>
+      {/* The karigar's copy — drawings and cut lists, saved as a PDF he can be
+          sent on WhatsApp. */}
+      <button onClick={printSheet} className="btn-dark no-print w-full py-3.5 display">
+        📄 Karigar ke liye PDF save karo
+      </button>
 
       {/* STEP 1 — kya banana hai: har opening ki dimensioned drawing + parts */}
       <StepBar n={1} title="Kya banana hai" sub="Har opening ki drawing, sections aur parts" />
@@ -3116,57 +3156,43 @@ function SettingsModal({
 
 /* ————————————————— WhatsApp text ————————————————— */
 
-function buildWhatsAppText(items: JobItem[], list: MaterialList): string {
-  const lines: string[] = [];
-  lines.push("*Material List — FabriQ*");
-  lines.push("");
-  for (const it of items) {
-    const tag =
-      it.system === "normal_3t" ? "3T"
-      : it.system === "normal_2t" ? "2T"
-      : it.system === "domal" ? "Domal"
-      : it.system === "partition" ? "Partition"
-      : it.system === "z_section"
-        ? `Z ${it.meta.zSize === "heavy" ? "Big" : "Small"} ${
-            it.meta.zType === "fixed" ? "Fixed"
-            : it.meta.zType === "combo" ? "Fix+Open"
-            : it.meta.zType === "door" ? "Door" : "Openable"}`
-      : "Door";
-    lines.push(
-      `${it.id}: ${formatFtInSut(it.width)}×${formatFtInSut(it.height)} ×${it.qty} (${tag})`
-    );
-  }
-  lines.push("");
-  lines.push("*Aluminium (pipes):*");
+/**
+ * A fabricator does not send one list to everyone. The aluminium dealer only
+ * wants sections and bar counts; the glass shop only wants panel sizes. Two
+ * separate messages, each readable straight in the chat window.
+ */
+function aluminiumWaText(list: MaterialList, plan: OffcutPlan, shopName?: string): string {
+  const L: string[] = [];
+  L.push(`*Aluminium order${shopName ? ` — ${shopName}` : ""}*`);
+  L.push("");
   for (const s of list.sections) {
     const sec = getSection(s.sectionId);
     const full = sec.barLengthFt ?? 16;
-    const half = full / 2;
+    const sp = plan.sections.find((p) => p.sectionId === s.sectionId);
     const parts: string[] = [];
     if (s.bars16) parts.push(`${s.bars16} × ${full}'`);
-    if (s.bars8) parts.push(`${s.bars8} × ${half}'`);
-    lines.push(`• ${sec.label} (${sec.size}mm): ${parts.join(" + ")}`);
+    if (s.bars8) parts.push(`${s.bars8} × ${full / 2}'`);
+    const line = `• ${sec.label} — ${parts.join(" + ")}`;
+    L.push(sp ? `${line}  (${fmtPipes(sp.pipesAfter)} pipe hi chahiye)` : line);
   }
-  lines.push(`*Total: ${list.totals.bars16} full + ${list.totals.bars8} half bars*`);
-  if (list.glass.length) {
-    lines.push("");
-    lines.push(`*Glass:* ${list.glassSqft.toFixed(1)} sqft`);
-    for (const g of list.glass)
-      lines.push(`• ${formatFtInSut(g.width)}×${formatFtInSut(g.height)} — ${g.count} pcs`);
-  }
-  if (list.sheet.panels.length) {
-    lines.push("");
-    lines.push(`*Sheet:* ${list.sheet.sqft.toFixed(1)} sqft`);
-    for (const s of list.sheet.panels)
-      lines.push(`• ${formatFtInSut(s.width)}×${formatFtInSut(s.height)} — ${s.count} pcs`);
-  }
-  if (list.mesh.panels.length) {
-    lines.push("");
-    lines.push(`*Jali:* ${list.mesh.sqft.toFixed(1)} sqft + spline ${list.mesh.splineFt} rft`);
-    for (const m of list.mesh.panels)
-      lines.push(`• ${formatFtInSut(m.width)}×${formatFtInSut(m.height)} — ${m.count} pcs`);
-  }
-  lines.push("");
-  lines.push("_FabriQ se 1 minute mein bana ✓_");
-  return lines.join("\n");
+  const need = list.totals.bars16 + list.totals.bars8 * 0.5;
+  const buy = Math.max(0, need - plan.pipesSaved);
+  L.push("");
+  L.push(`*Total: ${fmtPipes(buy)} pipe*`);
+  return L.join("\n");
+}
+
+function glassWaText(list: MaterialList, shopName?: string): string {
+  const L: string[] = [];
+  L.push(`*Glass / Jali order${shopName ? ` — ${shopName}` : ""}*`);
+  const block = (title: string, sub: string, panels: { width: Um; height: Um; count: number }[]) => {
+    if (!panels.length) return;
+    L.push("");
+    L.push(`*${title}* — ${sub}`);
+    for (const p of panels) L.push(`• ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)} — ${p.count} pcs`);
+  };
+  block("Glass", `${list.glassSqft.toFixed(1)} sqft`, list.glass);
+  block("Jali / Mesh", `${list.mesh.sqft.toFixed(1)} sqft + spline ${list.mesh.splineFt} rft`, list.mesh.panels);
+  block("Sheet", `${list.sheet.sqft.toFixed(1)} sqft`, list.sheet.panels);
+  return L.join("\n");
 }

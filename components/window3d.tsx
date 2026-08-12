@@ -7,7 +7,7 @@
  * mitred corners. Colour (anodised finish) and glass swap live. Deterministic:
  * geometry comes straight from the opening's real width/height.
  */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, ContactShadows, OrbitControls, Center } from "@react-three/drei";
 import * as THREE from "three";
@@ -217,18 +217,42 @@ function Studio() {
 }
 
 /** Fires onReady once, a few frames after mount, with the canvas as a PNG. */
+/**
+ * Captures the thumbnail for the quotation.
+ *
+ * Renders explicitly instead of waiting for animation frames: a backgrounded
+ * tab or a slow phone stops rAF, and the old frame-counting version simply
+ * never fired — the quotation then fell back to the flat elevation without
+ * telling anyone. Driving gl.render() ourselves makes the capture happen
+ * whether or not the render loop is ticking.
+ */
 function Grab({ onReady }: { onReady: (dataUrl: string) => void }) {
   const gl = useThree((s) => s.gl);
-  const n = useRef(0);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
   const done = useRef(false);
-  useFrame(() => {
-    if (done.current) return;
-    n.current += 1;
-    if (n.current >= 4) {
-      done.current = true;
-      try { onReady(gl.domElement.toDataURL("image/png")); } catch { /* ignore */ }
-    }
-  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const tryGrab = (attempt: number) => {
+      if (cancelled || done.current) return;
+      try {
+        gl.render(scene, camera);
+        const url = gl.domElement.toDataURL("image/png");
+        // a blank canvas encodes to a very small PNG — keep trying while the
+        // materials/environment are still warming up
+        if (url.length > 5000 || attempt >= 6) {
+          done.current = true;
+          onReady(url);
+          return;
+        }
+      } catch { /* keep trying */ }
+      setTimeout(() => tryGrab(attempt + 1), 180);
+    };
+    const t = setTimeout(() => tryGrab(0), 120);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [gl, scene, camera, onReady]);
+
   return null;
 }
 
