@@ -4,7 +4,8 @@
  * shop profile as structured JSON. Never invents data — only what is printed.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAnthropicClient } from "@/lib/ai/client";
+import { resolveProvider } from "@/lib/ai/client";
+import { geminiJson } from "@/lib/ai/gemini";
 
 const CARD_SCHEMA = {
   type: "object" as const,
@@ -33,13 +34,29 @@ export async function POST(req: NextRequest) {
   const { image, mediaType, apiKey } = (await req.json()) as {
     image: string; mediaType: string; apiKey?: string;
   };
-  const resolved = resolveAnthropicClient(apiKey);
+  const resolved = resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json(
       { error: "no_key", message: "Add an AI key in Settings to scan the card." },
       { status: 400 },
     );
   }
+
+  if (resolved.provider === "gemini") {
+    try {
+      const parsed = await geminiJson<{ legible: boolean; [k: string]: unknown }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: CARD_SCHEMA, image: { data: image, mediaType },
+        userText: "Read this visiting card and extract the shop profile.",
+      });
+      if (parsed.legible === false) {
+        return NextResponse.json({ error: "unreadable", message: "Card not clear — please fill in manually." }, { status: 200 });
+      }
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json({ error: "read_failed", message: "Could not read the card — please fill in manually." }, { status: 500 });
+    }
+  }
+
   try {
     const { client, model } = resolved;
     const response = await client.messages.create({

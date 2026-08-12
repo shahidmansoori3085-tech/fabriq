@@ -5,7 +5,8 @@
  * Falls back to deterministic rules when no ANTHROPIC_API_KEY.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAnthropicClient } from "@/lib/ai/client";
+import { resolveProvider } from "@/lib/ai/client";
+import { geminiJson } from "@/lib/ai/gemini";
 import { generateQuestions, type Question } from "@/lib/engine/questions";
 import { formatFtInSut } from "@/lib/engine/units";
 
@@ -81,9 +82,25 @@ export async function POST(req: NextRequest) {
   // Deterministic fallback — always works
   const fallback = generateQuestions({ type, width, height, qty, known });
 
-  const resolved = resolveAnthropicClient(apiKey);
+  const resolved = resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json({ questions: fallback, source: "rules" });
+  }
+
+  if (resolved.provider === "gemini") {
+    try {
+      const parsed = await geminiJson<{ questions: Question[] }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: QUESTION_SCHEMA,
+        userText: JSON.stringify({
+          opening_type: type,
+          size_display: `${formatFtInSut(width)} × ${formatFtInSut(height)}`,
+          width_um: width, height_um: height, qty, already_known: known,
+        }),
+      });
+      return NextResponse.json({ questions: parsed.questions.slice(0, 4), source: "ai" });
+    } catch {
+      return NextResponse.json({ questions: fallback, source: "rules-fallback" });
+    }
   }
 
   try {

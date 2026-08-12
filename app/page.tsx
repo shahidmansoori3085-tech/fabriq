@@ -448,10 +448,8 @@ function Onboarding({
 
   const set = (k: keyof ShopProfile, v: string) => setS((p) => ({ ...p, [k]: v }));
 
-  const pickCard = () => {
-    if (!apiKey) { onNeedKey(); return; }
-    cardRef.current?.click();
-  };
+  // No client-side gate here either — the server may carry its own key.
+  const pickCard = () => cardRef.current?.click();
 
   const onCard = async (f: File | undefined) => {
     if (!f) return;
@@ -466,6 +464,7 @@ function Onboarding({
       const d = await r.json();
       if (!r.ok || d.error) {
         setScanNote(d.message || "Card padhne mein dikkat aayi — haath se bhar do.");
+        if (d.error === "no_key") onNeedKey();
       } else {
         setS((p) => ({
           name: d.name || p.name,
@@ -3115,21 +3114,24 @@ function SettingsModal({
       <div className="card w-full max-w-md p-5" style={{ maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="display text-lg font-bold">⚙️ Settings</h2>
         <p className="mt-1 text-xs" style={{ color: "var(--ink-2)" }}>
-          Photo padhna, AI sawaal aur AI review ke liye Anthropic API key chahiye.
-          Key sirf tumhare phone/browser mein save hoti hai.
+          Photo padhna, AI sawaal aur AI review ke liye ek AI key chahiye.
+          Key sirf tumhare phone/browser mein save hoti hai, kahin bhejte nahi.
         </p>
         <label className="mt-4 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-          Anthropic API Key
+          AI Key
         </label>
         <input
           type="password"
-          placeholder="sk-ant-…"
+          placeholder="Yahan paste karo…"
           value={val}
           onChange={(e) => setVal(e.target.value)}
           className="dim-input mt-1.5 w-full px-3 py-3 font-mono text-sm"
         />
+        {/* App khud pehchan leta hai kaunsi company ki key hai — fabricator ko
+            "provider" ka naam yaad rakhne ki zaroorat nahi. */}
         <p className="mt-2 text-[11px]" style={{ color: "var(--ink-3)" }}>
-          Key yahan se milti hai: console.anthropic.com → API Keys
+          Free key: <b>aistudio.google.com</b> → Get API key<br />
+          Ya: <b>console.anthropic.com</b> → API Keys
         </p>
 
         {/* advanced — multi-model gateway */}

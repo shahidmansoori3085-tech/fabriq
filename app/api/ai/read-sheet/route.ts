@@ -5,7 +5,8 @@
  * calculates — raw values + confidence only (D2).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAnthropicClient } from "@/lib/ai/client";
+import { resolveProvider } from "@/lib/ai/client";
+import { geminiJson } from "@/lib/ai/gemini";
 
 const EXTRACT_SCHEMA = {
   type: "object" as const,
@@ -65,12 +66,27 @@ export async function POST(req: NextRequest) {
     image: string; mediaType: string; apiKey?: string;
   };
 
-  const resolved = resolveAnthropicClient(apiKey);
+  const resolved = resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json(
       { error: "no_key", message: "AI photo padhne ke liye API key chahiye — Settings (⚙) mein daalo." },
       { status: 400 }
     );
+  }
+
+  if (resolved.provider === "gemini") {
+    try {
+      const parsed = await geminiJson({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, image: { data: image, mediaType },
+        userText: "Is measurement sheet ko padho aur items extract karo.",
+      });
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json(
+        { error: "read_failed", message: "Photo padhne mein dikkat aayi — dobara try karo ya haath se bharo." },
+        { status: 500 },
+      );
+    }
   }
 
   try {

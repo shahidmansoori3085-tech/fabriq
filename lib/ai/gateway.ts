@@ -11,8 +11,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import { AI_MODEL, BEDROCK_MODEL, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION } from "./client";
+import { geminiChat } from "./gemini";
 
-export type Provider = "anthropic" | "openrouter" | "bedrock";
+export type Provider = "anthropic" | "openrouter" | "bedrock" | "gemini";
 
 export interface ChatMsg { role: "user" | "assistant"; content: string }
 
@@ -50,6 +51,12 @@ export async function chatComplete(opts: ChatOpts): Promise<string> {
     const text = data?.choices?.[0]?.message?.content;
     if (typeof text !== "string") throw new Error("openrouter_no_text");
     return text.trim();
+  }
+
+  if (provider === "gemini") {
+    return geminiChat({
+      apiKey: opts.apiKey, system: opts.system, messages: opts.messages, model: opts.model, maxTokens,
+    });
   }
 
   if (provider === "bedrock") {

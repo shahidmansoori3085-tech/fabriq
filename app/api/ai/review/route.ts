@@ -5,7 +5,8 @@
  * ANTHROPIC_API_KEY is present. AI never changes numbers (D2).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAnthropicClient } from "@/lib/ai/client";
+import { resolveProvider } from "@/lib/ai/client";
+import { geminiJson } from "@/lib/ai/gemini";
 import type { ReviewFinding } from "@/lib/engine/types";
 
 const REVIEW_SCHEMA = {
@@ -51,9 +52,24 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { items, summary, deterministicFindings, apiKey } = body;
 
-  const resolved = resolveAnthropicClient(apiKey);
+  const resolved = resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json({ findings: [], source: "none" });
+  }
+
+  if (resolved.provider === "gemini") {
+    try {
+      const parsed = await geminiJson<{ findings: ReviewFinding[]; confidenceAdjustment?: number; summary: string }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: REVIEW_SCHEMA,
+        userText: JSON.stringify({
+          job_items: items, estimate_summary: summary, already_flagged_by_rules: deterministicFindings,
+          note: "already_flagged wale points repeat mat karo — naye insights do",
+        }),
+      });
+      return NextResponse.json({ ...parsed, source: "ai" });
+    } catch {
+      return NextResponse.json({ findings: [], source: "error" });
+    }
   }
 
   try {

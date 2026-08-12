@@ -66,13 +66,11 @@ export function PhotoCapture({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pick = () => {
-    if (!apiKey) {
-      onNeedKey();
-      return;
-    }
-    fileRef.current?.click();
-  };
+  // No client-side key gate: the server may have its own key (Anthropic,
+  // Gemini free-tier, or Bedrock) even when Settings has nothing saved. Let
+  // the request go through; onFile's error path already surfaces "no_key"
+  // if truly nothing is configured anywhere.
+  const pick = () => fileRef.current?.click();
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
@@ -89,6 +87,7 @@ export function PhotoCapture({
       const d = await r.json();
       if (!r.ok) {
         setError(d.message || "Photo padhne mein dikkat aayi.");
+        if (d.error === "no_key") onNeedKey();
       } else if (!d.legible || !d.items?.length) {
         setError("Photo dhundhli hai ya sheet samajh nahi aayi — dobara kheencho ya haath se bharo.");
       } else {
