@@ -724,17 +724,25 @@ function Home({
         </div>
       </div>
 
-      {/* hero */}
-      <div className="rise flex flex-col gap-3 pt-1">
-        <span className="eyebrow">Fabricator OS · Premium</span>
-        <h1 className="display text-[28px] font-extrabold leading-[1.1]">
-          Create your material list &amp;<br />quotation <span style={{ color: "var(--accent)" }}>in 1 minute.</span>
+      {/* Hero earns its space only once. A fabricator who already has jobs
+          reads this pitch every single morning on his way to "continue" — so
+          once he has projects it collapses to a single line. */}
+      {nProjects === 0 ? (
+        <div className="rise flex flex-col gap-3 pt-1">
+          <span className="eyebrow">Fabricator OS · Premium</span>
+          <h1 className="display text-[28px] font-extrabold leading-[1.1]">
+            Create your material list &amp;<br />quotation <span style={{ color: "var(--accent)" }}>in 1 minute.</span>
+          </h1>
+          <p className="text-sm" style={{ color: "var(--ink-2)" }}>
+            Drawing ki photo kheencho ya sizes daalo — cutting-ready list, engineering drawings aur ek
+            brand quotation jo customer ka bharosa jeete.
+          </p>
+        </div>
+      ) : (
+        <h1 className="rise display pt-1 text-[22px] font-extrabold leading-tight">
+          Aaj kya banana hai?
         </h1>
-        <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-          Drawing ki photo kheencho ya sizes daalo — cutting-ready list, engineering drawings aur ek
-          brand quotation jo customer ka bharosa jeete.
-        </p>
-      </div>
+      )}
 
       {/* primary actions */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -769,6 +777,11 @@ function Home({
         <span style={{ color: "#E4C77E" }}><Ic.ArrowRight size={20} /></span>
       </button>
 
+      {/* Continue work sits right under the actions: for a returning fabricator
+          this is the most likely thing he came to do. */}
+      <RecentProjects projects={projects} onOpen={onOpenProject}
+        onRemove={(id) => setProjects(removeProject(id))} />
+
       {/* copilot — advice, not actions: the engine owns every number */}
       <div className="card p-4">
         <div className="flex items-center gap-2.5">
@@ -795,7 +808,9 @@ function Home({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map(([icon, label, value, sub]) => (
           <div key={label} className="card p-3.5">
-            <div className="flex items-center gap-1.5" style={{ color: "var(--accent)" }}>{icon}</div>
+            {/* decoration, not an action — accent stays reserved for things the
+                fabricator can actually tap */}
+            <div className="flex items-center gap-1.5" style={{ color: "var(--ink-3)" }}>{icon}</div>
             <div className="display mt-2 text-xl font-extrabold tabnum">{value}</div>
             <div className="text-[12px] font-semibold" style={{ color: "var(--ink-2)" }}>{label}</div>
             <div className="text-[10.5px] leading-tight" style={{ color: "var(--ink-3)" }}>{sub}</div>
@@ -803,73 +818,84 @@ function Home({
         ))}
       </div>
 
-      {/* features */}
-      <div>
-        <div className="mb-2.5 flex items-center justify-between">
-          <span className="eyebrow">What you get</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {features.map(([icon, title, sub], i) => (
-            <div key={title} className="card p-4">
-              <span className="grid h-10 w-10 place-items-center rounded-xl"
-                style={{ background: i === 3 ? "var(--glass-soft)" : "var(--accent-soft)", color: i === 3 ? "var(--glass)" : "var(--accent)" }}>
-                {icon}
-              </span>
-              <div className="display mt-2.5 text-[14px] font-bold leading-tight">{title}</div>
-              <div className="mt-1 text-[11.5px] leading-snug" style={{ color: "var(--ink-3)" }}>{sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* recent projects */}
-      <div>
-        <div className="mb-2.5 flex items-center justify-between">
-          <span className="eyebrow">Recent projects</span>
-          {nProjects > 0 && <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>{nProjects} total</span>}
-        </div>
-        {nProjects === 0 ? (
-          <div className="card flex flex-col items-center gap-1 p-6 text-center">
-            <span style={{ color: "var(--ink-3)" }}><Ic.Folder size={26} /></span>
-            <div className="text-sm font-semibold">No projects yet</div>
-            <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>Start your first — it takes a minute.</div>
+      {/* "What you get" is onboarding copy — a fabricator with jobs already
+          knows what he gets, and scrolls past it every day. */}
+      {nProjects === 0 && (
+        <div>
+          <div className="mb-2.5 flex items-center justify-between">
+            <span className="eyebrow">What you get</span>
           </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {projects.slice(0, 6).map((p) => (
-              <div key={p.id} className="card flex items-center gap-2 p-3.5">
-                <button onClick={() => onOpenProject(p)} className="min-w-0 flex-1 text-left">
-                  <div className="truncate text-sm font-semibold">{p.title}</div>
-                  <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-                    {timeAgo(p.updated)} · {p.sqft.toFixed(0)} sqft
-                    {p.customer ? ` · ${p.customer}` : ""}
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    <StageChip done label="Material" />
-                    <StageChip done={p.amount > 0} label={p.amount > 0 ? "Quoted" : "Quotation pending"} />
-                    {p.scrapPct > 0 && (
-                      <span className="badge" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                        {p.scrapPct.toFixed(0)}% scrap
-                      </span>
-                    )}
-                  </div>
-                </button>
-                <div className="shrink-0 text-right">
-                  {p.amount > 0 && (
-                    <div className="text-sm font-bold tabnum" style={{ color: "var(--good)" }}>
-                      ₹{Math.round(p.amount).toLocaleString("en-IN")}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => { if (confirm(`"${p.title}" hata dein?`)) setProjects(removeProject(p.id)); }}
-                    className="btn-ghost mt-1 grid h-7 w-7 place-items-center rounded-full text-xs"
-                    title="Hatao">✕</button>
-                </div>
+          <div className="grid grid-cols-2 gap-3">
+            {features.map(([icon, title, sub], i) => (
+              <div key={title} className="card p-4">
+                <span className="grid h-10 w-10 place-items-center rounded-xl"
+                  style={{ background: i === 3 ? "var(--glass-soft)" : "var(--accent-soft)", color: i === 3 ? "var(--glass)" : "var(--accent)" }}>
+                  {icon}
+                </span>
+                <div className="display mt-2.5 text-[14px] font-bold leading-tight">{title}</div>
+                <div className="mt-1 text-[11.5px] leading-snug" style={{ color: "var(--ink-3)" }}>{sub}</div>
               </div>
             ))}
           </div>
-        )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Saved jobs, newest first — the returning fabricator's real front door. */
+function RecentProjects({ projects, onOpen, onRemove }: {
+  projects: ProjectRec[];
+  onOpen: (p: ProjectRec) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="eyebrow">{projects.length ? "Kaam jaari rakho" : "Recent projects"}</span>
+        {projects.length > 0 && <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>{projects.length} total</span>}
       </div>
+      {projects.length === 0 ? (
+        <div className="card flex flex-col items-center gap-1 p-6 text-center">
+          <span style={{ color: "var(--ink-3)" }}><Ic.Folder size={26} /></span>
+          <div className="text-sm font-semibold">No projects yet</div>
+          <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>Start your first — it takes a minute.</div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {projects.slice(0, 6).map((p) => (
+            <div key={p.id} className="card flex items-center gap-2 p-3.5">
+              <button onClick={() => onOpen(p)} className="min-w-0 flex-1 text-left">
+                <div className="truncate text-sm font-semibold">{p.title}</div>
+                <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+                  {timeAgo(p.updated)} · {p.sqft.toFixed(0)} sqft
+                  {p.customer ? ` · ${p.customer}` : ""}
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  <StageChip done label="Material" />
+                  <StageChip done={p.amount > 0} label={p.amount > 0 ? "Quoted" : "Quotation pending"} />
+                  {p.scrapPct > 0 && (
+                    <span className="badge" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                      {p.scrapPct.toFixed(0)}% scrap
+                    </span>
+                  )}
+                </div>
+              </button>
+              <div className="shrink-0 text-right">
+                {p.amount > 0 && (
+                  <div className="text-sm font-bold tabnum" style={{ color: "var(--good)" }}>
+                    ₹{Math.round(p.amount).toLocaleString("en-IN")}
+                  </div>
+                )}
+                <button
+                  onClick={() => { if (confirm(`"${p.title}" hata dein?`)) onRemove(p.id); }}
+                  className="btn-ghost mt-1 grid h-7 w-7 place-items-center rounded-full text-xs"
+                  title="Hatao">✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2043,9 +2069,12 @@ function QuotePanel({
         </label>
       </div>
 
-      <div className="card flex items-center justify-between p-4" style={{ background: "var(--accent-soft)" }}>
+      {/* Gold, matching the printed quotation — the same number should not have
+          two identities on screen and on paper. */}
+      <div className="card flex items-center justify-between p-4"
+        style={{ background: "rgba(176,134,40,.10)", border: "1px solid rgba(176,134,40,.35)" }}>
         <span className="text-sm font-semibold">Total (approx)</span>
-        <span className="display text-xl font-extrabold" style={{ color: "var(--accent)" }}>₹ {Math.round(total).toLocaleString("en-IN")}</span>
+        <span className="display text-xl font-extrabold" style={{ color: "#B08628" }}>₹ {Math.round(total).toLocaleString("en-IN")}</span>
       </div>
 
       <button onClick={onPrint} className="btn-primary w-full py-4 text-lg display" disabled={total <= 0}>
