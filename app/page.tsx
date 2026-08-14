@@ -1315,8 +1315,15 @@ function Entry({ startId, onBuild, onBack }: {
     return bs;
   };
 
-  const cfgOk = curType === "window" ? winSys.length > 0
-    : curType === "door" ? doorPalla.length > 0
+  // Domal's fixed-band choice and Z-Section's type genuinely change what gets
+  // built — unlike Normal's tracks, there's no sensible width-based default
+  // to fall back on, so picking the system without picking its variant must
+  // block "Next" rather than silently taking computeBuckets' fallback.
+  const winSysReady =
+    (!winSys.includes("domal") || domalVar.length > 0) &&
+    (!winSys.includes("z_section") || zTypes.length > 0);
+  const cfgOk = curType === "window" ? winSys.length > 0 && winSysReady
+    : curType === "door" ? doorPalla.length > 0 && doorChokhat.length > 0
     : partVar.length > 0;
 
   const goConfigNext = () => {
