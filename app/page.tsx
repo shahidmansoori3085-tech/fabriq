@@ -12,6 +12,7 @@ import {
   mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
 import { estimate } from "@/lib/engine/estimator";
+import { buildJobItem } from "@/lib/engine/quick-item";
 import {
   getSection, SECTIONS, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
 } from "@/lib/engine/sections";
@@ -530,6 +531,12 @@ export default function FabriQ() {
           photo, or jump straight to an output from anywhere in the app. */}
       <Copilot
         onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
+        onComputed={(item) => {
+          ensureProject();
+          setItems((prev) => [...prev, { ...item, id: `W${prev.length + 1}` }]);
+          setIntent("list");
+          setStep("result");
+        }}
         onAction={(a) => {
           if (a === "offcuts") { setStep("offcutbank"); return; }
           if (a === "material_list") { setIntent("list"); setStep("choose"); return; }
@@ -1191,68 +1198,6 @@ const TYPE_META: Record<OpeningType, { icon: string; label: string; plural: stri
   door: { icon: "🚪", label: "Door", plural: "doors" },
   partition: { icon: "🧱", label: "Partition", plural: "partitions" },
 };
-
-/**
- * Build a finished JobItem from a resolved meta map — mirrors the per-item
- * build logic in `answer()` so the wizard can create items directly (no
- * questions step). Un-asked details fall back to the same defaults the old
- * flow used, plus a width-aware track default. The engine is never touched.
- */
-function buildJobItem(
-  idNum: number, type: OpeningType, width: Um, height: Um, qty: number,
-  metaIn: Record<string, string>,
-): JobItem {
-  const next: Record<string, string> = { ...metaIn };
-  let sys: SystemId;
-  let shutters: JobItem["shutters"];
-
-  if (type === "door") {
-    sys = "door_single";
-    next.chokhat = next.chokhat ?? "needed";
-    next.rails = next.rails ?? "2";
-    next.zonemix = next.zonemix ?? (next.rails === "3" ? "SSSJ" : "SSJ");
-    shutters = doorMixToZones(next.zonemix);
-  } else if (type === "partition") {
-    sys = "partition";
-    next.partDoor = next.partDoor ?? "no";
-    if (next.partDoor === "yes") next.partDoorW = next.partDoorW ?? "3";
-    next.partSheetFt = next.partSheetFt ?? "0";
-    next.partBayFt = next.partBayFt ?? "2.5";
-    next.partRowFt = next.partRowFt ?? "3.5";
-    shutters = [];
-  } else if (next.system === "z_section") {
-    sys = "z_section";
-    const zType = next.zType ?? "openable";
-    next.zSize = next.zSize ?? "light";
-    next.zDoor = zType === "door" ? "yes" : "no";
-    next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : "openable";
-    if (zType === "combo") {
-      next.zComboDir = next.zComboDir ?? "top";
-      next.zFixedFt = next.zFixedFt ?? "2";
-    }
-    if (zType === "openable" || zType === "combo") next.zSashCount = next.zSashCount ?? "2";
-    const n = zType === "fixed" || zType === "door"
-      ? 1
-      : Math.max(1, parseInt(next.zSashCount ?? "2", 10));
-    shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
-  } else {
-    // Normal Sliding or Domal — track/mix default (track is width-aware).
-    const wide = width >= mm(1500);
-    const tracks = next.tracks ?? (wide ? "3" : "2");
-    next.tracks = tracks;
-    sys = next.system === "domal" ? "domal" : tracks === "3" ? "normal_3t" : "normal_2t";
-    if (next.system === "domal") {
-      next.domalFix = next.domalFix ?? "no";
-      if (next.domalFix === "yes") next.domalFixFt = next.domalFixFt ?? "2";
-    }
-    next.handle = next.handle ?? "std";
-    const mix = next.mix ?? (tracks === "4" ? "GGGJ" : tracks === "3" ? "GGJ" : "GG");
-    next.mix = mix;
-    shutters = mixToShutters(mix);
-  }
-
-  return { id: `W${idNum}`, type, width, height, qty, system: sys, shutters, meta: next };
-}
 
 /* —— wizard option tables —— */
 const WIN_SYS: [SystemId | "normal", string, string][] = [

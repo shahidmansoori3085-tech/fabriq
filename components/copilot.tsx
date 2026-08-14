@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VoiceButton } from "@/components/voice";
 import { downscale, type ExtractedItem } from "@/components/photo";
+import type { JobItem } from "@/lib/engine/types";
 
 /** Mirrors the allow-list the copilot route validates against. */
 export type CopilotAction = "photo" | "material_list" | "quotation" | "cutting" | "offcuts";
@@ -25,7 +26,7 @@ const ACTION_LABEL: Record<CopilotAction, string> = {
   offcuts: "♻️ Open the offcut bank",
 };
 
-interface Msg { role: "user" | "assistant"; content: string; action?: CopilotAction }
+interface Msg { role: "user" | "assistant"; content: string; action?: CopilotAction; item?: JobItem }
 
 interface Shot { id: string; url: string; data: string; mediaType: string }
 
@@ -46,11 +47,13 @@ const SUGGESTIONS = [
   "Where does the glazing clip go in a partition?",
 ];
 
-export function Copilot({ onAction, onExtracted }: {
+export function Copilot({ onAction, onExtracted, onComputed }: {
   /** Take the fabricator to the part of the app he just asked for. */
   onAction?: (a: CopilotAction) => void;
   /** Sheet photos read here feed the same review screen as the main flow. */
   onExtracted?: (rows: ExtractedItem[], notes?: string) => void;
+  /** The Copilot ran a size straight through the real engine — add it to the job. */
+  onComputed?: (item: JobItem) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -140,7 +143,7 @@ export function Copilot({ onAction, onExtracted }: {
       });
       const d = await r.json();
       if (!r.ok) setErr(d.message || "The Copilot could not answer.");
-      else setMsgs((m) => [...m, { role: "assistant", content: d.reply, action: d.action }]);
+      else setMsgs((m) => [...m, { role: "assistant", content: d.reply, action: d.action, item: d.item }]);
     } catch { setErr("Network problem. Please try again."); }
     setBusy(false);
   };
@@ -180,8 +183,9 @@ export function Copilot({ onAction, onExtracted }: {
             {msgs.length === 0 && (
               <div className="flex flex-col gap-2">
                 <div className="card p-3 text-xs" style={{ color: "var(--ink-2)" }}>
-                  👷 Attach a sheet photo here, or just ask — systems, cutting method,
-                  interlock, glass, hardware. Measurements always come from the engine, never from me.
+                  👷 Tell me a size and I&rsquo;ll work it out &mdash; &ldquo;4x4 window, how
+                  much material?&rdquo; &mdash; or attach a sheet photo, or just ask a
+                  question. Every number still comes from the real engine, never guessed.
                 </div>
                 {/* The command centre's own shortcuts — no model call needed to
                     reach the thing he actually came to do. */}
@@ -210,6 +214,14 @@ export function Copilot({ onAction, onExtracted }: {
                   <button onClick={() => runAction(m.action!)}
                     className="btn-primary mt-1.5 px-3.5 py-2 text-xs font-bold">
                     {ACTION_LABEL[m.action]}
+                  </button>
+                )}
+                {/* The Copilot ran this size through the real engine — one tap
+                    puts it straight into the job, no re-entering it. */}
+                {m.item && (
+                  <button onClick={() => { onComputed?.(m.item!); setOpen(false); }}
+                    className="btn-primary mt-1.5 px-3.5 py-2 text-xs font-bold">
+                    ➕ Add to job &amp; open cutting sheet
                   </button>
                 )}
               </div>
