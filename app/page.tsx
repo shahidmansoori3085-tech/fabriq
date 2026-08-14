@@ -1294,7 +1294,13 @@ function Entry({ startId, onBuild, onBack }: {
           }
         } else if (s === "domal") {
           const vs = domalVar.length ? domalVar : ["no"];
-          for (const [v, vl] of DOMAL_VAR) if (vs.includes(v)) push("window", { system: "domal", domalFix: v }, `Domal · ${vl}`);
+          if (normTracks.length) {
+            for (const [v, vl] of DOMAL_VAR) if (vs.includes(v))
+              for (const [t, tl] of NORMAL_VAR) if (normTracks.includes(t))
+                push("window", { system: "domal", domalFix: v, tracks: t }, `Domal · ${vl} · ${tl}`);
+          } else {
+            for (const [v, vl] of DOMAL_VAR) if (vs.includes(v)) push("window", { system: "domal", domalFix: v }, `Domal · ${vl}`);
+          }
         } else {
           const zs = zTypes.length ? zTypes : ["openable"];
           for (const [z, zl] of Z_TYPE) if (zs.includes(z)) push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
@@ -1315,11 +1321,12 @@ function Entry({ startId, onBuild, onBack }: {
     return bs;
   };
 
-  // Domal's fixed-band choice and Z-Section's type genuinely change what gets
-  // built — unlike Normal's tracks, there's no sensible width-based default
-  // to fall back on, so picking the system without picking its variant must
-  // block "Next" rather than silently taking computeBuckets' fallback.
+  // Track count, Domal's fixed-band choice and Z-Section's type all genuinely
+  // change what gets built — a fabricator's track choice doesn't follow from
+  // width alone (some run 2-track on a big window, or 3-track on a small
+  // one), so it must be asked, not silently sized off the opening.
   const winSysReady =
+    (!(winSys.includes("normal") || winSys.includes("domal")) || normTracks.length > 0) &&
     (!winSys.includes("domal") || domalVar.length > 0) &&
     (!winSys.includes("z_section") || zTypes.length > 0);
   const cfgOk = curType === "window" ? winSys.length > 0 && winSysReady
@@ -1424,9 +1431,9 @@ function Entry({ startId, onBuild, onBack }: {
                 <ChipGroup options={WIN_SYS.map(([v, l, hnt]) => [v as string, l, hnt])} selected={winSys}
                   onToggle={(v) => setWinSys((p) => toggleArr(p, v))} />
               </div>
-              {winSys.includes("normal") && (
+              {(winSys.includes("normal") || winSys.includes("domal")) && (
                 <div>
-                  <Label>Normal — tracks</Label>
+                  <Label>Track count</Label>
                   <ChipGroup options={NORMAL_VAR.map(([v, l]) => [v, l])} selected={normTracks}
                     onToggle={(v) => setNormTracks((p) => toggleArr(p, v))} />
                 </div>
