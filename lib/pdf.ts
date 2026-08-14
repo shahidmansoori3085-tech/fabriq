@@ -34,6 +34,10 @@ export interface PdfTable {
   sub?: string;
   columns: PdfColumn[];
   rows: string[][];
+  /** One data-URL (or null) per row — a small cross-section thumbnail drawn
+   *  in a left-hand gutter before the text columns, so a supplier reading the
+   *  PDF sees the same profile shape the app shows on screen. */
+  rowImages?: (string | null)[];
 }
 
 export interface OrderPdfOpts {
@@ -101,10 +105,12 @@ export function buildOrderPdf(opts: OrderPdfOpts): Blob {
       y += 5;
     }
 
-    // Normalise declared widths to the printable width.
+    // A row-image gutter, if this table carries drawings, pushes every text
+    // column right — the declared widths still normalise to what's left.
+    const gutter = t.rowImages ? 16 : 0;
     const totalW = t.columns.reduce((a, c) => a + c.width, 0) || 1;
-    const widths = t.columns.map((c) => (c.width / totalW) * CW);
-    const xAt = (i: number) => M + widths.slice(0, i).reduce((a, w) => a + w, 0);
+    const widths = t.columns.map((c) => (c.width / totalW) * (CW - gutter));
+    const xAt = (i: number) => M + gutter + widths.slice(0, i).reduce((a, w) => a + w, 0);
 
     const cell = (i: number, text: string) => {
       const c = t.columns[i];
@@ -119,8 +125,14 @@ export function buildOrderPdf(opts: OrderPdfOpts): Blob {
     t.columns.forEach((c, i) => cell(i, c.label.toUpperCase()));
     y += headH - 0.5;
 
-    // body rows
-    const rowH = 7;
+    // body rows — taller when a gutter drawing needs the room
+    const rowH = gutter ? 15 : 7;
+    const drawRowImage = (data: string | null | undefined, rowTop: number) => {
+      if (!data) return;
+      try {
+        doc.addImage(data, "PNG", M + 1.5, rowTop + 1, gutter - 3, rowH - 2);
+      } catch { /* a malformed data URL should never break the rest of the PDF */ }
+    };
     t.rows.forEach((r, ri) => {
       if (y + rowH > H - 18) {
         doc.addPage();
@@ -131,6 +143,7 @@ export function buildOrderPdf(opts: OrderPdfOpts): Blob {
         y += headH - 0.5;
       }
       if (ri % 2 === 1) doc.setFillColor(ZEBRA).rect(M, y - 4.6, CW, rowH, "F");
+      drawRowImage(t.rowImages?.[ri], y - 4.6);
       doc.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(INK);
       r.forEach((v, i) => {
         if (i === 0) doc.setFont("helvetica", "bold");
@@ -168,6 +181,36 @@ export function buildOrderPdf(opts: OrderPdfOpts): Blob {
   }
 
   return doc.output("blob");
+}
+
+/**
+ * Fetch a catalogue cross-section PNG (from /public/sections) and flatten it
+ * onto a white background as a data URL jsPDF can embed. Returns null for a
+ * section with no cropped image (or any load failure) — the caller just
+ * skips the drawing for that row rather than breaking the whole PDF.
+ */
+export async function sectionImageDataUrl(sectionId: string): Promise<string | null> {
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const loaded = new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("image load failed"));
+    });
+    img.src = `/sections/${sectionId}.png`;
+    await loaded;
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !canvas.width || !canvas.height) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
 }
 
 /**
