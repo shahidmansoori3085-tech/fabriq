@@ -341,7 +341,7 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     // Shutters — Normal Sliding: glass aur jali dono mein same sections
     item.shutters.forEach((sh, i) => {
       const sn = `S${i + 1}`;
-      const tag = sh.kind === "jali" ? " (Jali)" : "";
+      const tag = sh.kind === "jali" ? " (Mesh)" : "";
       push("handle_std", shutterH, `${sn} Handle${tag}`);
       push("interlock", shutterH, `${sn} Interlock${tag}`);
       push("bearing", bearingLen, `${sn} Bearing Top${tag}`);
@@ -401,7 +401,7 @@ function expandDomalItem(item: JobItem): CutPiece[] {
     item.shutters.forEach((sh, i) => {
       const sn = `S${i + 1}`;
       const secId = sh.kind === "jali" ? "domal_jali_shutter" : "domal_glass_shutter";
-      const tag = sh.kind === "jali" ? " (Jali)" : "";
+      const tag = sh.kind === "jali" ? " (Mesh)" : "";
       push(secId, shutterW, `${sn} Shutter Top${tag}`);
       push(secId, shutterW, `${sn} Shutter Bottom${tag}`);
       push(secId, shutterH, `${sn} Shutter Left${tag}`);
@@ -452,10 +452,10 @@ function expandDoorItem(item: JobItem): CutPiece[] {
       });
 
     if (hasChokhat) {
-      push("door_frame_pattam", item.width, "Chokhat Top");
-      push("door_frame_pattam", item.height, "Chokhat Left");
-      push("door_frame_pattam", item.height, "Chokhat Right");
-      push("door_frame_pattam", item.width, "Chokhat Bottom");
+      push("door_frame_pattam", item.width, "Frame Top");
+      push("door_frame_pattam", item.height, "Frame Left");
+      push("door_frame_pattam", item.height, "Frame Right");
+      push("door_frame_pattam", item.width, "Frame Bottom");
     }
 
     // Top/Bottom/Center rails all span the SAME horizontal gap — between
@@ -463,10 +463,10 @@ function expandDoorItem(item: JobItem): CutPiece[] {
     // clearance reduction again (fabricator-confirmed 2026-07-27: 27.5"
     // palla → 25" center, same 2.5" clearance reused).
     const railW = pallaW - clearance;
-    push(pallaSection, railW, "Palla Top");
-    push(pallaSection, railW, "Palla Bottom");
-    push(pallaSection, pallaH, "Palla Left");
-    push(pallaSection, pallaH, "Palla Right");
+    push(pallaSection, railW, "Shutter Top");
+    push(pallaSection, railW, "Shutter Bottom");
+    push(pallaSection, pallaH, "Shutter Left");
+    push(pallaSection, pallaH, "Shutter Right");
 
     for (let r = 0; r < railCount; r++) {
       push(centerSection, railW, `Center Rail ${r + 1}`);
@@ -680,7 +680,7 @@ function expandZSectionItem(item: JobItem): CutPiece[] {
     // Openable sashes — Z-pipe shutter frame (+ clip if glass).
     g.sashes.forEach((s, i) => {
       const sn = `S${i + 1}`;
-      const kindTag = s.kind === "jali" ? " (Jali)" : s.kind === "sheet" ? " (Sheet)" : "";
+      const kindTag = s.kind === "jali" ? " (Mesh)" : s.kind === "sheet" ? " (Sheet)" : "";
       push(g.pipe, s.shW, `${sn} Shutter Top${kindTag}`);
       push(g.pipe, s.shW, `${sn} Shutter Bottom${kindTag}`);
       push(g.pipe, s.shH, `${sn} Shutter Left${kindTag}`);
@@ -840,7 +840,7 @@ export function estimate(items: JobItem[]): MaterialList {
     hardware.push({ name: "Hinges", formula: "3 per door (typical)", qty: hinges, unit: "nos" });
   if (meshSplineFt > 0)
     hardware.push({
-      name: "Jali spline / rubber", formula: `jali perimeter +${DEFAULTS.wastagePct}%`,
+      name: "Mesh spline / rubber", formula: `mesh perimeter +${DEFAULTS.wastagePct}%`,
       qty: Math.ceil(meshSplineFt * wastage), unit: "rft",
     });
   if (sheetSplineFt > 0)

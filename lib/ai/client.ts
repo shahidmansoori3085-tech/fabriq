@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import { isGeminiKey } from "./gemini";
 
 /** Model is a config value — revisited per eval run (doc 03). */
@@ -37,8 +36,13 @@ export type ProviderChoice =
  *      for every fabricator once the founder sets this once
  *   4. AWS Bedrock (server AWS credentials)
  * Returns null only when nothing at all is configured.
+ *
+ * Async because the Bedrock branch dynamically imports @anthropic-ai/bedrock-sdk —
+ * that SDK is unused on the hot path (Gemini/Anthropic-direct) but was previously
+ * imported at module top level, bloating every AI route's serverless bundle and
+ * slowing cold starts for all fabricators, not just the rare Bedrock deployment.
  */
-export function resolveProvider(apiKey?: string): ProviderChoice | null {
+export async function resolveProvider(apiKey?: string): Promise<ProviderChoice | null> {
   if (apiKey && isGeminiKey(apiKey)) return { provider: "gemini", apiKey };
   const anthropicKey = apiKey || process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) return { provider: "anthropic", client: new Anthropic({ apiKey: anthropicKey }), model: AI_MODEL };
@@ -47,6 +51,7 @@ export function resolveProvider(apiKey?: string): ProviderChoice | null {
   const awsAccessKey = AWS_ACCESS_KEY();
   const awsSecretKey = AWS_SECRET_KEY();
   if (awsAccessKey && awsSecretKey) {
+    const { AnthropicBedrock } = await import("@anthropic-ai/bedrock-sdk");
     const client = new AnthropicBedrock({ awsRegion: AWS_REGION(), awsAccessKey, awsSecretKey }) as unknown as Anthropic;
     return { provider: "bedrock", client, model: BEDROCK_MODEL };
   }

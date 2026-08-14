@@ -3,14 +3,22 @@
  * When ANTHROPIC_API_KEY is set, /api/ai/questions asks Claude to analyze the
  * situation and generate contextual questions. Without a key, these
  * deterministic rules produce sensible questions so the app always works.
- * Format contract (both paths): 4 options + free-text "Apna khud likho".
+ * Format contract (both paths): 4 options + a free-text "Enter your own".
+ *
+ * Copy rule for everything a fabricator reads: plain professional English,
+ * short sentences, no slang. Trade names that a shop actually says out loud —
+ * Domal, Z-Section, track, sash, mullion, interlock, chokhat, palla — stay,
+ * because translating them would make the app harder to use, not easier. The
+ * two Hindi words that DO have a clear English equivalent lead in English with
+ * the trade word in brackets on first use: Frame (chokhat), Shutter (palla).
  */
 import { Um, mm, formatFtInSut } from "./units";
 
 export interface Question {
   id: string;
-  question: string; // Hinglish
-  why: string; // one-liner: is sawaal ka faayda
+  question: string;
+  /** one line on why the answer matters */
+  why: string;
   options: { value: string; label: string; hint?: string }[];
   /** diagram hint for the SVG renderer */
   diagram?: { kind: "tracks" | "shutter-mix" | "profile" | "partition-type" | "partition-bays" | "partition-rows"; params?: Record<string, string> };
@@ -24,6 +32,90 @@ export interface QuestionContext {
   known: Record<string, string>; // answers so far / profile defaults
 }
 
+/**
+ * Questions a shop answers ONCE for a whole job rather than per opening.
+ *
+ * A photographed sheet with six windows used to run six separate rounds of the
+ * same interrogation — "which system?" asked six times for a job that is
+ * obviously all one system. These four are the ones that are uniform in
+ * practice: the shop builds a job in one system, one pipe size, one palla
+ * profile. Everything else (tracks, mix, fixed bands, bays) genuinely differs
+ * opening to opening and stays per-item.
+ */
+export const JOB_LEVEL_IDS = new Set(["system", "zSize", "chokhat", "palla"]);
+
+/**
+ * The job-level round, worded for a whole job instead of one opening.
+ *
+ * Only asks what is still unknown, and only for the types actually present on
+ * the sheet. Returns [] when there is nothing worth asking once — the caller
+ * should then skip the round entirely rather than show an empty screen.
+ */
+export function jobLevelQuestions(opts: {
+  types: ("window" | "door" | "partition")[];
+  count: number;
+  known: Record<string, string>;
+}): Question[] {
+  const { types, count, known } = opts;
+  const qs: Question[] = [];
+  const many = count > 1;
+  const all = many ? `all ${count}` : "this";
+
+  if (types.includes("window") && !known.system) {
+    qs.push({
+      id: "system",
+      question: `Which system for ${all} window${many ? "s" : ""}?`,
+      why: many ? "Answer once — we will not ask again for each window" : "The system decides the sections and the formula",
+      options: [
+        { value: "normal", label: "Normal Sliding", hint: "18mm — most common" },
+        { value: "domal", label: "Domal", hint: "27–29mm — premium, different build" },
+        { value: "z_section", label: "Z-Section", hint: "Hinge-openable — fixed, openable or door" },
+      ],
+    });
+  }
+
+  // Only meaningful once Z-section is the chosen system.
+  if (types.includes("window") && known.system === "z_section" && !known.zSize) {
+    qs.push({
+      id: "zSize",
+      question: `Which pipe size for ${all} window${many ? "s" : ""}?`,
+      why: "Size changes the outer, shutter and center sections, and the weight",
+      options: [
+        { value: "light", label: "Small (40×40)", hint: "For normal windows" },
+        { value: "heavy", label: "Big (40×55 / 70)", hint: "For large windows and doors" },
+      ],
+    });
+  }
+
+  if (types.includes("door")) {
+    if (!known.chokhat) {
+      qs.push({
+        id: "chokhat",
+        question: "Is the door frame (chokhat) already fitted?",
+        why: "If the frame is already there, you only need an estimate for the shutter",
+        options: [
+          { value: "existing", label: "Yes, already fitted", hint: "Shutter only" },
+          { value: "needed", label: "No, we have to make it", hint: "Frame + shutter" },
+        ],
+      });
+    }
+    if (!known.palla) {
+      qs.push({
+        id: "palla",
+        question: "Which shutter (palla) profile size?",
+        why: "Size changes the section code and the weight",
+        options: [
+          { value: "60", label: "60×25mm", hint: "Moulding handle — common" },
+          { value: "75", label: "75×25mm", hint: "3×1 handle — heavy" },
+          { value: "50", label: "50×25mm", hint: "2×1 handle — light" },
+        ],
+      });
+    }
+  }
+
+  return qs;
+}
+
 export function generateQuestions(ctx: QuestionContext): Question[] {
   const qs: Question[] = [];
   const wide = ctx.width >= mm(1500);
@@ -33,12 +125,12 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
     if (!ctx.known.system) {
       qs.push({
         id: "system",
-        question: `${sizeLabel} window — kaun sa system?`,
-        why: "System se sections aur formula decide hota hai",
+        question: `${sizeLabel} window — which system?`,
+        why: "The system decides the sections and the formula",
         options: [
-          { value: "normal", label: "Normal Sliding", hint: "18mm — sabse common" },
-          { value: "domal", label: "Domal", hint: "27-29mm — premium, alag construction" },
-          { value: "z_section", label: "Z-Section", hint: "Hinge-openable — fixed/openable/door" },
+          { value: "normal", label: "Normal Sliding", hint: "18mm — most common" },
+          { value: "domal", label: "Domal", hint: "27–29mm — premium, different build" },
+          { value: "z_section", label: "Z-Section", hint: "Hinge-openable — fixed, openable or door" },
         ],
       });
     }
@@ -53,23 +145,23 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if (!ctx.known.domalFix) {
         qs.push({
           id: "domalFix",
-          question: "Sliding ke UPAR fixed glass patti chahiye?",
-          why: "Upar fix ho to SP partition pipe + glazing clip add hoti hai",
+          question: "Fixed glass band ABOVE the sliding?",
+          why: "A fixed band adds SP partition pipe and glazing clip",
           options: [
-            { value: "no", label: "Nahi, sirf sliding", hint: "Poora window sliding" },
-            { value: "yes", label: "Haan, upar fix", hint: "Neeche sliding, upar fixed glass" },
+            { value: "no", label: "No, sliding only", hint: "Full window slides" },
+            { value: "yes", label: "Yes, fixed on top", hint: "Sliding below, fixed glass above" },
           ],
         });
       }
       if (ctx.known.domalFix === "yes" && !ctx.known.domalFixFt) {
         qs.push({
           id: "domalFixFt",
-          question: "Upar fix wala hissa kitna uncha (feet)?",
-          why: "Isse coupler kahan lagega aur fixed glass ka size nikalta hai",
+          question: "How tall is the fixed band on top (feet)?",
+          why: "This sets where the coupler sits and the size of the fixed glass",
           options: [
-            { value: "1", label: "1 ft", hint: "Patli patti" },
+            { value: "1", label: "1 ft", hint: "Narrow band" },
             { value: "1.5", label: "1.5 ft" },
-            { value: "2", label: "2 ft", hint: "Sabse common" },
+            { value: "2", label: "2 ft", hint: "Most common" },
             { value: "2.5", label: "2.5 ft" },
           ],
         });
@@ -82,11 +174,11 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if (!ctx.known.zSize) {
         qs.push({
           id: "zSize",
-          question: "Konsi size ki pipe — small ya big?",
-          why: "Size se outer/shutter/center sections aur weight badalta hai",
+          question: "Which pipe size — small or big?",
+          why: "Size changes the outer, shutter and center sections, and the weight",
           options: [
-            { value: "light", label: "Small (40×40)", hint: "Normal window ke liye" },
-            { value: "heavy", label: "Big (40×55 / 70)", hint: "Bada window ya door ke liye" },
+            { value: "light", label: "Small (40×40)", hint: "For normal windows" },
+            { value: "heavy", label: "Big (40×55 / 70)", hint: "For large windows and doors" },
           ],
         });
       }
@@ -94,13 +186,13 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if (!ctx.known.zType) {
         qs.push({
           id: "zType",
-          question: "Kis type ka banega?",
-          why: "Type se pura construction aur formula decide hota hai",
+          question: "Which type will this be?",
+          why: "The type decides the whole build and the formula",
           options: [
-            { value: "openable", label: "Openable window", hint: "Khulne wala — mullion + shutter" },
-            { value: "combo", label: "Upar fix + neeche openable", hint: "Transom se bata — sabse common" },
-            { value: "fixed", label: "Poora fixed (nahi khulega)", hint: "Sirf glass + clip, shutter nahi" },
-            { value: "door", label: "Door", hint: "Single palla, mullion nahi" },
+            { value: "openable", label: "Openable window", hint: "Mullion + shutter" },
+            { value: "combo", label: "Fixed on top, openable below", hint: "Split by a transom — most common" },
+            { value: "fixed", label: "Fully fixed (does not open)", hint: "Glass + clip only, no shutter" },
+            { value: "door", label: "Door", hint: "Single shutter, no mullion" },
           ],
         });
       }
@@ -110,11 +202,11 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if (zType === "combo" && !ctx.known.zComboDir) {
         qs.push({
           id: "zComboDir",
-          question: "Fix wala hissa kahan?",
-          why: "Upar ya side se transom/mullion aur dono glass ke size badalte hain",
+          question: "Where is the fixed part?",
+          why: "Top or side changes the transom/mullion and both glass sizes",
           options: [
-            { value: "top", label: "Upar (leti patti)", hint: "Upar fix, neeche khulega" },
-            { value: "side", label: "Side (khadi patti)", hint: "Ek taraf fix, doosri khulegi" },
+            { value: "top", label: "On top (horizontal band)", hint: "Fixed above, opens below" },
+            { value: "side", label: "On the side (vertical band)", hint: "One side fixed, other opens" },
           ],
         });
       }
@@ -123,12 +215,12 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if ((zType === "openable" || zType === "combo") && !ctx.known.zSashCount) {
         qs.push({
           id: "zSashCount",
-          question: "Khulne wale hisse me kitne sash?",
-          why: "Sash count se mullion aur shutter count decide hota hai",
+          question: "How many sashes in the openable part?",
+          why: "Sash count decides the number of mullions and shutters",
           options: [
-            { value: "1", label: "1 Sash", hint: "Mullion nahi" },
-            { value: "2", label: "2 Sash", hint: "1 mullion" },
-            { value: "3", label: "3 Sash", hint: "2 mullion" },
+            { value: "1", label: "1 sash", hint: "No mullion" },
+            { value: "2", label: "2 sashes", hint: "1 mullion" },
+            { value: "3", label: "3 sashes", hint: "2 mullions" },
           ],
         });
       }
@@ -137,14 +229,14 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
         const side = ctx.known.zComboDir === "side";
         qs.push({
           id: "zFixedFt",
-          question: side ? "Side fix wala hissa kitna chauda (feet)?"
-            : "Upar fix wala hissa kitna uncha (feet)?",
-          why: "Isse divider kahan lagega aur dono glass ke size nikalte hain",
+          question: side ? "How wide is the fixed part on the side (feet)?"
+            : "How tall is the fixed part on top (feet)?",
+          why: "This sets where the divider sits and the size of both glass panels",
           options: [
-            { value: "1.5", label: "1.5 ft", hint: "Chhoti fixed patti" },
-            { value: "2", label: "2 ft", hint: "Sabse common" },
+            { value: "1.5", label: "1.5 ft", hint: "Small fixed band" },
+            { value: "2", label: "2 ft", hint: "Most common" },
             { value: "2.5", label: "2.5 ft" },
-            { value: "3", label: "3 ft", hint: "Badi fixed patti" },
+            { value: "3", label: "3 ft", hint: "Large fixed band" },
           ],
         });
       }
@@ -157,21 +249,21 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
     if (!isZSection && !ctx.known.tracks) {
       qs.push({
         id: "tracks",
-        question: "Kitne track?",
-        why: "Track se bottom section aur shutter count decide hota hai",
+        question: "How many tracks?",
+        why: "Track count decides the bottom section and the number of shutters",
         diagram: { kind: "tracks" },
         options: wide
           ? [
-              { value: "3", label: "3 Track", hint: "Is width pe common" },
-              { value: "2", label: "2 Track" },
-              { value: "4", label: "4 Track" },
-              { value: "2.5", label: "2 Track + Fix" },
+              { value: "3", label: "3 track", hint: "Common at this width" },
+              { value: "2", label: "2 track" },
+              { value: "4", label: "4 track" },
+              { value: "2.5", label: "2 track + fixed" },
             ]
           : [
-              { value: "2", label: "2 Track", hint: "Is width pe kaafi hai" },
-              { value: "3", label: "3 Track" },
-              { value: "4", label: "4 Track" },
-              { value: "2.5", label: "2 Track + Fix" },
+              { value: "2", label: "2 track", hint: "Enough at this width" },
+              { value: "3", label: "3 track" },
+              { value: "4", label: "4 track" },
+              { value: "2.5", label: "2 track + fixed" },
             ],
       });
     }
@@ -182,39 +274,39 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       if (tracks === "4") {
         qs.push({
           id: "mix",
-          question: "Shutter kaise banaoge?",
-          why: "Glass/jali mix se material list badalti hai",
+          question: "How should the shutters be split?",
+          why: "The glass and mesh mix changes the material list",
           diagram: { kind: "shutter-mix", params: { tracks: "4" } },
           options: [
-            { value: "GGGJ", label: "3 Glass + 1 Jali", hint: "Sabse common" },
-            { value: "GGJJ", label: "2 Glass + 2 Jali" },
-            { value: "GGGG", label: "4 Glass, jali nahi" },
-            { value: "GJJJ", label: "1 Glass + 3 Jali" },
+            { value: "GGGJ", label: "3 glass + 1 mesh", hint: "Most common" },
+            { value: "GGJJ", label: "2 glass + 2 mesh" },
+            { value: "GGGG", label: "4 glass, no mesh" },
+            { value: "GJJJ", label: "1 glass + 3 mesh" },
           ],
         });
       } else if (tracks === "3") {
         qs.push({
           id: "mix",
-          question: "Shutter kaise banaoge?",
-          why: "Glass/jali mix se material list badalti hai",
+          question: "How should the shutters be split?",
+          why: "The glass and mesh mix changes the material list",
           diagram: { kind: "shutter-mix", params: { tracks: "3" } },
           options: [
-            { value: "GGJ", label: "2 Glass + 1 Jali", hint: "Sabse common" },
-            { value: "GGG", label: "3 Glass, jali nahi" },
-            { value: "GJJ", label: "1 Glass + 2 Jali" },
-            { value: "GG", label: "2 Glass (1 track khaali)" },
+            { value: "GGJ", label: "2 glass + 1 mesh", hint: "Most common" },
+            { value: "GGG", label: "3 glass, no mesh" },
+            { value: "GJJ", label: "1 glass + 2 mesh" },
+            { value: "GG", label: "2 glass (1 track empty)" },
           ],
         });
       } else {
         qs.push({
           id: "mix",
-          question: "Shutter kaise banaoge?",
-          why: "Glass/jali mix se material list badalti hai",
+          question: "How should the shutters be split?",
+          why: "The glass and mesh mix changes the material list",
           diagram: { kind: "shutter-mix", params: { tracks: "2" } },
           options: [
-            { value: "GG", label: "2 Glass", hint: "Standard" },
-            { value: "GJ", label: "1 Glass + 1 Jali" },
-            { value: "JJ", label: "2 Jali" },
+            { value: "GG", label: "2 glass", hint: "Standard" },
+            { value: "GJ", label: "1 glass + 1 mesh" },
+            { value: "JJ", label: "2 mesh" },
           ],
         });
       }
@@ -228,34 +320,34 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
     if (!ctx.known.chokhat) {
       qs.push({
         id: "chokhat",
-        question: "Chokhat (frame) pehle se lagi hai?",
-        why: "Agar chokhat pehle se hai toh sirf palla ka estimate milega",
+        question: "Is the frame (chokhat) already fitted?",
+        why: "If the frame is already there, you only need an estimate for the shutter",
         options: [
-          { value: "existing", label: "Haan, pehle se hai", hint: "Sirf palla banega" },
-          { value: "needed", label: "Nahi, banani hai", hint: "Chokhat + palla dono" },
+          { value: "existing", label: "Yes, already fitted", hint: "Shutter only" },
+          { value: "needed", label: "No, we have to make it", hint: "Frame + shutter" },
         ],
       });
     }
     if (!ctx.known.palla) {
       qs.push({
         id: "palla",
-        question: "Palla (shutter) ka profile size kaunsa?",
-        why: "Size se section code aur weight badalta hai",
+        question: "Which shutter (palla) profile size?",
+        why: "Size changes the section code and the weight",
         options: [
-          { value: "60", label: "60×25mm", hint: "Moulding Handle — common" },
-          { value: "75", label: "75×25mm", hint: "3×1 Handle — heavy" },
-          { value: "50", label: "50×25mm", hint: "2×1 Handle — halka" },
+          { value: "60", label: "60×25mm", hint: "Moulding handle — common" },
+          { value: "75", label: "75×25mm", hint: "3×1 handle — heavy" },
+          { value: "50", label: "50×25mm", hint: "2×1 handle — light" },
         ],
       });
     }
     if (!ctx.known.rails) {
       qs.push({
         id: "rails",
-        question: "Kitne center rail?",
-        why: "Rail se door kitne hisso mein batega decide hota hai",
+        question: "How many center rails?",
+        why: "Rails decide how many panels the door is split into",
         options: [
-          { value: "2", label: "2 Rail", hint: "3 hisse" },
-          { value: "3", label: "3 Rail", hint: "4 hisse" },
+          { value: "2", label: "2 rails", hint: "3 panels" },
+          { value: "3", label: "3 rails", hint: "4 panels" },
         ],
       });
     }
@@ -263,19 +355,19 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       const rails = ctx.known.rails ?? "2";
       qs.push({
         id: "zonemix",
-        question: "Har hisse mein kya lagega?",
-        why: "Sheet aur jali mix se material list badalti hai",
+        question: "What goes in each panel?",
+        why: "The sheet and mesh mix changes the material list",
         options:
           rails === "3"
             ? [
-                { value: "SSSJ", label: "3 Sheet + 1 Jali (upar)", hint: "Sabse common" },
-                { value: "SSSS", label: "4 Sheet, jali nahi" },
-                { value: "SSJJ", label: "2 Sheet + 2 Jali" },
+                { value: "SSSJ", label: "3 sheet + 1 mesh (top)", hint: "Most common" },
+                { value: "SSSS", label: "4 sheet, no mesh" },
+                { value: "SSJJ", label: "2 sheet + 2 mesh" },
               ]
             : [
-                { value: "SSJ", label: "2 Sheet + 1 Jali (upar)", hint: "Sabse common" },
-                { value: "SSS", label: "3 Sheet, jali nahi" },
-                { value: "SJJ", label: "1 Sheet + 2 Jali" },
+                { value: "SSJ", label: "2 sheet + 1 mesh (top)", hint: "Most common" },
+                { value: "SSS", label: "3 sheet, no mesh" },
+                { value: "SJJ", label: "1 sheet + 2 mesh" },
               ],
       });
     }
@@ -286,19 +378,19 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
     if (!ctx.known.partDoor) {
       qs.push({
         id: "partDoor",
-        question: "Partition me door (darwaza) hai?",
-        why: "Door ki jagah chhodkar baaki hisse me panels lagte hain",
+        question: "Is there a door in the partition?",
+        why: "The door takes its own space; panels fill the rest",
         options: [
-          { value: "no", label: "Nahi, sirf panels", hint: "Poora glass/sheet grid" },
-          { value: "yes", label: "Haan, door hai", hint: "Std ~3ft, alag door palla" },
+          { value: "no", label: "No, panels only", hint: "Full glass or sheet grid" },
+          { value: "yes", label: "Yes, there is a door", hint: "Usually ~3 ft, separate door shutter" },
         ],
       });
     }
     if (ctx.known.partDoor === "yes" && !ctx.known.partDoorW) {
       qs.push({
         id: "partDoorW",
-        question: "Door kitna chauda?",
-        why: "Door width se baaki panels ki jagah bachti hai",
+        question: "How wide is the door?",
+        why: "The door width decides how much space is left for the panels",
         options: [
           { value: "2.5", label: "2.5 ft (30\")" },
           { value: "3", label: "3 ft (36\")", hint: "Standard" },
@@ -311,32 +403,32 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
     if (!ctx.known.partBayFt) {
       qs.push({
         id: "partBayFt",
-        question: "Har glass panel kitna chauda? (khade divider ka gap)",
-        why: "Isse kitne khade divider lagenge aur har glass ka size nikalta hai",
+        question: "How wide is each glass panel? (gap between vertical dividers)",
+        why: "This decides how many vertical dividers you need and the size of each glass",
         diagram: { kind: "partition-bays" },
         options: [
-          { value: "2", label: "2 ft", hint: "Zyada divider, chhote panel" },
+          { value: "2", label: "2 ft", hint: "More dividers, smaller panels" },
           { value: "2.5", label: "2.5 ft", hint: "Balanced — common" },
-          { value: "3", label: "3 ft", hint: "Kam divider, bade panel" },
+          { value: "3", label: "3 ft", hint: "Fewer dividers, larger panels" },
         ],
       });
     }
     if (!ctx.known.partRowFt) {
       qs.push({
         id: "partRowFt",
-        question: "Glass ki har row kitni uunchi? (leta/horizontal divider ka gap)",
-        why: "Isse kitne lete divider lagenge aur har glass ki height nikalti hai",
+        question: "How tall is each row of glass? (gap between horizontal dividers)",
+        why: "This decides how many horizontal dividers you need and the height of each glass",
         diagram: { kind: "partition-rows" },
         options: [
-          { value: "3", label: "3 ft", hint: "Zyada divider, chhoti row" },
+          { value: "3", label: "3 ft", hint: "More dividers, shorter rows" },
           { value: "3.5", label: "3.5 ft", hint: "Balanced" },
-          { value: "4", label: "4 ft", hint: "Kam divider, badi row" },
+          { value: "4", label: "4 ft", hint: "Fewer dividers, taller rows" },
         ],
       });
     }
   }
 
-  // Cap at 4 — sirf sabse zaroori
+  // Cap at 4 — only what genuinely changes the answer
   return qs.slice(0, 4);
 }
 

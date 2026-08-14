@@ -9,7 +9,6 @@
  * cost matter most.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import { AI_MODEL, BEDROCK_MODEL, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION } from "./client";
 import { geminiChat } from "./gemini";
 
@@ -65,6 +64,7 @@ export async function chatComplete(opts: ChatOpts): Promise<string> {
     const awsAccessKey = AWS_ACCESS_KEY();
     const awsSecretKey = AWS_SECRET_KEY();
     if (!awsAccessKey || !awsSecretKey) throw new Error("bedrock_no_creds");
+    const { AnthropicBedrock } = await import("@anthropic-ai/bedrock-sdk");
     const client = new AnthropicBedrock({ awsRegion: AWS_REGION(), awsAccessKey, awsSecretKey });
     const response = await client.messages.create({
       model: opts.model || BEDROCK_MODEL,

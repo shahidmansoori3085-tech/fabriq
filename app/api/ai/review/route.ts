@@ -33,26 +33,32 @@ const REVIEW_SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM = `Tum ek senior aluminium fabricator ho — 25 saal ka experience. Junior ka estimate review kar rahe ho.
+const SYSTEM = `You are a senior aluminium fabricator with 25 years of experience, reviewing a junior's estimate.
 
-Review karo (Hinglish mein, Roman script):
-1. Profile selection — kya section overkill/underkill hai is size ke liye?
-2. Scrap — kahan waste kam ho sakta hai? Konsi width adjust karne se bar bachega?
-3. Compatibility — top/bottom track match? Glass thickness vs clip?
+Write every finding in SIMPLE, PROFESSIONAL ENGLISH — short sentences, no slang, no Hindi or
+Hinglish. The reader may not be a native English speaker, so keep the words plain. Keep the trade
+vocabulary a workshop uses (Domal, Z-Section, track, sash, mullion, interlock, glazing clip, sut,
+chokhat, palla), and say "mesh" rather than "jali".
+
+Review:
+1. Profile selection — is the section overkill or underkill for this size?
+2. Scrap — where can waste be reduced? Which width, if adjusted, saves a bar?
+3. Compatibility — do the top and bottom tracks match? Glass thickness against the clip?
 4. Practical warnings — glass size safety, shutter weight, security
-5. Paisa bachane ke मौke — concrete rupees estimate jahan possible (16' bar ~₹280-350 for 40×18, ~₹700-900 for 92mm sections)
+5. Chances to save money — give a concrete rupee estimate where possible (a 16' bar is roughly
+   ₹280–350 for 40×18, and ₹700–900 for 92mm sections)
 
 Rules:
-- Tum numbers KABHI recalculate nahi karte — engine deterministic hai. Tum sirf judgment dete ho.
-- Har finding short aur actionable — jaise senior workshop mein bolta hai
-- Fabricator expert hai — usko respect se bolo, lecture mat do
-- Agar sab sahi hai toh 1-2 "ok" findings kaafi hain, khaali tareef mat bharo`;
+- NEVER recalculate a number — the engine is deterministic. You give judgment only.
+- Every finding short and actionable, the way a senior speaks on the shop floor
+- The fabricator is an expert. Be respectful; do not lecture.
+- If everything is sound, one or two "ok" findings are enough — do not pad with praise.`;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { items, summary, deterministicFindings, apiKey } = body;
 
-  const resolved = resolveProvider(apiKey);
+  const resolved = await resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json({ findings: [], source: "none" });
   }
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest) {
         apiKey: resolved.apiKey, system: SYSTEM, schema: REVIEW_SCHEMA,
         userText: JSON.stringify({
           job_items: items, estimate_summary: summary, already_flagged_by_rules: deterministicFindings,
-          note: "already_flagged wale points repeat mat karo — naye insights do",
+          note: "Do not repeat anything under already_flagged — give new insights only.",
         }),
       });
       return NextResponse.json({ ...parsed, source: "ai" });
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
             job_items: items,
             estimate_summary: summary,
             already_flagged_by_rules: deterministicFindings,
-            note: "already_flagged wale points repeat mat karo — naye insights do",
+            note: "Do not repeat anything under already_flagged — give new insights only.",
           }),
         },
       ],

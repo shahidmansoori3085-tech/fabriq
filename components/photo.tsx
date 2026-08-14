@@ -4,7 +4,7 @@
  * /api/ai/read-sheet → editable extracted items.
  */
 import { useRef, useState } from "react";
-import { parseDimension, formatFtInSut } from "@/lib/engine/units";
+import { parseDimension, describeDim, openingWarning } from "@/lib/engine/units";
 
 export interface ExtractedItem {
   type: "window" | "door" | "partition";
@@ -54,79 +54,135 @@ export async function downscale(file: File): Promise<{ data: string; mediaType: 
   }
 }
 
-export function PhotoCapture({
-  apiKey, onExtracted, onNeedKey,
-}: {
+/* ————————————————— composer ————————————————— */
+
+interface Shot { id: string; url: string; data: string; mediaType: string }
+
+/**
+ * Attach-and-send composer for sheet photos.
+ *
+ * The founder asked for something "chatbot type" here. A message THREAD is the
+ * wrong shape for data entry — it adds turns and hides what you have already
+ * attached — so this takes the part that matters: several photos, a free-text
+ * note underneath, one send. Everything stays visible and removable until sent.
+ *
+ * A real sheet is often more than one photo: separate pages, or a close-up of a
+ * corner the wide shot could not read. One analysis call sees them together.
+ */
+export function PhotoComposer({ apiKey, onExtracted, onNeedKey }: {
   apiKey: string | null;
   onExtracted: (items: ExtractedItem[], sheetNotes?: string) => void;
   onNeedKey: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [shots, setShots] = useState<Shot[]>([]);
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // No client-side key gate: the server may have its own key (Anthropic,
-  // Gemini free-tier, or Bedrock) even when Settings has nothing saved. Let
-  // the request go through; onFile's error path already surfaces "no_key"
-  // if truly nothing is configured anywhere.
-  const pick = () => fileRef.current?.click();
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setError(null);
+    const next: Shot[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const { data, mediaType } = await downscale(f);
+        next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url: URL.createObjectURL(f), data, mediaType });
+      } catch { /* skip unreadable file, keep the rest */ }
+    }
+    setShots((s) => [...s, ...next]);
+  };
 
-  const onFile = async (f: File | undefined) => {
-    if (!f) return;
+  const remove = (id: string) =>
+    setShots((s) => {
+      const gone = s.find((x) => x.id === id);
+      if (gone) URL.revokeObjectURL(gone.url);
+      return s.filter((x) => x.id !== id);
+    });
+
+  const send = async () => {
+    if (!shots.length || busy) return;
     setError(null);
     setBusy(true);
-    setPreview(URL.createObjectURL(f));
     try {
-      const { data, mediaType } = await downscale(f);
       const r = await fetch("/api/ai/read-sheet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: data, mediaType, apiKey }),
+        body: JSON.stringify({
+          images: shots.map((s) => ({ data: s.data, mediaType: s.mediaType })),
+          notes: note.trim() || undefined,
+          apiKey,
+        }),
       });
       const d = await r.json();
       if (!r.ok) {
-        setError(d.message || "Photo padhne mein dikkat aayi.");
+        setError(d.message || "Could not read the photo.");
         if (d.error === "no_key") onNeedKey();
       } else if (!d.legible || !d.items?.length) {
-        setError("Photo dhundhli hai ya sheet samajh nahi aayi — dobara kheencho ya haath se bharo.");
+        setError("The photo is blurred, or the sheet could not be understood. Take it again, or enter the sizes yourself.");
       } else {
         onExtracted(d.items, d.sheet_notes);
       }
-    } catch {
-      setError("Network problem — dobara try karo.");
-    }
+    } catch { setError("Network problem. Please try again."); }
     setBusy(false);
   };
 
   return (
     <div className="flex flex-col gap-3">
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => onFile(e.target.files?.[0])}
-      />
-      <button
-        onClick={pick}
-        disabled={busy}
-        className="btn-primary flex w-full flex-col items-center gap-1 py-6 display disabled:opacity-60"
-      >
-        <span className="text-3xl">📷</span>
-        <span className="text-lg">Sheet ki Photo Upload Karo</span>
-        <span className="text-xs font-normal opacity-90">AI khud padhega — sizes, system, sab</span>
-      </button>
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+        onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
 
-      {busy && preview && (
-        <div className="card overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="sheet" className="max-h-56 w-full object-cover opacity-70" />
-          <div className="flex items-center justify-center gap-2 p-4 text-sm font-semibold"
-            style={{ color: "var(--accent)" }}>
-            <ScanSpinner /> AI sheet padh raha hai…
-          </div>
+      {/* attachment tray — every photo stays visible and removable until sent */}
+      {shots.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {shots.map((s, i) => (
+            <div key={s.id} className="relative overflow-hidden rounded-xl"
+              style={{ border: "1px solid var(--line)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.url} alt={`sheet ${i + 1}`} className="h-24 w-24 object-cover" />
+              <span className="absolute bottom-0 left-0 px-1.5 py-0.5 text-[10px] font-bold text-white"
+                style={{ background: "rgba(0,0,0,.55)" }}>{i + 1}</span>
+              {!busy && (
+                <button onClick={() => remove(s.id)} aria-label="Remove"
+                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white"
+                  style={{ background: "rgba(0,0,0,.6)" }}>✕</button>
+              )}
+            </div>
+          ))}
+          {!busy && (
+            <button onClick={() => fileRef.current?.click()}
+              className="grid h-24 w-24 place-items-center rounded-xl text-2xl"
+              style={{ border: "1px dashed var(--steel)", color: "var(--ink-3)" }}>+</button>
+          )}
+        </div>
+      )}
+
+      {shots.length === 0 && (
+        <button onClick={() => fileRef.current?.click()} disabled={busy}
+          className="btn-primary flex w-full flex-col items-center gap-1 py-6 display disabled:opacity-60">
+          <span className="text-3xl">📷</span>
+          <span className="text-lg">Add a Photo of the Sheet</span>
+          <span className="text-xs font-normal opacity-90">One page or several — all read together</span>
+        </button>
+      )}
+
+      {shots.length > 0 && (
+        <>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} disabled={busy}
+            placeholder="Anything else we should know? For example — all in Domal, or this is a third-floor job…"
+            className="dim-input w-full px-3 py-2.5 text-sm" />
+          <button onClick={send} disabled={busy}
+            className="btn-primary w-full py-4 text-base display disabled:opacity-60">
+            {busy
+              ? "Reading…"
+              : `Read ${shots.length} ${shots.length === 1 ? "photo" : "photos"}${note.trim() ? " + my notes" : ""} →`}
+          </button>
+        </>
+      )}
+
+      {busy && (
+        <div className="flex items-center justify-center gap-2 text-sm font-semibold" style={{ color: "var(--accent)" }}>
+          <ScanSpinner /> Reading the sheet…
         </div>
       )}
 
@@ -154,21 +210,24 @@ export function ExtractReview({
 
   const remove = (i: number) => setRows((r) => r.filter((_, j) => j !== i));
 
+  // A row is only good enough to build if both sides read AND the result is a
+  // real opening — a mis-guessed unit makes a 4" window look perfectly parseable.
   const allValid = rows.length > 0 && rows.every((r) => {
     const w = parseDimension(normalizeRaw(r.width_raw, r.unit_guess));
     const h = parseDimension(normalizeRaw(r.height_raw, r.unit_guess));
-    return w && h;
+    return w && h && !openingWarning(w, h);
   });
 
   return (
     <div className="flex flex-col gap-3">
       <div className="card p-3 text-xs" style={{ background: "var(--accent-soft)", color: "var(--ink-2)" }}>
-        🤖 AI ne yeh padha — galat ho toh number tap karke theek karo. Yeh 5 second
-        ka check hi 99% accuracy ki guarantee hai.
+        🤖 This is what we read. Tap any number to correct it — a five-second check here
+        is what makes the rest of the job accurate.
       </div>
       {rows.map((r, i) => {
         const w = parseDimension(normalizeRaw(r.width_raw, r.unit_guess));
         const h = parseDimension(normalizeRaw(r.height_raw, r.unit_guess));
+        const sizeWarn = w && h ? openingWarning(w, h) : null;
         return (
           <div key={i} className="card p-4">
             <div className="flex items-center justify-between">
@@ -177,7 +236,7 @@ export function ExtractReview({
                 {r.confidence !== "high" && (
                   <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold"
                     style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
-                    CHECK KARO
+                    CHECK THIS
                   </span>
                 )}
               </span>
@@ -200,8 +259,8 @@ export function ExtractReview({
                   className="dim-input w-full px-3 py-2 font-semibold"
                   style={!w ? { borderColor: "var(--bad)" } : undefined}
                 />
-                <div className="mt-0.5 text-[11px] font-semibold" style={{ color: w ? "var(--good)" : "var(--bad)" }}>
-                  {w ? `W = ${formatFtInSut(w)}` : "width samajh nahi aayi"}
+                <div className="mt-0.5 text-[11px] font-semibold" style={{ color: w && !sizeWarn ? "var(--good)" : "var(--bad)" }}>
+                  {w ? `W = ${describeDim(w)}` : "Width not understood"}
                 </div>
               </div>
               <div>
@@ -211,11 +270,17 @@ export function ExtractReview({
                   className="dim-input w-full px-3 py-2 font-semibold"
                   style={!h ? { borderColor: "var(--bad)" } : undefined}
                 />
-                <div className="mt-0.5 text-[11px] font-semibold" style={{ color: h ? "var(--good)" : "var(--bad)" }}>
-                  {h ? `H = ${formatFtInSut(h)}` : "height samajh nahi aayi"}
+                <div className="mt-0.5 text-[11px] font-semibold" style={{ color: h && !sizeWarn ? "var(--good)" : "var(--bad)" }}>
+                  {h ? `H = ${describeDim(h)}` : "Height not understood"}
                 </div>
               </div>
             </div>
+            {sizeWarn && (
+              <div className="mt-2 rounded-lg px-3 py-2 text-[11px] font-semibold"
+                style={{ background: "var(--bad-soft)", color: "var(--ink)" }}>
+                ⚠️ {sizeWarn}
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <span className="text-xs" style={{ color: "var(--ink-3)" }}>Qty:</span>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -232,7 +297,7 @@ export function ExtractReview({
             </div>
             {r.notes && (
               <p className="mt-2 text-xs italic" style={{ color: "var(--ink-3)" }}>
-                📝 Sheet pe likha: “{r.notes}”
+                📝 Written on the sheet: “{r.notes}”
               </p>
             )}
           </div>
@@ -243,10 +308,10 @@ export function ExtractReview({
         disabled={!allValid}
         className="btn-primary w-full py-4 text-lg display disabled:opacity-40"
       >
-        ✓ Sahi Hai — Aage Badho
+        ✓ Looks Right — Continue
       </button>
       <button onClick={onCancel} className="btn-ghost w-full py-3">
-        Haath se bharo
+        Enter sizes myself
       </button>
     </div>
   );

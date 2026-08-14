@@ -22,7 +22,7 @@ function getSR(): SRCtor | null {
 }
 
 export function VoiceButton({
-  onTranscript, lang = "hi-IN", title = "Bol kar batao",
+  onTranscript, lang = "hi-IN", title = "Speak your answer",
 }: {
   onTranscript: (text: string) => void;
   lang?: string;

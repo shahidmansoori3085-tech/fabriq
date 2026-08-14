@@ -1,13 +1,33 @@
 "use client";
 /**
- * Fabricator Copilot — a floating "Ask FabriQ" chat. The fabricator can type or
- * speak a fabrication question and get a short, workshop-practical answer.
- * Reads the AI provider/key from localStorage (Anthropic or OpenRouter).
+ * Fabricator Copilot — the app's command centre, reachable from every screen.
+ *
+ * It is a chat, but not only a chat: the fabricator can attach sheet photos
+ * here and have them read, and when he asks to DO something the reply carries a
+ * real button into that part of the app instead of describing it. The home
+ * screen has always promised "just ask"; this is what makes that true.
+ *
+ * The Copilot routes and explains. It never produces a measurement — every
+ * number still comes from the deterministic engine.
  */
 import { useEffect, useRef, useState } from "react";
 import { VoiceButton } from "@/components/voice";
+import { downscale, type ExtractedItem } from "@/components/photo";
 
-interface Msg { role: "user" | "assistant"; content: string }
+/** Mirrors the allow-list the copilot route validates against. */
+export type CopilotAction = "photo" | "material_list" | "quotation" | "cutting" | "offcuts";
+
+const ACTION_LABEL: Record<CopilotAction, string> = {
+  photo: "📷 Add a sheet photo",
+  material_list: "📦 New material list",
+  quotation: "💰 Create a quotation",
+  cutting: "🔧 Open the cutting sheet",
+  offcuts: "♻️ Open the offcut bank",
+};
+
+interface Msg { role: "user" | "assistant"; content: string; action?: CopilotAction }
+
+interface Shot { id: string; url: string; data: string; mediaType: string }
 
 function readAIConfig() {
   try {
@@ -21,25 +41,89 @@ function readAIConfig() {
 }
 
 const SUGGESTIONS = [
-  "Domal 3 track window ke parts kya hote hain?",
-  "Sliding window me interlock kitne lagte hain?",
-  "Partition me glazing clip kaha lagti hai?",
+  "What are the parts of a Domal 3-track window?",
+  "How many interlocks does a sliding window need?",
+  "Where does the glazing clip go in a partition?",
 ];
 
-export function Copilot() {
+export function Copilot({ onAction, onExtracted }: {
+  /** Take the fabricator to the part of the app he just asked for. */
+  onAction?: (a: CopilotAction) => void;
+  /** Sheet photos read here feed the same review screen as the main flow. */
+  onExtracted?: (rows: ExtractedItem[], notes?: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [shots, setShots] = useState<Shot[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [msgs, busy]);
+  }, [msgs, busy, shots]);
+
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setErr(null);
+    const next: Shot[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const { data, mediaType } = await downscale(f);
+        next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url: URL.createObjectURL(f), data, mediaType });
+      } catch { /* skip unreadable file, keep the rest */ }
+    }
+    setShots((s) => [...s, ...next]);
+  };
+
+  const removeShot = (id: string) =>
+    setShots((s) => {
+      const gone = s.find((x) => x.id === id);
+      if (gone) URL.revokeObjectURL(gone.url);
+      return s.filter((x) => x.id !== id);
+    });
+
+  /** Attached photos go to the vision route, not the chat route — reading a
+   *  sheet is an extraction job, and its result belongs in the review screen
+   *  where every number can still be corrected before anything is built. */
+  const sendPhotos = async (note: string) => {
+    if (!shots.length || busy) return;
+    setErr(null);
+    setBusy(true);
+    setMsgs((m) => [...m, { role: "user", content: `📷 ${shots.length} sheet photo${note ? ` — ${note}` : ""}` }]);
+    setInput("");
+    try {
+      const cfg = readAIConfig();
+      const r = await fetch("/api/ai/read-sheet", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          images: shots.map((s) => ({ data: s.data, mediaType: s.mediaType })),
+          notes: note || undefined, apiKey: cfg.apiKey,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) setErr(d.message || "Could not read the photo.");
+      else if (!d.legible || !d.items?.length) {
+        setErr("The photo is blurred, or the sheet could not be understood. Please take it again.");
+      } else {
+        shots.forEach((s) => URL.revokeObjectURL(s.url));
+        setShots([]);
+        setMsgs((m) => [...m, {
+          role: "assistant",
+          content: `Read ${d.items.length} ${d.items.length === 1 ? "item" : "items"}. Check them below and correct anything that looks wrong before confirming.`,
+        }]);
+        setOpen(false);
+        onExtracted?.(d.items, d.sheet_notes);
+      }
+    } catch { setErr("Network problem. Please try again."); }
+    setBusy(false);
+  };
 
   const send = async (text: string) => {
     const q = text.trim();
+    if (shots.length) { sendPhotos(q); return; }
     if (!q || busy) return;
     setErr(null);
     const cfg = readAIConfig();
@@ -55,10 +139,16 @@ export function Copilot() {
         body: JSON.stringify({ messages: next, apiKey: cfg.apiKey, provider: cfg.provider, model: cfg.model }),
       });
       const d = await r.json();
-      if (!r.ok) setErr(d.message || "Copilot jawab nahi de paaya.");
-      else setMsgs((m) => [...m, { role: "assistant", content: d.reply }]);
-    } catch { setErr("Network problem — dobara try karo."); }
+      if (!r.ok) setErr(d.message || "The Copilot could not answer.");
+      else setMsgs((m) => [...m, { role: "assistant", content: d.reply, action: d.action }]);
+    } catch { setErr("Network problem. Please try again."); }
     setBusy(false);
+  };
+
+  const runAction = (a: CopilotAction) => {
+    if (a === "photo") { fileRef.current?.click(); return; }
+    setOpen(false);
+    onAction?.(a);
   };
 
   return (
@@ -90,7 +180,17 @@ export function Copilot() {
             {msgs.length === 0 && (
               <div className="flex flex-col gap-2">
                 <div className="card p-3 text-xs" style={{ color: "var(--ink-2)" }}>
-                  👷 Fabrication ka koi bhi sawaal poocho — systems, cutting method, interlock, glass, hardware. Exact cutting size ke liye material list dekho.
+                  👷 Attach a sheet photo here, or just ask — systems, cutting method,
+                  interlock, glass, hardware. Measurements always come from the engine, never from me.
+                </div>
+                {/* The command centre's own shortcuts — no model call needed to
+                    reach the thing he actually came to do. */}
+                <div className="flex flex-wrap gap-1.5">
+                  {(["photo", "material_list", "quotation"] as CopilotAction[]).map((a) => (
+                    <button key={a} onClick={() => runAction(a)} className="chip px-3 py-2 text-xs font-semibold">
+                      {ACTION_LABEL[a]}
+                    </button>
+                  ))}
                 </div>
                 {SUGGESTIONS.map((s) => (
                   <button key={s} onClick={() => send(s)} className="chip px-3 py-2 text-left text-xs">{s}</button>
@@ -98,28 +198,61 @@ export function Copilot() {
               </div>
             )}
             {msgs.map((m, i) => (
-              <div key={i} className={`mb-2 flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`mb-2 flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
                 <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm"
                   style={m.role === "user"
                     ? { background: "var(--accent)", color: "#fff", borderBottomRightRadius: 4 }
                     : { background: "var(--surface-2)", color: "var(--ink)", borderBottomLeftRadius: 4 }}>
                   {m.content}
                 </div>
+                {/* A reply that describes an action gets the action itself. */}
+                {m.action && (
+                  <button onClick={() => runAction(m.action!)}
+                    className="btn-primary mt-1.5 px-3.5 py-2 text-xs font-bold">
+                    {ACTION_LABEL[m.action]}
+                  </button>
+                )}
               </div>
             ))}
-            {busy && <div className="mb-2 flex justify-start"><div className="rounded-2xl px-3 py-2 text-sm" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>soch raha hoon…</div></div>}
+            {busy && <div className="mb-2 flex justify-start"><div className="rounded-2xl px-3 py-2 text-sm" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>{shots.length ? "Reading the sheet…" : "Thinking…"}</div></div>}
             {err && <div className="card p-2.5 text-xs" style={{ background: "var(--bad-soft)", color: "var(--ink)" }}>⚠️ {err}</div>}
           </div>
 
-          {/* input */}
-          <div className="flex items-center gap-2 border-t p-2.5" style={{ borderColor: "var(--line)" }}>
-            <input value={input} onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send(input)}
-              placeholder="Sawaal likho ya 🎤 bolo…"
-              className="dim-input flex-1 px-3 py-2.5 text-sm" />
-            <VoiceButton onTranscript={(t) => setInput((c) => (c ? `${c} ${t}` : t))} />
-            <button onClick={() => send(input)} disabled={busy || !input.trim()}
-              className="btn-primary grid h-[42px] w-[42px] place-items-center disabled:opacity-40" aria-label="Send">➤</button>
+          {/* composer */}
+          <div className="flex flex-col gap-2 border-t p-2.5" style={{ borderColor: "var(--line)" }}>
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+
+            {/* attached sheets stay visible until they are actually sent */}
+            {shots.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {shots.map((s, i) => (
+                  <div key={s.id} className="relative overflow-hidden rounded-lg" style={{ border: "1px solid var(--line)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.url} alt={`sheet ${i + 1}`} className="h-14 w-14 object-cover" />
+                    {!busy && (
+                      <button onClick={() => removeShot(s.id)} aria-label="Remove"
+                        className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: "rgba(0,0,0,.6)" }}>✕</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button onClick={() => fileRef.current?.click()} disabled={busy}
+                className="btn-ghost grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl text-lg disabled:opacity-40"
+                aria-label="Add photo" title="Add a photo of the sheet">📷</button>
+              <input value={input} onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && send(input)}
+                placeholder={shots.length ? "Anything to add? (optional)" : "Type a question, or tap 🎤 to speak…"}
+                className="dim-input min-w-0 flex-1 px-3 py-2.5 text-sm" />
+              <VoiceButton onTranscript={(t) => setInput((c) => (c ? `${c} ${t}` : t))} />
+              <button onClick={() => send(input)} disabled={busy || (!input.trim() && !shots.length)}
+                className="btn-primary grid h-[42px] w-[42px] shrink-0 place-items-center disabled:opacity-40"
+                aria-label="Send">{shots.length ? "📤" : "➤"}</button>
+            </div>
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@
  */
 import { feet, toFeet, type Um } from "./units";
 import type { PackedBar } from "./types";
+import type { FinishId } from "./finishes";
 
 /** Below this, a leftover is cut-off scrap, not a usable offcut. */
 export const MIN_OFFCUT: Um = feet(1);
@@ -17,6 +18,9 @@ export interface Offcut {
   length: Um;
   savedAt: number;
   jobLabel?: string;
+  /** Colour of the stock. Optional: pieces saved before colour existed have
+   *  none, and an unstated finish never blocks a match (see finishCompatible). */
+  finish?: FinishId;
 }
 
 /** Candidate offcuts sitting in this job's cutting plan (not yet saved). */
@@ -49,7 +53,7 @@ function persist(list: Offcut[]) {
   try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* ignore */ }
 }
 
-export function addOffcuts(candidates: OffcutCandidate[], jobLabel?: string): Offcut[] {
+export function addOffcuts(candidates: OffcutCandidate[], jobLabel?: string, finish?: FinishId): Offcut[] {
   const existing = loadOffcuts();
   const fresh: Offcut[] = candidates.map((c) => ({
     id: `${Date.now()}-${c.key}-${Math.random().toString(36).slice(2, 7)}`,
@@ -57,6 +61,7 @@ export function addOffcuts(candidates: OffcutCandidate[], jobLabel?: string): Of
     length: c.length,
     savedAt: Date.now(),
     jobLabel,
+    finish,
   }));
   const next = [...existing, ...fresh];
   persist(next);

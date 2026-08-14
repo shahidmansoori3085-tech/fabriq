@@ -423,7 +423,7 @@ export function CustomerShowcase({
             <div className="truncate text-[11px]" style={{ color: "rgba(255,255,255,.55)" }}>{tagline}</div>
           )}
         </div>
-        <button onClick={onExit} aria-label="Band karo"
+        <button onClick={onExit} aria-label="Close"
           className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg"
           style={{ background: "rgba(255,255,255,.1)", color: "#fff" }}>✕</button>
       </div>
@@ -442,7 +442,7 @@ export function CustomerShowcase({
         </Canvas>
         <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px]"
           style={{ color: "rgba(255,255,255,.5)" }}>
-          Ghumane ke liye ungli se ghumaiye
+          Drag with a finger to rotate
         </div>
       </div>
 
@@ -452,7 +452,7 @@ export function CustomerShowcase({
           <div className="min-w-0">
             <div className="display text-xl font-extrabold leading-tight">{title}</div>
             <div className="mt-0.5 text-[13px] tabnum" style={{ color: "rgba(255,255,255,.6)" }}>
-              {ft(item.width)}′ × {ft(item.height)}′{item.qty > 1 ? ` · ${item.qty} nag` : ""}
+              {ft(item.width)}′ × {ft(item.height)}′{item.qty > 1 ? ` · ${item.qty} nos` : ""}
             </div>
           </div>
           {price && price > 0 ? (
@@ -461,7 +461,7 @@ export function CustomerShowcase({
                 {inr(price)}
               </div>
               <div className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,.45)" }}>
-                is item ka
+                for this item
               </div>
             </div>
           ) : null}

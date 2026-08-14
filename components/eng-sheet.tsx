@@ -124,10 +124,12 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
   );
 }
 
-/** "S1 Bearing Top" / "S3 Handle (Jali)" → "Bearing Top" / "Handle" — drops the
- *  shutter number and the glass/jali qualifier so identical cuts can merge. */
+/** "S1 Bearing Top" / "S3 Handle (Mesh)" → "Bearing Top" / "Handle" — drops the
+ *  shutter number and the glass/mesh qualifier so identical cuts can merge.
+ *  "Jali" is still matched so projects saved before the copy rewrite keep
+ *  merging exactly as they did. */
 function baseRole(role: string): string {
-  return role.replace(/^S\d+\s+/, "").replace(/\s*\((Jali|Glass|Sheet)\)\s*$/i, "").trim();
+  return role.replace(/^S\d+\s+/, "").replace(/\s*\((Mesh|Jali|Glass|Sheet)\)\s*$/i, "").trim();
 }
 
 /** Full engineering sheet: title block + elevation + sections + parts schedule. */

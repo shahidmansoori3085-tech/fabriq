@@ -38,38 +38,65 @@ const EXTRACT_SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM = `Tum FabriQ ho — Indian aluminium fabricator ki hand-drawn measurement sheet padhne wale expert.
+const SYSTEM = `You are FabriQ, an expert at reading an Indian aluminium fabricator's hand-drawn measurement sheet.
 
-Sheet mein kya hota hai:
-- Ballpoint pen se bane rectangles (windows/doors/partitions) with sizes
-- Sizes: "4x3" (usually FEET), "4'6\"x3'", "54x42" (inches agar bade numbers), "4-6-4" = 4 feet 6 inch 4 sut
-- Hindi/Urdu labels, "जाली"/"jali" = mesh, "दो पट्टी"/"2 patti" = 2 track
-- System slang: "domal", "18mm", "section", "Z"
-- Diagonal strokes inside box = glass
-- W (window), D (door), qty like "x5" or "5 nos"
+What these sheets contain (this describes the INPUT — the paper is written in local trade shorthand):
+- Ballpoint-pen rectangles (windows, doors, partitions) with sizes written on them
+- Sizes: "4x3" (usually FEET), "4'6\"x3'", "54x42" (inches when the numbers are large), "4-6-4" = 4 feet 6 inch 4 sut
+- Hindi/Urdu labels — "जाली"/"jali" means mesh, "दो पट्टी"/"2 patti" means 2 track
+- System shorthand: "domal", "18mm", "section", "Z"
+- Diagonal strokes inside a box mean glass
+- W (window), D (door), quantity written as "x5" or "5 nos"
 
 Rules (CRITICAL):
-- Width×Height order: Indian fabricators usually write W×H
-- NEVER guess a digit. Agar number unclear hai → confidence "low" aur best guess
-- NEVER convert units — jo likha hai wahi width_raw/height_raw mein do (e.g. "4'6\"", "54", "4-6-4")
-- unit_guess: chhote numbers (2-12) = feet; 24-96 = inches; 300+ = mm
-- qty default 1 agar nahi likha
-- tracks: "2"/"3" agar sheet pe likha ya draw kiya hai, warna omit
-- mix: G=glass J=jali, e.g. "GGJ" agar dikh raha hai, warna omit
-- Har item ka notes: jo bhi extra likha hai us box ke paas
-- Agar photo dhundhli/unreadable hai → legible: false, items: []
-- Hallucinate MAT karo — jo dikhta hai sirf wahi`;
+- Width × Height order: Indian fabricators usually write W×H
+- NEVER guess a digit. If a number is unclear, set confidence "low" and give your best reading
+- NEVER convert units — put exactly what is written into width_raw/height_raw (e.g. "4'6\"", "54", "4-6-4")
+- unit_guess: small numbers (2-12) = feet; 24-96 = inches; 300+ = mm
+- qty defaults to 1 when not written
+- tracks: "2"/"3" when the sheet says or draws it, otherwise omit
+- mix: G=glass, J=mesh, e.g. "GGJ" when visible, otherwise omit
+- notes: for each item, anything extra written next to that box
+- If the photo is blurred or unreadable, return legible: false and items: []
+- Do NOT hallucinate — report only what is actually visible
+
+"notes" and "sheet_notes" are QUOTES OF THE PAPER, not your own writing. Copy what is
+written exactly as written, in its own script and words — the app shows it back as
+"Written on the sheet: …", so translating it would misquote the fabricator's own note.
+Anything you write in your own voice stays simple, professional English.`;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { image, mediaType, apiKey } = body as {
-    image: string; mediaType: string; apiKey?: string;
+  const { image, mediaType, images, notes, apiKey } = body as {
+    image?: string; mediaType?: string;
+    images?: { data: string; mediaType: string }[];
+    notes?: string;
+    apiKey?: string;
   };
 
-  const resolved = resolveProvider(apiKey);
+  // A sheet is often several photos — separate pages, or a close-up of a corner
+  // the wide shot could not read. The single-image shape is still accepted so
+  // older callers keep working.
+  const shots = images?.length
+    ? images
+    : image ? [{ data: image, mediaType: mediaType || "image/jpeg" }] : [];
+  if (!shots.length) {
+    return NextResponse.json({ error: "no_image", message: "No photo received." }, { status: 400 });
+  }
+
+  // The fabricator's own note is context, never a source of dimensions — the
+  // rules above still forbid inventing a number that isn't drawn on the sheet.
+  const userText = [
+    shots.length > 1
+      ? `These are ${shots.length} photos of ONE job. Read them together and extract every item. If the same item appears in two photos, list it only once.`
+      : "Read this measurement sheet and extract the items.",
+    notes?.trim() ? `\nThe fabricator added this note (context only — never take a dimension from it):\n"${notes.trim()}"` : "",
+  ].join("");
+
+  const resolved = await resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json(
-      { error: "no_key", message: "AI photo padhne ke liye API key chahiye — Settings (⚙) mein daalo." },
+      { error: "no_key", message: "An API key is needed to read photos — add one under Settings (⚙)." },
       { status: 400 }
     );
   }
@@ -77,13 +104,12 @@ export async function POST(req: NextRequest) {
   if (resolved.provider === "gemini") {
     try {
       const parsed = await geminiJson({
-        apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, image: { data: image, mediaType },
-        userText: "Is measurement sheet ko padho aur items extract karo.",
+        apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
       });
       return NextResponse.json(parsed);
     } catch {
       return NextResponse.json(
-        { error: "read_failed", message: "Photo padhne mein dikkat aayi — dobara try karo ya haath se bharo." },
+        { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
         { status: 500 },
       );
     }
@@ -100,15 +126,15 @@ export async function POST(req: NextRequest) {
         {
           role: "user",
           content: [
-            {
-              type: "image",
+            ...shots.map((s) => ({
+              type: "image" as const,
               source: {
-                type: "base64",
-                media_type: mediaType as "image/jpeg" | "image/png" | "image/webp",
-                data: image,
+                type: "base64" as const,
+                media_type: s.mediaType as "image/jpeg" | "image/png" | "image/webp",
+                data: s.data,
               },
-            },
-            { type: "text", text: "Is measurement sheet ko padho aur items extract karo." },
+            })),
+            { type: "text" as const, text: userText },
           ],
         },
       ],
@@ -121,8 +147,8 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     const friendly = msg.includes("401") || msg.toLowerCase().includes("auth")
-      ? "API key galat hai — Settings (⚙) mein check karo."
-      : "Photo padhne mein dikkat aayi — dobara try karo ya haath se bharo.";
+      ? "That API key is wrong — check it under Settings (⚙)."
+      : "Could not read the photo. Try again, or enter the sizes yourself.";
     return NextResponse.json({ error: "read_failed", message: friendly }, { status: 500 });
   }
 }

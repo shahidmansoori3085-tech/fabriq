@@ -1,101 +1,170 @@
 /**
- * Order PDFs — one clean, branded sheet per supplier.
+ * Order PDFs — the sheet a supplier actually receives.
+ *
+ * This document is the fabricator's face at the counter, so it is built like
+ * stationery, not a text dump: a branded header carrying his shop name and
+ * address, a real table with column headings, and a total that can be read
+ * across a shop counter. It replaces an earlier version that printed plain
+ * left/right lines with no address, no headings and no rules — technically
+ * correct and impossible to be proud of.
  *
  * Built programmatically (not screenshotted), so the text stays crisp, the file
  * stays small enough to send over WhatsApp, and the layout is identical on
  * every phone.
- *
- * The flow the fabricator asked for: tap send → the PDF is created and saved →
- * that same file is handed to WhatsApp. On phones that is the native share
- * sheet (Web Share with files); on a desktop browser, which cannot attach a
- * file to a wa.me link, the PDF downloads and WhatsApp opens with the text so
- * he can attach the file he just got.
  */
 import { jsPDF } from "jspdf";
-
-export interface PdfRow { left: string; right: string }
-export interface PdfBlock { heading?: string; sub?: string; rows: PdfRow[] }
 
 const INK = "#14181d";
 const DIM = "#6b7480";
 const LINE = "#d7dde3";
+const ZEBRA = "#f6f8fa";
+/** One accent, used only for the header band and the total — same discipline as the app. */
+const ACCENT = "#E2661F";
+const ACCENT_SOFT = "#fdf0e8";
 
-export function buildOrderPdf(opts: {
+export interface PdfColumn {
+  label: string;
+  /** share of the content width, any scale — normalised across the row */
+  width: number;
+  align?: "left" | "right";
+}
+
+export interface PdfTable {
+  heading?: string;
+  sub?: string;
+  columns: PdfColumn[];
+  rows: string[][];
+}
+
+export interface OrderPdfOpts {
   title: string;
   shopName?: string;
   tagline?: string;
-  blocks: PdfBlock[];
+  address?: string;
+  phone?: string;
+  gstin?: string;
+  tables: PdfTable[];
+  totalLabel?: string;
   total?: string;
   note?: string;
-}): Blob {
+}
+
+export function buildOrderPdf(opts: OrderPdfOpts): Blob {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const M = 16;
-  let y = 20;
+  const H = doc.internal.pageSize.getHeight();
+  const M = 14;
+  const CW = W - M * 2;
 
-  const page = () => {
-    if (y < 268) return;
+  const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+  /* —— branded header band —— */
+  const band = 26;
+  doc.setFillColor(ACCENT).rect(0, 0, W, band, "F");
+
+  doc.setTextColor("#ffffff");
+  doc.setFont("helvetica", "bold").setFontSize(15);
+  doc.text(opts.shopName || "FabriQ", M, 11);
+
+  // Contact details ride under the name, so the supplier can call without asking.
+  const contact = [opts.address, opts.phone && `Ph: ${opts.phone}`, opts.gstin && `GSTIN: ${opts.gstin}`]
+    .filter(Boolean).join("  ·  ");
+  doc.setFont("helvetica", "normal").setFontSize(7.5);
+  if (contact) doc.text(contact.slice(0, 110), M, 16.5);
+  if (opts.tagline) doc.text(opts.tagline.slice(0, 70), M, 21);
+
+  doc.setFont("helvetica", "bold").setFontSize(11);
+  doc.text(opts.title.toUpperCase(), W - M, 11, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(8);
+  doc.text(today, W - M, 16.5, { align: "right" });
+
+  let y = band + 10;
+
+  const newPageIfNeeded = (needed: number) => {
+    if (y + needed <= H - 18) return;
     doc.addPage();
-    y = 20;
+    y = 18;
   };
 
-  // header
-  doc.setFont("helvetica", "bold").setFontSize(16).setTextColor(INK);
-  doc.text(opts.shopName || "FabriQ", M, y);
-  y += 5;
-  if (opts.tagline) {
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(DIM);
-    doc.text(opts.tagline, M, y);
-    y += 4;
-  }
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(DIM);
-  doc.text(opts.title.toUpperCase(), W - M, 20, { align: "right" });
-  doc.setFont("helvetica", "normal").setFontSize(9);
-  doc.text(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-    W - M, 25, { align: "right" });
+  /* —— tables —— */
+  for (const t of opts.tables) {
+    if (!t.rows.length) continue;
+    newPageIfNeeded(24);
 
-  y += 3;
-  doc.setDrawColor(LINE).setLineWidth(0.4).line(M, y, W - M, y);
-  y += 8;
-
-  for (const b of opts.blocks) {
-    page();
-    if (b.heading) {
-      doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(INK);
-      doc.text(b.heading, M, y);
-      if (b.sub) {
-        doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(DIM);
-        doc.text(b.sub, W - M, y, { align: "right" });
+    if (t.heading) {
+      doc.setFont("helvetica", "bold").setFontSize(10.5).setTextColor(INK);
+      doc.text(t.heading, M, y);
+      if (t.sub) {
+        doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(DIM);
+        doc.text(t.sub, W - M, y, { align: "right" });
       }
-      y += 6;
+      y += 5;
     }
-    for (const r of b.rows) {
-      page();
-      doc.setFont("helvetica", "normal").setFontSize(10.5).setTextColor(INK);
-      doc.text(r.left, M, y);
-      doc.setFont("helvetica", "bold");
-      doc.text(r.right, W - M, y, { align: "right" });
-      y += 5.5;
-      doc.setDrawColor("#eef1f4").setLineWidth(0.2).line(M, y - 1.8, W - M, y - 1.8);
-    }
-    y += 4;
+
+    // Normalise declared widths to the printable width.
+    const totalW = t.columns.reduce((a, c) => a + c.width, 0) || 1;
+    const widths = t.columns.map((c) => (c.width / totalW) * CW);
+    const xAt = (i: number) => M + widths.slice(0, i).reduce((a, w) => a + w, 0);
+
+    const cell = (i: number, text: string) => {
+      const c = t.columns[i];
+      if (c.align === "right") doc.text(text, xAt(i) + widths[i] - 2, y, { align: "right" });
+      else doc.text(text, xAt(i) + 2, y);
+    };
+
+    // header row
+    const headH = 7;
+    doc.setFillColor("#eef1f4").rect(M, y - 4.6, CW, headH, "F");
+    doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(DIM);
+    t.columns.forEach((c, i) => cell(i, c.label.toUpperCase()));
+    y += headH - 0.5;
+
+    // body rows
+    const rowH = 7;
+    t.rows.forEach((r, ri) => {
+      if (y + rowH > H - 18) {
+        doc.addPage();
+        y = 18;
+        doc.setFillColor("#eef1f4").rect(M, y - 4.6, CW, headH, "F");
+        doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(DIM);
+        t.columns.forEach((c, i) => cell(i, c.label.toUpperCase()));
+        y += headH - 0.5;
+      }
+      if (ri % 2 === 1) doc.setFillColor(ZEBRA).rect(M, y - 4.6, CW, rowH, "F");
+      doc.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(INK);
+      r.forEach((v, i) => {
+        if (i === 0) doc.setFont("helvetica", "bold");
+        else doc.setFont("helvetica", "normal");
+        cell(i, v ?? "");
+      });
+      y += rowH;
+      doc.setDrawColor(LINE).setLineWidth(0.15).line(M, y - 4.6, W - M, y - 4.6);
+    });
+
+    y += 6;
   }
 
+  /* —— total —— */
   if (opts.total) {
-    page();
-    y += 2;
-    doc.setDrawColor(LINE).setLineWidth(0.4).line(M, y, W - M, y);
-    y += 7;
-    doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(INK);
-    doc.text("Total", M, y);
-    doc.text(opts.total, W - M, y, { align: "right" });
-    y += 8;
+    newPageIfNeeded(20);
+    const boxH = 14;
+    doc.setFillColor(ACCENT_SOFT).rect(M, y - 4, CW, boxH, "F");
+    doc.setDrawColor(ACCENT).setLineWidth(0.4).rect(M, y - 4, CW, boxH, "S");
+    doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(INK);
+    doc.text(opts.totalLabel || "Total", M + 4, y + 5);
+    doc.setFontSize(13).setTextColor(ACCENT);
+    doc.text(opts.total, W - M - 4, y + 5, { align: "right" });
+    y += boxH + 6;
   }
 
-  if (opts.note) {
-    page();
-    doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(DIM);
-    doc.text(opts.note, M, y);
+  /* —— footer on every page —— */
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(LINE).setLineWidth(0.2).line(M, H - 13, W - M, H - 13);
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(DIM);
+    doc.text(opts.note || "Generated by FabriQ — sizes come from a deterministic engine, not from AI.", M, H - 8.5);
+    if (pages > 1) doc.text(`${p} / ${pages}`, W - M, H - 8.5, { align: "right" });
   }
 
   return doc.output("blob");

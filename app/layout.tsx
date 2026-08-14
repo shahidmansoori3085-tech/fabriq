@@ -15,9 +15,9 @@ const body = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "FabriQ — Sheet ki photo kheencho, material list lo",
+  title: "FabriQ — Photograph the sheet, get the material list",
   description:
-    "Aluminium fabricators ka AI estimator — accurate material list, cutting list aur scrap bachao, 1 minute mein.",
+    "An estimator for aluminium fabricators: accurate material lists, cutting lists and less scrap, in a minute.",
 };
 
 export const viewport: Viewport = {

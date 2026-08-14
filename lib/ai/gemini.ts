@@ -65,15 +65,16 @@ export async function geminiJson<T>(opts: {
   system: string;
   userText: string;
   schema: object;
-  image?: { data: string; mediaType: string };
+  /** One sheet is often several photos — pages, or close-ups of one page. */
+  images?: { data: string; mediaType: string }[];
   model?: string;
   maxTokens?: number;
 }): Promise<T> {
   const parts: Part[] = [];
-  if (opts.image) {
+  for (const img of opts.images ?? []) {
     parts.push({
       type: "image_url",
-      image_url: { url: `data:${opts.image.mediaType};base64,${opts.image.data}` },
+      image_url: { url: `data:${img.mediaType};base64,${img.data}` },
     });
   }
   parts.push({ type: "text", text: opts.userText });

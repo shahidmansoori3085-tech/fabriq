@@ -151,7 +151,7 @@ export function WindowDiagram({
             )}
             <text x={x + shW / 2} y={h - frame - 8} textAnchor="middle"
               fontSize={11} fontWeight={700} fill="#5a5f6a">
-              {sh.kind === "glass" ? "GLASS" : "JALI"}
+              {sh.kind === "glass" ? "GLASS" : "MESH"}
             </text>
           </g>
         );
@@ -342,7 +342,7 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
   return (
     <div className="card p-4">
       <div className="display text-sm font-bold mb-3">
-        📐 {domal ? "Domal window ke parts" : "Window ke parts"} — pehle samjho
+        📐 Parts of a {domal ? "Domal " : ""}window
       </div>
       <div className="flex justify-center">
         <svg viewBox={`0 0 ${fw} ${fh}`} width="100%" style={{ maxWidth: fw }}
@@ -385,7 +385,7 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
                 )}
                 <text x={x + sw / 2} y={fr + innerH / 2 + 4} textAnchor="middle"
                   fontSize={11} fill="#5a5f6a" fontWeight={600}>
-                  {isJali ? "JALI" : "GLASS"}
+                  {isJali ? "MESH" : "GLASS"}
                 </text>
               </g>
             );
@@ -395,16 +395,16 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
         {(domal
           ? [
-              ["#dbeafe", "#3b82f6", "Frame", "1 hi profile, charo side"],
-              ["#fafbfc", "#9aa0ab", "Glass Shutter", "4 side — rounded nose profile"],
-              ["#f0fdf4", "#9aa0ab", "Jali Shutter", "4 side — plain profile"],
-              ["#e9d5ff", "#a855f7", "Interlock", "Shutter height, jahan milte hain"],
+              ["#dbeafe", "#3b82f6", "Frame", "One profile, all four sides"],
+              ["#fafbfc", "#9aa0ab", "Glass Shutter", "All four sides — rounded nose profile"],
+              ["#f0fdf4", "#9aa0ab", "Mesh Shutter", "All four sides — plain profile"],
+              ["#e9d5ff", "#a855f7", "Interlock", "Full shutter height, where they meet"],
             ]
           : [
-              ["#dbeafe", "#3b82f6", "Frame (Track)", "Top + 2 Side + Bottom"],
-              ["#fed7aa", "#f97316", "Handle", "Shutter ka ek side"],
-              ["#e9d5ff", "#a855f7", "Interlock", "Doosra side"],
-              ["#d1fae5", "#10b981", "Bearing", "Upar + neeche (×2)"],
+              ["#dbeafe", "#3b82f6", "Frame (Track)", "Top + 2 sides + bottom"],
+              ["#fed7aa", "#f97316", "Handle", "One side of the shutter"],
+              ["#e9d5ff", "#a855f7", "Interlock", "The other side"],
+              ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
             ]
         ).map(([bg, border, label, desc], i) => (
           <div key={i} className="flex items-center gap-2">
@@ -419,8 +419,8 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
       </div>
       <p className="mt-2.5 text-center text-[10px]" style={{ color: "var(--ink-3)" }}>
         {domal
-          ? "Domal mein handle/interlock/bearing alag nahi hote — poora shutter 1 profile se banta hai"
-          : "Glass ho ya Jali — aluminium sections same lagte hain (Normal Sliding)"}
+          ? "Domal has no separate handle, interlock or bearing — the whole shutter is built from one profile"
+          : "Glass or mesh, the aluminium sections are the same (Normal Sliding)"}
       </p>
     </div>
   );

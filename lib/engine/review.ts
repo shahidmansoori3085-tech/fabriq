@@ -16,7 +16,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: Center rail ka exact OMEO code abhi verify nahi hai (size confirm hai, dealer se sec no. pooch lena).`,
+        message: `${item.id}: the exact OMEO code for the center rail is not yet verified. The size is confirmed — ask your dealer for the section number.`,
       });
       confidence -= 2;
       continue;
@@ -26,7 +26,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: Panel (sheet/glass) ka clearance abhi ek real job se verify nahi hua — dealer se glazing groove confirm kar lena.`,
+        message: `${item.id}: the panel clearance for sheet and glass has not yet been verified against a real job — confirm the glazing groove with your dealer.`,
       });
       confidence -= 2;
       continue;
@@ -40,7 +40,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "warning",
         category: "shutter-size",
-        message: `${item.id}: shutter ${formatFtInSut(shutterW)} wide hai — 1400mm se zyada heavy chalti hai. Zyada track ya divide consider karo.`,
+        message: `${item.id}: the shutter is ${formatFtInSut(shutterW)} wide. Anything over 1400mm runs heavy — consider more tracks, or splitting it.`,
       });
       confidence -= 6;
     }
@@ -50,7 +50,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "glass-thickness",
-        message: `${item.id}: glass panel bada hai (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). 4mm ki jagah 5mm glass safe rahega.`,
+        message: `${item.id}: this is a large glass panel (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). 5mm glass is safer here than 4mm.`,
       });
       confidence -= 2;
     }
@@ -60,7 +60,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "shutter-mix",
-        message: `${item.id}: 3-track mein teeno glass shutter hain — jali nahi. Agar machar jali chahiye thi toh shutter mix badlo.`,
+        message: `${item.id}: all three shutters on this 3-track are glass — there is no mesh. If an insect screen was wanted, change the shutter mix.`,
       });
     }
 
@@ -69,7 +69,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "system-choice",
-        message: `${item.id}: ${formatFtInSut(item.width)} chhoti width pe 3-track zaroori nahi — 2-track sasta padega (chhota bottom section).`,
+        message: `${item.id}: at ${formatFtInSut(item.width)} a 3-track is not necessary — a 2-track works out cheaper, with a smaller bottom section.`,
       });
       confidence -= 3;
     }
@@ -80,30 +80,30 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     findings.push({
       severity: "warning",
       category: "scrap",
-      message: `Total scrap ${list.totals.wastePct}% hai (${list.totals.wasteFt} ft). Bache tukde Offcut Bank mein save karo — agle kaam mein lagenge.`,
+      message: `Total scrap is ${list.totals.wastePct}% (${list.totals.wasteFt} ft). Save the leftover pieces to the Offcut Bank — they will be used on the next job.`,
     });
     confidence -= 4;
   } else if (list.totals.wastePct > 12) {
     findings.push({
       severity: "suggestion",
       category: "scrap",
-      message: `Scrap ${list.totals.wastePct}% — theek hai, par bache tukde sambhal ke rakho.`,
+      message: `Scrap is ${list.totals.wastePct}% — acceptable, but keep the leftover pieces safe.`,
     });
   } else if (list.totals.wastePct > 0) {
     findings.push({
       severity: "ok",
       category: "scrap",
-      message: `Scrap sirf ${list.totals.wastePct}% — bahut achhi nesting hai!`,
+      message: `Scrap is only ${list.totals.wastePct}% — excellent nesting.`,
     });
   }
 
 
   const summary =
     confidence >= 95
-      ? "Estimate solid hai — download karke kaam shuru karo."
+      ? "This estimate is solid — download it and start work."
       : confidence >= 88
-        ? "Estimate theek hai, kuch suggestions dekh lo."
-        : "Kuch cheezein check karni chahiye pehle — warnings padho.";
+        ? "This estimate is fine. Have a look at the suggestions."
+        : "A few things need checking first — read the warnings below.";
 
   return { confidence: Math.max(confidence, 60), findings, summary };
 }

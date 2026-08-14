@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const { image, mediaType, apiKey } = (await req.json()) as {
     image: string; mediaType: string; apiKey?: string;
   };
-  const resolved = resolveProvider(apiKey);
+  const resolved = await resolveProvider(apiKey);
   if (!resolved) {
     return NextResponse.json(
       { error: "no_key", message: "Add an AI key in Settings to scan the card." },
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (resolved.provider === "gemini") {
     try {
       const parsed = await geminiJson<{ legible: boolean; [k: string]: unknown }>({
-        apiKey: resolved.apiKey, system: SYSTEM, schema: CARD_SCHEMA, image: { data: image, mediaType },
+        apiKey: resolved.apiKey, system: SYSTEM, schema: CARD_SCHEMA, images: [{ data: image, mediaType }],
         userText: "Read this visiting card and extract the shop profile.",
       });
       if (parsed.legible === false) {

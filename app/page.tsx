@@ -1,21 +1,27 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import QRCode from "qrcode";
 import {
-  parseDimension, formatFtInSut, Um, toFeet, sqft, UM_PER_INCH, UM_PER_SUT,
+  parseDimension, formatFtInSut, Um, toFeet, sqft,
+  parseOpening, describeDim, openingWarning,
 } from "@/lib/engine/units";
 import {
-  generateQuestions, mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
+  generateQuestions, jobLevelQuestions, JOB_LEVEL_IDS,
+  mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
 import { estimate } from "@/lib/engine/estimator";
-import { getSection, SECTIONS } from "@/lib/engine/sections";
-import { costJob, inr, type JobCost } from "@/lib/engine/pricing";
+import {
+  getSection, SECTIONS, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
+} from "@/lib/engine/sections";
+import { costJob, inr, kg, type JobCost } from "@/lib/engine/pricing";
 import { findOffcuts, loadOffcuts, addOffcuts, removeOffcut, totalOffcutFt, type Offcut, type OffcutCandidate } from "@/lib/engine/offcuts";
 import { planOffcutUse, EMPTY_PLAN, type OffcutPlan } from "@/lib/offcut-plan";
-import { buildOrderPdf, sharePdfToWhatsApp, type PdfBlock } from "@/lib/pdf";
+import {
+  FINISHES, getFinish, finishTo3D, loadDefaultFinish, saveDefaultFinish, type FinishId,
+} from "@/lib/engine/finishes";
+import { buildOrderPdf, sharePdfToWhatsApp, type PdfTable } from "@/lib/pdf";
 import {
   loadProjects, saveProject, patchProject, removeProject, newProjectId, autoTitle, totalSqft,
   type ProjectRec,
@@ -36,7 +42,7 @@ import {
 } from "@/components/icons";
 import * as Ic from "@/components/icons";
 import {
-  PhotoCapture, ExtractReview, normalizeRaw, downscale, type ExtractedItem,
+  PhotoComposer, ExtractReview, normalizeRaw, downscale, type ExtractedItem,
 } from "@/components/photo";
 import { mm } from "@/lib/engine/units";
 
@@ -61,7 +67,7 @@ const CustomerShowcase = dynamic(() => import("@/components/window3d").then((m) 
   ssr: false,
   loading: () => (
     <div className="fixed inset-0 z-50 grid place-items-center text-sm"
-      style={{ background: "#0e1116", color: "rgba(255,255,255,.6)" }}>3D taiyar ho raha hai…</div>
+      style={{ background: "#0e1116", color: "rgba(255,255,255,.6)" }}>Preparing the 3D view…</div>
   ),
 });
 
@@ -75,7 +81,7 @@ const GLASS_OPTS: [GlassKind, string, string][] = [
 
 /* ————————————————— types ————————————————— */
 
-type Step = "home" | "entry" | "questions" | "addmore" | "result" | "extract" | "offcutbank";
+type Step = "home" | "choose" | "quotestart" | "entry" | "jobqs" | "questions" | "addmore" | "result" | "extract" | "offcutbank";
 
 interface Draft {
   type: OpeningType;
@@ -133,6 +139,9 @@ export default function FabriQ() {
   const [photoQueue, setPhotoQueue] = useState<ExtractedItem[]>([]);
   const [theme, setThemeState] = useState<Theme>("system");
   const [intent, setIntent] = useState<"list" | "quote">("list");
+  /** Collected up-front by the quotation flow, before any size is entered. */
+  const [quoteCustomer, setQuoteCustomer] = useState("");
+  const [quoteJobFinish, setQuoteJobFinish] = useState<FinishId | undefined>(undefined);
   const [shop, setShop] = useState<ShopProfile>({ name: "" });
   const [loaded, setLoaded] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
@@ -208,29 +217,85 @@ export default function FabriQ() {
   }, [apiKey]);
 
   /* —— photo: process one extracted row through the question flow —— */
-  const startPhotoItem = useCallback((row: ExtractedItem, rest: ExtractedItem[]) => {
+  const startPhotoItem = useCallback((row: ExtractedItem, rest: ExtractedItem[], shared: Record<string, string> = {}) => {
     const wRaw = normalizeRaw(row.width_raw, row.unit_guess);
     const hRaw = normalizeRaw(row.height_raw, row.unit_guess);
     const w = parseDimension(wRaw);
     const h = parseDimension(hRaw);
     setPhotoQueue(rest);
     setDraft({ type: row.type, widthRaw: wRaw, heightRaw: hRaw, qty: row.qty });
-    const known = seedFromRow(row);
+    // Job-level answers are folded in first so the per-item round never asks
+    // again what was already settled once for the whole sheet.
+    const known = { ...shared, ...seedFromRow(row) };
     // seed answers so the finalize step reuses the photo data and only the
     // MISSING questions are asked
     setAnswers({ source: "photo", notes: row.notes ?? "", ...known });
     if (w && h) generateAndSet(row.type, w, h, row.qty, known);
   }, [generateAndSet]);
 
-  /* —— photo extract → run each row through questions (only missing asked) —— */
-  const confirmExtracted = useCallback((rows: ExtractedItem[]) => {
-    const valid = rows.filter((r) =>
-      parseDimension(normalizeRaw(r.width_raw, r.unit_guess)) &&
-      parseDimension(normalizeRaw(r.height_raw, r.unit_guess)));
-    if (valid.length === 0) { setStep("addmore"); return; }
-    const [first, ...rest] = valid;
-    startPhotoItem(first, rest);
+  /** Extracted rows waiting behind the job-level round. */
+  const [pendingRows, setPendingRows] = useState<ExtractedItem[]>([]);
+  const [jobQs, setJobQs] = useState<Question[]>([]);
+  const [jobQIndex, setJobQIndex] = useState(0);
+  const [jobAnswers, setJobAnswers] = useState<Record<string, string>>({});
+
+  /** Answers settled once for the whole sheet. A ref, not state: every row in
+   *  the batch is started from a callback that must read the CURRENT value, and
+   *  the batch outlives several renders. Without this only the first opening
+   *  benefited from the job-level round and every later one was asked the same
+   *  questions again — which is the entire point of asking them once. */
+  const jobShared = useRef<Record<string, string>>({});
+
+  /** Hand the (possibly job-seeded) rows to the per-item flow. */
+  const runRows = useCallback((rows: ExtractedItem[], shared: Record<string, string>) => {
+    jobShared.current = shared;
+    const [first, ...rest] = rows;
+    startPhotoItem(first, rest, shared);
   }, [startPhotoItem]);
+
+  /* —— photo extract → ask the job-level things ONCE, then per-item —— */
+  const confirmExtracted = useCallback((rows: ExtractedItem[]) => {
+    const valid = rows.filter((r) => {
+      const w = parseDimension(normalizeRaw(r.width_raw, r.unit_guess));
+      const h = parseDimension(normalizeRaw(r.height_raw, r.unit_guess));
+      return w && h && !openingWarning(w, h);
+    });
+    if (valid.length === 0) { setStep("addmore"); return; }
+
+    // Anything the sheet already stated for EVERY row is settled — don't ask.
+    const seeds = valid.map(seedFromRow);
+    const sharedFromSheet: Record<string, string> = {};
+    for (const id of JOB_LEVEL_IDS) {
+      const vals = seeds.map((s) => s[id]);
+      if (vals[0] && vals.every((v) => v === vals[0])) sharedFromSheet[id] = vals[0];
+    }
+
+    const types = [...new Set(valid.map((r) => r.type))];
+    const qs = jobLevelQuestions({ types, count: valid.length, known: sharedFromSheet });
+    // One opening is not a "job" — asking it twice would just be the same
+    // question in different words.
+    if (valid.length < 2 || qs.length === 0) { runRows(valid, sharedFromSheet); return; }
+
+    setPendingRows(valid);
+    setJobAnswers(sharedFromSheet);
+    setJobQs(qs);
+    setJobQIndex(0);
+    setStep("jobqs");
+  }, [runRows]);
+
+  /** Answer one job-level question; regenerate the rest as the picture fills in. */
+  const answerJobQ = useCallback((qid: string, value: string) => {
+    const next = { ...jobAnswers, [qid]: value };
+    setJobAnswers(next);
+    const types = [...new Set(pendingRows.map((r) => r.type))];
+    const remaining = jobLevelQuestions({ types, count: pendingRows.length, known: next });
+    if (remaining.length > 0) {
+      setJobQs([...jobQs.slice(0, jobQIndex + 1), ...remaining]);
+      setJobQIndex(jobQIndex + 1);
+      return;
+    }
+    runRows(pendingRows, next);
+  }, [jobAnswers, jobQs, jobQIndex, pendingRows, runRows]);
 
   /* —— answer a question —— */
   const answer = useCallback((qid: string, value: string) => {
@@ -307,7 +372,7 @@ export default function FabriQ() {
       // (only its MISSING info); otherwise land on the add-more screen.
       if (photoQueue.length > 0) {
         const [nextRow, ...rest] = photoQueue;
-        startPhotoItem(nextRow, rest);
+        startPhotoItem(nextRow, rest, jobShared.current);
       } else {
         setStep("addmore");
       }
@@ -352,6 +417,9 @@ export default function FabriQ() {
   const reset = () => {
     projectId.current = null;
     setItems([]); setDraft(EMPTY_DRAFT); setAnswers({}); setQuestions([]);
+    // The next job is for someone else — never carry a party name across.
+    setQuoteCustomer(""); setQuoteJobFinish(undefined);
+    setPendingRows([]); setJobQs([]); setJobAnswers({}); setJobQIndex(0);
     setQIndex(0); setStep("home");
   };
 
@@ -365,7 +433,8 @@ export default function FabriQ() {
           onDone={saveShop}
           onSkip={() => { try { localStorage.setItem("fabriq_onboarded", "1"); } catch { /* ignore */ } setOnboarded(true); }}
         />
-        {showSettings && <SettingsModal current={apiKey} onSave={saveKey} onClose={() => setShowSettings(false)} />}
+        {showSettings && <SettingsModal current={apiKey} shop={shop} onSaveShop={saveShop} onSave={saveKey}
+          onClose={() => setShowSettings(false)} />}
       </main>
     );
   }
@@ -375,19 +444,37 @@ export default function FabriQ() {
       {step === "home" && (
         <Home
           shop={shop} theme={theme} onToggleTheme={toggleTheme}
-          onStart={() => { setIntent("list"); setStep("entry"); }}
-          onStartQuote={() => { setIntent("quote"); setStep("entry"); }}
+          onStart={() => { setIntent("list"); setStep("choose"); }}
+          onStartQuote={() => { setIntent("quote"); setStep("quotestart"); }}
           onOffcutBank={() => setStep("offcutbank")}
-          apiKey={apiKey}
           onOpenSettings={() => setShowSettings(true)}
-          onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
           onOpenProject={openProject}
+        />
+      )}
+      {step === "choose" && (
+        <ChooseInput
+          apiKey={apiKey}
+          onManual={() => setStep("entry")}
+          onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
+          onNeedKey={() => setShowSettings(true)}
+          onBack={() => setStep("home")}
+        />
+      )}
+      {step === "quotestart" && (
+        <QuoteStart
+          apiKey={apiKey}
+          customer={quoteCustomer} onCustomer={setQuoteCustomer}
+          finish={quoteJobFinish} onFinish={setQuoteJobFinish}
+          onManual={() => setStep("entry")}
+          onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
+          onNeedKey={() => setShowSettings(true)}
+          onBack={() => setStep("home")}
         />
       )}
       {step === "offcutbank" && <OffcutBank onBack={() => setStep("home")} />}
       {step === "extract" && (
         <div className="fade-up flex flex-col gap-4">
-          <Header title="AI ne yeh padha" sub="Check karo aur confirm karo" onBack={() => setStep("home")} />
+          <Header title="What we read" sub="Check the sizes, then confirm" onBack={() => setStep("home")} />
           <ExtractReview
             items={extracted}
             onConfirm={confirmExtracted}
@@ -396,13 +483,24 @@ export default function FabriQ() {
         </div>
       )}
       {showSettings && (
-        <SettingsModal current={apiKey} onSave={saveKey} onClose={() => setShowSettings(false)} />
+        <SettingsModal current={apiKey} shop={shop} onSaveShop={saveShop} onSave={saveKey}
+          onClose={() => setShowSettings(false)} />
       )}
       {step === "entry" && (
         <Entry
           startId={items.length}
           onBuild={(built) => { ensureProject(); setItems((prev) => [...prev, ...built]); setStep("result"); }}
-          onBack={() => setStep(items.length ? "addmore" : "home")}
+          onBack={() => setStep(items.length ? "addmore" : intent === "quote" ? "quotestart" : "choose")}
+        />
+      )}
+      {step === "jobqs" && (
+        <Questions
+          questions={jobQs} qIndex={jobQIndex} answers={jobAnswers}
+          loading={false} source="rules"
+          scopeLabel={`Applies to the whole job — ${pendingRows.length} items`}
+          draft={EMPTY_DRAFT} width={null} height={null}
+          onAnswer={answerJobQ}
+          onBack={() => (jobQIndex > 0 ? setJobQIndex(jobQIndex - 1) : setStep("extract"))}
         />
       )}
       {step === "questions" && (
@@ -424,9 +522,24 @@ export default function FabriQ() {
       )}
       {step === "result" && (
         <Result items={items} onNew={reset} apiKey={apiKey}
-          initialTab={intent === "quote" ? "quote" : "aluminium"} onSnapshot={onSnapshot} />
+          initialTab={intent === "quote" ? "quote" : "aluminium"}
+          initialCustomer={quoteCustomer} initialFinish={quoteJobFinish}
+          onSnapshot={onSnapshot} />
       )}
-      <Copilot />
+      {/* The Copilot is the command centre: it can start a job, read a sheet
+          photo, or jump straight to an output from anywhere in the app. */}
+      <Copilot
+        onExtracted={(rows) => { setExtracted(rows); setStep("extract"); }}
+        onAction={(a) => {
+          if (a === "offcuts") { setStep("offcutbank"); return; }
+          if (a === "material_list") { setIntent("list"); setStep("choose"); return; }
+          if (a === "quotation") { setIntent("quote"); setStep(items.length ? "result" : "choose"); return; }
+          if (a === "cutting") {
+            // Only meaningful once there is a job to cut — otherwise start one.
+            if (items.length) { setIntent("list"); setStep("result"); } else { setIntent("list"); setStep("choose"); }
+          }
+        }}
+      />
     </main>
   );
 }
@@ -463,7 +576,7 @@ function Onboarding({
       });
       const d = await r.json();
       if (!r.ok || d.error) {
-        setScanNote(d.message || "Card padhne mein dikkat aayi — haath se bhar do.");
+        setScanNote(d.message || "Could not read the card — please fill the details in below.");
         if (d.error === "no_key") onNeedKey();
       } else {
         setS((p) => ({
@@ -473,10 +586,10 @@ function Onboarding({
           gstin: d.gstin || p.gstin,
           tagline: d.tagline || p.tagline,
         }));
-        setScanNote("✓ Card se bhar diya — check karke aage badho.");
+        setScanNote("✓ Filled in from the card — check it and continue.");
       }
     } catch {
-      setScanNote("Network problem — dobara try karo.");
+      setScanNote("Network problem. Please try again.");
     }
     setScanning(false);
   };
@@ -512,7 +625,7 @@ function Onboarding({
         <div>
           <div className="display text-2xl font-extrabold">Fabricator OS</div>
           <p className="mt-0.5 text-sm" style={{ color: "var(--ink-2)" }}>
-            Apni shop set karo — quotation par yahi brand chhpega.
+            Set up your shop — this is the brand that appears on every quotation.
           </p>
         </div>
       </div>
@@ -524,10 +637,10 @@ function Onboarding({
           onChange={(e) => onCard(e.target.files?.[0])} />
         <button onClick={pickCard} disabled={scanning}
           className="btn-primary flex w-full items-center justify-center gap-2 py-3.5 disabled:opacity-60">
-          <Ic.Scan size={18} /> {scanning ? "Card padh raha hoon…" : "Snap Visiting Card"}
+          <Ic.Scan size={18} /> {scanning ? "Reading the card…" : "Scan Visiting Card"}
         </button>
         <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-          Card ki photo se naam, number, address, GST — sab auto-fill.
+          Name, number, address and GSTIN filled in automatically from a photo of your card.
         </p>
         {scanNote && (
           <div className="rounded-lg px-3 py-2 text-[12px]"
@@ -539,7 +652,7 @@ function Onboarding({
       <div className="card flex flex-col gap-3 p-4">
         {field("name", "Shop / Business Name", "e.g. Al-Noor Aluminium", <Ic.Store size={16} />, true)}
         {field("phone", "Mobile", "e.g. 98765 43210", <Ic.Phone size={16} />)}
-        {field("address", "Address", "Shop address (quotation par aayega)", <Ic.MapPin size={16} />)}
+        {field("address", "Address", "Shop address (printed on quotations)", <Ic.MapPin size={16} />)}
         {field("gstin", "GSTIN", "Optional — 22AAAAA0000A1Z5", <Ic.Building size={16} />)}
         {field("tagline", "Tagline", "Optional — e.g. Since 2009", <Ic.Sparkle size={16} />)}
       </div>
@@ -552,7 +665,7 @@ function Onboarding({
           <Ic.Check size={18} /> Enter Workshop OS
         </button>
         <button onClick={onSkip} className="btn-ghost w-full py-2.5 text-sm">
-          Abhi skip karo
+          Skip for now
         </button>
       </div>
     </div>
@@ -562,14 +675,14 @@ function Onboarding({
 /* ————————————————— DASHBOARD (home) ————————————————— */
 
 
-/** "12 min pehle" / "kal" / "12 Aug" — a fabricator reads recency, not dates. */
+/** "12 min ago" / "Yesterday" / "12 Aug" — a fabricator reads recency, not dates. */
 function timeAgo(ts: number): string {
   const min = Math.floor((Date.now() - ts) / 60000);
-  if (min < 1) return "abhi";
-  if (min < 60) return `${min} min pehle`;
+  if (min < 1) return "Just now";
+  if (min < 60) return `${min} min ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ghante pehle`;
-  if (hr < 48) return "kal";
+  if (hr < 24) return `${hr} hr ago`;
+  if (hr < 48) return "Yesterday";
   return new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
@@ -584,18 +697,189 @@ function StageChip({ done, label }: { done?: boolean; label: string }) {
   );
 }
 
+/* ————————————————— START A QUOTATION ————————————————— */
+
+/**
+ * The quotation flow starts with the CLIENT, not with sizes.
+ *
+ * Tapping "Create Premium Quotation" used to drop the fabricator into exactly
+ * the same size-entry wizard as a material list — two different jobs wearing
+ * one screen, which made the premium CTA feel like a lie. A quotation is a
+ * sales document: it begins with who it is for and what colour they are being
+ * sold, and only then asks what to price.
+ */
+function QuoteStart({ apiKey, customer, onCustomer, finish, onFinish, onManual, onExtracted, onNeedKey, onBack }: {
+  apiKey: string | null;
+  customer: string;
+  onCustomer: (v: string) => void;
+  finish: FinishId | undefined;
+  onFinish: (v: FinishId | undefined) => void;
+  onManual: () => void;
+  onExtracted: (rows: ExtractedItem[], notes?: string) => void;
+  onNeedKey: () => void;
+  onBack: () => void;
+}) {
+  const [showInput, setShowInput] = useState(false);
+
+  return (
+    <div className="fade-up flex flex-col gap-5">
+      <Header title="Who is this quotation for?" sub="Client name and colour first, then sizes" onBack={onBack} />
+
+      {/* gold, matching the printed quotation — same identity on screen and paper */}
+      <div className="card flex flex-col gap-3 p-5"
+        style={{ background: "linear-gradient(120deg,#14181d,#232a34)", border: "1px solid #B08628" }}>
+        <span className="grid h-12 w-12 place-items-center rounded-xl"
+          style={{ background: "rgba(228,199,126,.15)", color: "#E4C77E" }}><Ic.FileText size={24} /></span>
+        <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#c2c8d0" }}>
+          Client name
+          <input value={customer} onChange={(e) => onCustomer(e.target.value)} autoFocus
+            placeholder="e.g. Sharma ji, Green Valley Apartments"
+            className="dim-input mt-1.5 w-full px-3 py-3 text-[15px] font-semibold"
+            style={{ background: "rgba(255,255,255,.06)", color: "#fff", borderColor: "rgba(228,199,126,.4)" }} />
+        </label>
+        <p className="text-[11px]" style={{ color: "#8d95a0" }}>
+          This name is printed at the top of the quotation.
+        </p>
+      </div>
+
+      {/* Colour is asked here because the customer sees it — the 3D preview and
+          the proposal drawing both follow this choice. */}
+      <div className="card p-4">
+        <FinishPicker value={finish} onChange={onFinish} label="Which colour are you showing the client?"
+          hint="Optional — you can change this later" />
+      </div>
+
+      {!showInput ? (
+        <button onClick={() => setShowInput(true)} disabled={!customer.trim()}
+          className="btn-primary w-full py-4 text-lg display disabled:opacity-40">
+          Next → what are we making?
+        </button>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+            What are we making for {customer.trim()}?
+          </div>
+          <div className="card flex flex-col gap-3 p-4">
+            <div className="display text-[15px] font-bold">From a drawing or photo</div>
+            <PhotoComposer apiKey={apiKey} onExtracted={onExtracted} onNeedKey={onNeedKey} />
+          </div>
+          <div className="card flex flex-col gap-3 p-4">
+            <div className="display text-[15px] font-bold">Enter sizes yourself</div>
+            <button onClick={onManual} className="btn-dark w-full py-3.5 text-base display">
+              Start entering sizes →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ————————————————— START A JOB ————————————————— */
+
+/**
+ * How do you want to start? Exactly two ways in, nothing else on screen.
+ *
+ * This used to sit on the dashboard next to stats, recent projects and a third
+ * gold quotation button, so the decision competed with everything around it.
+ * Given its own screen, each option can be big enough to tap with a glove on.
+ */
+function ChooseInput({ apiKey, onManual, onExtracted, onNeedKey, onBack }: {
+  apiKey: string | null;
+  onManual: () => void;
+  onExtracted: (rows: ExtractedItem[], notes?: string) => void;
+  onNeedKey: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="fade-up flex flex-col gap-5">
+      <Header title="How do you want to start?" sub="Two ways in — pick whichever is easier" onBack={onBack} />
+
+      <div className="card flex flex-col gap-3.5 p-5">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl"
+          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><Ic.Camera size={28} /></span>
+        <div>
+          <div className="display text-[17px] font-extrabold">From a drawing or photo</div>
+          <div className="mt-1 text-[12.5px]" style={{ color: "var(--ink-2)" }}>
+            Photograph the measurement sheet — one page or several. Sizes, system and
+            quantity are read automatically, and anything unclear is asked.
+          </div>
+        </div>
+        <PhotoComposer apiKey={apiKey} onExtracted={onExtracted} onNeedKey={onNeedKey} />
+      </div>
+
+      <div className="card flex flex-col gap-3.5 p-5">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl"
+          style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}><Ic.Pencil size={28} /></span>
+        <div>
+          <div className="display text-[17px] font-extrabold">Enter sizes yourself</div>
+          <div className="mt-1 text-[12.5px]" style={{ color: "var(--ink-2)" }}>
+            Windows, doors and partitions — as many as you like, in one go. Type the
+            numbers; we handle the rest.
+          </div>
+        </div>
+        <button onClick={onManual} className="btn-dark w-full py-3.5 text-base display">
+          Start entering sizes →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ————————————————— COLOUR ————————————————— */
+
+/**
+ * Optional colour picker. Skipping is a first-class answer, not a nag: a shop
+ * that works in one finish should never be forced to restate it, and one that
+ * doesn't track colour must keep working exactly as before.
+ */
+function FinishPicker({ value, onChange, label, hint }: {
+  value: FinishId | undefined;
+  onChange: (v: FinishId | undefined) => void;
+  label?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between">
+        <Label>{label ?? "Colour"}</Label>
+        <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+          {hint ?? "Optional — you can skip this"}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {FINISHES.map((f) => {
+          const on = value === f.id;
+          return (
+            <button key={f.id} onClick={() => onChange(on ? undefined : f.id)}
+              className={`chip flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-semibold ${on ? "selected" : ""}`}>
+              <span className="h-3.5 w-3.5 shrink-0 rounded-full"
+                style={{ background: f.swatch, border: f.pale ? "1px solid var(--line)" : undefined }} />
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ————————————————— OFFCUT BANK (standalone) ————————————————— */
 
 function OffcutBank({ onBack }: { onBack: () => void }) {
   const [bank, setBank] = useState<Offcut[]>([]);
   const [secId, setSecId] = useState<string>("2t_top");
   const [lenRaw, setLenRaw] = useState("");
-  useEffect(() => { setBank(loadOffcuts()); }, []);
+  const [finish, setFinish] = useState<FinishId | undefined>(undefined);
+  useEffect(() => { setBank(loadOffcuts()); setFinish(loadDefaultFinish()); }, []);
 
   const len = parseDimension(lenRaw);
   const add = () => {
     if (!len || len <= 0) return;
-    setBank(addOffcuts([{ key: `m-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, sectionId: secId, length: len, barNo: 0 }], "Manual"));
+    setBank(addOffcuts(
+      [{ key: `m-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, sectionId: secId, length: len, barNo: 0 }],
+      "Manual", finish,
+    ));
     setLenRaw("");
   };
   const groups = useMemo(() => {
@@ -607,32 +891,36 @@ function OffcutBank({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="fade-up flex flex-col gap-5">
-      <Header title="♻️ Offcut Bank" sub="Pade hue tukde — agli material list me apne aap lag jayenge" onBack={onBack} />
+      <Header title="♻️ Offcut Bank" sub="Leftover pieces — used automatically in your next material list" onBack={onBack} />
 
       <div className="card flex items-center justify-between p-4" style={{ background: "var(--good-soft)" }}>
         <div>
-          <div className="eyebrow" style={{ color: "var(--good)" }}>Total bachat stock</div>
-          <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>{bank.length} pieces jama</div>
+          <div className="eyebrow" style={{ color: "var(--good)" }}>Stock in bank</div>
+          <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>{bank.length} {bank.length === 1 ? "piece" : "pieces"} stored</div>
         </div>
         <div className="display text-3xl font-extrabold tabnum" style={{ color: "var(--good)" }}>{totalFt.toFixed(1)}&apos;</div>
       </div>
 
       <div className="card flex flex-col gap-3 p-4">
-        <Label>Naya leftover tukda jodo</Label>
+        <Label>Add a leftover piece</Label>
         <select value={secId} onChange={(e) => setSecId(e.target.value)} className="dim-input px-3 py-2.5 text-sm">
           {Object.values(SECTIONS).map((s) => <option key={s.id} value={s.id}>{s.label} · {s.size}mm</option>)}
         </select>
         <div className="flex gap-2">
           <input value={lenRaw} onChange={(e) => setLenRaw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()}
             placeholder={`Length — 3  ·  3'6"`} className="dim-input flex-1 px-3 py-2.5" />
-          <button onClick={add} disabled={!len} className="btn-primary px-6 disabled:opacity-40">Jodo</button>
+          <button onClick={add} disabled={!len} className="btn-primary px-6 disabled:opacity-40">Add</button>
         </div>
         {lenRaw && <Parsed um={len} raw={lenRaw} />}
+        {/* Colour is what makes a bank piece actually usable later — an ivory
+            job cannot cut a grey offcut, however well it fits. */}
+        <FinishPicker value={finish} onChange={setFinish}
+          hint="Optional — set it and wrong-colour pieces stay out of the list" />
       </div>
 
       {groups.length === 0 ? (
         <div className="card p-6 text-center text-sm" style={{ color: "var(--ink-3)" }}>
-          Abhi bank khaali hai. Upar se tukde jodo — ya kisi job ke baad ♻️ Offcuts tab se save karo.
+          The bank is empty. Add pieces above, or save them from the ♻️ Offcuts tab after a job.
         </div>
       ) : groups.map(([sid, olist]) => {
         const sec = getSection(sid);
@@ -640,15 +928,22 @@ function OffcutBank({ onBack }: { onBack: () => void }) {
           <div key={sid} className="card p-3.5">
             <div className="mb-2.5 flex items-center gap-2.5">
               <span className="rounded-md p-1" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}><SectionProfile sectionId={sid} /></span>
-              <div><div className="text-sm font-bold">{sec.label}</div><div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size}mm · {olist.length} pieces</div></div>
+              <div><div className="text-sm font-bold">{sec.label}</div><div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size}mm · {olist.length} {olist.length === 1 ? "piece" : "pieces"}</div></div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {olist.map((o) => (
-                <span key={o.id} className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold tabnum" style={{ background: "var(--surface-2)" }}>
-                  {formatFtInSut(o.length)}
-                  <button onClick={() => setBank(removeOffcut(o.id))} className="opacity-50 hover:opacity-100" title="Hatao">✕</button>
-                </span>
-              ))}
+              {olist.map((o) => {
+                const f = getFinish(o.finish);
+                return (
+                  <span key={o.id} className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold tabnum" style={{ background: "var(--surface-2)" }}>
+                    {f && (
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" title={f.label}
+                        style={{ background: f.swatch, border: f.pale ? "1px solid var(--line)" : undefined }} />
+                    )}
+                    {formatFtInSut(o.length)}
+                    <button onClick={() => setBank(removeOffcut(o.id))} className="opacity-50 hover:opacity-100" title="Remove">✕</button>
+                  </span>
+                );
+              })}
             </div>
           </div>
         );
@@ -658,12 +953,12 @@ function OffcutBank({ onBack }: { onBack: () => void }) {
 }
 
 function Home({
-  shop, theme, onToggleTheme, onStart, onStartQuote, onOffcutBank, apiKey, onOpenSettings, onExtracted,
+  shop, theme, onToggleTheme, onStart, onStartQuote, onOffcutBank, onOpenSettings,
   onOpenProject,
 }: {
   shop: ShopProfile; theme: Theme; onToggleTheme: () => void;
-  onStart: () => void; onStartQuote: () => void; onOffcutBank: () => void; apiKey: string | null;
-  onOpenSettings: () => void; onExtracted: (rows: ExtractedItem[]) => void;
+  onStart: () => void; onStartQuote: () => void; onOffcutBank: () => void;
+  onOpenSettings: () => void;
   onOpenProject: (p: ProjectRec) => void;
 }) {
   const [projects, setProjects] = useState<ProjectRec[]>([]);
@@ -685,7 +980,7 @@ function Home({
   // Every tile is a measured number from this shop's own jobs. No assumed
   // baselines, no projections — a dash until we have actually earned the figure.
   const stats: [React.ReactNode, string, string, string][] = [
-    [<Ic.TrendDown size={18} key="a" />, "Avg Scrap", avgScrap > 0 ? `${avgScrap.toFixed(0)}%` : "—", "aapke apne jobs par"],
+    [<Ic.TrendDown size={18} key="a" />, "Avg Scrap", avgScrap > 0 ? `${avgScrap.toFixed(0)}%` : "—", "across your own jobs"],
     [<Ic.Clock size={18} key="b" />, "Time Saved", nProjects ? `${timeSavedHrs.toFixed(1)}h` : "—", "≈14 min / job"],
     [<Ic.Rupee size={18} key="c" />, "Value Quoted", valueQuoted > 0 ? `₹${Math.round(valueQuoted / 1000)}k` : "—", "all quotations"],
     [<Ic.Folder size={18} key="d" />, "Projects", `${nProjects}`, "lifetime"],
@@ -693,10 +988,10 @@ function Home({
 
   // Every card below must describe something that actually ships today.
   const features: [React.ReactNode, string, string][] = [
-    [<Ic.Layers size={20} key="1" />, "Instant Material List", "Sizes → kitni pipe, glass aur jali — seconds me"],
-    [<Ic.Scissors size={20} key="2" />, "Workshop Cutting Sheets", "Cut lengths + engineering drawings, ek hi sheet"],
-    [<Ic.FileText size={20} key="3" />, "Supplier Catalogue", "Har pipe ka naam + cross-section, WhatsApp-ready"],
-    [<Ic.Cube size={20} key="4" />, "Live 3D Configurator", "Customer ko colour aur glass live dikhao"],
+    [<Ic.Layers size={20} key="1" />, "Instant Material List", "Sizes in — pipe, glass and mesh out, in seconds"],
+    [<Ic.Scissors size={20} key="2" />, "Workshop Cutting Sheets", "Cut lengths and engineering drawings on one sheet"],
+    [<Ic.FileText size={20} key="3" />, "Supplier Catalogue", "Every section named and drawn, ready for WhatsApp"],
+    [<Ic.Cube size={20} key="4" />, "Live 3D Configurator", "Show the client colour and glass, live"],
   ];
 
   return (
@@ -733,37 +1028,24 @@ function Home({
             Create your material list &amp;<br />quotation <span style={{ color: "var(--accent)" }}>in 1 minute.</span>
           </h1>
           <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-            Drawing ki photo kheencho ya sizes daalo — cutting-ready list, engineering drawings aur ek
-            brand quotation jo customer ka bharosa jeete.
+            Photograph a drawing or type the sizes. You get a cutting-ready list, engineering
+            drawings, and a branded quotation your client can trust.
           </p>
         </div>
       ) : (
         <h1 className="rise display pt-1 text-[22px] font-extrabold leading-tight">
-          Aaj kya banana hai?
+          What are we making today?
         </h1>
       )}
 
-      {/* primary actions */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="card flex flex-col gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><Ic.Camera size={22} /></span>
-          <div>
-            <div className="display text-[15px] font-bold">Drawing / Photo se</div>
-            <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>AI khud padhega — sizes, system, sab</div>
-          </div>
-          <PhotoCapture apiKey={apiKey} onExtracted={onExtracted} onNeedKey={onOpenSettings} />
-        </div>
-        <div className="card flex flex-col gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><Ic.Pencil size={22} /></span>
-          <div>
-            <div className="display text-[15px] font-bold">Sizes khud daalo</div>
-            <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Ek saath kai window/door/partition</div>
-          </div>
-          <button onClick={onStart} className="btn-dark flex w-full items-center justify-center gap-2 py-3">
-            <Ic.Plus size={16} /> Naya kaam
-          </button>
-        </div>
-      </div>
+      {/* ONE primary action. Home used to offer three co-equal starts — photo,
+          manual and quotation — which is a choice to make before any work has
+          begun. Now the choice moves to its own screen, after the decision to
+          start a job has already been taken. */}
+      <button onClick={onStart}
+        className="btn-primary flex w-full items-center justify-center gap-2.5 py-5 text-lg display">
+        <Ic.Plus size={20} /> New Project
+      </button>
 
       {/* create premium quotation — luxury CTA */}
       <button onClick={onStartQuote} className="card flex items-center gap-4 p-4 text-left"
@@ -771,7 +1053,7 @@ function Home({
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl" style={{ background: "rgba(228,199,126,.15)", color: "#E4C77E" }}><Ic.FileText size={24} /></span>
         <div className="flex-1">
           <div className="display text-[16px] font-extrabold" style={{ color: "#fff" }}>Create Premium Quotation</div>
-          <div className="text-[11.5px]" style={{ color: "#c2c8d0" }}>Window/door/partition · size · rate · colour → luxury 3D proposal</div>
+          <div className="text-[11.5px]" style={{ color: "#c2c8d0" }}>Window, door or partition · size · rate · colour → a 3D proposal in your name</div>
         </div>
         <span style={{ color: "#E4C77E" }}><Ic.ArrowRight size={20} /></span>
       </button>
@@ -784,12 +1066,13 @@ function Home({
       {/* copilot — advice, not actions: the engine owns every number */}
       <div className="card p-4">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><Ic.Sparkle size={18} /></span>
-          <div className="display text-[15px] font-bold">Ask FabriQ — aapka Copilot</div>
+          <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}><Ic.Sparkle size={18} /></span>
+          <div className="display text-[15px] font-bold">Ask FabriQ — your Copilot</div>
         </div>
         <p className="mt-2 text-[12px]" style={{ color: "var(--ink-2)" }}>
-          Fabrication ka koi bhi sawaal — konsa section, kitne track, interlock kahan, glass ya jali.
-          Neeche <b>“Ask FabriQ”</b> se poochho. <b>Naap aur cutting hamesha engine deta hai</b>, Copilot nahi.
+          Any fabrication question — which section, how many tracks, where the interlock goes,
+          glass or mesh. Tap <b>“Ask FabriQ”</b> below. <b>Measurements and cutting always come
+          from the engine</b>, never from the Copilot.
         </p>
       </div>
 
@@ -798,7 +1081,7 @@ function Home({
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl" style={{ background: "var(--good-soft)", color: "var(--good)" }}><Ic.Recycle size={24} /></span>
         <div className="flex-1">
           <div className="display text-[15px] font-bold">♻️ Offcut Bank {bank.length > 0 && <span className="text-xs font-semibold" style={{ color: "var(--good)" }}>· {bankFt.toFixed(0)}&apos; stock</span>}</div>
-          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Bache tukde yahan jama karo — agli material list me apne aap lagenge, utni pipe kam khareedni padegi</div>
+          <div className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Store leftover pieces here. They are used automatically in your next material list, so you buy less pipe.</div>
         </div>
         <span style={{ color: "var(--ink-3)" }}><Ic.ArrowRight size={20} /></span>
       </button>
@@ -827,8 +1110,10 @@ function Home({
           <div className="grid grid-cols-2 gap-3">
             {features.map(([icon, title, sub], i) => (
               <div key={title} className="card p-4">
+                {/* orange is reserved for actions — these are informational
+                    cards, so icons stay neutral except 3D's own blue-glass tint */}
                 <span className="grid h-10 w-10 place-items-center rounded-xl"
-                  style={{ background: i === 3 ? "var(--glass-soft)" : "var(--accent-soft)", color: i === 3 ? "var(--glass)" : "var(--accent)" }}>
+                  style={{ background: i === 3 ? "var(--glass-soft)" : "var(--surface-2)", color: i === 3 ? "var(--glass)" : "var(--ink-2)" }}>
                   {icon}
                 </span>
                 <div className="display mt-2.5 text-[14px] font-bold leading-tight">{title}</div>
@@ -851,7 +1136,7 @@ function RecentProjects({ projects, onOpen, onRemove }: {
   return (
     <div>
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="eyebrow">{projects.length ? "Kaam jaari rakho" : "Recent projects"}</span>
+        <span className="eyebrow">{projects.length ? "Continue working" : "Recent projects"}</span>
         {projects.length > 0 && <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>{projects.length} total</span>}
       </div>
       {projects.length === 0 ? (
@@ -889,7 +1174,7 @@ function RecentProjects({ projects, onOpen, onRemove }: {
                 <button
                   onClick={() => { if (confirm(`"${p.title}" hata dein?`)) onRemove(p.id); }}
                   className="btn-ghost mt-1 grid h-7 w-7 place-items-center rounded-full text-xs"
-                  title="Hatao">✕</button>
+                  title="Remove">✕</button>
               </div>
             </div>
           ))}
@@ -971,39 +1256,27 @@ function buildJobItem(
 
 /* —— wizard option tables —— */
 const WIN_SYS: [SystemId | "normal", string, string][] = [
-  ["normal", "Normal Sliding", "18mm — sabse common"],
+  ["normal", "Normal Sliding", "18mm — most common"],
   ["domal", "Domal", "27–29mm — premium"],
   ["z_section", "Z-Section", "Hinge-openable"],
 ];
 const NORMAL_VAR: [string, string][] = [["2", "2 Track"], ["3", "3 Track"], ["4", "4 Track"]];
-const DOMAL_VAR: [string, string][] = [["no", "Bina Fix"], ["yes", "Upar Fix"]];
+const DOMAL_VAR: [string, string][] = [["no", "No Fixed Band"], ["yes", "Fixed On Top"]];
 const Z_TYPE: [string, string][] = [
-  ["openable", "Openable"], ["combo", "Fix + Openable"], ["fixed", "Poora Fixed"], ["door", "Door"],
+  ["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"],
 ];
 
-/** Parse a size honouring the chosen unit — no feet here, sirf mm aur inch(+sut).
- *  mm mode: bare number = mm.
- *  inch mode: bare number = inches; "54-4" = 54 inch + 4 sut (1 inch = 8 sut).
- *  Explicit suffixed formats (1372mm, 54", 4'6") still work in either mode. */
-function parseWithUnit(raw: string, unit: "mm" | "inch"): Um | null {
-  const s = raw.trim();
-  if (!s) return null;
-  if (unit === "mm") {
-    if (/^\d+(?:\.\d+)?$/.test(s)) return mm(parseFloat(s));
-    return parseDimension(s);
-  }
-  const is = s.match(/^(\d+)-(\d+)$/); // inch-sut, no feet part
-  if (is) return parseInt(is[1], 10) * UM_PER_INCH + parseInt(is[2], 10) * UM_PER_SUT;
-  if (/^\d+(?:\.\d+)?$/.test(s)) return Math.round(parseFloat(s) * UM_PER_INCH);
-  return parseDimension(s);
+/** Size as understood by the shared parser. `null` = nothing readable typed yet. */
+function parseWithUnit(raw: string): Um | null {
+  return parseOpening(raw)?.um ?? null;
 }
 const DOOR_PALLA: [string, string][] = [["60", "60×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
-const DOOR_CHOKHAT: [string, string][] = [["needed", "Frame + Palla"], ["existing", "Sirf Palla"]];
-const PART_VAR: [string, string][] = [["no", "Sirf panels"], ["yes", "Door ke saath"]];
+const DOOR_CHOKHAT: [string, string][] = [["needed", "Frame + Shutter"], ["existing", "Shutter Only"]];
+const PART_VAR: [string, string][] = [["no", "Panels Only"], ["yes", "With A Door"]];
 
 const toggleArr = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number; unit: "mm" | "inch" }
+interface SizeRow { id: number; widthRaw: string; heightRaw: string; qty: number }
 interface Bucket { key: string; type: OpeningType; meta: Record<string, string>; label: string; rows: SizeRow[] }
 
 /** Multi-select chip row. */
@@ -1051,9 +1324,8 @@ function Entry({ startId, onBuild, onBack }: {
   // sizes phase
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [bIdx, setBIdx] = useState(0);
-  const [unit, setUnit] = useState<"mm" | "inch">("inch");
   const rid = useRef(1);
-  const blank = (): SizeRow => ({ id: rid.current++, widthRaw: "", heightRaw: "", qty: 1, unit });
+  const blank = (): SizeRow => ({ id: rid.current++, widthRaw: "", heightRaw: "", qty: 1 });
   const isBlank = (r: SizeRow) => !r.widthRaw.trim() && !r.heightRaw.trim();
 
   const ordered = (["window", "door", "partition"] as OpeningType[]).filter((t) => types.includes(t));
@@ -1123,16 +1395,25 @@ function Entry({ startId, onBuild, onBack }: {
     setBuckets((bs) => bs.map((b, i) => i === bIdx
       ? { ...b, rows: normalizeRows(b.rows.filter((r) => r.id !== rowId)) } : b));
 
-  const filledRows = (b: Bucket) =>
-    b.rows.filter((r) => parseWithUnit(r.widthRaw, r.unit) && parseWithUnit(r.heightRaw, r.unit));
+  /** Both sides readable AND the result is a buildable opening. */
+  const rowSize = (r: SizeRow): [Um, Um] | null => {
+    const w = parseWithUnit(r.widthRaw);
+    const h = parseWithUnit(r.heightRaw);
+    if (!w || !h || openingWarning(w, h)) return null;
+    return [w, h];
+  };
+  const filledRows = (b: Bucket) => b.rows.filter((r) => rowSize(r));
+  /** Rows the fabricator typed into that we refuse to build — surfaced, never dropped silently. */
+  const badRows = buckets.reduce(
+    (a, b) => a + b.rows.filter((r) => !isBlank(r) && !rowSize(r)).length, 0);
 
   const finalize = (bsIn: Bucket[]) => {
     const items: JobItem[] = [];
     let n = startId;
     for (const b of bsIn) for (const r of b.rows) {
-      const rw = parseWithUnit(r.widthRaw, r.unit); const rh = parseWithUnit(r.heightRaw, r.unit);
-      if (!rw || !rh) continue;
-      items.push(buildJobItem(++n, b.type, rw, rh, r.qty, { ...b.meta }));
+      const size = rowSize(r);
+      if (!size) continue;
+      items.push(buildJobItem(++n, b.type, size[0], size[1], r.qty, { ...b.meta }));
     }
     if (items.length) onBuild(items);
   };
@@ -1156,7 +1437,7 @@ function Entry({ startId, onBuild, onBack }: {
   if (phase === "types") {
     return (
       <div className="fade-up flex flex-col gap-5">
-        <Header title="Kya-kya banana hai?" sub="Ek ya zyada chuno — sab ek saath" onBack={back} />
+        <Header title="What are we making?" sub="Pick one or more — they all go in together" onBack={back} />
         <div className="grid grid-cols-3 gap-2">
           {(Object.keys(TYPE_META) as OpeningType[]).map((t) => (
             <button key={t} onClick={() => setTypes((p) => toggleArr(p, t))}
@@ -1168,7 +1449,7 @@ function Entry({ startId, onBuild, onBack }: {
         </div>
         <button onClick={() => { setCfgIdx(0); setPhase("config"); }} disabled={types.length === 0}
           className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
-          Aage → System chuno
+          Next → choose the system
         </button>
       </div>
     );
@@ -1180,7 +1461,7 @@ function Entry({ startId, onBuild, onBack }: {
       <div className="fade-up flex flex-col gap-5">
         <Header
           title={`${TYPE_META[curType].icon} ${TYPE_META[curType].label} — system`}
-          sub={`Step ${cfgIdx + 1} / ${ordered.length} · ek ya zyada chuno`}
+          sub={`Step ${cfgIdx + 1} of ${ordered.length} · pick one or more`}
           onBack={back}
         />
         <div className="card p-5 flex flex-col gap-5">
@@ -1193,14 +1474,14 @@ function Entry({ startId, onBuild, onBack }: {
               </div>
               {winSys.includes("normal") && (
                 <div>
-                  <Label>Normal — track</Label>
+                  <Label>Normal — tracks</Label>
                   <ChipGroup options={NORMAL_VAR.map(([v, l]) => [v, l])} selected={normTracks}
                     onToggle={(v) => setNormTracks((p) => toggleArr(p, v))} />
                 </div>
               )}
               {winSys.includes("domal") && (
                 <div>
-                  <Label>Domal — fix patti?</Label>
+                  <Label>Domal — fixed band on top?</Label>
                   <ChipGroup options={DOMAL_VAR.map(([v, l]) => [v, l])} selected={domalVar}
                     onToggle={(v) => setDomalVar((p) => toggleArr(p, v))} />
                 </div>
@@ -1217,12 +1498,12 @@ function Entry({ startId, onBuild, onBack }: {
           {curType === "door" && (
             <>
               <div>
-                <Label>Palla (shutter) size</Label>
+                <Label>Shutter (palla) size</Label>
                 <ChipGroup options={DOOR_PALLA.map(([v, l]) => [v, l])} selected={doorPalla}
                   onToggle={(v) => setDoorPalla((p) => toggleArr(p, v))} />
               </div>
               <div>
-                <Label>Chokhat (frame)</Label>
+                <Label>Frame (chokhat)</Label>
                 <ChipGroup options={DOOR_CHOKHAT.map(([v, l]) => [v, l])} selected={doorChokhat}
                   onToggle={(v) => setDoorChokhat((p) => toggleArr(p, v))} />
               </div>
@@ -1238,7 +1519,7 @@ function Entry({ startId, onBuild, onBack }: {
         </div>
         <button onClick={goConfigNext} disabled={!cfgOk}
           className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
-          {cfgIdx < ordered.length - 1 ? "Aage →" : "Aage → Sizes daalo"}
+          {cfgIdx < ordered.length - 1 ? "Next →" : "Next → enter sizes"}
         </button>
       </div>
     );
@@ -1247,12 +1528,11 @@ function Entry({ startId, onBuild, onBack }: {
   /* ————— PHASE 3 · sizes (per bucket, inline auto-expanding rows) ————— */
   const cur = buckets[bIdx];
   const rows = cur?.rows ?? [];
-  const placeholder = unit === "inch" ? `54  ·  54-4 (54"4s)` : `1372  ·  1372mm`;
   return (
     <div className="fade-up flex flex-col gap-5">
       <Header
         title={cur ? `${TYPE_META[cur.type].icon} ${cur.label}` : "Sizes"}
-        sub={`Bucket ${bIdx + 1} / ${buckets.length} · size daalte hi neeche naya row aa jayega`}
+        sub={`Group ${bIdx + 1} of ${buckets.length} · a new row appears as soon as you type a size`}
         onBack={back}
       />
 
@@ -1275,45 +1555,49 @@ function Entry({ startId, onBuild, onBack }: {
         </div>
       )}
 
-      {/* unit toggle */}
-      <div className="flex items-center gap-3">
-        <Label>Unit</Label>
-        <div className="flex overflow-hidden rounded-lg border-2" style={{ borderColor: "var(--steel)" }}>
-          {(["mm", "inch"] as const).map((u) => (
-            <button key={u} onClick={() => setUnit(u)}
-              className="px-4 py-1.5 text-sm font-bold"
-              style={{
-                background: unit === u ? "var(--accent)" : "var(--surface-2)",
-                color: unit === u ? "#fff" : "var(--ink-2)",
-              }}>
-              {u === "mm" ? "MM" : "Inch"}
-            </button>
-          ))}
-        </div>
-        <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-          {unit === "inch" ? "· sut ke liye 54-4 (1 inch = 8 sut)" : "· sirf mm daalo"}
-        </span>
+      {/* No unit picker: the fabricator writes a plain number and the parser
+          reads it by magnitude. The per-row echo below is what keeps that
+          honest — nothing to choose, nothing to get wrong. */}
+
+      {/* column header — which box is width and which is height, spelled out */}
+      <div className="flex items-center gap-2 pl-10 text-[10px] font-bold uppercase tracking-wide"
+        style={{ color: "var(--ink-3)" }}>
+        <span className="min-w-0 flex-1">Width</span>
+        <span className="w-3" />
+        <span className="min-w-0 flex-1">Height</span>
+        <span className="w-[86px] text-center">Qty</span>
+        <span className="w-8" />
       </div>
 
       {/* inline size rows */}
       <div className="flex flex-col gap-2">
         {rows.map((r, i) => {
-          const rw = parseWithUnit(r.widthRaw, r.unit);
-          const rh = parseWithUnit(r.heightRaw, r.unit);
+          const pw = parseOpening(r.widthRaw);
+          const ph = parseOpening(r.heightRaw);
+          const rw = pw?.um ?? null;
+          const rh = ph?.um ?? null;
           const empty = isBlank(r);
-          const over = Boolean((rw && toFeet(rw) > 20) || (rh && toFeet(rh) > 20));
           const touched = r.widthRaw.trim() || r.heightRaw.trim();
+          // Guard rail: a 4" window and a 30' window are both un-buildable. Say
+          // so here rather than confidently packing bars for one.
+          const warn = rw && rh ? openingWarning(rw, rh) : null;
+          // Only worth saying "maine feet maana" while the magnitude leaves real
+          // doubt — announcing it on every 4×5 would just be noise.
+          const shaky = [pw, ph].some((p) => p?.ambiguous);
+          const tone = !touched ? "var(--ink-3)"
+            : !rw || !rh || warn ? "var(--bad)"
+            : shaky ? "var(--warn)" : "var(--good)";
           return (
             <div key={r.id} className="card flex flex-col gap-1.5 p-3">
               <div className="flex items-center gap-2">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-bold"
                   style={{ background: "var(--surface-2)", color: empty ? "var(--ink-3)" : "var(--ink)" }}>{i + 1}</span>
-                <input inputMode="text" placeholder={i === 0 ? placeholder.split("·")[0].trim() : "W"} value={r.widthRaw}
-                  onChange={(e) => patchRow(r.id, { widthRaw: e.target.value, unit })}
+                <input inputMode="text" placeholder="Width" value={r.widthRaw}
+                  onChange={(e) => patchRow(r.id, { widthRaw: e.target.value })}
                   className="dim-input min-w-0 flex-1 px-2.5 py-2.5 text-base font-semibold" />
                 <span className="shrink-0 text-sm" style={{ color: "var(--ink-3)" }}>×</span>
-                <input inputMode="text" placeholder="H" value={r.heightRaw}
-                  onChange={(e) => patchRow(r.id, { heightRaw: e.target.value, unit })}
+                <input inputMode="text" placeholder="Height" value={r.heightRaw}
+                  onChange={(e) => patchRow(r.id, { heightRaw: e.target.value })}
                   className="dim-input min-w-0 flex-1 px-2.5 py-2.5 text-base font-semibold" />
                 <div className="flex shrink-0 items-center overflow-hidden rounded-lg border" style={{ borderColor: "var(--line)" }}>
                   <button className="px-2 py-2 text-base font-bold" style={{ background: "var(--surface-2)" }}
@@ -1324,17 +1608,19 @@ function Entry({ startId, onBuild, onBack }: {
                 </div>
                 {!empty && (
                   <button onClick={() => removeRow(r.id)}
-                    className="btn-ghost grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm" title="Hatao">✕</button>
+                    className="btn-ghost grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm" title="Remove">✕</button>
                 )}
               </div>
+              {/* The echo is the actual safety net: the app says out loud what it
+                  understood, so a mis-read unit is a visible typo not a ruined job. */}
               {touched && (
-                <div className="pl-10 text-[11px] font-semibold"
-                  style={{ color: rw && rh && !over ? "var(--good)" : "var(--bad)" }}>
-                  {rw && rh
-                    ? over
-                      ? "⚠️ ye size bahut bada lag raha hai — unit check karo"
-                      : `= ${formatFtInSut(rw)} × ${formatFtInSut(rh)}${r.qty > 1 ? ` · ×${r.qty}` : ""} · ${r.unit === "inch" ? "inch" : "mm"}`
-                    : "width & height dono daalo"}
+                <div className="pl-10 text-[11px] font-semibold" style={{ color: tone }}>
+                  {!rw || !rh
+                    ? "Enter both width and height"
+                    : warn
+                      ? `⚠️ ${warn}`
+                      : `= ${describeDim(rw)} × ${describeDim(rh)}${r.qty > 1 ? ` · ×${r.qty}` : ""}${
+                          shaky ? " · read as feet — for inches type 15\"" : ""}`}
                 </div>
               )}
             </div>
@@ -1342,11 +1628,18 @@ function Entry({ startId, onBuild, onBack }: {
         })}
       </div>
 
+      {/* A refused row must never just vanish — say how many and why. */}
+      {badRows > 0 && (
+        <div className="card p-3 text-[12px] font-semibold" style={{ background: "var(--bad-soft)" }}>
+          ⚠️ {badRows} {badRows === 1 ? "size cannot" : "sizes cannot"} be built yet — read the lines marked in red above and correct the units.
+        </div>
+      )}
+
       <button onClick={goSizesNext} disabled={isLastBucket && !anySizes}
         className="btn-primary w-full py-4 text-lg display disabled:opacity-40 disabled:shadow-none">
         {isLastBucket
-          ? (totalSizes > 0 ? `Material List banao → (${totalSizes})` : "Material List banao →")
-          : "Aage → agla system"}
+          ? (totalSizes > 0 ? `Create Material List → (${totalSizes})` : "Create Material List →")
+          : "Next → next system"}
       </button>
     </div>
   );
@@ -1357,7 +1650,7 @@ function Parsed({ um, raw }: { um: Um | null; raw: string }) {
   return (
     <div className="mt-1 h-5 text-xs font-semibold"
       style={{ color: um ? "var(--good)" : "var(--bad)" }}>
-      {um ? `= ${formatFtInSut(um)}` : "samajh nahi aaya — 6 ya 4'6\" likho"}
+      {um ? `= ${formatFtInSut(um)}` : "Could not read that — try 6 or 4'6\""}
     </div>
   );
 }
@@ -1365,12 +1658,15 @@ function Parsed({ um, raw }: { um: Um | null; raw: string }) {
 /* ————————————————— QUESTIONS ————————————————— */
 
 function Questions({
-  questions, qIndex, answers, loading, source, draft, width, height, onAnswer, onBack,
+  questions, qIndex, answers, loading, source, draft, width, height, onAnswer, onBack, scopeLabel,
 }: {
   questions: Question[]; qIndex: number; answers: Record<string, string>;
   loading: boolean; source: string;
   draft: Draft; width: Um | null; height: Um | null;
   onAnswer: (qid: string, value: string) => void; onBack: () => void;
+  /** Set for the once-per-job round, so the fabricator knows this answer
+   *  covers every opening on the sheet and not just the one in front of him. */
+  scopeLabel?: string;
 }) {
   const [custom, setCustom] = useState("");
   const q = questions[qIndex];
@@ -1388,14 +1684,14 @@ function Questions({
         {loading ? (
           <>
             <Spinner />
-            <p className="text-sm" style={{ color: "var(--ink-2)" }}>AI soch raha hai…</p>
+            <p className="text-sm" style={{ color: "var(--ink-2)" }}>Thinking…</p>
           </>
         ) : (
           <>
             <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-              Is type ke liye abhi sawaal nahi hain — jald aa raha hai!
+              No questions for this type yet.
             </p>
-            <button onClick={onBack} className="btn-ghost px-6 py-2">← Wapas jao</button>
+            <button onClick={onBack} className="btn-ghost px-6 py-2">← Go back</button>
           </>
         )}
       </div>
@@ -1405,8 +1701,8 @@ function Questions({
   return (
     <div className="fade-up flex flex-col gap-4">
       <Header
-        title={`Sawaal ${qIndex + 1} / ${questions.length}`}
-        sub={source === "ai" ? "AI ne aapki situation analyze ki" : "Smart questions — sirf zaroori"}
+        title={`Question ${qIndex + 1} of ${questions.length}`}
+        sub={scopeLabel ?? (source === "ai" ? "Tailored to this opening" : "Only what changes the answer")}
         onBack={onBack}
       />
 
@@ -1498,7 +1794,7 @@ function Questions({
 
         <div className="mt-3 flex gap-2">
           <input
-            placeholder="Apna khud likho ya 🎤 bolo…"
+            placeholder="Type your own answer, or tap 🎤 to speak…"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && custom.trim() && onAnswer(q.id, custom.trim())}
@@ -1516,7 +1812,7 @@ function Questions({
 
       {loading && (
         <p className="text-center text-xs" style={{ color: "var(--ink-3)" }}>
-          <Spinner tiny /> AI aur behtar sawaal bana raha hai…
+          <Spinner tiny /> Refining the questions…
         </p>
       )}
     </div>
@@ -1532,7 +1828,7 @@ function AddMore({
 }) {
   return (
     <div className="fade-up flex flex-col gap-4">
-      <Header title="Job mein items" sub={`${items.length} item${items.length > 1 ? "s" : ""} add ho gaye`} />
+      <Header title="Items in this job" sub={`${items.length} item${items.length > 1 ? "s" : ""} added`} />
       <div className="flex flex-col gap-3">
         {items.map((it) => (
           <div key={it.id} className="card flex items-center gap-4 p-4">
@@ -1553,9 +1849,9 @@ function AddMore({
               <div className="text-xs" style={{ color: "var(--ink-2)" }}>
                 {it.type === "door" ? (
                   <>
-                    {it.qty} nos · Palla {it.meta.palla ?? "60"}mm ·{" "}
+                    {it.qty} nos · Shutter {it.meta.palla ?? "60"}mm ·{" "}
                     {it.shutters.filter((s) => s.kind === "sheet").length}S+
-                    {it.shutters.filter((s) => s.kind === "jali").length}J
+                    {it.shutters.filter((s) => s.kind === "jali").length}M
                   </>
                 ) : it.type === "partition" ? (
                   <>
@@ -1568,14 +1864,14 @@ function AddMore({
                   <>
                     {it.qty} nos · Z-Section {it.meta.zSize === "heavy" ? "Big" : "Small"} ·{" "}
                     {it.meta.zType === "fixed" ? "Fixed"
-                      : it.meta.zType === "combo" ? "Fix+Openable"
+                      : it.meta.zType === "combo" ? "Fixed + Openable"
                       : it.meta.zType === "door" ? "Door" : "Openable"}
                   </>
                 ) : (
                   <>
                     {it.qty} nos · {it.system === "normal_3t" ? "3-Track" : it.system === "normal_2t" ? "2-Track" : "Domal"} ·{" "}
                     {it.shutters.filter((s) => s.kind === "glass").length}G+
-                    {it.shutters.filter((s) => s.kind === "jali").length}J
+                    {it.shutters.filter((s) => s.kind === "jali").length}M
                   </>
                 )}
               </div>
@@ -1587,10 +1883,10 @@ function AddMore({
         ))}
       </div>
       <button onClick={onAdd} className="btn-ghost w-full py-3.5">
-        ✚ Aur item jodo
+        ✚ Add another item
       </button>
       <button onClick={onDone} className="btn-primary w-full py-4 text-lg display" disabled={!items.length}>
-        📋 List Banao
+        📋 Create Material List
       </button>
     </div>
   );
@@ -1604,21 +1900,40 @@ function AddMore({
  *  action on Material rather than its own tab. */
 type Tab = "aluminium" | "cutting" | "offcuts" | "threed" | "quote";
 
-/** Renders into <body>, so `position: fixed` is measured against the viewport
- *  even when an ancestor has a transform (our fade-up animation does). */
-function BodyPortal({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => { setReady(true); }, []);
-  return ready ? createPortal(children, document.body) : null;
-}
+/** Short label for the chip bar, once an output actually exists. */
+const TAB_LABEL: Record<Tab, string> = {
+  aluminium: "📦 Material",
+  cutting: "🔧 Workshop",
+  offcuts: "♻️ Offcuts",
+  threed: "✨ 3D",
+  quote: "💰 Quotation",
+};
 
-/** [id, icon, desktop label, mobile label] — one source for both switchers. */
-const TAB_DEFS: [Tab, string, string, string][] = [
-  ["aluminium", "📦", "Material", "Material"],
-  ["cutting", "🔧", "🔧 Workshop", "Workshop"],
-  ["offcuts", "♻️", "♻️ Offcuts", "Offcuts"],
-  ["threed", "✨", "✨ 3D", "3D"],
-  ["quote", "💰", "💰 Quotation", "Quote"],
+/**
+ * The "What next?" ladder.
+ *
+ * Every output used to exist the moment a size was typed, sitting in a five-tab
+ * bar that was permanently on screen. That made each one feel like clutter
+ * rather than a deliverable, and on a phone the bar competed with the content
+ * it was supposed to serve. Now the material list IS the result, and the rest
+ * are offers the fabricator accepts one at a time.
+ */
+const ARTIFACTS: { id: Tab; icon: string; title: string; sub: string; cta: string }[] = [
+  {
+    id: "cutting", icon: "🔧", title: "Workshop Cutting Sheet",
+    sub: "Cut length, angle and drawing for every piece — ready to hand to the workshop",
+    cta: "Create",
+  },
+  {
+    id: "quote", icon: "💰", title: "Client Quotation",
+    sub: "Add the client name, rate and colour to get a branded PDF",
+    cta: "Create",
+  },
+  {
+    id: "threed", icon: "✨", title: "3D Preview",
+    sub: "Show the client colour and glass live, and close on the spot",
+    cta: "Open",
+  },
 ];
 
 /** Customer-facing name + spec line for a job item (no engineering jargon). */
@@ -1640,7 +1955,7 @@ function itemSpec(it: JobItem): string {
   }
   if (it.type === "door") return "Hinged door with panel";
   if (it.system === "z_section") return it.meta.zType === "combo" ? "Fixed + openable" : (it.meta.zType ?? "openable");
-  const mix = [g ? `${g} Glass` : "", j ? `${j} Jali` : ""].filter(Boolean).join(" + ");
+  const mix = [g ? `${g} Glass` : "", j ? `${j} Mesh` : ""].filter(Boolean).join(" + ");
   const tr = it.meta.tracks ? `${it.meta.tracks} Track` : "";
   return [tr, mix].filter(Boolean).join(" · ") || "Glass";
 }
@@ -1652,25 +1967,40 @@ function sizeFtIn(um: Um): string {
   return `${ft}'${i ? i + '"' : ""}`;
 }
 
-function Result({ items, onNew, initialTab, onSnapshot }: {
+function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSnapshot }: {
   items: JobItem[]; onNew: () => void; apiKey: string | null; initialTab?: Tab;
+  /** carried over from the quotation flow, which asks these before any size */
+  initialCustomer?: string;
+  initialFinish?: FinishId;
   /** reports real computed figures back so the saved project card is truthful */
   onSnapshot?: (s: { scrapPct?: number; amount?: number; customer?: string }) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab ?? "aluminium");
+  /** Outputs the fabricator has actually asked for. The material list is always
+   *  there because it is what he came for; everything else has to be requested,
+   *  which is what makes it read as a deliverable rather than clutter. */
+  const [made, setMade] = useState<Set<Tab>>(
+    () => new Set<Tab>(initialTab && initialTab !== "aluminium" ? ["aluminium", initialTab] : ["aluminium"]),
+  );
+  const openArtifact = useCallback((t: Tab) => {
+    setMade((s) => (s.has(t) ? s : new Set(s).add(t)));
+    setTab(t);
+    window.scrollTo({ top: 0 });
+  }, []);
   const [threedIdx, setThreedIdx] = useState(0);
   const [showcase, setShowcase] = useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
   const [quoteFinish, setQuoteFinish] = useState<Finish>("black");
+  const [jobFinish, setJobFinish] = useState<FinishId | undefined>(undefined);
   const [quoteGlass, setQuoteGlass] = useState<GlassKind>("clear");
   const [payQr, setPayQr] = useState<string>("");
 
   // —— quotation state ——
   const [shop, setShop] = useState<ShopProfile>({ name: "" });
-  const [customer, setCustomer] = useState("");
+  const [customer, setCustomer] = useState(initialCustomer ?? "");
   const [itemRate, setItemRate] = useState<Record<string, number>>({});
   const [savedRate, setSavedRate] = useState<Record<string, number>>({});
-  const [aluRate, setAluRate] = useState(0); // ₹ per running foot of aluminium (shop memory)
+  const [aluRate, setAluRate] = useState(0); // ₹ per KILO of aluminium (shop memory)
   const [gstPct, setGstPct] = useState(0);
   const [discountPct, setDiscountPct] = useState(0);
   const [showShop, setShowShop] = useState(false);
@@ -1681,12 +2011,28 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
   useEffect(() => {
     try { const s = JSON.parse(localStorage.getItem("fabriq_shop") || "{}"); if (s && s.name) setShop(s); } catch { /* ignore */ }
     try { setSavedRate(JSON.parse(localStorage.getItem("fabriq_rates") || "{}")); } catch { /* ignore */ }
-    try { const r = parseFloat(localStorage.getItem("fabriq_alu_rate") || ""); if (r > 0) setAluRate(r); } catch { /* ignore */ }
-  }, []);
+    // Deliberately a NEW key: the old `fabriq_alu_rate` held ₹ per FOOT, and
+    // reading e.g. 45 back as ₹45/kg would quietly under-price every job.
+    try { const r = parseFloat(localStorage.getItem("fabriq_alu_rate_kg") || ""); if (r > 0) setAluRate(r); } catch { /* ignore */ }
+    // A colour chosen in the quotation flow wins over the shop's usual one.
+    const f = initialFinish ?? loadDefaultFinish();
+    setJobFinish(f);
+    const preview = finishTo3D(f);
+    if (preview) setQuoteFinish(preview);
+  }, [initialFinish]);
+
+  /** The job's aluminium colour. Drives which bank stock may be offered, and
+   *  pre-selects the 3D/quotation preview. Undefined = fabricator didn't say. */
+  const changeJobFinish = (v: FinishId | undefined) => {
+    setJobFinish(v);
+    saveDefaultFinish(v);
+    const preview = finishTo3D(v);
+    if (preview) setQuoteFinish(preview);
+  };
 
   const saveAluRate = (v: number) => {
     setAluRate(v);
-    try { if (v > 0) localStorage.setItem("fabriq_alu_rate", String(v)); else localStorage.removeItem("fabriq_alu_rate"); } catch { /* ignore */ }
+    try { if (v > 0) localStorage.setItem("fabriq_alu_rate_kg", String(v)); else localStorage.removeItem("fabriq_alu_rate_kg"); } catch { /* ignore */ }
   };
 
   const rateFor = (it: JobItem): number =>
@@ -1734,14 +2080,22 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
   // changes (bankVer) so confirming a use immediately refreshes the plan.
   const [bankVer, setBankVer] = useState(0);
   const rawPlan = useMemo(
-    () => (list ? planOffcutUse(list.pieces, loadOffcuts()) : EMPTY_PLAN),
-    [list, bankVer],
+    () => (list ? planOffcutUse(list.pieces, loadOffcuts(), jobFinish) : EMPTY_PLAN),
+    [list, bankVer, jobFinish],
   );
   /** Using shop stock is the fabricator's decision, not ours — until he turns
    *  it on, every list shows plain "buy it all" numbers. Once on, BOTH the
    *  material list and the workshop sheet switch to the stock-aware plan. */
   const [useStock, setUseStock] = useState(false);
   const offcutPlan = useStock ? rawPlan : EMPTY_PLAN;
+  /** Bank pieces this job could have used on length, but not on colour. Shown
+   *  so a shrinking saving is explained rather than mysterious. */
+  const hiddenByColour = useMemo(() => {
+    if (!jobFinish || !list) return 0;
+    const needed = new Set(list.pieces.map((p) => p.sectionId));
+    return loadOffcuts().filter((o) => needed.has(o.sectionId) && o.finish && o.finish !== jobFinish).length;
+  }, [list, jobFinish, bankVer]);
+
   /** Fabricator confirms he actually cut from the bank: consume those pieces
    *  and put any still-usable remainder back. Never silent — always his call. */
   const applyOffcutPlan = () => {
@@ -1751,25 +2105,11 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         offcutPlan.leftovers.map((l, i) => ({
           key: `cut-${Date.now()}-${i}`, sectionId: l.sectionId, length: l.length, barNo: 0,
         })),
-        "Bank se kaata",
+        "Cut from bank", jobFinish,
       );
     }
     setBankVer((v) => v + 1);
   };
-
-  if (error || !list) {
-    const friendly = error?.startsWith("Piece longer than 16 feet")
-      ? `${error} — ye size shayad galat unit mein daali gayi hai. Feet ki jagah agar inch chahiye tha, wapas jaake number ke aage " lagao (jaise 66").`
-      : error;
-    return (
-      <div className="card mt-10 p-6 text-center">
-        <div className="text-3xl">⚠️</div>
-        <p className="mt-2 font-semibold">{friendly}</p>
-        <button onClick={onNew} className="btn-ghost mt-4 px-6 py-2">Wapas jao</button>
-      </div>
-    );
-  }
-
 
   const quoteLines: QuoteLine[] = items.map((it) => {
     const area = sqft(it.width, it.height) * it.qty;
@@ -1787,19 +2127,46 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
   const grandPayable = Math.round(quoteTotal * (1 - discountPct / 100) * (1 + gstPct / 100));
 
   // Report real figures up so the saved project card shows earned numbers only.
-  const scrapPct = list.totals.wastePct;
+  // This must stay ABOVE the error return: a hook after an early return runs on
+  // some renders and not others, which crashes React with "rendered fewer hooks
+  // than expected" the moment an estimate fails.
+  const scrapPct = list?.totals.wastePct ?? 0;
   useEffect(() => {
     onSnapshot?.({ scrapPct, amount: grandPayable, customer: customer.trim() || undefined });
   }, [scrapPct, grandPayable, customer, onSnapshot]);
 
+  if (error || !list) {
+    const friendly = error?.startsWith("Piece longer than 16 feet")
+      ? `${error} — this size was probably entered in the wrong unit. If you meant inches rather than feet, go back and add " after the number (for example 66").`
+      : error;
+    return (
+      <div className="card mt-10 p-6 text-center">
+        <div className="text-3xl">⚠️</div>
+        <p className="mt-2 font-semibold">{friendly}</p>
+        <button onClick={onNew} className="btn-ghost mt-4 px-6 py-2">Go back</button>
+      </div>
+    );
+  }
+
   return (
-    <div className="result-view fade-up flex flex-col gap-4 pb-24 sm:pb-0">
-      {tab === "quote" ? (
+    // pb-24 clears the floating "Ask FabriQ" button on every size — it used to
+    // be mobile-only, for a bottom nav that no longer exists.
+    <div className="result-view fade-up flex flex-col gap-4 pb-24">
+      {/* Each output is its own document now, so it gets its own title. Showing
+          "Material List" plus pipe counts above a cutting sheet made the screen
+          look like one long page instead of the thing that was asked for. */}
+      {tab !== "aluminium" ? (
         <div className="no-print flex items-center justify-between">
           <div>
-            <h1 className="display text-2xl font-extrabold">Quotation</h1>
+            <h1 className="display text-2xl font-extrabold">
+              {tab === "quote" ? "Quotation" : tab === "cutting" ? "Workshop Sheet"
+                : tab === "threed" ? "3D Preview" : "Leftover Pieces"}
+            </h1>
             <p className="text-xs" style={{ color: "var(--ink-2)" }}>
-              Party ke liye — rate daalo, PDF banao
+              {tab === "quote" ? "For the client — set the rate, then make the PDF"
+                : tab === "cutting" ? "For the workshop — cut lengths and drawings"
+                : tab === "threed" ? "Show the client colour and glass, live"
+                : "Save them to the bank and they are used in your next list"}
             </p>
           </div>
           <button onClick={() => setTab("aluminium")} className="btn-ghost px-4 py-2 text-sm">← Material List</button>
@@ -1810,10 +2177,10 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
             <div>
               <h1 className="display text-2xl font-extrabold">Material List</h1>
               <p className="text-xs" style={{ color: "var(--ink-2)" }}>
-                {items.length} item · {items.reduce((a, i) => a + i.qty, 0)} openings
+                {items.length} item{items.length > 1 ? "s" : ""} · {items.reduce((a, i) => a + i.qty, 0)} openings
               </p>
             </div>
-            <button onClick={onNew} className="btn-ghost px-4 py-2 text-sm no-print">✚ Naya</button>
+            <button onClick={onNew} className="btn-ghost px-4 py-2 text-sm no-print">✚ New</button>
           </div>
 
           {/* big numbers — the hero is what to actually BUY, with the full
@@ -1826,8 +2193,8 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
                 <Stat label="16' Pipes" value={list.totals.bars16} />
                 <Stat label="8' Pipes" value={list.totals.bars8} />
                 {offcutPlan.pipesSaved > 0 ? (
-                  <Stat label="Khareedo" value={fmtPipes(buy)} tone="good"
-                    sub={`${fmtPipes(need)} chahiye · ${fmtPipes(offcutPlan.pipesSaved)} bank se`} />
+                  <Stat label="To Buy" value={fmtPipes(buy)} tone="good"
+                    sub={`${fmtPipes(need)} needed · ${fmtPipes(offcutPlan.pipesSaved)} from bank`} />
                 ) : (
                   <Stat label="Total Pipes" value={fmtPipes(need)} tone="accent" />
                 )}
@@ -1839,60 +2206,42 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         </>
       )}
 
-      {/* Output switcher. On a phone the top strip cut the last two tabs off
-          screen — Quotation, the tab that wins the customer, was undiscoverable.
-          So on mobile it moves to a fixed bottom bar (all five visible, within
-          thumb reach) and the top strip is desktop-only. */}
-      <div className="no-print hidden gap-1 overflow-x-auto rounded-xl p-1 sm:flex" style={{ background: "var(--surface-2)" }}>
-        {TAB_DEFS.map(([t, , label]) => (
-          <button key={t} onClick={() => setTab(t)}
-            className="whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-all"
-            style={tab === t
-              ? { background: "var(--surface)", boxShadow: "var(--shadow)", color: "var(--ink)" }
-              : { color: "var(--ink-2)" }}>
-            {label}{t === "offcuts" && offcutCandidates.length ? ` (${offcutCandidates.length})` : ""}
-          </button>
-        ))}
-      </div>
-
-      {/* Portalled to <body>: .result-view runs a fade-up transform, which would
-          make it the containing block and pin this bar to the bottom of the
-          CONTENT instead of the screen. */}
-      <BodyPortal>
-        <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 sm:hidden"
-          style={{
-            background: "var(--surface)", borderTop: "1px solid var(--line)",
-            paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 20px rgba(0,0,0,.10)",
-          }}>
-          {TAB_DEFS.map(([t, icon, , short]) => (
-            <button key={t} onClick={() => { setTab(t); window.scrollTo({ top: 0 }); }}
-              className="relative flex flex-col items-center gap-0.5 py-2.5"
-              style={{ color: tab === t ? "var(--accent)" : "var(--ink-3)" }}>
-              <span className="text-[17px] leading-none">{icon}</span>
-              <span className="text-[10px] font-bold leading-none">{short}</span>
-              {t === "offcuts" && offcutCandidates.length > 0 && (
-                <span className="absolute right-3 top-1.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white"
-                  style={{ background: "var(--good)" }}>{offcutCandidates.length}</span>
-              )}
+      {/* Switcher for what has ACTUALLY been made. Appears only once there is
+          more than the material list, so a first-time result screen stays a
+          single clean document instead of a rack of empty tabs. */}
+      {made.size > 1 && (
+        <div className="no-print flex gap-1 overflow-x-auto rounded-xl p-1" style={{ background: "var(--surface-2)" }}>
+          {(Object.keys(TAB_LABEL) as Tab[]).filter((t) => made.has(t)).map((t) => (
+            <button key={t} onClick={() => openArtifact(t)}
+              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-all"
+              style={tab === t
+                ? { background: "var(--surface)", boxShadow: "var(--shadow)", color: "var(--ink)" }
+                : { color: "var(--ink-2)" }}>
+              {TAB_LABEL[t]}
             </button>
           ))}
-        </nav>
-      </BodyPortal>
+        </div>
+      )}
 
       {tab === "aluminium" && (
-        <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} shop={shop}
-          plan={offcutPlan} rawPlan={rawPlan} useStock={useStock} onToggleStock={setUseStock}
-          onUseBank={applyOffcutPlan} />
+        <>
+          <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} shop={shop}
+            jobFinish={jobFinish} onFinish={changeJobFinish} hiddenByColour={hiddenByColour}
+            plan={offcutPlan} rawPlan={rawPlan} useStock={useStock} onToggleStock={setUseStock}
+            onUseBank={applyOffcutPlan} />
+          <NextSteps made={made} onOpen={openArtifact} offcutCount={offcutCandidates.length} />
+        </>
       )}
       {tab === "cutting" && <CuttingPanel list={list} shop={shop} items={items} plan={offcutPlan} />}
-      {tab === "offcuts" && <OffcutsPanel candidates={offcutCandidates} aluRate={aluRate} jobLabel={items[0] ? itemName(items[0]) : undefined} />}
+      {tab === "offcuts" && <OffcutsPanel candidates={offcutCandidates} aluRate={aluRate}
+        jobLabel={items[0] ? itemName(items[0]) : undefined} jobFinish={jobFinish} />}
       {tab === "threed" && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div>
               <div className="display font-bold">Live 3D Configurator</div>
               <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-                Customer ko dikhao — colour aur glass live badlo
+                Show the client — change colour and glass live
               </div>
             </div>
             {items.length > 1 && (
@@ -1908,10 +2257,10 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
           />
           <button onClick={() => setShowcase(true)}
             className="btn-dark w-full py-4 text-base display">
-            👤 Customer ko dikhao — full screen
+            👤 Show the client — full screen
           </button>
           <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-            📸 &quot;Save to Quotation&quot; dabao — ye 3D view quotation ke us item pe lag jayega
+            📸 Tap &quot;Save to Quotation&quot; and this 3D view is attached to that item in the quotation
           </p>
         </div>
       )}
@@ -1924,16 +2273,16 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
         />
       )}
 
-      {/* No global "WhatsApp pe bhejo" any more: a fabricator sends different
+      {/* No global "send on WhatsApp" any more: a fabricator sends different
           documents to different people (aluminium supplier, glass supplier,
-          his own karigar, the customer). Each tab carries its own send action. */}
+          his own workshop, the client). Each tab carries its own send action. */}
 
       {/* 3D colour/glass picker — auto-renders each opening into the quotation */}
       {tab === "quote" && quoteTotal > 0 && (
         <div className="no-print card flex flex-col gap-3 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="eyebrow">3D preview · quotation me lagega</div>
-            <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>Colour chuno — har window us colour me quote me aa jayegi</div>
+            <div className="eyebrow">3D preview · goes into the quotation</div>
+            <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>Pick a colour — every window is quoted in it</div>
           </div>
           <div className="flex flex-wrap gap-2">
             {FINISH_OPTS.map(([f, label, sw]) => (
@@ -1977,7 +2326,7 @@ function Result({ items, onNew, initialTab, onSnapshot }: {
 
       {showShop && <ShopModal shop={shop} onSave={(s) => { setShop(s); try { localStorage.setItem("fabriq_shop", JSON.stringify(s)); } catch { /* ignore */ } setShowShop(false); }} onClose={() => setShowShop(false)} />}
 
-      {/* Customer-facing full screen — shop ke private numbers yahan kabhi nahi */}
+      {/* Client-facing full screen — the shop's private numbers never appear here */}
       {showcase && items.length > 0 && (() => {
         const it = items[Math.min(threedIdx, items.length - 1)];
         const rate = rateFor(it);
@@ -2013,21 +2362,21 @@ function QuotePanel({
     <div className="no-print flex flex-col gap-3">
       {!shop.name ? (
         <button onClick={onEditShop} className="card p-4 text-left" style={{ borderStyle: "dashed", borderColor: "var(--accent)" }}>
-          <div className="font-bold">🏪 Apni shop ki details daalo</div>
-          <div className="text-xs" style={{ color: "var(--ink-3)" }}>Quotation pe aapka naam + phone aayega — ek baar daalo, hamesha ke liye yaad rahega.</div>
+          <div className="font-bold">🏪 Add your shop details</div>
+          <div className="text-xs" style={{ color: "var(--ink-3)" }}>Your name and phone number appear on every quotation. Enter them once and we remember them.</div>
         </button>
       ) : (
         <div className="card flex items-center justify-between p-3">
           <div className="min-w-0">
             <div className="truncate font-bold">{shop.name}</div>
-            <div className="truncate text-xs" style={{ color: "var(--ink-3)" }}>{shop.phone || "phone add karo"}</div>
+            <div className="truncate text-xs" style={{ color: "var(--ink-3)" }}>{shop.phone || "Add a phone number"}</div>
           </div>
           <button onClick={onEditShop} className="btn-ghost px-3 py-1.5 text-xs">Edit</button>
         </div>
       )}
 
-      <label className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>Customer / Party ka naam
-        <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="jaise — Sharma ji, Green Valley Apartments"
+      <label className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>Client name
+        <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="e.g. Sharma ji, Green Valley Apartments"
           className="dim-input mt-1 w-full px-3 py-2.5" />
       </label>
 
@@ -2077,10 +2426,10 @@ function QuotePanel({
       </div>
 
       <button onClick={onPrint} className="btn-primary w-full py-4 text-lg display" disabled={total <= 0}>
-        📄 Customer ke liye quotation PDF save karo
+        📄 Save the quotation PDF
       </button>
       <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-        Neeche live preview hai — PDF save karke party ko WhatsApp pe bhej do
+        Live preview below — save the PDF, then send it to the client on WhatsApp
       </p>
     </div>
   );
@@ -2100,14 +2449,14 @@ function ShopModal({ shop, onSave, onClose }: { shop: ShopProfile; onSave: (s: S
       <div className="card w-full" style={{ maxWidth: 480, borderRadius: "18px 18px 0 0", padding: 20, maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}>
         <div className="display text-lg font-bold">🏪 Shop details</div>
-        <p className="mb-3 text-xs" style={{ color: "var(--ink-3)" }}>Ye quotation ke header me aayega. Ek baar daalo.</p>
+        <p className="mb-3 text-xs" style={{ color: "var(--ink-3)" }}>This appears in the quotation header. Enter it once.</p>
         <div className="flex flex-col gap-3">
-          {field("name", "Shop ka naam", "M/s Shahid Aluminium & Glass", true)}
+          {field("name", "Shop name", "M/s Shahid Aluminium & Glass", true)}
           {field("tagline", "Tagline (optional)", "Windows · Doors · Partitions")}
           {field("phone", "Phone", "+91 98xxxxxxx")}
           {field("address", "Address", "Shop no, market, city")}
           {field("gstin", "GSTIN (optional)", "22ABCDE1234F1Z5")}
-          {field("upi", "UPI ID (optional)", "shopname@okhdfcbank — quotation pe Scan-to-Pay QR aayega")}
+          {field("upi", "UPI ID (optional)", "shopname@okhdfcbank — adds a Scan-to-Pay QR")}
         </div>
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="btn-ghost flex-1 py-3">Cancel</button>
@@ -2119,16 +2468,65 @@ function ShopModal({ shop, onSave, onClose }: { shop: ShopProfile; onSave: (s: S
   );
 }
 
+/**
+ * What to build next, once the material list exists.
+ *
+ * Each row is an offer with a reason, not a tab. Already-made outputs stay in
+ * the list but flip to "Open", so nothing the fabricator created ever becomes
+ * hard to find — the chip bar above is the fast path, this is the discoverable one.
+ */
+function NextSteps({ made, onOpen, offcutCount }: {
+  made: Set<Tab>; onOpen: (t: Tab) => void; offcutCount: number;
+}) {
+  const rows = [...ARTIFACTS];
+  // Offcuts only earn a row when this job actually produced reusable pieces.
+  if (offcutCount > 0) {
+    rows.push({
+      id: "offcuts", icon: "♻️", title: "Save leftover pieces to the bank",
+      sub: `${offcutCount} reusable ${offcutCount === 1 ? "piece" : "pieces"} from this job — used automatically in your next list`,
+      cta: "Open",
+    });
+  }
+
+  return (
+    <div className="no-print mt-1 flex flex-col gap-2.5">
+      <h2 className="display text-[15px] font-extrabold">What next?</h2>
+      {rows.map((a) => {
+        const done = made.has(a.id);
+        return (
+          <button key={a.id} onClick={() => onOpen(a.id)}
+            className="card flex items-center gap-3.5 p-4 text-left">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[20px]"
+              style={{ background: "var(--surface-2)" }}>{a.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="display text-[14px] font-bold leading-tight">{a.title}</div>
+              <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--ink-3)" }}>{a.sub}</div>
+            </div>
+            <span className={`shrink-0 rounded-lg px-3.5 py-2 text-[13px] font-bold ${done ? "" : "btn-primary"}`}
+              style={done ? { background: "var(--surface-2)", color: "var(--ink-2)" } : undefined}>
+              {done ? "Open" : a.cta}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* —— result sub-panels —— */
 
 function AluminiumPanel({
-  list, cost, aluRate, onRate, shop, plan, rawPlan, useStock, onToggleStock, onUseBank,
+  list, cost, aluRate, onRate, shop, jobFinish, onFinish, hiddenByColour,
+  plan, rawPlan, useStock, onToggleStock, onUseBank,
 }: {
   list: MaterialList;
   cost: JobCost | null;
   aluRate: number;
   onRate: (v: number) => void;
   shop: ShopProfile;
+  jobFinish: FinishId | undefined;
+  onFinish: (v: FinishId | undefined) => void;
+  hiddenByColour: number;
   plan: OffcutPlan;
   rawPlan: OffcutPlan;
   useStock: boolean;
@@ -2145,10 +2543,14 @@ function AluminiumPanel({
   }, [plan]);
   const costBySection = useMemo(() => {
     const m = new Map<string, number>();
-    cost?.sections.forEach((c) => m.set(c.sectionId, c.scrapCost));
+    // Sections with no catalogue weight carry no scrapCost — skip them rather
+    // than showing ₹0, which would read as "no waste here".
+    cost?.sections.forEach((c) => { if (c.scrapCost !== undefined) m.set(c.sectionId, c.scrapCost); });
     return m;
   }, [cost]);
   const priced = aluRate > 0 && !!cost;
+  const [brand, setBrand] = useState<BrandId | undefined>(undefined);
+  useEffect(() => { setBrand(loadBrand()); }, []);
 
   const totalPipes = list.totals.bars16 + list.totals.bars8 * 0.5;
 
@@ -2158,65 +2560,94 @@ function AluminiumPanel({
       {/* money-visible scrap strip */}
       <MoneyScrap cost={cost} aluRate={aluRate} onRate={onRate} totalWastePct={list.totals.wastePct} />
 
+      {/* Colour sits above the stock offer on purpose: it decides which bank
+          pieces are even eligible, so answering it changes the numbers below. */}
+      <div className="card flex flex-col gap-2.5 p-3.5">
+        <FinishPicker value={jobFinish} onChange={onFinish} label="Colour for this job"
+          hint="Optional — skip it and all stock is offered" />
+        {hiddenByColour > 0 && (
+          <div className="rounded-lg px-3 py-2 text-[11px]" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
+            ♻️ {hiddenByColour} {hiddenByColour === 1 ? "piece" : "pieces"} in the bank {hiddenByColour === 1 ? "is" : "are"} a different colour, so {hiddenByColour === 1 ? "it is" : "they are"} not counted here.
+          </div>
+        )}
+      </div>
+
       {/* stock offer / applied plan */}
       <OffcutSavings plan={plan} rawPlan={rawPlan} useStock={useStock}
         onToggleStock={onToggleStock} aluRate={aluRate} onUseBank={onUseBank} />
 
-      {/* premium per-section cards — pipe ka NAAM, size nahi */}
-      {list.sections.map((s) => {
-        const sec = getSection(s.sectionId);
-        const barFt = sec.barLengthFt ?? 16;
-        const halfFt = Math.round(barFt / 2);
-        const pipes = s.bars16 + s.bars8 * 0.5;
-        const scrapRs = costBySection.get(s.sectionId) ?? 0;
-        return (
-          <div key={s.sectionId} className="card p-3.5">
-            <div className="flex items-center gap-3.5">
-              <SectionProfile sectionId={s.sectionId} w={78} h={54} />
-              <div className="min-w-0 flex-1">
-                <div className="font-bold leading-tight">{sec.label}</div>
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="display text-2xl font-extrabold leading-none tabnum" style={{ color: "var(--accent)" }}>
-                  {fmtPipes(pipes)}
+      {/* The list a fabricator actually reads: one row per pipe, same four
+          columns every time — drawing, name, quantity, scrap. It used to be a tall
+          card per section with a giant number and three chips, which made five
+          sections into a page of scrolling and buried the thing he came for.
+          The cross-section leads the row because that is what he recognises
+          before he reads any word, so it gets the space it deserves. */}
+      <div className="card overflow-hidden p-0">
+        <div className="flex items-center gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-wide"
+          style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+          <span className="shrink-0" style={{ width: 96 }}>Pipe</span>
+          <span className="min-w-0 flex-1">Section</span>
+          <span className="w-16 shrink-0 text-right">Qty</span>
+          <span className="w-14 shrink-0 text-right">Scrap</span>
+        </div>
+
+        {list.sections.map((s) => {
+          const sec = getSection(s.sectionId);
+          const barFt = sec.barLengthFt ?? 16;
+          const halfFt = Math.round(barFt / 2);
+          const pipes = s.bars16 + s.bars8 * 0.5;
+          const scrapRs = costBySection.get(s.sectionId) ?? 0;
+          const sp = planBySection.get(s.sectionId);
+          const cuts = sp ? sp.uses.reduce((a, u) => a + u.pieces.length, 0) : 0;
+          const breakdown = [
+            s.bars16 ? `${s.bars16} × ${barFt}'` : "",
+            s.bars8 ? `${s.bars8} × ${halfFt}'` : "",
+          ].filter(Boolean).join(" + ");
+          return (
+            <div key={s.sectionId} style={{ borderTop: "1px solid var(--line)" }}>
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <span className="shrink-0" style={{ width: 96 }}>
+                  <SectionProfile sectionId={s.sectionId} w={96} h={64} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[14px] font-bold leading-tight">{sec.label}</span>
+                    {/* The dealer's own catalogue number, once the shop says
+                        which brand it buys — nothing shown if it hasn't. */}
+                    {sectionCode(s.sectionId, brand) && (
+                      <span className="mono text-[10px] font-bold" style={{ color: "var(--ink-3)" }}>
+                        #{sectionCode(s.sectionId, brand)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>
+                    {breakdown || "—"}{sec.size ? ` · ${sec.size}mm` : ""}
+                  </div>
                 </div>
-                <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                  pipe
+                <div className="w-16 shrink-0 text-right">
+                  <span className="display text-xl font-extrabold leading-none tabnum">{fmtPipes(pipes)}</span>
+                </div>
+                <div className="w-14 shrink-0 text-right text-[13px] font-bold tabnum"
+                  style={{ color: s.wastePct > 20 ? "var(--warn)" : "var(--ink-2)" }}>
+                  {s.wastePct}%
                 </div>
               </div>
+
+              {/* Only the rows that have something extra to say get a second line. */}
+              {sp && (
+                <div className="px-3 pb-2 text-[11px]" style={{ color: "var(--good)" }}>
+                  ♻️ {cuts} {cuts === 1 ? "cut" : "cuts"} from the bank — buy only {pipeQty(sp.pipesAfter)}
+                </div>
+              )}
+              {priced && scrapRs > 0 && (
+                <div className="px-3 pb-2 text-[11px]" style={{ color: s.wastePct > 20 ? "var(--warn)" : "var(--ink-3)" }}>
+                  {inr(scrapRs)} tied up in scrap
+                </div>
+              )}
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <MetricChip label={`${barFt}' pipe`} value={s.bars16} />
-              <MetricChip label={`${halfFt}' pipe`} value={s.bars8 || "—"} />
-              <MetricChip label="Scrap" value={`${s.wastePct}%`} tone={s.wastePct > 20 ? "warn" : undefined} />
-            </div>
-            {(() => {
-              const sp = planBySection.get(s.sectionId);
-              if (!sp) return null;
-              const saved = Math.max(0, sp.pipesBefore - sp.pipesAfter);
-              const cuts = sp.uses.reduce((a, u) => a + u.pieces.length, 0);
-              return (
-                <div className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-[11px]"
-                  style={{ background: "var(--good-soft)" }}>
-                  <span style={{ color: "var(--ink-2)" }}>
-                    ♻️ {cuts} cutting bache hue tukdon se — sirf {fmtPipes(sp.pipesAfter)} pipe khareedo
-                  </span>
-                  {saved > 0 && (
-                    <span className="mono font-bold" style={{ color: "var(--good)" }}>−{fmtPipes(saved)} pipe</span>
-                  )}
-                </div>
-              );
-            })()}
-            {priced && scrapRs > 0 && (
-              <div className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-[11px]"
-                style={{ background: s.wastePct > 20 ? "var(--warn-soft)" : "var(--surface-2)" }}>
-                <span style={{ color: "var(--ink-3)" }}>Is section me atka scrap</span>
-                <span className="mono font-bold" style={{ color: s.wastePct > 20 ? "var(--warn)" : "var(--ink-2)" }}>{inr(scrapRs)}</span>
-              </div>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {/* grand total — hero is what to buy once the bank is counted */}
       {(() => {
@@ -2227,14 +2658,14 @@ function AluminiumPanel({
             style={{ background: saving ? "var(--good-soft)" : "var(--accent-soft)" }}>
             <div>
               <div className="eyebrow" style={{ color: saving ? "var(--good)" : "var(--accent)" }}>
-                {saving ? "Khareedna kitna hai" : "Total Aluminium"}
+                {saving ? "How much to buy" : "Total Aluminium"}
               </div>
               <div className="text-[11px]" style={{ color: "var(--ink-2)" }}>
                 {list.totals.bars16} × 16&apos;{list.totals.bars8 ? ` + ${list.totals.bars8} × 8'` : ""} · scrap {list.totals.wastePct}%
               </div>
               {saving && (
                 <div className="text-[11px] font-semibold" style={{ color: "var(--good)" }}>
-                  {fmtPipes(totalPipes)} chahiye — {fmtPipes(plan.pipesSaved)} bank se aa jayegi
+                  {pipeQty(totalPipes)} needed · {fmtPipes(plan.pipesSaved)} from the bank
                 </div>
               )}
             </div>
@@ -2247,47 +2678,66 @@ function AluminiumPanel({
         );
       })()}
 
-      {/* glass / jali / sheet — same list, neeche */}
+      {/* glass / mesh / sheet — same list, further down */}
       <GlassBlock list={list} />
 
       {/* Two suppliers, two orders. The aluminium dealer and the glass shop are
           different people — they get different sheets, never one combined list. */}
       <SendOrder
-        label="Aluminium supplier ko bhejo"
-        sub={`${list.sections.length} section · ${fmtPipes(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))} pipe`}
+        label="Send to aluminium supplier"
+        sub={`${list.sections.length} sections · ${pipeQty(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))}`}
         filename="aluminium-order.pdf"
         text={aluminiumWaText(list, plan, shopName)}
         build={() => buildOrderPdf({
-          title: "Aluminium Order", shopName, tagline,
-          blocks: [{
+          title: "Aluminium Order",
+          shopName, tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
+          tables: [{
+            // Same four columns the on-screen list uses, so the sheet the dealer
+            // reads and the sheet the fabricator checked are the same document.
+            columns: [
+              { label: "Section", width: 34 },
+              { label: brand ? `${brand.toUpperCase()} code` : "Size", width: 18 },
+              { label: "Pipe", width: 26, align: "right" },
+              { label: "Qty", width: 12, align: "right" },
+            ],
             rows: list.sections.map((s) => {
               const sec = getSection(s.sectionId);
               const full = sec.barLengthFt ?? 16;
               const parts: string[] = [];
               if (s.bars16) parts.push(`${s.bars16} x ${full}'`);
               if (s.bars8) parts.push(`${s.bars8} x ${full / 2}'`);
-              return { left: sec.label, right: parts.join("  +  ") };
+              const sp = planBySection.get(s.sectionId);
+              return [
+                sec.label,
+                sectionCode(s.sectionId, brand) ?? (sec.size ? `${sec.size}mm` : "—"),
+                parts.join("  +  ") || "—",
+                fmtPipes(sp ? sp.pipesAfter : s.bars16 + s.bars8 * 0.5),
+              ];
             }),
           }],
-          total: `${fmtPipes(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))} pipe`,
-          note: "FabriQ se bana — sizes deterministic engine se, AI se nahi.",
+          totalLabel: "Total pipes required",
+          total: pipeQty(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved)),
+          note: "Generated by FabriQ — sizes come from a deterministic engine, not from AI.",
         })}
       />
 
       {hasGlass && (
         <SendOrder
-          label="Glass / Jali supplier ko bhejo"
+          label="Send to glass / mesh supplier"
           sub={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`}
           filename="glass-order.pdf"
           text={glassWaText(list, shopName)}
           build={() => buildOrderPdf({
-            title: "Glass / Jali Order", shopName, tagline,
-            blocks: [
+            title: "Glass / Mesh Order",
+            shopName, tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
+            tables: [
               glassBlock("Glass", `${list.glassSqft.toFixed(1)} sqft`, list.glass),
-              glassBlock("Jali / Mesh", `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, list.mesh.panels),
+              glassBlock("Mesh (Jali)", `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, list.mesh.panels),
               glassBlock("Sheet", `${list.sheet.sqft.toFixed(1)} sqft`, list.sheet.panels),
-            ].filter((b): b is PdfBlock => b !== null),
-            note: "Har size finished panel ka hai — FabriQ se bana.",
+            ].filter((b): b is PdfTable => b !== null),
+            totalLabel: "Total area",
+            total: `${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`,
+            note: "All sizes are finished panel sizes. Generated by FabriQ.",
           })}
         />
       )}
@@ -2297,14 +2747,20 @@ function AluminiumPanel({
   );
 }
 
-function glassBlock(heading: string, sub: string, panels: { width: Um; height: Um; count: number }[]): PdfBlock | null {
+function glassBlock(heading: string, sub: string, panels: { width: Um; height: Um; count: number }[]): PdfTable | null {
   if (!panels.length) return null;
   return {
     heading, sub,
-    rows: panels.map((p) => ({
-      left: `${formatFtInSut(p.width)}  x  ${formatFtInSut(p.height)}`,
-      right: `${p.count} pcs`,
-    })),
+    columns: [
+      { label: "Size (W x H)", width: 40 },
+      { label: "Sqft / pc", width: 20, align: "right" },
+      { label: "Pcs", width: 14, align: "right" },
+    ],
+    rows: panels.map((p) => [
+      `${formatFtInSut(p.width)}  x  ${formatFtInSut(p.height)}`,
+      sqft(p.width, p.height).toFixed(2),
+      `${p.count}`,
+    ]),
   };
 }
 
@@ -2334,28 +2790,28 @@ function SendOrder({ label, sub, filename, text, build }: {
         className="btn-primary flex w-full items-center justify-between gap-3 px-4 py-3.5 disabled:opacity-60"
         style={{ background: "#25d366", boxShadow: "0 4px 14px rgba(37,211,102,.30)" }}>
         <span className="text-left">
-          <span className="block text-sm font-bold">{state === "working" ? "PDF ban raha hai…" : label}</span>
+          <span className="block text-sm font-bold">{state === "working" ? "Building the PDF…" : label}</span>
           <span className="block text-[11px] opacity-90">{sub} · PDF</span>
         </span>
         <span className="text-lg">↗</span>
       </button>
       {state === "downloaded" && (
         <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
-          PDF save ho gaya aur WhatsApp khul gaya — chat me wahi file attach kar do.
+          PDF saved and WhatsApp opened — attach that file to the chat.
         </p>
       )}
       {state === "shared" && (
-        <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--good)" }}>✓ PDF bhej diya</p>
+        <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--good)" }}>✓ PDF sent</p>
       )}
     </div>
   );
 }
 
-/** Glass / jali / sheet sizes — Material list ke neeche, alag tab ki zaroorat nahi. */
+/** Glass / mesh / sheet sizes — under the material list; no separate tab needed. */
 function GlassBlock({ list }: { list: MaterialList }) {
   const rows: { title: string; sub: string; panels: { itemId: string; width: Um; height: Um; count: number }[] }[] = [];
   if (list.glass.length) rows.push({ title: "Glass", sub: `${list.glassSqft.toFixed(1)} sqft`, panels: list.glass });
-  if (list.mesh.panels.length) rows.push({ title: "Jali / Mesh", sub: `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, panels: list.mesh.panels });
+  if (list.mesh.panels.length) rows.push({ title: "Mesh (Jali)", sub: `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, panels: list.mesh.panels });
   if (list.sheet.panels.length) rows.push({ title: "Sheet", sub: `${list.sheet.sqft.toFixed(1)} sqft`, panels: list.sheet.panels });
   if (!rows.length) return null;
 
@@ -2371,7 +2827,7 @@ function GlassBlock({ list }: { list: MaterialList }) {
             <div key={i} className="flex items-center justify-between border-t px-4 py-3 text-sm" style={{ borderColor: "var(--surface-2)" }}>
               <span className="font-semibold">{g.itemId}</span>
               <span className="tabnum">{formatFtInSut(g.width)} × {formatFtInSut(g.height)}</span>
-              <span className="font-bold tabnum">{g.count} pcs</span>
+              <span className="font-bold tabnum">{g.count} {g.count === 1 ? "pc" : "pcs"}</span>
             </div>
           ))}
         </div>
@@ -2381,9 +2837,9 @@ function GlassBlock({ list }: { list: MaterialList }) {
 }
 
 /**
- * Offcut Bank ka asli faayda — kitni pipe kam khareedni padegi.
- * Sirf tab dikhta hai jab bank se sach me kuch kaam aa raha ho, aur ₹ tabhi
- * jab fabricator ne apna rate diya ho. Koi bana hua number nahi.
+ * The real point of the Offcut Bank: how much less pipe there is to buy.
+ * Shown only when the bank genuinely covers something, and priced in ₹ only
+ * once the fabricator has given his own rate. No invented numbers.
  */
 function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseBank }: {
   plan: OffcutPlan; rawPlan: OffcutPlan; useStock: boolean;
@@ -2394,27 +2850,28 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
   const [applied, setApplied] = useState<{ cuts: number; pipes: number; rupees: number } | null>(null);
 
   const cuts = plan.uses.reduce((a, u) => a + u.pieces.length, 0);
-  // ₹ is on pipe NOT bought — not on the metal pulled out of the bank.
-  const rupees = aluRate > 0 ? Math.round(plan.feetSaved * aluRate) : 0;
+  // ₹ is on pipe NOT bought — not on the metal pulled out of the bank. Priced
+  // from kilos, because that is the unit the rate is in.
+  const rupees = aluRate > 0 ? Math.round(plan.kgSaved * aluRate) : 0;
 
   // Stock available but not switched on yet — offer it, don't force it.
   if (!useStock && !applied) {
     if (!rawPlan.uses.length) return null;
     const offerCuts = rawPlan.uses.reduce((a, u) => a + u.pieces.length, 0);
-    const offerRs = aluRate > 0 ? Math.round(rawPlan.feetSaved * aluRate) : 0;
+    const offerRs = aluRate > 0 ? Math.round(rawPlan.kgSaved * aluRate) : 0;
     return (
       <div className="card p-4" style={{ background: "var(--good-soft)", border: "1px solid var(--good)" }}>
         <div className="display text-[15px] font-extrabold">
-          ♻️ Dukaan me pade tukdon se {offerCuts} {offerCuts === 1 ? "cutting" : "cutting"} nikal jayegi
+          ♻️ {offerCuts} {offerCuts === 1 ? "cut" : "cuts"} can come from pieces already in your shop
         </div>
         <div className="mt-1 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
-          Pichle kaam ke jo tukde bach gaye the, unme se {offerCuts} cutting nikal sakti hai —
-          phir <b style={{ color: "var(--good)" }}>{fmtPipes(rawPlan.pipesSaved)} pipe kam</b> khareedni padegi
-          {offerRs > 0 ? `, lagbhag ${inr(offerRs)} ki bachat` : ""}.
-          Material list aur cutting list dono usi hisaab se ban jayengi.
+          Leftovers from earlier jobs cover {offerCuts} of the {offerCuts === 1 ? "cut" : "cuts"} in this list,
+          so you buy <b style={{ color: "var(--good)" }}>{fmtPipes(rawPlan.pipesSaved)} fewer {rawPlan.pipesSaved === 1 ? "pipe" : "pipes"}</b>
+          {offerRs > 0 ? `, saving roughly ${inr(offerRs)}` : ""}.
+          Both the material list and the cutting list are recalculated to match.
         </div>
         <button onClick={() => onToggleStock(true)} className="btn-dark mt-3 w-full py-3 text-sm">
-          Bache hue tukde laga kar list banao
+          Use the leftover pieces
         </button>
       </div>
     );
@@ -2424,11 +2881,11 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
     return (
       <div className="card p-3.5" style={{ background: "var(--good-soft)" }}>
         <div className="text-[12.5px] font-bold" style={{ color: "var(--good)" }}>
-          ✓ Bank se {applied.cuts} {applied.cuts === 1 ? "tukda" : "tukde"} kaat liye
+          ✓ {applied.cuts} {applied.cuts === 1 ? "piece" : "pieces"} cut from the bank
         </div>
         <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
-          {fmtPipes(applied.pipes)} pipe kam khareedni padi{applied.rupees > 0 ? ` — ${inr(applied.rupees)} bachi` : ""}.
-          Bank update ho gaya, kaam layak bacha hua tukda wapas jama ho gaya.
+          {fmtPipes(applied.pipes)} fewer {applied.pipes === 1 ? "pipe" : "pipes"} to buy{applied.rupees > 0 ? ` — ${inr(applied.rupees)} saved` : ""}.
+          The bank is updated, and any remainder still worth keeping has been put back.
         </div>
       </div>
     );
@@ -2441,13 +2898,13 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="display text-[15px] font-extrabold">
-            ♻️ Bache hue tukde lag gaye — dono list update ho gayi
+            ♻️ Leftover pieces applied — both lists updated
           </div>
           <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--ink-2)" }}>
-            {cuts} {cuts === 1 ? "cutting" : "cutting"} ({plan.feetFromBank}′) pade hue maal se ho jayegi —{" "}
-            {fmtPipes(plan.pipesSaved)} pipe kam khareedni padegi
-            {rupees > 0 ? `, lagbhag ${inr(rupees)} bachat` : ""}.
-            Cutting list me har line par likha hai ki wo tukda naye pipe se kaatna hai ya bache hue se.
+            {cuts} {cuts === 1 ? "cut" : "cuts"} ({plan.feetFromBank}′) come from stock you already have,
+            so there {plan.pipesSaved === 1 ? "is" : "are"} {fmtPipes(plan.pipesSaved)} fewer {plan.pipesSaved === 1 ? "pipe" : "pipes"} to buy
+            {rupees > 0 ? `, saving roughly ${inr(rupees)}` : ""}.
+            Every line in the cutting list says whether to cut from a new pipe or a leftover.
           </div>
         </div>
         {plan.pipesSaved > 0 && (
@@ -2470,7 +2927,7 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
               → {u.pieces.map((p) => formatFtInSut(p.length)).join(" + ")}
             </span>
             {u.leftover > 0 && (
-              <span className="mono" style={{ color: "var(--ink-3)" }}>· bachega {formatFtInSut(u.leftover)}</span>
+              <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(u.leftover)} left over</span>
             )}
           </div>
         ))}
@@ -2478,21 +2935,21 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
 
       <div className="mt-3 flex gap-2">
         <button onClick={() => onToggleStock(false)} className="btn-ghost px-4 py-3 text-sm">
-          Hatao
+          Remove
         </button>
         <button onClick={() => { setApplied({ cuts, pipes: plan.pipesSaved, rupees }); onUseBank(); }}
           className="btn-dark flex-1 py-3 text-sm">
-          Kaat liye — bank se hata do
+          Cut them — remove from bank
         </button>
       </div>
       <p className="mt-1.5 text-center text-[10.5px]" style={{ color: "var(--ink-3)" }}>
-        Ye tabhi dabaye jab tukde sach me kaat liye ho — tabhi wo bank se hatenge.
+        Only tap this once the pieces are actually cut — that is when they leave the bank.
       </p>
     </div>
   );
 }
 
-/** Trust strip — har number deterministic engine se aata hai, AI se nahi. */
+/** Trust strip — every number comes from the deterministic engine, not from AI. */
 function EngineVerified() {
   return (
     <div className="rounded-xl px-4 py-3" style={{ background: "var(--surface-2)" }}>
@@ -2501,17 +2958,8 @@ function EngineVerified() {
       </div>
       <div className="text-[11px] leading-relaxed" style={{ color: "var(--ink-3)" }}>
         Deterministic calculation · catalogue profiles checked · cutting plan validated.
-        Koi bhi measurement AI se generate nahi hui.
+        No measurement on this page was generated by AI.
       </div>
-    </div>
-  );
-}
-
-function MetricChip({ label, value, tone }: { label: string; value: string | number; tone?: "warn" }) {
-  return (
-    <div className="rounded-lg px-2 py-2 text-center" style={{ background: "var(--surface-2)" }}>
-      <div className="display text-base font-extrabold tabnum" style={{ color: tone === "warn" ? "var(--warn)" : "var(--ink)" }}>{value}</div>
-      <div className="text-[9.5px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>{label}</div>
     </div>
   );
 }
@@ -2528,23 +2976,32 @@ function MoneyScrap({
   const [editing, setEditing] = useState(aluRate <= 0);
   const [draft, setDraft] = useState(aluRate > 0 ? String(aluRate) : "");
   const priced = aluRate > 0 && !!cost;
+  // The saved rate arrives from localStorage one render AFTER mount, so the
+  // initial `editing` guess is made while aluRate is still 0. Without this a
+  // returning fabricator is asked to re-enter a rate he already set.
+  useEffect(() => {
+    if (aluRate > 0) { setEditing(false); setDraft(String(aluRate)); }
+  }, [aluRate]);
 
   if (!priced || editing) {
     return (
       <div className="card p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <Ic.Rupee size={16} /> Aluminium rate set karo — scrap ka paisa dikhega
+          <Ic.Rupee size={16} /> Set your aluminium rate to see scrap in rupees
         </div>
+        {/* ₹/kg, because that is the only rate a dealer quotes and the only one
+            a fabricator knows by heart. Feet → kilos is our job, not his. */}
         <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
-          Aap jis rate pe pipe kharidte ho — ₹ per running foot (blended). Ek baar set karo, yaad rahega.
+          The rate your dealer charges — <b>₹ per kilo</b>. Set it once and we remember it.
+          We work out the weight of each pipe from the catalogue ourselves.
         </p>
         <div className="mt-3 flex items-center gap-2">
           <span className="text-sm" style={{ color: "var(--ink-2)" }}>₹</span>
           <input
-            type="number" min={0} inputMode="decimal" value={draft} placeholder="e.g. 45"
+            type="number" min={0} inputMode="decimal" value={draft} placeholder="e.g. 280"
             onChange={(e) => setDraft(e.target.value)}
             className="dim-input w-28 px-3 py-2 text-sm" />
-          <span className="text-sm" style={{ color: "var(--ink-3)" }}>/ foot</span>
+          <span className="text-sm" style={{ color: "var(--ink-3)" }}>/ kilo</span>
           <button
             onClick={() => { onRate(Math.max(0, parseFloat(draft) || 0)); setEditing(false); }}
             disabled={!(parseFloat(draft) > 0)}
@@ -2557,29 +3014,44 @@ function MoneyScrap({
   }
 
   const tone = totalWastePct > 20 ? "var(--warn)" : "var(--good)";
+  // Nothing in this job has a catalogue weight, so there is no honest rupee
+  // figure to show. "₹0" would read as "costs nothing" — a dash reads as
+  // "not known", which is the truth.
+  const weighable = cost!.boughtKg > 0;
   return (
     <div className="card overflow-hidden">
       <div className="grid grid-cols-2 divide-x" style={{ borderColor: "var(--line)" }}>
         <div className="p-4">
           <div className="eyebrow">Aluminium Cost</div>
-          <div className="display mt-1 text-2xl font-extrabold mono">{inr(cost!.totalCost)}</div>
+          <div className="display mt-1 text-2xl font-extrabold mono">
+            {weighable ? inr(cost!.totalCost) : "—"}
+          </div>
           <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-            {Math.round(cost!.boughtFt)}&apos; bars @ ₹{aluRate}/ft
+            {weighable ? `${kg(cost!.boughtKg)} @ ₹${aluRate}/kg` : `Weight not known · rate set at ₹${aluRate}/kg`}
           </div>
         </div>
         <div className="p-4" style={{ background: totalWastePct > 20 ? "var(--warn-soft)" : "var(--good-soft)" }}>
           <div className="eyebrow" style={{ color: tone }}>Locked in Scrap</div>
-          <div className="display mt-1 text-2xl font-extrabold mono" style={{ color: tone }}>{inr(cost!.scrapCost)}</div>
+          <div className="display mt-1 text-2xl font-extrabold mono" style={{ color: tone }}>
+            {weighable ? inr(cost!.scrapCost) : "—"}
+          </div>
           <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-            {Math.round(cost!.scrapFt)}&apos; waste · {totalWastePct}%
+            {weighable ? `${kg(cost!.scrapKg)} waste · ${totalWastePct}%` : `${Math.round(cost!.scrapFt)}' waste · ${totalWastePct}%`}
           </div>
         </div>
       </div>
+      {/* Never let a partial total look like a full one. */}
+      {!cost!.complete && (
+        <div className="border-t px-4 py-2 text-[11px]" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>
+          ⓘ The catalogue has no weight for {cost!.unpricedSections.length} section{cost!.unpricedSections.length > 1 ? "s" : ""}
+          {weighable ? " — they are not included in the figures above." : " — so this job cannot be costed yet."}
+        </div>
+      )}
       <button
         onClick={() => { setDraft(String(aluRate)); setEditing(true); }}
         className="flex w-full items-center justify-center gap-1.5 border-t py-2 text-[11px]"
         style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>
-        <Ic.Pencil size={12} /> Rate: ₹{aluRate}/ft — badlo
+        <Ic.Pencil size={12} /> Rate: ₹{aluRate}/kg — change
       </button>
     </div>
   );
@@ -2587,11 +3059,13 @@ function MoneyScrap({
 
 /** Offcut Bank — save leftover bar pieces from this job, browse what's saved. */
 function OffcutsPanel({
-  candidates, aluRate, jobLabel,
+  candidates, aluRate, jobLabel, jobFinish,
 }: {
   candidates: OffcutCandidate[];
   aluRate: number;
   jobLabel?: string;
+  /** stamped onto every piece saved here, so the bank knows its own colour */
+  jobFinish?: FinishId;
 }) {
   const [bank, setBank] = useState<Offcut[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -2612,7 +3086,7 @@ function OffcutsPanel({
   const save = () => {
     const picked = candidates.filter((c) => selected.has(c.key));
     if (!picked.length) return;
-    setBank(addOffcuts(picked, jobLabel));
+    setBank(addOffcuts(picked, jobLabel, jobFinish));
     setSaved(true);
   };
 
@@ -2631,18 +3105,18 @@ function OffcutsPanel({
   return (
     <div className="flex flex-col gap-4">
       <div className="card p-4 text-xs" style={{ color: "var(--ink-2)" }}>
-        ♻️ <span className="font-bold">Offcut Bank:</span> har bar ka bacha hua tukda (1&apos; ya
-        usse zyada) yahan save karo. Agla kaam shuru karne se pehle yahan check karo — naya pipe
-        kam order karna padega.
+        ♻️ <span className="font-bold">Offcut Bank:</span>{" "}save every leftover piece of 1&apos; or
+        more here. Before starting the next job, check the bank first — you will need to order
+        less new pipe.
       </div>
 
       {candidates.length > 0 && (
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b p-4" style={{ borderColor: "var(--line)" }}>
             <div>
-              <div className="font-bold">Is job se bachega</div>
+              <div className="font-bold">Left over from this job</div>
               <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-                {candidates.length} tukde, 1&apos;+ lambe — chuno jo rakhne layak hain
+                {candidates.length} {candidates.length === 1 ? "piece" : "pieces"}{" "}of 1&apos; or more — tick the ones worth keeping
               </div>
             </div>
             <button onClick={save} disabled={selected.size === 0}
@@ -2687,7 +3161,7 @@ function OffcutsPanel({
         </div>
         {bank.length === 0 ? (
           <div className="p-6 text-center text-sm" style={{ color: "var(--ink-3)" }}>
-            Abhi khaali hai — upar se offcuts save karo.
+            Empty for now — save offcuts from above.
           </div>
         ) : (
           bankBySection.map(([sectionId, offs]) => {
@@ -2702,7 +3176,7 @@ function OffcutsPanel({
                   {offs.map((o) => (
                     <div key={o.id} className="chip flex items-center gap-2 px-3 py-1.5 text-xs">
                       <span className="mono font-semibold">{formatFtInSut(o.length)}</span>
-                      <button onClick={() => remove(o.id)} style={{ color: "var(--ink-3)" }} title="Use kar liya / remove">
+                      <button onClick={() => remove(o.id)} style={{ color: "var(--ink-3)" }} title="Used / remove">
                         <Ic.X size={12} />
                       </button>
                     </div>
@@ -2876,9 +3350,9 @@ function CuttingPanel({ list, shop, items, plan }: {
     <div className="print-sheet flex flex-col gap-4">
       <SheetHeader shop={shop} title="WORKSHOP CUTTING SHEET" stats={
         <>
-          <SheetStat label={stockCuts ? "Naye Pipe" : "Total Pipes"} value={fmtPipes(buyPipes)} tone="var(--accent)" />
+          <SheetStat label={stockCuts ? "New Pipes" : "Total Pipes"} value={fmtPipes(buyPipes)} />
           {stockCuts > 0 && (
-            <SheetStat label="Bache tukdon se" value={`${stockCuts} cutting`} tone="var(--good)" />
+            <SheetStat label="From Leftovers" value={`${stockCuts} ${stockCuts === 1 ? "cut" : "cuts"}`} tone="var(--good)" />
           )}
           <SheetStat label="Cut Pieces" value={String(totalPieces)} />
           <SheetStat label="Sections" value={String(sectionGroups.length)} />
@@ -2886,34 +3360,35 @@ function CuttingPanel({ list, shop, items, plan }: {
         </>
       } />
 
-      {/* The karigar's copy — drawings and cut lists, saved as a PDF he can be
+      {/* The workshop's copy — drawings and cut lists, saved as a PDF that can be
           sent on WhatsApp. */}
       <button onClick={printSheet} className="btn-dark no-print w-full py-3.5 display">
-        📄 Karigar ke liye PDF save karo
+        📄 Save PDF for the workshop
       </button>
 
-      {/* STEP 1 — kya banana hai: har opening ki dimensioned drawing + parts */}
-      <StepBar n={1} title="Kya banana hai" sub="Har opening ki drawing, sections aur parts" />
+      {/* STEP 1 — what to build: a dimensioned drawing + parts per opening */}
+      <StepBar n={1} title="What to build" sub="Drawing, sections and parts for every opening" />
       {items.map((it) => (
         <EngineeringSheet key={it.id} item={it} list={list} shop={shop} />
       ))}
 
-      {/* STEP 2 — kaise kaatna hai: section-wise saw plan */}
-      <StepBar n={2} title="Kaise kaatna hai" sub="Section-wise cut list aur pipe se packing" />
+      {/* STEP 2 — how to cut it: section-wise saw plan */}
+      <StepBar n={2} title="How to cut it" sub="Cut list by section, and how each pipe is packed" />
 
       {hasNormal && <CuttingGuide system="normal" />}
       {hasDomal && <CuttingGuide system="domal" />}
       {hasDoor && (
         <div className="card p-4 text-xs" style={{ color: "var(--ink-2)" }}>
-          🚪 <span className="font-bold">Door ke parts:</span> Chokhat (agar banani hai) + Palla
-          (leaf, charo side ek profile se) + Center Rail (jitne hisse utne rail, palla ko baantte hain).
+          🚪 <span className="font-bold">Door parts:</span> frame (chokhat, if you are making one)
+          + shutter (palla — one profile on all four sides) + center rails, which divide the shutter
+          into panels.
         </div>
       )}
       {hasPartition && (
         <div className="card p-4 text-xs" style={{ color: "var(--ink-2)" }}>
-          🧱 <span className="font-bold">Partition ke parts:</span> SP (perimeter frame) + DP
-          (divider, jitne hisse utni DP) + Glazing Clip (panel ko pakadta hai, sheet/glass ke
-          perimeter ke hisab se).
+          🧱 <span className="font-bold">Partition parts:</span> SP (perimeter frame) + DP (one
+          divider per split) + glazing clip, which holds each panel and runs the full perimeter
+          of every sheet or glass.
         </div>
       )}
 
@@ -2931,7 +3406,7 @@ function CuttingPanel({ list, shop, items, plan }: {
             <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--surface-2)" }}>
               <div className="display font-bold">{sec.label}</div>
               <div className="text-right">
-                <div className="display text-lg font-extrabold" style={{ color: "var(--accent)" }}>{bars.length}</div>
+                <div className="display text-lg font-extrabold">{bars.length}</div>
                 <div className="text-[10px] font-bold" style={{ color: "var(--ink-3)" }}>
                   {b16 > 0 ? `${b16}×16'` : ""}{b8 > 0 ? `${b16 > 0 ? " + " : ""}${b8}×8'` : ""}
                 </div>
@@ -2941,8 +3416,8 @@ function CuttingPanel({ list, shop, items, plan }: {
             <div className="border-b px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
               <SectionDrawing sectionId={sectionId} />
             </div>
-            {/* CUT LIST — har row batati hai maal kahan se aayega, taaki cutter
-                galti se naya pipe na kaat de */}
+            {/* CUT LIST — every row says where the stock comes from, so the
+                cutter never opens a new pipe by mistake */}
             {/* No minWidth and no tick column on a phone: a cut list that needs
                 sideways scrolling is useless standing at the saw. The tick box
                 comes back on wider screens and in print. */}
@@ -2950,7 +3425,7 @@ function CuttingPanel({ list, shop, items, plan }: {
               <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                    {["Length", "Tukde", "Kahan se kaatna", "Kis kaam ka", "✓ mark"].map((h, i) => (
+                    {["Length", "Pieces", "Cut from", "Used for", "✓"].map((h, i) => (
                       <th key={h}
                         className={`px-2 py-2 text-[11px] font-bold uppercase tracking-wide sm:px-3 ${i === 4 ? "hidden sm:table-cell" : ""}`}
                         style={{ textAlign: i === 1 ? "center" : "left" }}>{h}</th>
@@ -2963,13 +3438,13 @@ function CuttingPanel({ list, shop, items, plan }: {
                       borderBottom: "1px solid var(--surface-2)",
                       background: g.fromLeftover ? "var(--good-soft)" : undefined,
                     }}>
-                      <td className="px-2 py-2.5 mono text-base font-bold sm:px-3" style={{ color: "var(--accent)" }}>{g.label}</td>
+                      <td className="px-2 py-2.5 mono text-base font-bold sm:px-3">{g.label}</td>
                       <td className="px-2 py-2.5 text-center sm:px-3">
                         <span className="display text-lg font-extrabold tabnum">{g.count}</span>
                       </td>
                       <td className="px-2 py-2.5 text-[11.5px] font-bold sm:px-3"
                         style={{ color: g.fromLeftover ? "var(--good)" : "var(--ink-2)" }}>
-                        {g.fromLeftover ? "♻️ Bache tukde se" : "Naye pipe se"}
+                        {g.fromLeftover ? "♻️ Leftover piece" : "New pipe"}
                       </td>
                       <td className="px-2 py-2.5 text-xs sm:px-3" style={{ color: "var(--ink-2)" }}>{g.forWhat}</td>
                       <td className="hidden px-3 py-2.5 sm:table-cell"><span style={{ display: "inline-block", width: 40, borderBottom: "1px solid var(--line)" }} /></td>
@@ -2979,35 +3454,35 @@ function CuttingPanel({ list, shop, items, plan }: {
               </table>
             </div>
 
-            {/* kaunsa maal uthana hai — pade tukde pehle, phir naye pipe */}
+            {/* which stock to pick up — leftovers first, then new pipe */}
             <div className="border-t px-4 py-3" style={{ borderColor: "var(--surface-2)" }}>
               <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                Kaunsa maal uthao, usme se kya kaatna
+                Which stock to pick up, and what to cut from it
               </div>
               <div className="flex flex-col gap-1">
                 {sp?.uses.map((u, i) => (
                   <div key={`l${i}`} className="flex flex-wrap items-baseline gap-x-2 rounded px-1.5 py-0.5 text-[11px]"
                     style={{ background: "var(--good-soft)" }}>
                     <span className="font-bold" style={{ color: "var(--good)" }}>
-                      ♻️ Bacha hua {formatFtInSut(u.offcut.length)} ka tukda
+                      ♻️ Leftover piece, {formatFtInSut(u.offcut.length)}
                       {u.offcut.jobLabel ? ` — ${u.offcut.jobLabel}` : ""}
                     </span>
                     <span className="mono font-bold" style={{ color: "var(--ink)" }}>{packLine(u.pieces)}</span>
                     {u.leftover > 0 && (
-                      <span className="mono" style={{ color: "var(--ink-3)" }}>· phir bhi bachega {formatFtInSut(u.leftover)}</span>
+                      <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(u.leftover)} still left</span>
                     )}
                   </div>
                 ))}
                 {bars.map((bar, bi) => (
                   <div key={`n${bi}`} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
                     <span className="font-bold" style={{ color: "var(--ink-2)" }}>
-                      Naya pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
+                      New pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
                     </span>
                     <span className="mono" style={{ color: "var(--ink)" }}>
                       {packLine(bar.pieces)}
                     </span>
                     {bar.waste > 0 && (
-                      <span className="mono" style={{ color: "var(--ink-3)" }}>· bachat {formatFtInSut(bar.waste)}</span>
+                      <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(bar.waste)} left over</span>
                     )}
                   </div>
                 ))}
@@ -3068,6 +3543,11 @@ function fmtPipes(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+/** "1 pipe" / "2 pipes" / "1.5 pipes" — half bars count as plural, as they read. */
+function pipeQty(n: number): string {
+  return `${fmtPipes(n)} ${n === 1 ? "pipe" : "pipes"}`;
+}
+
 function Spinner({ tiny }: { tiny?: boolean }) {
   const s = tiny ? 14 : 28;
   return (
@@ -3080,12 +3560,27 @@ function Spinner({ tiny }: { tiny?: boolean }) {
 
 /* ————————————————— SETTINGS ————————————————— */
 
+/**
+ * Settings, rebuilt around what a fabricator actually owns: his shop and the
+ * catalogue he buys from.
+ *
+ * It used to open on a password field labelled "AI Key" — a term no fabricator
+ * knows, guarding a feature that already works without it because the server
+ * carries its own key. That field now lives at the bottom, collapsed, marked as
+ * a developer option, so nothing on the first screen needs explaining.
+ */
 function SettingsModal({
-  current, onSave, onClose,
+  current, shop, onSaveShop, onSave, onClose,
 }: {
-  current: string | null; onSave: (k: string) => void; onClose: () => void;
+  current: string | null;
+  shop: ShopProfile;
+  onSaveShop: (s: ShopProfile) => void;
+  onSave: (k: string) => void;
+  onClose: () => void;
 }) {
   const [val, setVal] = useState(current ?? "");
+  const [s, setS] = useState<ShopProfile>({ ...shop });
+  const [brand, setBrand] = useState<BrandId | undefined>(undefined);
   const [adv, setAdv] = useState(false);
   const [provider, setProvider] = useState<"anthropic" | "openrouter">("anthropic");
   const [orKey, setOrKey] = useState("");
@@ -3096,6 +3591,7 @@ function SettingsModal({
       setProvider((localStorage.getItem("fabriq_ai_provider") as "anthropic" | "openrouter" | null) ?? "anthropic");
       setOrKey(localStorage.getItem("fabriq_or_key") || "");
       setOrModel(localStorage.getItem("fabriq_ai_model") || "");
+      setBrand(loadBrand());
     } catch { /* ignore */ }
   }, []);
 
@@ -3105,81 +3601,96 @@ function SettingsModal({
       if (orKey) localStorage.setItem("fabriq_or_key", orKey); else localStorage.removeItem("fabriq_or_key");
       if (orModel) localStorage.setItem("fabriq_ai_model", orModel); else localStorage.removeItem("fabriq_ai_model");
     } catch { /* ignore */ }
+    saveBrand(brand);
+    onSaveShop(s);
     onSave(val);
   };
+
+  const field = (k: keyof ShopProfile, label: string, ph: string) => (
+    <label className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>{label}
+      <input value={s[k] ?? ""} onChange={(e) => setS((p) => ({ ...p, [k]: e.target.value }))}
+        placeholder={ph} className="dim-input mt-1 w-full px-3 py-2.5 text-sm" />
+    </label>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
       onClick={onClose}>
       <div className="card w-full max-w-md p-5" style={{ maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="display text-lg font-bold">⚙️ Settings</h2>
-        <p className="mt-1 text-xs" style={{ color: "var(--ink-2)" }}>
-          Photo padhna, AI sawaal aur AI review ke liye ek AI key chahiye.
-          Key sirf tumhare phone/browser mein save hoti hai, kahin bhejte nahi.
-        </p>
-        <label className="mt-4 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-          AI Key
-        </label>
-        <input
-          type="password"
-          placeholder="Yahan paste karo…"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          className="dim-input mt-1.5 w-full px-3 py-3 font-mono text-sm"
-        />
-        {/* App khud pehchan leta hai kaunsi company ki key hai — fabricator ko
-            "provider" ka naam yaad rakhne ki zaroorat nahi. */}
-        <p className="mt-2 text-[11px]" style={{ color: "var(--ink-3)" }}>
-          Free key: <b>aistudio.google.com</b> → Get API key<br />
-          Ya: <b>console.anthropic.com</b> → API Keys
-        </p>
 
-        {/* advanced — multi-model gateway */}
-        <button onClick={() => setAdv((a) => !a)} className="mt-4 flex w-full items-center justify-between text-xs font-bold"
-          style={{ color: "var(--ink-2)" }}>
-          <span>Advanced — Copilot AI provider</span>
+        {/* 1 · the shop — this is what prints on every quotation and order */}
+        <div className="mt-4 flex flex-col gap-2.5">
+          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+            Your shop
+          </div>
+          {field("name", "Shop name", "e.g. Al-Noor Aluminium")}
+          {field("phone", "Mobile", "98765 43210")}
+          {field("address", "Address", "Printed on quotations and orders")}
+          {field("gstin", "GST No.", "Optional")}
+        </div>
+
+        {/* 2 · catalogue brand — decides which code the dealer is handed */}
+        <div className="mt-5 flex flex-col gap-2">
+          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+            Which brand you buy
+          </div>
+          <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+            Optional. Set it and every order sheet carries that brand&apos;s section numbers, so
+            your dealer recognises them at a glance.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {BRANDS.map((b) => (
+              <button key={b.id} onClick={() => setBrand(brand === b.id ? undefined : b.id)}
+                className={`chip px-3 py-2 text-xs font-semibold ${brand === b.id ? "selected" : ""}`}>
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 3 · developer options — deliberately last and closed */}
+        <button onClick={() => setAdv((a) => !a)} className="mt-5 flex w-full items-center justify-between text-xs font-bold"
+          style={{ color: "var(--ink-3)" }}>
+          <span>Developer options — AI key</span>
           <span>{adv ? "▲" : "▼"}</span>
         </button>
         {adv && (
           <div className="mt-3 flex flex-col gap-3 rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+            <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+              You do not need this — AI is already enabled. Fill it in only if you want to use your own key.
+            </p>
+            <input type="password" placeholder="AI key — optional" value={val}
+              onChange={(e) => setVal(e.target.value)} className="dim-input w-full px-3 py-2.5 font-mono text-sm" />
             <div className="flex gap-2">
               {(["anthropic", "openrouter"] as const).map((p) => (
                 <button key={p} onClick={() => setProvider(p)}
                   className={`chip flex-1 py-2 text-xs font-semibold ${provider === p ? "selected" : ""}`}>
-                  {p === "anthropic" ? "Anthropic (direct)" : "OpenRouter (multi-model)"}
+                  {p === "anthropic" ? "Direct" : "OpenRouter"}
                 </button>
               ))}
             </div>
-            {provider === "openrouter" ? (
+            {provider === "openrouter" && (
               <>
                 <input type="password" placeholder="OpenRouter key — sk-or-…" value={orKey}
                   onChange={(e) => setOrKey(e.target.value)} className="dim-input w-full px-3 py-2.5 font-mono text-sm" />
-                <input placeholder="Model — jaise anthropic/claude-3.5-sonnet" value={orModel}
+                <input placeholder="Model — e.g. anthropic/claude-3.5-sonnet" value={orModel}
                   onChange={(e) => setOrModel(e.target.value)} className="dim-input w-full px-3 py-2.5 text-sm" />
-                <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
-                  Copilot chat OpenRouter ke kisi bhi model pe chalega (sasta/fast model choose kar sakte ho). Photo-read abhi Anthropic pe hi rahega.
-                </p>
               </>
-            ) : (
-              <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Copilot Anthropic key hi use karega.</p>
+            )}
+            {current && (
+              <button onClick={() => { setVal(""); onSave(""); }} className="text-center text-xs underline"
+                style={{ color: "var(--bad)" }}>
+                Remove key
+              </button>
             )}
           </div>
         )}
 
-        <div className="mt-4 flex gap-2">
-          <button onClick={saveAll} className="btn-primary flex-1 py-3">
-            Save
-          </button>
-          <button onClick={onClose} className="btn-ghost px-5 py-3">
-            Band karo
-          </button>
+        <div className="mt-5 flex gap-2">
+          <button onClick={saveAll} className="btn-primary flex-1 py-3">Save</button>
+          <button onClick={onClose} className="btn-ghost px-5 py-3">Close</button>
         </div>
-        {current && (
-          <button onClick={() => onSave("")} className="mt-3 w-full text-center text-xs underline"
-            style={{ color: "var(--bad)" }}>
-            Key hatao
-          </button>
-        )}
       </div>
     </div>
   );
@@ -3204,26 +3715,26 @@ function aluminiumWaText(list: MaterialList, plan: OffcutPlan, shopName?: string
     if (s.bars16) parts.push(`${s.bars16} × ${full}'`);
     if (s.bars8) parts.push(`${s.bars8} × ${full / 2}'`);
     const line = `• ${sec.label} — ${parts.join(" + ")}`;
-    L.push(sp ? `${line}  (${fmtPipes(sp.pipesAfter)} pipe hi chahiye)` : line);
+    L.push(sp ? `${line}  (only ${pipeQty(sp.pipesAfter)} needed)` : line);
   }
   const need = list.totals.bars16 + list.totals.bars8 * 0.5;
   const buy = Math.max(0, need - plan.pipesSaved);
   L.push("");
-  L.push(`*Total: ${fmtPipes(buy)} pipe*`);
+  L.push(`*Total: ${pipeQty(buy)}*`);
   return L.join("\n");
 }
 
 function glassWaText(list: MaterialList, shopName?: string): string {
   const L: string[] = [];
-  L.push(`*Glass / Jali order${shopName ? ` — ${shopName}` : ""}*`);
+  L.push(`*Glass / Mesh order${shopName ? ` — ${shopName}` : ""}*`);
   const block = (title: string, sub: string, panels: { width: Um; height: Um; count: number }[]) => {
     if (!panels.length) return;
     L.push("");
     L.push(`*${title}* — ${sub}`);
-    for (const p of panels) L.push(`• ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)} — ${p.count} pcs`);
+    for (const p of panels) L.push(`• ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)} — ${p.count} ${p.count === 1 ? "pc" : "pcs"}`);
   };
   block("Glass", `${list.glassSqft.toFixed(1)} sqft`, list.glass);
-  block("Jali / Mesh", `${list.mesh.sqft.toFixed(1)} sqft + spline ${list.mesh.splineFt} rft`, list.mesh.panels);
+  block("Mesh (Jali)", `${list.mesh.sqft.toFixed(1)} sqft + spline ${list.mesh.splineFt} rft`, list.mesh.panels);
   block("Sheet", `${list.sheet.sqft.toFixed(1)} sqft`, list.sheet.panels);
   return L.join("\n");
 }

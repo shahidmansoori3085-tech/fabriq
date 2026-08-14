@@ -90,6 +90,140 @@ export function formatMm(um: Um): string {
   return `${Math.round(um / UM_PER_MM)}mm`;
 }
 
+/* ————————————————— opening dimensions ————————————————— */
+
+/**
+ * Reading a size the fabricator typed.
+ *
+ * A fabricator writing "4" means four FEET. The same "4" from someone working
+ * off an inch tape means something twelve times smaller — and the app has no
+ * way to know which. So we infer from magnitude, record HOW we read it, and the
+ * UI always echoes the interpretation back (`describeDim`). A wrong guess then
+ * shows up as a visible typo instead of a silently ruined job.
+ */
+export type UnitMode = "auto" | "feet" | "inch" | "mm";
+
+export interface ParsedDim {
+  um: Um;
+  /** the written value carried its own unit — 4'6", 54", 1372mm, 4-6-4 */
+  explicit: boolean;
+  /** how a bare, unit-less number was read */
+  assumed?: "feet" | "inch" | "mm";
+  /** the other reading is believable too at this magnitude — worth a nudge */
+  ambiguous: boolean;
+}
+
+/**
+ * Magnitude bands for a bare, unit-less number. A fabricator never states the
+ * unit, so the number itself has to say it — and the three bands do not
+ * meaningfully overlap for real openings:
+ *   under 20  → feet   (windows 3–6, doors 3–7, partitions up to ~20)
+ *   20 – 299  → inches (24"–240" is the same 2–20 ft range on a tape)
+ *   300 and up→ mm     (openings run 600–7000 mm; 300" would be 25 ft)
+ */
+const BARE_INCH_FROM = 20;
+const BARE_MM_FROM = 300;
+/** Below this, a bare number can only sensibly be feet — nothing is 12" wide. */
+const BARE_FEET_UPTO = 12;
+
+/**
+ * Sanity band for a real opening. Outside it we refuse rather than confidently
+ * pack bars for something that cannot exist.
+ */
+export const MIN_OPENING: Um = inches(12);
+export const MAX_OPENING: Um = feet(25);
+
+/**
+ * Parse one opening dimension. `mode` is the entry screen's unit control:
+ * "auto" infers from magnitude, the others force a reading for bare numbers.
+ * Values written WITH a unit always win, whatever the mode.
+ */
+export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | null {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, "");
+  if (!s) return null;
+
+  const explicit = (um: Um): ParsedDim => ({ um, explicit: true, ambiguous: false });
+
+  // ft-in-sut: "4-6-4" — three parts is unambiguous
+  let m = s.match(/^(\d+)-(\d+)-(\d+)$/);
+  if (m) {
+    return explicit(
+      parseInt(m[1], 10) * UM_PER_FOOT + parseInt(m[2], 10) * UM_PER_INCH + parseInt(m[3], 10) * UM_PER_SUT,
+    );
+  }
+
+  // two-part dash is genuinely two notations: "4-6" is 4ft 6in, but "54-4" is
+  // 54in 4sut. Sut never exceeds 7, and a feet part never reaches 13 in this
+  // trade, so magnitude separates them cleanly.
+  m = s.match(/^(\d+)-(\d+)$/);
+  if (m) {
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    return a >= 13 && b <= 7
+      ? explicit(a * UM_PER_INCH + b * UM_PER_SUT)
+      : explicit(a * UM_PER_FOOT + b * UM_PER_INCH);
+  }
+
+  // anything carrying its own unit — mm / cm / inch / feet forms
+  if (/(mm|cm|"|in|inch|'|ft|feet|फुट)/.test(s)) {
+    const um = parseDimension(s);
+    return um === null ? null : explicit(um);
+  }
+
+  // bare number — this is where the guessing happens
+  m = s.match(/^(\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!(n > 0)) return null;
+
+  if (mode === "mm") return { um: Math.round(n * UM_PER_MM), explicit: false, assumed: "mm", ambiguous: false };
+  if (mode === "inch") return { um: Math.round(n * UM_PER_INCH), explicit: false, assumed: "inch", ambiguous: false };
+  if (mode === "feet") return { um: Math.round(n * UM_PER_FOOT), explicit: false, assumed: "feet", ambiguous: false };
+
+  // auto: the fabricator states no unit, so magnitude decides. The echo under
+  // the input always shows the reading back, so a wrong band is visible.
+  if (n >= BARE_MM_FROM) {
+    return { um: Math.round(n * UM_PER_MM), explicit: false, assumed: "mm", ambiguous: false };
+  }
+  if (n >= BARE_INCH_FROM) {
+    return { um: Math.round(n * UM_PER_INCH), explicit: false, assumed: "inch", ambiguous: false };
+  }
+  return {
+    um: Math.round(n * UM_PER_FOOT),
+    explicit: false,
+    assumed: "feet",
+    ambiguous: n > BARE_FEET_UPTO,
+  };
+}
+
+/** Human echo of a parsed size: `4'0" (48")` — what the app actually understood. */
+export function describeDim(um: Um): string {
+  const totalInch = um / UM_PER_INCH;
+  const ft = Math.floor(um / UM_PER_FOOT);
+  const rem = um - ft * UM_PER_FOOT;
+  const inch = Math.floor(rem / UM_PER_INCH);
+  const sut = Math.round((rem - inch * UM_PER_INCH) / UM_PER_SUT);
+  // Under a foot, "0'4"" reads like a typo — just say 4".
+  let head = ft > 0 ? `${ft}'` : "";
+  if (!ft || inch || sut) head += `${inch}"`;
+  if (sut) head += `${sut}s`;
+  const total = Math.round(totalInch * 10) / 10;
+  return ft > 0 ? `${head} (${total}")` : head;
+}
+
+/** Why this opening looks wrong, or null when it is believable. */
+export function openingWarning(w: Um, h: Um): string | null {
+  const small = Math.min(w, h);
+  const large = Math.max(w, h);
+  if (small < MIN_OPENING) {
+    return `${describeDim(small)} is too small. Was this in feet? Add ' after the number.`;
+  }
+  if (large > MAX_OPENING) {
+    return `${describeDim(large)} is too large. Was this in inches? Add " after the number.`;
+  }
+  return null;
+}
+
 /** µm → decimal feet (for totals) */
 export function toFeet(um: Um): number {
   return um / UM_PER_FOOT;

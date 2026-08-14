@@ -205,7 +205,7 @@ export function QuoteDoc({
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Scan to Pay the Advance</div>
             <div style={{ fontSize: 11.5, color: "#c2c8d0", marginTop: 3 }}>
-              Kisi bhi UPI app se scan karo — GPay · PhonePe · Paytm · BHIM
+              Scan with any UPI app — GPay · PhonePe · Paytm · BHIM
             </div>
             {shop.upi && <div style={{ fontSize: 11, color: ACCENT2, marginTop: 6, ...mono }}>{shop.upi}</div>}
           </div>

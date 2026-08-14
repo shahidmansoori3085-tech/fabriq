@@ -15,10 +15,11 @@
  * to cut something that isn't there.
  */
 import { packSection } from "./engine/cutting";
-import { getSection } from "./engine/sections";
+import { getSection, getSectionWeight } from "./engine/sections";
 import { feet, toFeet, type Um } from "./engine/units";
 import type { CutPiece, PackedBar } from "./engine/types";
 import { MIN_OFFCUT, type Offcut } from "./engine/offcuts";
+import { finishCompatible, type FinishId } from "./engine/finishes";
 
 /** Blade allowance between two cuts taken from the same offcut — mirrors the
  *  engine's kerf (5 mm). Only ever makes a fit MORE conservative, never less. */
@@ -54,6 +55,10 @@ export interface OffcutPlan {
    *  Always ≤ feetFromBank, because a bank piece only pays off once it
    *  removes a whole (or half) bar from the order. */
   feetSaved: number;
+  /** the same saving in KILOGRAMS, which is what money is actually priced on.
+   *  Covers only sections with a catalogue weight, so it can be less than
+   *  feetSaved implies — never more. */
+  kgSaved: number;
   /** bank ids that get physically cut by this plan */
   consumedIds: string[];
   /** remainders worth putting back into the bank afterwards */
@@ -61,7 +66,8 @@ export interface OffcutPlan {
 }
 
 export const EMPTY_PLAN: OffcutPlan = {
-  sections: [], uses: [], pipesSaved: 0, feetFromBank: 0, feetSaved: 0, consumedIds: [], leftovers: [],
+  sections: [], uses: [], pipesSaved: 0, feetFromBank: 0, feetSaved: 0, kgSaved: 0,
+  consumedIds: [], leftovers: [],
 };
 
 /** Count bars the way the UI does: full = 1 pipe, half = 0.5 pipe. */
@@ -76,7 +82,9 @@ function pipeUnits(bars: PackedBar[], sectionId: string): number {
  * Work out which required cuts the bank can serve, and what that removes from
  * the shopping list. Pure — reads the bank, never writes it.
  */
-export function planOffcutUse(pieces: CutPiece[], bank: Offcut[]): OffcutPlan {
+export function planOffcutUse(
+  pieces: CutPiece[], bank: Offcut[], jobFinish?: FinishId,
+): OffcutPlan {
   if (!pieces.length || !bank.length) return EMPTY_PLAN;
 
   const bySection = new Map<string, CutPiece[]>();
@@ -90,9 +98,11 @@ export function planOffcutUse(pieces: CutPiece[], bank: Offcut[]): OffcutPlan {
   const allUses: OffcutUse[] = [];
 
   for (const [sectionId, secPieces] of bySection) {
-    // longest offcut first — a big leftover should absorb the big cuts
+    // Longest offcut first — a big leftover should absorb the big cuts. Colour
+    // is filtered here rather than at fit time: a grey piece is not stock for an
+    // ivory job at any length, so it must never reach the packer.
     const stock = bank
-      .filter((o) => o.sectionId === sectionId)
+      .filter((o) => o.sectionId === sectionId && finishCompatible(jobFinish, o.finish))
       .sort((a, b) => b.length - a.length);
     if (!stock.length) continue;
 
@@ -140,9 +150,18 @@ export function planOffcutUse(pieces: CutPiece[], bank: Offcut[]): OffcutPlan {
     (a, u) => a + u.pieces.reduce((b, p) => b + toFeet(p.length), 0), 0,
   );
   // Money is saved on pipe NOT bought, not on metal pulled from the bank.
+  const barFt = (id: string) => getSection(id).barLengthFt ?? 16;
   const feetSaved = sections.reduce(
-    (a, s) => a + (s.pipesBefore - s.pipesAfter) * (getSection(s.sectionId).barLengthFt ?? 16), 0,
+    (a, s) => a + (s.pipesBefore - s.pipesAfter) * barFt(s.sectionId), 0,
   );
+  // Aluminium is priced per kilo, so the rupee figure has to be built from
+  // weight. Sections with no catalogue weight contribute nothing rather than
+  // being valued at a guessed density.
+  const kgSaved = sections.reduce((a, s) => {
+    const w = getSectionWeight(s.sectionId);
+    if (!w) return a;
+    return a + (s.pipesBefore - s.pipesAfter) * barFt(s.sectionId) * w.kgPerFt;
+  }, 0);
 
   return {
     sections,
@@ -150,6 +169,7 @@ export function planOffcutUse(pieces: CutPiece[], bank: Offcut[]): OffcutPlan {
     pipesSaved: Math.round(pipesSaved * 10) / 10,
     feetFromBank: Math.round(feetFromBank * 10) / 10,
     feetSaved: Math.round(feetSaved * 10) / 10,
+    kgSaved: Math.round(kgSaved * 100) / 100,
     consumedIds: allUses.map((u) => u.offcut.id),
     leftovers: allUses
       .filter((u) => u.leftover >= MIN_OFFCUT)
