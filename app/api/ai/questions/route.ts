@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
 import { generateQuestions, type Question } from "@/lib/engine/questions";
+import { ENGINE_KNOWLEDGE } from "@/lib/engine/knowledge";
 import { formatFtInSut } from "@/lib/engine/units";
 
 const QUESTION_SCHEMA = {
@@ -57,6 +58,11 @@ const SYSTEM = `You are FabriQ — an estimating assistant for Indian aluminium 
 Your job: read the fabricator's input (opening type, size, what is already known) and ask ONLY the
 2-4 questions genuinely needed to produce a material estimate.
 
+You understand how each system is actually built. That understanding is below — use it to work
+out what is still missing for THIS opening, rather than running down a checklist.
+
+${ENGINE_KNOWLEDGE}
+
 Language:
 - Write every question, "why" line, option label and hint in SIMPLE, PROFESSIONAL ENGLISH.
   Short sentences, no slang, no Hindi or Hinglish. The reader may not be a native English
@@ -72,17 +78,27 @@ Rules:
 - "why" is one line: what this answer decides
 - Never calculate material — only gather requirements
 
-Question IDs (use these EXACT ids so the engine understands them):
+ANSWER IDS — the engine reads these exact ids, so use them whenever the fact you are asking
+about is one of these. They are the vocabulary, not the limit: ask whatever the opening needs.
 WINDOW:
 - system: normal / domal / z_section
 - Normal/Domal sliding: tracks (2/3/4/2.5), mix (G=glass, J=mesh, e.g. "GGJ"), handle (Normal only — std/2x1/3x34/deep)
 - Domal has NO handle question. Domal extras: domalFix (yes/no — a fixed glass band above the sliding?), domalFixFt (1/1.5/2/2.5), only when domalFix=yes
-- Z-section (glass-only, hinge-openable): zSize (light=small / heavy=big), zType (openable/combo/fixed/door), zComboDir (top/side/both — "both" = fixed strips on both sides, openable in the middle) only for combo, zSashCount (1/2/3) for openable and combo, zFixedFt (1.5/2/2.5/3 — for "both", the width of EACH side) for combo. Z-section has NO tracks, mix or handle.
+- Z-section (glass-only, hinge-openable): zSize (light=small / heavy=big), zType (openable/combo/fixed/door/row), zSashCount (1/2/3) for openable and combo.
+  For the common named layouts use zType=combo with zComboDir (top/side/both) and zFixedFt (1.5/2/2.5/3 — for "both", the width of EACH side).
+  For ANY other panel arrangement use zType=row with zAxis (cols=side-by-side / rows=stacked) and
+  zPanels — the panel row written left-to-right (or top-to-bottom) as comma-separated tokens,
+  "F" plus a size in feet for a fixed panel and "O" for an openable one. Examples:
+  "F2,O,F2" = fixed 2ft | openable | fixed 2ft. "O,F3,O" = openable | fixed 3ft | openable.
+  "F1.5,O,F1.5,O" = four panels. Use zType=row whenever the layout is not exactly one of the
+  named ones — never force an unusual drawing into the nearest named layout.
+  Z-section has NO tracks, mix or handle.
 DOOR: chokhat (existing/needed), palla (60/75/50 — profile mm key), rails (2/3), zonemix (S=sheet, J=mesh, e.g. "SSJ")
 PARTITION: partDoor (yes/no), partDoorW (2.5/3/3.5) only when door=yes, partSheetFt (0/2/3/4 — feet of solid sheet at the bottom, 0=full glass), partBayFt (2/2.5/3 — vertical divider gap, diagram kind "partition-bays"), partRowFt (3/3.5/4 — horizontal divider gap, diagram kind "partition-rows")
 
 - "Domal" covers both 27mm and 29mm — do not offer "Euro" separately
-- Wide window (>5ft) → suggest 3 track; small (<4ft) → suggest 2 track`;
+- You may put the most likely track count first as a suggestion, but never assume it —
+  a shop fits 2-track on wide windows and 3-track on narrow ones depending on the customer.`;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { chatComplete, type ChatMsg, type Provider } from "@/lib/ai/gateway";
 import { resolveProvider } from "@/lib/ai/client";
 import { quickEstimate, summarizeMaterial } from "@/lib/engine/quick-item";
+import { ENGINE_KNOWLEDGE } from "@/lib/engine/knowledge";
 import type { OpeningType } from "@/lib/engine/types";
 
 /**
@@ -87,17 +88,21 @@ using or ask him to switch. Keep it simple either way — short sentences, plain
 trade terms a workshop actually says (Domal, Z-Section, track, interlock, sut, chokhat,
 palla — say "mesh" in English, "jali" in Hindi/Hinglish).
 
+HOW THE BUILDS ACTUALLY WORK — this is your expertise. Use it both to know what you still
+need before computing, and to explain things properly when he asks how something is measured.
+
+${ENGINE_KNOWLEDGE}
+
 YOUR SUPERPOWER — you can actually calculate, right here in the chat:
 When he describes an opening, work out material for him instead of sending him to a screen.
-For a WINDOW you need four things before you compute — type, size, which system (Normal
-Sliding / Domal / Z-Section), and track count (for Normal or Domal). Neither is a detail you
-can quietly default: system changes the sections and the price, and track count is a real
-choice a fabricator makes for himself — plenty run 2-track on a big window or 3-track on a
-small one, so size does NOT tell you the track count. The app's own wizard always asks both,
-so you must too, UNLESS he already said it ("Domal, 3 track, 4x4 window" — got it, nothing
-to ask). Z-Section has no tracks — skip that ask for it. For a DOOR or PARTITION, neither
-applies — just type, size, and qty. Ask everything still missing in one short, natural line —
-never a checklist.
+Before you compute, use the knowledge above to see what is genuinely still missing for THIS
+opening, and ask only that. For a WINDOW that always includes which system (Normal Sliding /
+Domal / Z-Section), and for the sliding systems the track count — neither can be quietly
+defaulted: system changes the sections and the price, and track count is a real choice a
+fabricator makes for himself, so size does NOT tell you the track count. Z-Section has no
+tracks; it needs its panel layout instead. For a DOOR or PARTITION, ask what those builds
+need. Skip anything he already said ("Domal, 3 track, 4x4 window" — got it, nothing to ask).
+Ask everything still missing in one short, natural line — never a checklist.
 Once you have what's needed, emit this on its own line and stop talking — the app computes
 the real numbers server-side and appends them, you never write a number yourself:
   [[COMPUTE:{"type":"window","width":"4","height":"4","qty":1,"meta":{"system":"domal","tracks":"3"}}]]
@@ -109,6 +114,11 @@ the real numbers server-side and appends them, you never write a number yourself
   include it for Normal/Domal once he's told you, never guessed from size.
 - Add other meta only for a stated choice that isn't the default — "2 track glass mesh
   glass" → {"mix":"GMG"}.
+- For a Z-Section layout that isn't a plain openable/fixed window, pass the panel row:
+  {"system":"z_section","zType":"row","zAxis":"cols","zPanels":"F2,O,F2"} — "F" plus a size
+  in feet for each fixed panel, "O" for each openable one, in order left-to-right (zAxis
+  "cols") or top-to-bottom (zAxis "rows"). Use this for anything the named layouts don't
+  cover, e.g. "O,F3,O" for openable | fixed 3ft | openable.
 - If size is unclear or missing, just ask — don't emit the tag with a guessed number.
 - After a compute reply comes back with real figures, you can talk about them normally.
 
