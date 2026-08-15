@@ -16,9 +16,25 @@ import html2canvas from "html2canvas";
  * to keep those controls off a real printout.
  */
 export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
+  // Capturing before web fonts / catalogue images have actually finished
+  // painting is exactly how you get a half-settled layout. Wait for both,
+  // each capped so a fabricator sharing this in the background — screen
+  // off, WhatsApp already switched to — can never hang forever: a
+  // backgrounded tab can suspend rAF and stall font/image loads outright.
+  const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+    Promise.race([p, new Promise<void>((res) => setTimeout(res, ms))]);
+  await withTimeout(document.fonts.ready.catch(() => undefined), 2000);
+  const images = Array.from(el.querySelectorAll("img"));
+  await withTimeout(Promise.all(images.map((img) => img.complete ? Promise.resolve() : new Promise((res) => {
+    img.addEventListener("load", res, { once: true });
+    img.addEventListener("error", res, { once: true });
+  }))), 3000);
+  await new Promise((res) => setTimeout(res, 30));
+
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,
+    imageTimeout: 8000,
     backgroundColor: "#ffffff",
     ignoreElements: (node) => node instanceof HTMLElement && node.classList.contains("no-print"),
   });
