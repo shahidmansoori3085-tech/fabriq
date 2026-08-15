@@ -206,7 +206,8 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           why: "Top or side changes the transom/mullion and both glass sizes",
           options: [
             { value: "top", label: "On top (horizontal band)", hint: "Fixed above, opens below" },
-            { value: "side", label: "On the side (vertical band)", hint: "One side fixed, other opens" },
+            { value: "side", label: "On one side (vertical band)", hint: "One side fixed, other opens" },
+            { value: "both", label: "On both sides", hint: "Fixed | openable | fixed — openable in the middle" },
           ],
         });
       }
@@ -226,12 +227,15 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       }
       // For a combo, how big is the fixed part (height if top, width if side).
       if (zType === "combo" && !ctx.known.zFixedFt) {
-        const side = ctx.known.zComboDir === "side";
+        const dir = ctx.known.zComboDir;
         qs.push({
           id: "zFixedFt",
-          question: side ? "How wide is the fixed part on the side (feet)?"
+          question: dir === "both" ? "How wide is EACH fixed side (feet)?"
+            : dir === "side" ? "How wide is the fixed part on the side (feet)?"
             : "How tall is the fixed part on top (feet)?",
-          why: "This sets where the divider sits and the size of both glass panels",
+          why: dir === "both"
+            ? "Both fixed strips are cut to this same width — this sets where both dividers sit"
+            : "This sets where the divider sits and the size of both glass panels",
           options: [
             { value: "1.5", label: "1.5 ft", hint: "Small fixed band" },
             { value: "2", label: "2 ft", hint: "Most common" },

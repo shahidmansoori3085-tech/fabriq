@@ -255,9 +255,22 @@ function zGeometry(item: JobItem): ZGeom {
     const sashes = item.shutters.length ? item.shutters : [{ kind: "glass" as const }];
     const n = sashes.length;
     // zComboDir === "side": a VERTICAL fixed strip on one side, divided from
-    // the openable band by a vertical mullion. Otherwise (default "top"): a
-    // horizontal fixed band on top, divided by a horizontal transom.
-    if (item.meta.zComboDir === "side") {
+    // the openable band by a vertical mullion. "both": a fixed strip on
+    // BOTH sides (same width each), openable sashes sandwiched in the
+    // middle — the fix|openable|fix triplet common on wide Z-section
+    // windows. Otherwise (default "top"): a horizontal fixed band on top,
+    // divided by a horizontal transom.
+    if (item.meta.zComboDir === "both") {
+      const fixedPocketW = fixedRaw - Z_FACE - Z_TRANSOM_HALF;
+      const openableOpenW = item.width - 2 * fixedRaw - 2 * Z_TRANSOM_HALF;
+      g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH)); // left
+      g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH)); // right
+      g.mullions.push(openH); // divider: left fixed strip <-> openable band
+      const sashOpenW = n > 1 ? Math.round(openableOpenW / n) : openableOpenW;
+      for (let m = 0; m < n - 1; m++) g.mullions.push(openH);
+      g.mullions.push(openH); // divider: openable band <-> right fixed strip
+      sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openH, false)));
+    } else if (item.meta.zComboDir === "side") {
       const fixedPocketW = fixedRaw - Z_FACE - Z_TRANSOM_HALF;
       const openableOpenW = item.width - fixedRaw - Z_FACE - Z_TRANSOM_HALF;
       g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH));

@@ -1211,6 +1211,10 @@ const DOMAL_VAR: [string, string][] = [["no", "No Fixed Band"], ["yes", "Fixed O
 const Z_TYPE: [string, string][] = [
   ["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"],
 ];
+const Z_COMBO_DIR: [string, string][] = [
+  ["top", "Fixed On Top"], ["side", "Fixed On One Side"], ["both", "Fixed On Both Sides"],
+];
+const Z_FIXED_FT: [string, string][] = [["1.5", "1.5 ft"], ["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
 
 /** Size as understood by the shared parser. `null` = nothing readable typed yet. */
 function parseWithUnit(raw: string): Um | null {
@@ -1262,6 +1266,8 @@ function Entry({ startId, onBuild, onBack }: {
   const [normTracks, setNormTracks] = useState<string[]>([]);
   const [domalVar, setDomalVar] = useState<string[]>([]);
   const [zTypes, setZTypes] = useState<string[]>([]);
+  const [zComboDir, setZComboDir] = useState<string[]>([]);
+  const [zFixedFt, setZFixedFt] = useState<string[]>([]);
   // door config
   const [doorPalla, setDoorPalla] = useState<string[]>([]);
   const [doorChokhat, setDoorChokhat] = useState<string[]>(["needed"]);
@@ -1304,7 +1310,17 @@ function Entry({ startId, onBuild, onBack }: {
           }
         } else {
           const zs = zTypes.length ? zTypes : ["openable"];
-          for (const [z, zl] of Z_TYPE) if (zs.includes(z)) push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
+          for (const [z, zl] of Z_TYPE) if (zs.includes(z)) {
+            if (z === "combo") {
+              const dirs = zComboDir.length ? zComboDir : ["top"];
+              const fts = zFixedFt.length ? zFixedFt : ["2"];
+              for (const [d, dl] of Z_COMBO_DIR) if (dirs.includes(d))
+                for (const [f, fl] of Z_FIXED_FT) if (fts.includes(f))
+                  push("window", { system: "z_section", zType: z, zComboDir: d, zFixedFt: f }, `Z-Section · ${zl} · ${dl} · ${fl}`);
+            } else {
+              push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
+            }
+          }
         }
       }
     }
@@ -1329,7 +1345,8 @@ function Entry({ startId, onBuild, onBack }: {
   const winSysReady =
     (!(winSys.includes("normal") || winSys.includes("domal")) || normTracks.length > 0) &&
     (!winSys.includes("domal") || domalVar.length > 0) &&
-    (!winSys.includes("z_section") || zTypes.length > 0);
+    (!winSys.includes("z_section") || zTypes.length > 0) &&
+    (!zTypes.includes("combo") || (zComboDir.length > 0 && zFixedFt.length > 0));
   const cfgOk = curType === "window" ? winSys.length > 0 && winSysReady
     : curType === "door" ? doorPalla.length > 0 && doorChokhat.length > 0
     : partVar.length > 0;
@@ -1452,6 +1469,20 @@ function Entry({ startId, onBuild, onBack }: {
                   <ChipGroup options={Z_TYPE.map(([v, l]) => [v, l])} selected={zTypes}
                     onToggle={(v) => setZTypes((p) => toggleArr(p, v))} />
                 </div>
+              )}
+              {winSys.includes("z_section") && zTypes.includes("combo") && (
+                <>
+                  <div>
+                    <Label>Fixed + Openable — where is the fixed part?</Label>
+                    <ChipGroup options={Z_COMBO_DIR.map(([v, l]) => [v, l])} selected={zComboDir}
+                      onToggle={(v) => setZComboDir((p) => toggleArr(p, v))} />
+                  </div>
+                  <div>
+                    <Label>Fixed + Openable — how big is the fixed part?</Label>
+                    <ChipGroup options={Z_FIXED_FT.map(([v, l]) => [v, l])} selected={zFixedFt}
+                      onToggle={(v) => setZFixedFt((p) => toggleArr(p, v))} />
+                  </div>
+                </>
               )}
             </>
           )}

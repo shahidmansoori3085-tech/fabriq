@@ -77,7 +77,7 @@ WINDOW:
 - system: normal / domal / z_section
 - Normal/Domal sliding: tracks (2/3/4/2.5), mix (G=glass, J=mesh, e.g. "GGJ"), handle (Normal only — std/2x1/3x34/deep)
 - Domal has NO handle question. Domal extras: domalFix (yes/no — a fixed glass band above the sliding?), domalFixFt (1/1.5/2/2.5), only when domalFix=yes
-- Z-section (glass-only, hinge-openable): zSize (light=small / heavy=big), zType (openable/combo/fixed/door), zComboDir (top/side) only for combo, zSashCount (1/2/3) for openable and combo, zFixedFt (1.5/2/2.5/3) for combo. Z-section has NO tracks, mix or handle.
+- Z-section (glass-only, hinge-openable): zSize (light=small / heavy=big), zType (openable/combo/fixed/door), zComboDir (top/side/both — "both" = fixed strips on both sides, openable in the middle) only for combo, zSashCount (1/2/3) for openable and combo, zFixedFt (1.5/2/2.5/3 — for "both", the width of EACH side) for combo. Z-section has NO tracks, mix or handle.
 DOOR: chokhat (existing/needed), palla (60/75/50 — profile mm key), rails (2/3), zonemix (S=sheet, J=mesh, e.g. "SSJ")
 PARTITION: partDoor (yes/no), partDoorW (2.5/3/3.5) only when door=yes, partSheetFt (0/2/3/4 — feet of solid sheet at the bottom, 0=full glass), partBayFt (2/2.5/3 — vertical divider gap, diagram kind "partition-bays"), partRowFt (3/3.5/4 — horizontal divider gap, diagram kind "partition-rows")
 
