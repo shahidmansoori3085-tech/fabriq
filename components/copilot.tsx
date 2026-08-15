@@ -62,7 +62,8 @@ export function Copilot({ onAction, onExtracted, onComputed }: {
   const [err, setErr] = useState<string | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -149,7 +150,7 @@ export function Copilot({ onAction, onExtracted, onComputed }: {
   };
 
   const runAction = (a: CopilotAction) => {
-    if (a === "photo") { fileRef.current?.click(); return; }
+    if (a === "photo") { cameraRef.current?.click(); return; }
     setOpen(false);
     onAction?.(a);
   };
@@ -232,7 +233,9 @@ export function Copilot({ onAction, onExtracted, onComputed }: {
 
           {/* composer */}
           <div className="flex flex-col gap-2 border-t p-2.5" style={{ borderColor: "var(--line)" }}>
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+            <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
 
             {/* attached sheets stay visible until they are actually sent */}
@@ -253,9 +256,12 @@ export function Copilot({ onAction, onExtracted, onComputed }: {
             )}
 
             <div className="flex items-center gap-2">
-              <button onClick={() => fileRef.current?.click()} disabled={busy}
-                className="btn-ghost grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl text-lg disabled:opacity-40"
-                aria-label="Add photo" title="Add a photo of the sheet">📷</button>
+              <button onClick={() => cameraRef.current?.click()} disabled={busy}
+                className="btn-ghost grid h-[42px] w-[36px] shrink-0 place-items-center rounded-xl text-base disabled:opacity-40"
+                aria-label="Take a photo" title="Take a photo of the sheet">📷</button>
+              <button onClick={() => galleryRef.current?.click()} disabled={busy}
+                className="btn-ghost grid h-[42px] w-[36px] shrink-0 place-items-center rounded-xl text-base disabled:opacity-40"
+                aria-label="Add from gallery" title="Add a photo from gallery">🖼️</button>
               <input value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send(input)}
                 placeholder={shots.length ? "Anything to add? (optional)" : "Type a question, or tap 🎤 to speak…"}

@@ -74,7 +74,11 @@ export function PhotoComposer({ apiKey, onExtracted, onNeedKey }: {
   onExtracted: (items: ExtractedItem[], sheetNotes?: string) => void;
   onNeedKey: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Two inputs, not one: `capture` takes a phone straight to the camera, but
+  // it also forces single-shot capture — a fabricator picking several
+  // existing photos of one sheet needs the plain gallery picker instead.
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [shots, setShots] = useState<Shot[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -129,7 +133,9 @@ export function PhotoComposer({ apiKey, onExtracted, onNeedKey }: {
 
   return (
     <div className="flex flex-col gap-3">
-      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+        onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
         onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
 
       {/* attachment tray — every photo stays visible and removable until sent */}
@@ -150,20 +156,33 @@ export function PhotoComposer({ apiKey, onExtracted, onNeedKey }: {
             </div>
           ))}
           {!busy && (
-            <button onClick={() => fileRef.current?.click()}
-              className="grid h-24 w-24 place-items-center rounded-xl text-2xl"
-              style={{ border: "1px dashed var(--steel)", color: "var(--ink-3)" }}>+</button>
+            <>
+              <button onClick={() => cameraRef.current?.click()} aria-label="Take another photo"
+                className="grid h-24 w-24 place-items-center rounded-xl text-2xl"
+                style={{ border: "1px dashed var(--steel)", color: "var(--ink-3)" }}>📷</button>
+              <button onClick={() => galleryRef.current?.click()} aria-label="Add from gallery"
+                className="grid h-24 w-24 place-items-center rounded-xl text-2xl"
+                style={{ border: "1px dashed var(--steel)", color: "var(--ink-3)" }}>🖼️</button>
+            </>
           )}
         </div>
       )}
 
       {shots.length === 0 && (
-        <button onClick={() => fileRef.current?.click()} disabled={busy}
-          className="btn-primary flex w-full flex-col items-center gap-1 py-6 display disabled:opacity-60">
-          <span className="text-3xl">📷</span>
-          <span className="text-lg">Add a Photo of the Sheet</span>
-          <span className="text-xs font-normal opacity-90">One page or several — all read together</span>
-        </button>
+        <div className="flex items-stretch gap-2">
+          <button onClick={() => cameraRef.current?.click()} disabled={busy}
+            className="btn-primary flex flex-1 flex-col items-center gap-1 py-6 display disabled:opacity-60">
+            <span className="text-3xl">📷</span>
+            <span className="text-lg">Take a Photo</span>
+            <span className="text-xs font-normal opacity-90">One page or several — all read together</span>
+          </button>
+          <button onClick={() => galleryRef.current?.click()} disabled={busy}
+            className="btn-ghost flex flex-col items-center justify-center gap-1 px-4 disabled:opacity-60"
+            style={{ border: "1px solid var(--line)" }}>
+            <span className="text-xl">🖼️</span>
+            <span className="text-xs font-semibold">Gallery</span>
+          </button>
+        </div>
       )}
 
       {shots.length > 0 && (
