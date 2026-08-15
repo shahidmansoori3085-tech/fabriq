@@ -25,8 +25,21 @@ type CopilotAction = (typeof ACTIONS)[number];
 
 const ACTION_TAG = /\[\[ACTION:([a-z_]+)\]\]/i;
 const COMPUTE_TAG = /\[\[COMPUTE:(\{[\s\S]*?\})\]\]/i;
+/** A COMPUTE tag the model started but never closed — it ran out of output
+ *  budget mid-tag. The complete-tag regex cannot match it, so without this the
+ *  raw `[[COMPUTE:{"type":…` would be shown to the fabricator as the answer. */
+const PARTIAL_COMPUTE_TAG = /\[\[COMPUTE:[\s\S]*$/i;
 
 const OPENING_TYPES: OpeningType[] = ["window", "door", "partition"];
+
+/**
+ * Output budget for one Copilot turn. Replies themselves are short, but on a
+ * reasoning model the thinking is billed against this same budget, and working
+ * out an unusual build (a multi-panel Z-section layout, say) thinks a lot.
+ * At 700 the model ran out mid-COMPUTE-tag on exactly those cases — the ones
+ * the engine knowledge is there to handle.
+ */
+const COPILOT_MAX_TOKENS = 2500;
 
 interface ComputeCall {
   type: OpeningType;
@@ -65,6 +78,17 @@ function splitAction(raw: string): { reply: string; action?: CopilotAction; item
       }
       return { reply: `${before}\n\n${result.error}`.trim() };
     }
+  }
+
+  // Cut off mid-tag: never show the fabricator the app's own internals. Ask
+  // him to repeat instead of guessing at what the half-written tag meant.
+  if (PARTIAL_COMPUTE_TAG.test(raw)) {
+    const before = raw.replace(PARTIAL_COMPUTE_TAG, "").trim();
+    return {
+      reply: before
+        ? `${before}\n\nSorry — I lost that one halfway. Please say the size once more.`
+        : "Sorry — I lost that one halfway. Please say the size once more.",
+    };
   }
 
   const m = raw.match(ACTION_TAG);
@@ -159,7 +183,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "no_key", message: "An OpenRouter key is required — add one under Settings → Developer options." }, { status: 400 });
     }
     try {
-      const raw = await chatComplete({ system: SYSTEM, messages: messages.slice(-10), apiKey, provider: "openrouter", model, maxTokens: 700 });
+      const raw = await chatComplete({ system: SYSTEM, messages: messages.slice(-10), apiKey, provider: "openrouter", model, maxTokens: COPILOT_MAX_TOKENS });
       return NextResponse.json(splitAction(raw));
     } catch (e) {
       return NextResponse.json({ error: "chat_failed", message: friendlyError(e) }, { status: 500 });
@@ -183,7 +207,7 @@ export async function POST(req: NextRequest) {
       apiKey: key,
       provider: resolvedProvider,
       model: model || (resolvedProvider === "anthropic" ? "claude-sonnet-5" : undefined),
-      maxTokens: 700,
+      maxTokens: COPILOT_MAX_TOKENS,
     });
     return NextResponse.json(splitAction(raw));
   } catch (e) {
