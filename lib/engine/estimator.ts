@@ -160,13 +160,100 @@ function zSectionIds(family: "light" | "heavy") {
     : { outer: "z_outer_40", pipe: "z_pipe_40", center: "z_center_55" };
 }
 
-export type ZLayout = "openable" | "fixed" | "combo";
+export type ZLayout = "openable" | "fixed" | "combo" | "row";
 
 /** Which layout this Z item is — door forces a single openable leaf. */
 function zLayout(item: JobItem): ZLayout {
   if (item.meta.zDoor === "yes") return "openable";
   const l = item.meta.zLayout;
-  return l === "fixed" || l === "combo" ? l : "openable";
+  return l === "fixed" || l === "combo" || l === "row" ? l : "openable";
+}
+
+/**
+ * A Z-section window is, in general, an outer frame divided along ONE axis
+ * — side-by-side (vertical dividers/mullions) or stacked (horizontal
+ * dividers/transoms) — into an ORDERED ROW of panels, each either FIXED
+ * (an explicit size in feet) or OPEN (one or more openable sashes sharing
+ * whatever width/height is left over, split evenly). "Fixed on top",
+ * "fixed on one side" and "fixed on both sides" are not three different
+ * formulas — they are the same row-of-panels rule with 2 or 3 panels in a
+ * particular order. Any other real-world layout (fixed in the middle,
+ * three fixed strips, four stacked bands, …) is just a longer or
+ * differently-ordered panel list through this same function.
+ */
+type ZPanel = { kind: "fixed"; ft: number } | { kind: "open"; sashes: number };
+
+function parseZPanels(spec: string | undefined): ZPanel[] {
+  if (!spec) return [];
+  return spec.split(",").map((raw) => {
+    const tok = raw.trim();
+    if (tok.startsWith("F")) return { kind: "fixed" as const, ft: parseFloat(tok.slice(1)) || 2 };
+    const sashes = tok.length > 1 ? Math.max(1, parseInt(tok.slice(1), 10) || 1) : 1;
+    return { kind: "open" as const, sashes };
+  });
+}
+
+/** Legacy zComboDir/zFixedFt/zSashCount meta (still what the guided question
+ *  flow and Copilot ask) expressed as the same general panel row, so both
+ *  the old simple UI and the manual wizard's full panel builder run through
+ *  one geometry formula instead of two that could drift apart. */
+function legacyComboPanels(item: JobItem): { axis: "cols" | "rows"; panels: ZPanel[] } {
+  const ft = parseFloat(item.meta.zFixedFt ?? "2") || 2;
+  const sashes = Math.max(1, item.shutters.length || 1);
+  if (item.meta.zComboDir === "both") {
+    return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }, { kind: "fixed", ft }] };
+  }
+  if (item.meta.zComboDir === "side") {
+    return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }] };
+  }
+  return { axis: "rows", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }] }; // "top" (default)
+}
+
+/**
+ * Build fixed/sash/mullion/transom pieces for one ordered panel row. Every
+ * boundary — outer frame edge or the shared line between two panels — eats
+ * its own face width off the raw share; only the boundary itself decides
+ * the deduction (Z_FACE at the two outer ends, Z_TRANSOM_HALF at every
+ * internal join), never which kind of panel sits on either side of it.
+ */
+function applyZRowPanels(
+  g: ZGeom, axis: "cols" | "rows", panels: ZPanel[], item: JobItem,
+  fill: "glass" | "jali" | "sheet",
+): void {
+  const openW = item.width - 2 * Z_FACE;
+  const openH = item.height - 2 * Z_FACE;
+  if (panels.length === 0) { g.fixed.push(zMakeFixed(fill, openW, openH)); return; }
+
+  const n = panels.length;
+  const runLenRaw = axis === "cols" ? item.width : item.height;
+  const crossLen = axis === "cols" ? openH : openW; // the dimension NOT divided
+  const fixedTotalRaw = panels.reduce((s, p) => s + (p.kind === "fixed" ? mm(p.ft * 304.8) : mm(0)), 0);
+  const openCount = panels.filter((p) => p.kind === "open").length;
+  const openRawEach = openCount > 0 ? Math.max(mm(0), runLenRaw - fixedTotalRaw) / openCount : mm(0);
+
+  panels.forEach((p, i) => {
+    const nearFace = i === 0 ? Z_FACE : Z_TRANSOM_HALF;
+    const farFace = i === n - 1 ? Z_FACE : Z_TRANSOM_HALF;
+    const raw = p.kind === "fixed" ? mm(p.ft * 304.8) : openRawEach;
+    const pocketLen = raw - nearFace - farFace;
+
+    if (p.kind === "fixed") {
+      g.fixed.push(axis === "cols" ? zMakeFixed(fill, pocketLen, crossLen) : zMakeFixed(fill, crossLen, pocketLen));
+    } else {
+      const sashCount = Math.max(1, p.sashes);
+      const sashLen = sashCount > 1 ? Math.round(pocketLen / sashCount) : pocketLen;
+      // Sashes within one panel always sit side by side, so the divider
+      // between them is a vertical mullion regardless of the row's axis.
+      const mullionLen = axis === "cols" ? crossLen : pocketLen;
+      for (let s = 0; s < sashCount - 1; s++) g.mullions.push(mullionLen);
+      for (let s = 0; s < sashCount; s++) {
+        g.sashes.push(axis === "cols" ? zMakeSash("glass", sashLen, crossLen, false) : zMakeSash("glass", crossLen, sashLen, false));
+      }
+    }
+    // boundary to the NEXT panel — a vertical mullion between side-by-side
+    // panels, a horizontal transom between stacked ones.
+    if (i < n - 1) (axis === "cols" ? g.mullions : g.transoms).push(crossLen);
+  });
 }
 
 interface ZSash {
@@ -244,49 +331,19 @@ function zGeometry(item: JobItem): ZGeom {
     return g;
   }
 
-  if (layout === "combo") {
-    // Fixed-panel size (ft) from meta; default 2 ft. The fixed zone and the
-    // openable zone are each charged their own frame face (40mm) + half of the
-    // divider face (20mm) = 60mm off the raw fixed dimension.
-    const fixedFt = parseFloat(item.meta.zFixedFt ?? "2") || 2;
-    const fixedRaw = mm(fixedFt * 304.8);
+  if (layout === "combo" || layout === "row") {
     const fixedFill = item.meta.zFixedFill === "jali" ? "jali"
       : item.meta.zFixedFill === "sheet" ? "sheet" : "glass";
-    const sashes = item.shutters.length ? item.shutters : [{ kind: "glass" as const }];
-    const n = sashes.length;
-    // zComboDir === "side": a VERTICAL fixed strip on one side, divided from
-    // the openable band by a vertical mullion. "both": a fixed strip on
-    // BOTH sides (same width each), openable sashes sandwiched in the
-    // middle — the fix|openable|fix triplet common on wide Z-section
-    // windows. Otherwise (default "top"): a horizontal fixed band on top,
-    // divided by a horizontal transom.
-    if (item.meta.zComboDir === "both") {
-      const fixedPocketW = fixedRaw - Z_FACE - Z_TRANSOM_HALF;
-      const openableOpenW = item.width - 2 * fixedRaw - 2 * Z_TRANSOM_HALF;
-      g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH)); // left
-      g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH)); // right
-      g.mullions.push(openH); // divider: left fixed strip <-> openable band
-      const sashOpenW = n > 1 ? Math.round(openableOpenW / n) : openableOpenW;
-      for (let m = 0; m < n - 1; m++) g.mullions.push(openH);
-      g.mullions.push(openH); // divider: openable band <-> right fixed strip
-      sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openH, false)));
-    } else if (item.meta.zComboDir === "side") {
-      const fixedPocketW = fixedRaw - Z_FACE - Z_TRANSOM_HALF;
-      const openableOpenW = item.width - fixedRaw - Z_FACE - Z_TRANSOM_HALF;
-      g.fixed.push(zMakeFixed(fixedFill, fixedPocketW, openH));
-      g.mullions.push(openH); // divider between fixed strip and openable band
-      const sashOpenW = n > 1 ? Math.round(openableOpenW / n) : openableOpenW;
-      for (let m = 0; m < n - 1; m++) g.mullions.push(openH);
-      sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openH, false)));
-    } else {
-      const fixedPocketH = fixedRaw - Z_FACE - Z_TRANSOM_HALF;
-      const openableOpenH = item.height - fixedRaw - Z_FACE - Z_TRANSOM_HALF;
-      g.fixed.push(zMakeFixed(fixedFill, openW, fixedPocketH));
-      g.transoms.push(openW); // divider between fixed band and openable band
-      const sashOpenW = n > 1 ? Math.round(openW / n) : openW;
-      for (let m = 0; m < n - 1; m++) g.mullions.push(openableOpenH);
-      sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openableOpenH, false)));
-    }
+    // "row" is the general case: an explicit, arbitrary-length panel
+    // sequence (meta.zPanels) along an explicit axis (meta.zAxis) — used by
+    // the manual wizard's panel builder. "combo" is the older, simpler
+    // top/side/both question asked by the guided flow and Copilot; it is
+    // translated into the exact same panel-row shape so one formula (below)
+    // computes both instead of two formulas that could quietly drift apart.
+    const { axis, panels } = layout === "row"
+      ? { axis: (item.meta.zAxis === "rows" ? "rows" : "cols") as "cols" | "rows", panels: parseZPanels(item.meta.zPanels) }
+      : legacyComboPanels(item);
+    applyZRowPanels(g, axis, panels, item, fixedFill);
     return g;
   }
 

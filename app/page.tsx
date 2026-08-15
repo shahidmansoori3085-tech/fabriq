@@ -1210,11 +1210,25 @@ const NORMAL_VAR: [string, string][] = [["2", "2 Track"], ["3", "3 Track"], ["4"
 const DOMAL_VAR: [string, string][] = [["no", "No Fixed Band"], ["yes", "Fixed On Top"]];
 const Z_TYPE: [string, string][] = [
   ["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"],
+  ["row", "Custom Layout"],
 ];
 const Z_COMBO_DIR: [string, string][] = [
   ["top", "Fixed On Top"], ["side", "Fixed On One Side"], ["both", "Fixed On Both Sides"],
 ];
 const Z_FIXED_FT: [string, string][] = [["1.5", "1.5 ft"], ["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
+
+/**
+ * A Z-section window is really just an ordered row of panels — each Fixed
+ * (an explicit size) or Openable — read left-to-right or top-to-bottom.
+ * "Fixed on top / on a side / on both sides" are the three most common
+ * 2–3-panel arrangements; this builder covers any other real arrangement a
+ * fabricator draws (fixed in the middle, three fixed strips, four stacked
+ * bands, …) without needing a named option for each one.
+ */
+interface ZPanelRow { id: number; kind: "fixed" | "open"; ft: string }
+function encodeZPanels(rows: ZPanelRow[]): string {
+  return rows.map((r) => (r.kind === "fixed" ? `F${r.ft.trim() || "2"}` : "O")).join(",");
+}
 
 /** Size as understood by the shared parser. `null` = nothing readable typed yet. */
 function parseWithUnit(raw: string): Um | null {
@@ -1268,6 +1282,27 @@ function Entry({ startId, onBuild, onBack }: {
   const [zTypes, setZTypes] = useState<string[]>([]);
   const [zComboDir, setZComboDir] = useState<string[]>([]);
   const [zFixedFt, setZFixedFt] = useState<string[]>([]);
+  const [zAxis, setZAxis] = useState<"cols" | "rows">("cols");
+  const [zPanelRows, setZPanelRows] = useState<ZPanelRow[]>([
+    { id: 1, kind: "fixed", ft: "2" }, { id: 2, kind: "open", ft: "" },
+  ]);
+  const zPanelRid = useRef(3);
+  const addZPanel = (kind: "fixed" | "open") =>
+    setZPanelRows((rs) => [...rs, { id: zPanelRid.current++, kind, ft: kind === "fixed" ? "2" : "" }]);
+  const removeZPanel = (id: number) => setZPanelRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== id) : rs));
+  const moveZPanel = (id: number, dir: -1 | 1) =>
+    setZPanelRows((rs) => {
+      const i = rs.findIndex((r) => r.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= rs.length) return rs;
+      const next = [...rs];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  const setZPanelKind = (id: number, kind: "fixed" | "open") =>
+    setZPanelRows((rs) => rs.map((r) => (r.id === id ? { ...r, kind, ft: kind === "fixed" ? (r.ft || "2") : r.ft } : r)));
+  const setZPanelFt = (id: number, ft: string) =>
+    setZPanelRows((rs) => rs.map((r) => (r.id === id ? { ...r, ft } : r)));
   // door config
   const [doorPalla, setDoorPalla] = useState<string[]>([]);
   const [doorChokhat, setDoorChokhat] = useState<string[]>(["needed"]);
@@ -1317,6 +1352,9 @@ function Entry({ startId, onBuild, onBack }: {
               for (const [d, dl] of Z_COMBO_DIR) if (dirs.includes(d))
                 for (const [f, fl] of Z_FIXED_FT) if (fts.includes(f))
                   push("window", { system: "z_section", zType: z, zComboDir: d, zFixedFt: f }, `Z-Section · ${zl} · ${dl} · ${fl}`);
+            } else if (z === "row") {
+              const desc = zPanelRows.map((r) => (r.kind === "fixed" ? `Fix ${r.ft || "2"}ft` : "Open")).join(" | ");
+              push("window", { system: "z_section", zType: z, zAxis, zPanels: encodeZPanels(zPanelRows) }, `Z-Section · Custom (${desc})`);
             } else {
               push("window", { system: "z_section", zType: z }, `Z-Section · ${zl}`);
             }
@@ -1346,7 +1384,8 @@ function Entry({ startId, onBuild, onBack }: {
     (!(winSys.includes("normal") || winSys.includes("domal")) || normTracks.length > 0) &&
     (!winSys.includes("domal") || domalVar.length > 0) &&
     (!winSys.includes("z_section") || zTypes.length > 0) &&
-    (!zTypes.includes("combo") || (zComboDir.length > 0 && zFixedFt.length > 0));
+    (!zTypes.includes("combo") || (zComboDir.length > 0 && zFixedFt.length > 0)) &&
+    (!zTypes.includes("row") || (zPanelRows.length > 0 && zPanelRows.every((r) => r.kind === "open" || parseFloat(r.ft) > 0)));
   const cfgOk = curType === "window" ? winSys.length > 0 && winSysReady
     : curType === "door" ? doorPalla.length > 0 && doorChokhat.length > 0
     : partVar.length > 0;
@@ -1483,6 +1522,54 @@ function Entry({ startId, onBuild, onBack }: {
                       onToggle={(v) => setZFixedFt((p) => toggleArr(p, v))} />
                   </div>
                 </>
+              )}
+              {winSys.includes("z_section") && zTypes.includes("row") && (
+                <div>
+                  <Label>Custom layout — panels in order</Label>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => setZAxis("cols")}
+                      className={`chip px-3 py-1.5 text-xs font-semibold ${zAxis === "cols" ? "selected" : ""}`}>
+                      Side by side (left → right)
+                    </button>
+                    <button onClick={() => setZAxis("rows")}
+                      className={`chip px-3 py-1.5 text-xs font-semibold ${zAxis === "rows" ? "selected" : ""}`}>
+                      Stacked (top → bottom)
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {zPanelRows.map((r, i) => (
+                      <div key={r.id} className="flex items-center gap-2">
+                        <span className="w-4 text-xs" style={{ color: "var(--ink-3)" }}>{i + 1}</span>
+                        <button onClick={() => setZPanelKind(r.id, "fixed")}
+                          className={`chip px-2.5 py-1.5 text-xs font-semibold ${r.kind === "fixed" ? "selected" : ""}`}>
+                          Fixed
+                        </button>
+                        <button onClick={() => setZPanelKind(r.id, "open")}
+                          className={`chip px-2.5 py-1.5 text-xs font-semibold ${r.kind === "open" ? "selected" : ""}`}>
+                          Openable
+                        </button>
+                        {r.kind === "fixed" && (
+                          <>
+                            <input value={r.ft} onChange={(e) => setZPanelFt(r.id, e.target.value)}
+                              placeholder="2" className="dim-input w-14 px-2 py-1.5 text-sm"
+                              style={!(parseFloat(r.ft) > 0) ? { borderColor: "var(--bad)" } : undefined} />
+                            <span className="text-xs" style={{ color: "var(--ink-3)" }}>ft</span>
+                          </>
+                        )}
+                        <button onClick={() => moveZPanel(r.id, -1)} disabled={i === 0}
+                          className="px-1 text-xs disabled:opacity-30" style={{ color: "var(--ink-3)" }}>↑</button>
+                        <button onClick={() => moveZPanel(r.id, 1)} disabled={i === zPanelRows.length - 1}
+                          className="px-1 text-xs disabled:opacity-30" style={{ color: "var(--ink-3)" }}>↓</button>
+                        <button onClick={() => removeZPanel(r.id)} disabled={zPanelRows.length <= 1}
+                          className="px-1 text-xs disabled:opacity-30" style={{ color: "var(--bad)" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => addZPanel("fixed")} className="btn-ghost px-3 py-1.5 text-xs">+ Fixed panel</button>
+                    <button onClick={() => addZPanel("open")} className="btn-ghost px-3 py-1.5 text-xs">+ Openable panel</button>
+                  </div>
+                </div>
               )}
             </>
           )}
@@ -1856,6 +1943,7 @@ function AddMore({
                     {it.qty} nos · Z-Section {it.meta.zSize === "heavy" ? "Big" : "Small"} ·{" "}
                     {it.meta.zType === "fixed" ? "Fixed"
                       : it.meta.zType === "combo" ? "Fixed + Openable"
+                      : it.meta.zType === "row" ? `Custom (${(it.meta.zPanels ?? "").split(",").length} panels)`
                       : it.meta.zType === "door" ? "Door" : "Openable"}
                   </>
                 ) : (
@@ -1945,7 +2033,8 @@ function itemSpec(it: JobItem): string {
     return bits.join(" · ");
   }
   if (it.type === "door") return "Hinged door with panel";
-  if (it.system === "z_section") return it.meta.zType === "combo" ? "Fixed + openable" : (it.meta.zType ?? "openable");
+  if (it.system === "z_section") return it.meta.zType === "combo" ? "Fixed + openable"
+    : it.meta.zType === "row" ? "Custom panel layout" : (it.meta.zType ?? "openable");
   const mix = [g ? `${g} Glass` : "", j ? `${j} Mesh` : ""].filter(Boolean).join(" + ");
   const tr = it.meta.tracks ? `${it.meta.tracks} Track` : "";
   return [tr, mix].filter(Boolean).join(" · ") || "Glass";

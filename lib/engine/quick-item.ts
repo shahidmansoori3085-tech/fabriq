@@ -11,6 +11,19 @@ import { estimate } from "./estimator";
 import { SECTIONS } from "./sections";
 import type { JobItem, MaterialList, OpeningType, SystemId } from "./types";
 
+/** How many openable Z-pipe shutters a custom panel row (e.g. "F2,O,F2") needs —
+ *  mirrors estimator.ts's own panel parsing, just counting sashes rather than
+ *  building cut pieces. */
+function countZPanelSashes(spec: string | undefined): number {
+  if (!spec) return 1;
+  const n = spec.split(",").reduce((total, raw) => {
+    const tok = raw.trim();
+    if (tok.startsWith("F")) return total;
+    return total + (tok.length > 1 ? Math.max(1, parseInt(tok.slice(1), 10) || 1) : 1);
+  }, 0);
+  return Math.max(1, n);
+}
+
 export function buildJobItem(
   idNum: number, type: OpeningType, width: Um, height: Um, qty: number,
   metaIn: Record<string, string>,
@@ -38,7 +51,7 @@ export function buildJobItem(
     const zType = next.zType ?? "openable";
     next.zSize = next.zSize ?? "light";
     next.zDoor = zType === "door" ? "yes" : "no";
-    next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : "openable";
+    next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
     if (zType === "combo") {
       next.zComboDir = next.zComboDir ?? "top";
       next.zFixedFt = next.zFixedFt ?? "2";
@@ -46,6 +59,8 @@ export function buildJobItem(
     if (zType === "openable" || zType === "combo") next.zSashCount = next.zSashCount ?? "2";
     const n = zType === "fixed" || zType === "door"
       ? 1
+      : zType === "row"
+      ? countZPanelSashes(next.zPanels)
       : Math.max(1, parseInt(next.zSashCount ?? "2", 10));
     shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
   } else {
