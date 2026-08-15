@@ -261,7 +261,7 @@ const SECTION_IMAGES = new Set<string>([
   "door_palla_75", "door_palla_60", "door_palla_50", "door_center_75", "door_frame_pattam",
 ]);
 
-function hasImage(sectionId: string): boolean {
+export function hasImage(sectionId: string): boolean {
   return SECTION_IMAGES.has(sectionId);
 }
 

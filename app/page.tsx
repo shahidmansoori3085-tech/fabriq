@@ -22,7 +22,7 @@ import { planOffcutUse, EMPTY_PLAN, type OffcutPlan } from "@/lib/offcut-plan";
 import {
   FINISHES, getFinish, finishTo3D, loadDefaultFinish, saveDefaultFinish, type FinishId,
 } from "@/lib/engine/finishes";
-import { buildOrderPdf, sharePdfToWhatsApp, sectionImageDataUrl, type PdfTable } from "@/lib/pdf";
+import { sharePdfToWhatsApp, elementToPdfBlob } from "@/lib/pdf";
 import {
   loadProjects, saveProject, patchProject, removeProject, newProjectId, autoTitle, totalSqft,
   type ProjectRec,
@@ -31,11 +31,12 @@ import type {
   JobItem, MaterialList, OpeningType, SystemId, PackedBar, CutPiece,
 } from "@/lib/engine/types";
 import { WindowDiagram, TrackDiagram, CuttingGuide, PartitionDiagram, PartitionBayDiagram, PartitionRowDiagram, MiniElevation } from "@/components/diagrams";
-import { SectionProfile, SectionDrawing } from "@/components/section-profiles";
+import { SectionProfile, SectionDrawing, hasImage } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { VoiceButton } from "@/components/voice";
 import { Copilot } from "@/components/copilot";
 import { QuoteDoc, type QuoteLine, type ShopProfile } from "@/components/quotation";
+import { SupplierOrderDoc } from "@/components/supplier-doc";
 import {
   Camera, Pencil, Settings, Sun, Moon, Layers, Cube, Scissors, FileText,
   Rupee, TrendDown, Clock, Folder, ArrowRight, Store, Scan, User, Phone,
@@ -1946,6 +1947,7 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
     setTab(t);
     window.scrollTo({ top: 0 });
   }, []);
+  const quoteDocRef = useRef<HTMLDivElement>(null);
   const [threedIdx, setThreedIdx] = useState(0);
   const [showcase, setShowcase] = useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
@@ -2221,7 +2223,7 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
           items={items} shop={shop} customer={customer} setCustomer={setCustomer}
           rateFor={rateFor} setRate={setRate} gstPct={gstPct} setGstPct={setGstPct}
           discountPct={discountPct} setDiscountPct={setDiscountPct}
-          total={quoteTotal} onEditShop={() => setShowShop(true)}
+          total={quoteTotal} onEditShop={() => setShowShop(true)} docRef={quoteDocRef}
         />
       )}
 
@@ -2269,11 +2271,13 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
 
       {/* the quotation document — the ONLY thing printed in quote mode */}
       {tab === "quote" && (
-        <QuoteDoc
-          className="quote-doc" shop={shop} customer={customer} quoteNo={quoteNo}
-          date={today} validTill={validTill} lines={quoteLines} discountPct={discountPct} gstPct={gstPct}
-          payQr={payQr}
-        />
+        <div ref={quoteDocRef}>
+          <QuoteDoc
+            className="quote-doc" shop={shop} customer={customer} quoteNo={quoteNo}
+            date={today} validTill={validTill} lines={quoteLines} discountPct={discountPct} gstPct={gstPct}
+            payQr={payQr}
+          />
+        </div>
       )}
 
       {showShop && <ShopModal shop={shop} onSave={(s) => { setShop(s); try { localStorage.setItem("fabriq_shop", JSON.stringify(s)); } catch { /* ignore */ } setShowShop(false); }} onClose={() => setShowShop(false)} />}
@@ -2303,12 +2307,12 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
 
 function QuotePanel({
   items, shop, customer, setCustomer, rateFor, setRate,
-  gstPct, setGstPct, discountPct, setDiscountPct, total, onEditShop,
+  gstPct, setGstPct, discountPct, setDiscountPct, total, onEditShop, docRef,
 }: {
   items: JobItem[]; shop: ShopProfile; customer: string; setCustomer: (v: string) => void;
   rateFor: (it: JobItem) => number; setRate: (it: JobItem, v: number) => void;
   gstPct: number; setGstPct: (v: number) => void; discountPct: number; setDiscountPct: (v: number) => void;
-  total: number; onEditShop: () => void;
+  total: number; onEditShop: () => void; docRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const grandPayable = Math.round(total * (1 - discountPct / 100) * (1 + gstPct / 100));
   return (
@@ -2384,38 +2388,7 @@ function QuotePanel({
         filename="quotation.pdf"
         text={`Quotation${customer ? ` for ${customer}` : ""} — ${items.length} item${items.length > 1 ? "s" : ""}, total ${inr(grandPayable)}. PDF attached.`}
         disabled={total <= 0}
-        build={() => buildOrderPdf({
-          title: "Quotation",
-          shopName: shop.name, tagline: shop.tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
-          tables: [{
-            heading: customer ? `For: ${customer}` : undefined,
-            columns: [
-              { label: "Item", width: 26 },
-              { label: "Size", width: 22 },
-              { label: "Qty", width: 8, align: "right" },
-              { label: "Sqft", width: 12, align: "right" },
-              { label: "Rate", width: 12, align: "right" },
-              { label: "Amount", width: 16, align: "right" },
-            ],
-            rows: items.map((it) => {
-              const area = sqft(it.width, it.height) * it.qty;
-              const rate = rateFor(it);
-              return [
-                itemName(it),
-                `${sizeFtIn(it.width)} × ${sizeFtIn(it.height)}`,
-                String(it.qty),
-                area.toFixed(1),
-                rate ? inr(rate) : "—",
-                rate ? inr(area * rate) : "—",
-              ];
-            }),
-          }],
-          totalLabel: discountPct || gstPct
-            ? `Total (${[discountPct ? `${discountPct}% off` : "", gstPct ? `GST ${gstPct}%` : ""].filter(Boolean).join(", ")})`
-            : "Total",
-          total: inr(grandPayable),
-          note: "Generated by FabriQ — sizes come from a deterministic engine, not from AI.",
-        })}
+        build={() => elementToPdfBlob(docRef.current!)}
       />
       <p className="text-center text-[11px]" style={{ color: "var(--ink-3)" }}>
         PDF is generated and WhatsApp opens with it attached, ready to send
@@ -2542,10 +2515,46 @@ function AluminiumPanel({
   useEffect(() => { setBrand(loadBrand()); }, []);
 
   const totalPipes = list.totals.bars16 + list.totals.bars8 * 0.5;
-
+  const today = useMemo(() => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }), []);
+  const aluDocRef = useRef<HTMLDivElement>(null);
+  const glassDocRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Off-screen, real layout (not display:none) — rendered so the WhatsApp
+          PDF has a premium document to screenshot, without cluttering this
+          working screen with a second copy of the same order. */}
+      <div aria-hidden style={{ position: "fixed", left: -9999, top: 0, width: 620 }}>
+        <div ref={aluDocRef}>
+          <SupplierOrderDoc shop={shop} title="Aluminium Order" date={today}
+            lines={list.sections.map((s) => {
+              const sec = getSection(s.sectionId);
+              const sp = planBySection.get(s.sectionId);
+              return {
+                image: hasImage(s.sectionId) ? `/sections/${s.sectionId}.png` : undefined,
+                label: sec.label,
+                sub: sectionCode(s.sectionId, brand) ? `#${sectionCode(s.sectionId, brand)}` : (sec.size ? `${sec.size}mm` : undefined),
+                qty: fmtPipes(sp ? sp.pipesAfter : s.bars16 + s.bars8 * 0.5),
+              };
+            })}
+            totalLabel="Total pipes required"
+            totalValue={pipeQty(Math.max(0, totalPipes - plan.pipesSaved))}
+            note="Generated by FabriQ — sizes come from a deterministic engine, not from AI." />
+        </div>
+        {hasGlass && (
+          <div ref={glassDocRef} style={{ marginTop: 16 }}>
+            <SupplierOrderDoc shop={shop} title="Glass / Mesh Order" date={today}
+              lines={[
+                ...list.glass.map((p) => ({ label: `Glass — ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sqft/pc`, qty: `${p.count} pcs` })),
+                ...list.mesh.panels.map((p) => ({ label: `Mesh — ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sqft/pc`, qty: `${p.count} pcs` })),
+                ...list.sheet.panels.map((p) => ({ label: `Sheet — ${formatFtInSut(p.width)} × ${formatFtInSut(p.height)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sqft/pc`, qty: `${p.count} pcs` })),
+              ]}
+              totalLabel="Total area"
+              totalValue={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`}
+              note="All sizes are finished panel sizes. Generated by FabriQ." />
+          </div>
+        )}
+      </div>
       {/* money-visible scrap strip */}
       <MoneyScrap cost={cost} aluRate={aluRate} onRate={onRate} totalWastePct={list.totals.wastePct} />
 
@@ -2677,36 +2686,7 @@ function AluminiumPanel({
         sub={`${list.sections.length} sections · ${pipeQty(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved))}`}
         filename="aluminium-order.pdf"
         text={aluminiumWaText(list, plan, shopName)}
-        build={async () => {
-          // A drawing per row, not just a name — the dealer sees the same
-          // cross-section the app shows on screen, so there's no guessing
-          // which profile a label like "Handle" actually means.
-          const rowImages = await Promise.all(list.sections.map((s) => sectionImageDataUrl(s.sectionId)));
-          return buildOrderPdf({
-            title: "Aluminium Order",
-            shopName, tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
-            tables: [{
-              // Just what a dealer needs to pull stock: the profile — by
-              // drawing, not a size he has to match himself — and how many.
-              columns: [
-                { label: "Section", width: 60 },
-                { label: "Qty", width: 20, align: "right" },
-              ],
-              rowImages,
-              rows: list.sections.map((s) => {
-                const sec = getSection(s.sectionId);
-                const sp = planBySection.get(s.sectionId);
-                return [
-                  sec.label,
-                  fmtPipes(sp ? sp.pipesAfter : s.bars16 + s.bars8 * 0.5),
-                ];
-              }),
-            }],
-            totalLabel: "Total pipes required",
-            total: pipeQty(Math.max(0, (list.totals.bars16 + list.totals.bars8 * 0.5) - plan.pipesSaved)),
-            note: "Generated by FabriQ — sizes come from a deterministic engine, not from AI.",
-          });
-        }}
+        build={() => elementToPdfBlob(aluDocRef.current!)}
       />
 
       {hasGlass && (
@@ -2715,41 +2695,13 @@ function AluminiumPanel({
           sub={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`}
           filename="glass-order.pdf"
           text={glassWaText(list, shopName)}
-          build={() => buildOrderPdf({
-            title: "Glass / Mesh Order",
-            shopName, tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
-            tables: [
-              glassBlock("Glass", `${list.glassSqft.toFixed(1)} sqft`, list.glass),
-              glassBlock("Mesh (Jali)", `${list.mesh.sqft.toFixed(1)} sqft · spline ${list.mesh.splineFt} rft`, list.mesh.panels),
-              glassBlock("Sheet", `${list.sheet.sqft.toFixed(1)} sqft`, list.sheet.panels),
-            ].filter((b): b is PdfTable => b !== null),
-            totalLabel: "Total area",
-            total: `${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sqft`,
-            note: "All sizes are finished panel sizes. Generated by FabriQ.",
-          })}
+          build={() => elementToPdfBlob(glassDocRef.current!)}
         />
       )}
 
       <EngineVerified />
     </div>
   );
-}
-
-function glassBlock(heading: string, sub: string, panels: { width: Um; height: Um; count: number }[]): PdfTable | null {
-  if (!panels.length) return null;
-  return {
-    heading, sub,
-    columns: [
-      { label: "Size (W x H)", width: 40 },
-      { label: "Sqft / pc", width: 20, align: "right" },
-      { label: "Pcs", width: 14, align: "right" },
-    ],
-    rows: panels.map((p) => [
-      `${formatFtInSut(p.width)}  x  ${formatFtInSut(p.height)}`,
-      sqft(p.width, p.height).toFixed(2),
-      `${p.count}`,
-    ]),
-  };
 }
 
 /**
@@ -3295,6 +3247,7 @@ function StepBar({ n, title, sub }: { n: number; title: string; sub: string }) {
 function CuttingPanel({ list, shop, items, plan }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; plan: OffcutPlan;
 }) {
+  const sheetRef = useRef<HTMLDivElement>(null);
   const planBySection = useMemo(() => {
     const m = new Map<string, (typeof plan.sections)[number]>();
     for (const s of plan.sections) m.set(s.sectionId, s);
@@ -3327,7 +3280,7 @@ function CuttingPanel({ list, shop, items, plan }: {
   const stockCuts = plan.uses.reduce((a, u) => a + u.pieces.length, 0);
 
   return (
-    <div className="print-sheet flex flex-col gap-4">
+    <div ref={sheetRef} className="print-sheet flex flex-col gap-4">
       <SheetHeader shop={shop} title="WORKSHOP CUTTING SHEET" stats={
         <>
           <SheetStat label={stockCuts ? "New Pipes" : "Total Pipes"} value={fmtPipes(buyPipes)} />
@@ -3340,40 +3293,15 @@ function CuttingPanel({ list, shop, items, plan }: {
         </>
       } />
 
-      {/* The workshop's copy — the cut list, section by section, straight to
-          WhatsApp. Drawings stay on-screen; the PDF carries the numbers a
-          cutter actually needs at the saw. */}
+      {/* The workshop's copy, straight to WhatsApp — a screenshot of this
+          same sheet (drawings, cut list, everything below), not a re-typed
+          summary of it. */}
       <SendOrder
         label="Share the cutting sheet on WhatsApp"
         sub={`${totalPieces} pieces · ${sectionGroups.length} sections`}
         filename="cutting-sheet.pdf"
         text={`Workshop cutting sheet — ${totalPieces} pieces across ${sectionGroups.length} sections. PDF attached.`}
-        build={() => buildOrderPdf({
-          title: "Workshop Cutting Sheet",
-          shopName: shop.name, tagline: shop.tagline, address: shop.address, phone: shop.phone, gstin: shop.gstin,
-          tables: sectionGroups.map(([sectionId, engineBars]) => {
-            const sec = getSection(sectionId);
-            const sp = planBySection.get(sectionId);
-            const bars = sp ? sp.barsAfter : engineBars;
-            const stockPieces = sp ? sp.uses.flatMap((u) => u.pieces) : [];
-            return {
-              heading: sec.label,
-              sub: `${bars.length} pipe${bars.length > 1 ? "s" : ""}`,
-              columns: [
-                { label: "Length", width: 16 },
-                { label: "Pcs", width: 10, align: "right" },
-                { label: "From", width: 20 },
-                { label: "Used for", width: 40 },
-              ],
-              rows: buildCutRows(bars, stockPieces).map((g) => [
-                g.label, String(g.count), g.fromLeftover ? "Leftover piece" : "New pipe", g.forWhat,
-              ]),
-            };
-          }),
-          totalLabel: "Total pipes",
-          total: fmtPipes(buyPipes),
-          note: "Generated by FabriQ — sizes come from a deterministic engine, not from AI.",
-        })}
+        build={() => elementToPdfBlob(sheetRef.current!)}
       />
 
       {/* STEP 1 — what to build: a dimensioned drawing + parts per opening */}
