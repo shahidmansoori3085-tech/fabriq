@@ -29,8 +29,10 @@ const UNIVERSAL = `
 UNIVERSAL RULES (true for every system)
 
 1. Sizes are ALWAYS width × height, in the fabricator's own notation. Feet,
-   inches, mm and ft-in-sut ("4-6-4" = 4 feet 6 inch 4 sut) are all accepted.
-   1 sut = 1/8 inch. Never convert a size yourself — hand it over as written.
+   inches, mm and ft-in-sut ("4-6-4" = 4 feet 6 inch 4 sut) are all accepted,
+   as symbols (4'6", 1372mm) or spelled-out words in any order ("feet 10",
+   "10 feet", "4 feet 6 inch 4 sut", "sut 4"). 1 sut = 1/8 inch. Never convert
+   a size yourself — hand it over as written.
 
 2. Every measurement in the material list comes from ONE chain:
       wall opening  →  frame  →  shutter / panel pocket  →  glass
