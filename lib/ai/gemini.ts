@@ -11,8 +11,20 @@
  */
 const BASE = "https://generativelanguage.googleapis.com/v1beta/openai";
 
-/** Fast, cheap and free-tier friendly; override per deployment if needed. */
+/** Fast, cheap and free-tier friendly — used for Copilot chat, where the
+ *  model only has to talk, never read a photo, so speed matters more than
+ *  the last bit of reasoning quality. Override per deployment if needed. */
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+
+/**
+ * Vision + structured extraction (reading a photographed measurement sheet
+ * or a visiting card) is a genuinely harder task than chat — real handwriting,
+ * ambiguous marks, reasoning about which heading applies to which box — and
+ * the flash tier's mistakes there are exactly what corrupt a fabricator's
+ * material list. Worth the extra latency/cost of the flagship reasoning
+ * model. Override with GEMINI_VISION_MODEL if a deployment needs to.
+ */
+export const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3.1-pro";
 
 /** Google AI Studio keys look like `AIza…`; Anthropic's look like `sk-ant-…`. */
 export function isGeminiKey(key: string): boolean {
@@ -80,7 +92,7 @@ export async function geminiJson<T>(opts: {
   parts.push({ type: "text", text: opts.userText });
 
   const text = await call({
-    model: opts.model || GEMINI_MODEL,
+    model: opts.model || GEMINI_VISION_MODEL,
     max_tokens: opts.maxTokens ?? 4096,
     messages: [
       { role: "system", content: opts.system },
