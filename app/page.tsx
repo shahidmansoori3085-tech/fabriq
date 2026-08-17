@@ -264,12 +264,27 @@ export default function FabriQ() {
     });
     if (valid.length === 0) { setStep("addmore"); return; }
 
-    // Anything the sheet already stated for EVERY row is settled — don't ask.
+    // Anything the sheet already stated for EVERY row it applies to is
+    // settled — don't ask. That includes a sheet with MIXED systems (2
+    // Normal, 2 Z-section, a Partition, say): every window already carries
+    // its own answer, so "which system for all N windows?" would be a wrong
+    // question to ask, not a missing one — sharedFromSheet[id] is set to a
+    // "__mixed__" placeholder purely to suppress the job-level ask, and the
+    // per-item seed in startPhotoItem always overrides it with that item's
+    // own real value regardless (never actually applied as "mixed").
     const seeds = valid.map(seedFromRow);
+    const APPLIES: Partial<Record<string, (t: ExtractedItem["type"]) => boolean>> = {
+      system: (t) => t === "window", zSize: (t) => t === "window",
+      chokhat: (t) => t === "door", palla: (t) => t === "door",
+    };
     const sharedFromSheet: Record<string, string> = {};
     for (const id of JOB_LEVEL_IDS) {
-      const vals = seeds.map((s) => s[id]);
-      if (vals[0] && vals.every((v) => v === vals[0])) sharedFromSheet[id] = vals[0];
+      const applies = APPLIES[id] ?? (() => true);
+      const relevant = valid.reduce<string[]>(
+        (acc, r, i) => (applies(r.type) ? [...acc, seeds[i][id]] : acc), []);
+      if (relevant.length > 0 && relevant.every((v) => v)) {
+        sharedFromSheet[id] = relevant.every((v) => v === relevant[0]) ? relevant[0] : "__mixed__";
+      }
     }
 
     const types = [...new Set(valid.map((r) => r.type))];
