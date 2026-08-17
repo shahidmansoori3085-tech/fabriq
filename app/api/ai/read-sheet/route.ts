@@ -114,7 +114,8 @@ export async function POST(req: NextRequest) {
         apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
       });
       return NextResponse.json(parsed);
-    } catch {
+    } catch (e) {
+      console.error("[read-sheet/gemini]", e);
       return NextResponse.json(
         { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
         { status: 500 },
