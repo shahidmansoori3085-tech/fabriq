@@ -20,11 +20,16 @@ export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
  * Vision + structured extraction (reading a photographed measurement sheet
  * or a visiting card) is a genuinely harder task than chat — real handwriting,
  * ambiguous marks, reasoning about which heading applies to which box — and
- * the flash tier's mistakes there are exactly what corrupt a fabricator's
- * material list. Worth the extra latency/cost of the flagship reasoning
- * model. Override with GEMINI_VISION_MODEL if a deployment needs to.
+ * in principle the flagship reasoning tier (gemini-3.1-pro-preview) would do
+ * this better than flash. Tried it here: confirmed via a live 429 that the
+ * free-tier AI Studio key this app is built around (see the module comment
+ * above — no billing setup required, that's the whole point) doesn't have
+ * quota for the Pro tier at all. Defaulting to it would break photo-reading
+ * outright for exactly the fabricator this app is for. Stays on the flash
+ * tier here too; a deployment that HAS a billed key can opt in with
+ * GEMINI_VISION_MODEL=gemini-3.1-pro-preview.
  */
-export const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3.1-pro";
+export const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || GEMINI_MODEL;
 
 /** Google AI Studio keys look like `AIza…`; Anthropic's look like `sk-ant-…`. */
 export function isGeminiKey(key: string): boolean {
