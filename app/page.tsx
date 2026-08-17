@@ -1829,8 +1829,14 @@ function Questions({
         ))}
       </div>
 
-      {/* live preview */}
-      {width && height && draft.type === "window" && (
+      {/* live preview — this renders the glass/mesh SHUTTER mix (Normal
+          Sliding / Domal). Z-section is a completely different, panel-based
+          build with no shutters or mesh at all, so showing this preview for
+          it is actively misleading (a fabricator answering a Z-section
+          panel-layout question would see a 3-shutter glass/glass/mesh
+          sliding-window picture that has nothing to do with what he's
+          building) — skip it once the system is known to be z_section. */}
+      {width && height && draft.type === "window" && answers.system !== "z_section" && (
         <div className="card flex justify-center p-4">
           <WindowDiagram width={width} height={height} shutters={previewShutters} size={190} />
         </div>
