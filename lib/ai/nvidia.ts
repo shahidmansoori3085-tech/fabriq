@@ -21,7 +21,7 @@ export const NVIDIA_MODEL = process.env.NVIDIA_MODEL || "meta/llama-3.1-70b-inst
  *  reason gemini.ts wanted a flagship reasoning tier for this: reading real
  *  handwriting and reasoning about an ambiguous sketch needs more than a
  *  small model reliably gives. */
-export const NVIDIA_VISION_MODEL = process.env.NVIDIA_VISION_MODEL || "meta/llama-3.2-90b-vision-instruct";
+export const NVIDIA_VISION_MODEL = process.env.NVIDIA_VISION_MODEL || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning";
 
 /** NVIDIA API-catalog keys look like `nvapi-…`. */
 export function isNvidiaKey(key: string): boolean {
@@ -105,7 +105,9 @@ export async function nvidiaJson<T>(opts: {
     return JSON.parse(text) as T;
   } catch {
     const m = text.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]) as T;
-    throw new Error("nvidia_bad_json");
+    if (m) {
+      try { return JSON.parse(m[0]) as T; } catch { /* fall through to the raw-text error below */ }
+    }
+    throw new Error(`nvidia_bad_json: ${text.slice(0, 400)}`);
   }
 }

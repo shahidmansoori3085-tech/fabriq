@@ -38,10 +38,20 @@ export type ProviderChoice =
  * Single source of truth for every AI route (vision + Copilot). Priority:
  *   1. caller-supplied key (Settings) — Anthropic, Gemini or NVIDIA, told apart by shape
  *   2. server ANTHROPIC_API_KEY — paid, highest quality, when the founder has set one
- *   3. server NVIDIA_API_KEY — free tier, a meaningfully larger vision model
- *      (Llama 3.2 90B) than Gemini's free tier can reach (see gemini.ts)
- *   4. server GEMINI_API_KEY — free tier, so the app works with zero setup
- *      for every fabricator once the founder sets this once
+ *   3. server GEMINI_API_KEY — free tier, proven reliable for reading a real
+ *      photographed sheet: fast, follows the JSON schema, and does not
+ *      hallucinate content on an unreadable image.
+ *   4. server NVIDIA_API_KEY — free tier, tried FIRST here originally (NVIDIA
+ *      hosts larger open vision models than Gemini's free tier can reach —
+ *      see gemini.ts on the Pro-tier quota wall) but every model actually
+ *      tried against a real sketch failed outright: the 90B Llama vision
+ *      variant hangs and never returns, the 11B variant ignores the JSON
+ *      schema and hallucinates plausible-looking window/door sizes on a
+ *      blank test image (exactly the failure this app cannot tolerate), and
+ *      even NVIDIA's own Nemotron Omni model — correct on a trivial test —
+ *      timed out past 200s on the real sketch. Kept available (chat with it
+ *      worked, just slower) but demoted below Gemini for vision until a
+ *      model on this catalog actually proves reliable on a real sheet.
  *   5. AWS Bedrock (server AWS credentials)
  * Returns null only when nothing at all is configured.
  *
@@ -55,10 +65,10 @@ export async function resolveProvider(apiKey?: string): Promise<ProviderChoice |
   if (apiKey && isNvidiaKey(apiKey)) return { provider: "nvidia", apiKey };
   const anthropicKey = apiKey || process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) return { provider: "anthropic", client: new Anthropic({ apiKey: anthropicKey }), model: AI_MODEL };
-  const serverNvidia = NVIDIA_SERVER_KEY();
-  if (serverNvidia) return { provider: "nvidia", apiKey: serverNvidia };
   const serverGemini = GEMINI_SERVER_KEY();
   if (serverGemini) return { provider: "gemini", apiKey: serverGemini };
+  const serverNvidia = NVIDIA_SERVER_KEY();
+  if (serverNvidia) return { provider: "nvidia", apiKey: serverNvidia };
   const awsAccessKey = AWS_ACCESS_KEY();
   const awsSecretKey = AWS_SECRET_KEY();
   if (awsAccessKey && awsSecretKey) {
