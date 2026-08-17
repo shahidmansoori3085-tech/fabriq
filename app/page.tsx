@@ -306,7 +306,7 @@ export default function FabriQ() {
 
     // Rule-based flow is adaptive — regenerate remaining questions with the
     // growing `known` so a system answer (e.g. Domal) changes what's asked
-    // next. AI-sourced batches are left as-is (already situation-aware).
+    // next.
     if (qSource !== "ai" && width && height) {
       const remaining = generateQuestions({
         type: draft.type, width, height, qty: draft.qty, known: next,
@@ -319,6 +319,27 @@ export default function FabriQ() {
     } else if (qIndex + 1 < questions.length) {
       setQIndex(qIndex + 1);
       return;
+    } else if (width && height) {
+      // An AI-generated batch is a one-shot guess made before any answer was
+      // known, so it can miss a question that only becomes necessary once an
+      // earlier one is answered (e.g. Z-section's combo direction unlocking
+      // a fixed-size question the AI never anticipated asking). The rule
+      // engine is exhaustive by construction — use it as a safety net right
+      // as the AI batch runs out: if it still wants to know something real,
+      // switch to the adaptive rule flow instead of silently building with a
+      // defaulted answer. (Switching qSource, not just appending once, matters
+      // here: a wording like "how big is the fixed part" depends on a
+      // direction answered in this very step, so it must be RECOMPUTED after
+      // each answer, not shown once from before that answer existed.)
+      const stillMissing = generateQuestions({
+        type: draft.type, width, height, qty: draft.qty, known: next,
+      });
+      if (stillMissing.length > 0) {
+        setQSource("rules");
+        setQuestions([...questions, ...stillMissing]);
+        setQIndex(qIndex + 1);
+        return;
+      }
     }
 
     {
