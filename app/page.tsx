@@ -227,8 +227,21 @@ export default function FabriQ() {
       });
       const data = await r.json();
       if (data.source === "ai" && data.questions?.length) {
-        setQuestions(data.questions);
-        setQSource("ai");
+        // Cap the AI batch to ids the rule engine also considers relevant
+        // for this exact `known` state — e.g. it once asked "how many
+        // sashes?" for a Z-section item whose layout (zType=row) means the
+        // engine never even reads a sash count, that being fully implied by
+        // the panel row instead. The rule engine's own id set is the
+        // ceiling: anything outside it is a question the build doesn't need
+        // answered, however plausible-sounding, so drop it rather than ask
+        // the fabricator something that changes nothing.
+        const relevantIds = new Set(local.map((lq) => lq.id));
+        const filtered = data.questions.filter((q: Question) => relevantIds.has(q.id));
+        if (filtered.length > 0) {
+          setQuestions(filtered);
+          setQSource("ai");
+        }
+        // else: local (rules) questions, already set above, stand as-is
       }
     } catch { /* rules already shown */ }
     setLoadingQs(false);
