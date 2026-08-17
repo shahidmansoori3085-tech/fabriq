@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
+import { nvidiaJson } from "@/lib/ai/nvidia";
 
 const CARD_SCHEMA = {
   type: "object" as const,
@@ -45,6 +46,21 @@ export async function POST(req: NextRequest) {
   if (resolved.provider === "gemini") {
     try {
       const parsed = await geminiJson<{ legible: boolean; [k: string]: unknown }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: CARD_SCHEMA, images: [{ data: image, mediaType }],
+        userText: "Read this visiting card and extract the shop profile.",
+      });
+      if (parsed.legible === false) {
+        return NextResponse.json({ error: "unreadable", message: "Card not clear — please fill in manually." }, { status: 200 });
+      }
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json({ error: "read_failed", message: "Could not read the card — please fill in manually." }, { status: 500 });
+    }
+  }
+
+  if (resolved.provider === "nvidia") {
+    try {
+      const parsed = await nvidiaJson<{ legible: boolean; [k: string]: unknown }>({
         apiKey: resolved.apiKey, system: SYSTEM, schema: CARD_SCHEMA, images: [{ data: image, mediaType }],
         userText: "Read this visiting card and extract the shop profile.",
       });

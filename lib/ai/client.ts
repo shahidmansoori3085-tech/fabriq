@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { isGeminiKey } from "./gemini";
+import { isNvidiaKey } from "./nvidia";
 
 /** Model is a config value — revisited per eval run (doc 03). */
 export const AI_MODEL = process.env.FABRIQ_AI_MODEL || "claude-opus-5";
@@ -23,18 +24,25 @@ export const hasBedrockCreds = () => !!(AWS_ACCESS_KEY() && AWS_SECRET_KEY());
  *  to paste their own key — same idea as ANTHROPIC_API_KEY, but for the free
  *  Google AI Studio tier. */
 export const GEMINI_SERVER_KEY = () => envAny("GEMINI_API_KEY", "geminiapikey", "GEMINIAPIKEY");
+/** Same idea, for the NVIDIA API Catalog free tier — added after Gemini's
+ *  free key turned out to have no quota at all for its Pro reasoning tier
+ *  (see gemini.ts), so photo-reading had no path to a stronger model. */
+export const NVIDIA_SERVER_KEY = () => envAny("NVIDIA_API_KEY", "nvidiaapikey", "NVIDIAAPIKEY");
 
 export type ProviderChoice =
   | { provider: "anthropic" | "bedrock"; client: Anthropic; model: string }
-  | { provider: "gemini"; apiKey: string };
+  | { provider: "gemini"; apiKey: string }
+  | { provider: "nvidia"; apiKey: string };
 
 /**
  * Single source of truth for every AI route (vision + Copilot). Priority:
- *   1. caller-supplied key (Settings) — Anthropic or Gemini, told apart by shape
- *   2. server ANTHROPIC_API_KEY
- *   3. server GEMINI_API_KEY — free tier, so the app works with zero setup
+ *   1. caller-supplied key (Settings) — Anthropic, Gemini or NVIDIA, told apart by shape
+ *   2. server ANTHROPIC_API_KEY — paid, highest quality, when the founder has set one
+ *   3. server NVIDIA_API_KEY — free tier, a meaningfully larger vision model
+ *      (Llama 3.2 90B) than Gemini's free tier can reach (see gemini.ts)
+ *   4. server GEMINI_API_KEY — free tier, so the app works with zero setup
  *      for every fabricator once the founder sets this once
- *   4. AWS Bedrock (server AWS credentials)
+ *   5. AWS Bedrock (server AWS credentials)
  * Returns null only when nothing at all is configured.
  *
  * Async because the Bedrock branch dynamically imports @anthropic-ai/bedrock-sdk —
@@ -44,8 +52,11 @@ export type ProviderChoice =
  */
 export async function resolveProvider(apiKey?: string): Promise<ProviderChoice | null> {
   if (apiKey && isGeminiKey(apiKey)) return { provider: "gemini", apiKey };
+  if (apiKey && isNvidiaKey(apiKey)) return { provider: "nvidia", apiKey };
   const anthropicKey = apiKey || process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) return { provider: "anthropic", client: new Anthropic({ apiKey: anthropicKey }), model: AI_MODEL };
+  const serverNvidia = NVIDIA_SERVER_KEY();
+  if (serverNvidia) return { provider: "nvidia", apiKey: serverNvidia };
   const serverGemini = GEMINI_SERVER_KEY();
   if (serverGemini) return { provider: "gemini", apiKey: serverGemini };
   const awsAccessKey = AWS_ACCESS_KEY();

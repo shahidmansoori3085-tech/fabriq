@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
+import { nvidiaJson } from "@/lib/ai/nvidia";
 import { SHEET_READING_KNOWLEDGE } from "@/lib/engine/knowledge";
 
 const EXTRACT_SCHEMA = {
@@ -121,6 +122,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[read-sheet/gemini]", e);
+      return NextResponse.json(
+        { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
+        { status: 500 },
+      );
+    }
+  }
+
+  if (resolved.provider === "nvidia") {
+    try {
+      const parsed = await nvidiaJson({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
+      });
+      return NextResponse.json(parsed);
+    } catch (e) {
+      console.error("[read-sheet/nvidia]", e);
       return NextResponse.json(
         { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
         { status: 500 },

@@ -205,7 +205,9 @@ export async function POST(req: NextRequest) {
   // it can't reuse resolved.client. Bedrock ignores this value (it reads AWS
   // creds itself); for "anthropic", resolveProvider only chose that branch
   // because one of these two was truthy, so this is always the right key.
-  const key = resolved.provider === "gemini" ? resolved.apiKey : (apiKey || process.env.ANTHROPIC_API_KEY || "");
+  const key = resolved.provider === "gemini" || resolved.provider === "nvidia"
+    ? resolved.apiKey
+    : (apiKey || process.env.ANTHROPIC_API_KEY || "");
   try {
     const raw = await chatComplete({
       system: SYSTEM,

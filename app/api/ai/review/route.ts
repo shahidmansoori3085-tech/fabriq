@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
+import { nvidiaJson } from "@/lib/ai/nvidia";
 import type { ReviewFinding } from "@/lib/engine/types";
 
 const REVIEW_SCHEMA = {
@@ -66,6 +67,21 @@ export async function POST(req: NextRequest) {
   if (resolved.provider === "gemini") {
     try {
       const parsed = await geminiJson<{ findings: ReviewFinding[]; confidenceAdjustment?: number; summary: string }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: REVIEW_SCHEMA,
+        userText: JSON.stringify({
+          job_items: items, estimate_summary: summary, already_flagged_by_rules: deterministicFindings,
+          note: "Do not repeat anything under already_flagged — give new insights only.",
+        }),
+      });
+      return NextResponse.json({ ...parsed, source: "ai" });
+    } catch {
+      return NextResponse.json({ findings: [], source: "error" });
+    }
+  }
+
+  if (resolved.provider === "nvidia") {
+    try {
+      const parsed = await nvidiaJson<{ findings: ReviewFinding[]; confidenceAdjustment?: number; summary: string }>({
         apiKey: resolved.apiKey, system: SYSTEM, schema: REVIEW_SCHEMA,
         userText: JSON.stringify({
           job_items: items, estimate_summary: summary, already_flagged_by_rules: deterministicFindings,

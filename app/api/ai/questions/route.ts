@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
+import { nvidiaJson } from "@/lib/ai/nvidia";
 import { generateQuestions, type Question } from "@/lib/engine/questions";
 import { ENGINE_KNOWLEDGE } from "@/lib/engine/knowledge";
 import { formatFtInSut } from "@/lib/engine/units";
@@ -115,6 +116,22 @@ export async function POST(req: NextRequest) {
   if (resolved.provider === "gemini") {
     try {
       const parsed = await geminiJson<{ questions: Question[] }>({
+        apiKey: resolved.apiKey, system: SYSTEM, schema: QUESTION_SCHEMA,
+        userText: JSON.stringify({
+          opening_type: type,
+          size_display: `${formatFtInSut(width)} × ${formatFtInSut(height)}`,
+          width_um: width, height_um: height, qty, already_known: known,
+        }),
+      });
+      return NextResponse.json({ questions: parsed.questions.slice(0, 4), source: "ai" });
+    } catch {
+      return NextResponse.json({ questions: fallback, source: "rules-fallback" });
+    }
+  }
+
+  if (resolved.provider === "nvidia") {
+    try {
+      const parsed = await nvidiaJson<{ questions: Question[] }>({
         apiKey: resolved.apiKey, system: SYSTEM, schema: QUESTION_SCHEMA,
         userText: JSON.stringify({
           opening_type: type,
