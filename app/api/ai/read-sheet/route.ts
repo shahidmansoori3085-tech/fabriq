@@ -25,6 +25,10 @@ const EXTRACT_SCHEMA = {
           tracks: { type: "string" as const },
           mix: { type: "string" as const },
           system: { type: "string" as const },
+          z_axis: { type: "string" as const, enum: ["cols", "rows"] },
+          z_panels: { type: "string" as const },
+          part_columns: { type: "integer" as const },
+          part_rows: { type: "integer" as const },
           notes: { type: "string" as const },
           confidence: { type: "string" as const, enum: ["high", "medium", "low"] },
         },
@@ -51,8 +55,8 @@ What these sheets contain (this describes the INPUT — the paper is written in 
 - Hindi/Urdu labels — "जाली"/"jali" means mesh, "दो पट्टी"/"2 patti" means 2 track
 - System shorthand: "domal", "18mm", "section", "Z"
 - A heading written once above a GROUP of boxes ("Normal 3 track", "Z section openable+fix window", "Domal", ...) applies to EVERY box in that group, not just the first — carry it down to each box until a new heading appears. Missing this is a common misread; double-check every box in a group got the heading's system/track info before moving to the next group.
-- A window box split into sections labelled "fix" and "openable" (sometimes with a width against each, e.g. "fix 22\" | openable | fix 22\"") is a multi-panel Z-section window. Report ONE item for the whole box using its overall width/height, and put the panel order and each labelled size into "notes" exactly as written, in order — the order is part of the build, so never drop it or reorder it.
-- A partition box drawn with an internal grid (extra lines dividing it into rows/columns of cells) — quote the grid into "notes", e.g. "grid ~4 columns x 3 rows" (count the cells as best you can), so the fabricator can set bay/row spacing correctly. Do not guess bay spacing yourself.
+- A window box split into sections labelled "fix" and "openable" (sometimes with a width against each, e.g. "fix 22\" | openable | fix 22\"") is a multi-panel Z-section window. Report ONE item for the whole box using its overall width/height. THE APP CANNOT ASK A GOOD FOLLOW-UP QUESTION ABOUT SOMETHING THE SHEET ALREADY ANSWERED — so when the panel order and each fixed panel's size are legible, fill z_axis ("cols" for side-by-side panels, "rows" for stacked) and z_panels: a left-to-right (or top-to-bottom) comma list, "F" plus the size in FEET for a fixed panel, "O" for an openable one — e.g. fix 22in | openable | fix 22in -> z_axis "cols", z_panels "F1.83,O,F1.83". This lets the app skip asking a question it already has the answer to. Still put the exact wording in "notes" too, including anything that doesn't fit the panel list cleanly (an odd extra label like "top fix 30\"" on part of a panel) — that stays as a quote for the fabricator to check, not something to silently fold into z_panels or guess about. If the panel sizes are NOT given (just the order, e.g. "openable | fix | openable" with no width on the fix), leave z_panels empty and quote the order into notes instead — the app will ask for the missing size, which is a real gap, not a redundant question.
+- A partition box drawn with an internal grid (extra lines dividing it into rows/columns of cells) — count the columns and rows and fill part_columns/part_rows (best count you can make from the drawing), so the app can work out bay/row spacing itself instead of asking the fabricator to state a spacing the drawing already shows. Also quote the grid into "notes" for the fabricator to double check, e.g. "grid ~4 columns x 3 rows".
 - W (window), D (door), quantity written as "x5" or "5 nos"
 
 Rules (CRITICAL):
@@ -63,7 +67,8 @@ Rules (CRITICAL):
 - qty defaults to 1 when not written
 - tracks: "2"/"3" when the sheet says or draws it, otherwise omit
 - mix: G=glass, J=mesh, e.g. "GGJ" when visible, otherwise omit
-- notes: for each item, anything extra written next to that box — including panel breakdowns and grid counts per the rules above
+- z_axis/z_panels, part_columns/part_rows: fill these whenever the drawing actually shows them (see rules above) — the whole point is to ask the fabricator only about what the sheet DIDN'T already tell you. Never fill them from a guess; leave empty/omitted when genuinely not legible.
+- notes: for each item, anything extra written next to that box — including the exact panel wording and grid counts per the rules above, even when you also filled the structured fields
 - If the photo is blurred or unreadable, return legible: false and items: []
 - Do NOT hallucinate — report only what is actually visible
 

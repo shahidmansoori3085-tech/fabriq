@@ -15,6 +15,15 @@ export interface ExtractedItem {
   tracks?: string;
   mix?: string;
   system?: string;
+  /** Z-section panel row, read straight off the sheet when the layout and
+   *  each fixed panel's size were legible — e.g. "F1.83,O,F1.83" for
+   *  fix|open|fix. Lets the app skip asking a panel-layout question the
+   *  sheet already answered. */
+  z_axis?: "cols" | "rows";
+  z_panels?: string;
+  /** Partition grid, counted straight off the drawing. */
+  part_columns?: number;
+  part_rows?: number;
   notes?: string;
   confidence: "high" | "medium" | "low";
 }

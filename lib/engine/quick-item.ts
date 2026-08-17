@@ -14,7 +14,7 @@ import type { JobItem, MaterialList, OpeningType, SystemId } from "./types";
 /** How many openable Z-pipe shutters a custom panel row (e.g. "F2,O,F2") needs —
  *  mirrors estimator.ts's own panel parsing, just counting sashes rather than
  *  building cut pieces. */
-function countZPanelSashes(spec: string | undefined): number {
+export function countZPanelSashes(spec: string | undefined): number {
   if (!spec) return 1;
   const n = spec.split(",").reduce((total, raw) => {
     const tok = raw.trim();

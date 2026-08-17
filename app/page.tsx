@@ -12,7 +12,7 @@ import {
   mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
 import { estimate } from "@/lib/engine/estimator";
-import { buildJobItem } from "@/lib/engine/quick-item";
+import { buildJobItem, countZPanelSashes } from "@/lib/engine/quick-item";
 import {
   getSection, SECTIONS, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
 } from "@/lib/engine/sections";
@@ -108,6 +108,22 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
     else if (/normal|18|bombay|sliding/.test(sys)) k.system = "normal";
     if (row.tracks === "2" || row.tracks === "3" || row.tracks === "4") k.tracks = row.tracks;
     if (row.mix && /^[GJS]+$/i.test(row.mix)) k.mix = row.mix.toUpperCase();
+    // The sheet already showed the panel layout — asking "what is the
+    // layout?" again would be a question the app already has the answer to.
+    if (k.system === "z_section" && row.z_axis && row.z_panels?.trim()) {
+      k.zType = "row";
+      k.zAxis = row.z_axis;
+      k.zPanels = row.z_panels.trim();
+    }
+  }
+  if (row.type === "partition" && row.part_columns && row.part_rows) {
+    // Grid counted straight off the drawing — derive the bay/row spacing
+    // the engine actually needs instead of asking for a spacing the
+    // drawing already implies.
+    const w = parseDimension(normalizeRaw(row.width_raw, row.unit_guess));
+    const h = parseDimension(normalizeRaw(row.height_raw, row.unit_guess));
+    if (w && row.part_columns > 0) k.partBayFt = (toFeet(w) / row.part_columns).toFixed(2);
+    if (h && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
   }
   return k;
 }
@@ -380,9 +396,11 @@ export default function FabriQ() {
         sys = "z_section";
         const zType = next.zType ?? "openable";
         next.zDoor = zType === "door" ? "yes" : "no";
-        next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : "openable";
+        next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
         const n = zType === "fixed" || zType === "door"
           ? 1
+          : zType === "row"
+          ? countZPanelSashes(next.zPanels)
           : Math.max(1, parseInt(next.zSashCount ?? "1", 10));
         shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
       } else {
