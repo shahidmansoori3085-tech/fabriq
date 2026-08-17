@@ -203,6 +203,12 @@ function legacyComboPanels(item: JobItem): { axis: "cols" | "rows"; panels: ZPan
   if (item.meta.zComboDir === "both") {
     return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }, { kind: "fixed", ft }] };
   }
+  if (item.meta.zComboDir === "center") {
+    // openable | fixed | openable — one sash either side of a centre-fixed
+    // pane. Sash COUNT here means "each side", not the window total, since
+    // the guided question only ever asks for one number.
+    return { axis: "cols", panels: [{ kind: "open", sashes }, { kind: "fixed", ft }, { kind: "open", sashes }] };
+  }
   if (item.meta.zComboDir === "side") {
     return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }] };
   }

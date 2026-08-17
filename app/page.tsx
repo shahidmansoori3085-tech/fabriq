@@ -1214,6 +1214,7 @@ const Z_TYPE: [string, string][] = [
 ];
 const Z_COMBO_DIR: [string, string][] = [
   ["top", "Fixed On Top"], ["side", "Fixed On One Side"], ["both", "Fixed On Both Sides"],
+  ["center", "Fixed In The Middle"],
 ];
 const Z_FIXED_FT: [string, string][] = [["1.5", "1.5 ft"], ["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
 

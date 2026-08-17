@@ -85,7 +85,7 @@ WINDOW:
 - Normal/Domal sliding: tracks (2/3/4/2.5), mix (G=glass, J=mesh, e.g. "GGJ"), handle (Normal only — std/2x1/3x34/deep)
 - Domal has NO handle question. Domal extras: domalFix (yes/no — a fixed glass band above the sliding?), domalFixFt (1/1.5/2/2.5), only when domalFix=yes
 - Z-section (glass-only, hinge-openable): zSize (light=small / heavy=big), zType (openable/combo/fixed/door/row), zSashCount (1/2/3) for openable and combo.
-  For the common named layouts use zType=combo with zComboDir (top/side/both) and zFixedFt (1.5/2/2.5/3 — for "both", the width of EACH side).
+  For the common named layouts use zType=combo with zComboDir (top/side/both/center — "center" is openable|fixed|openable, fixed in the middle) and zFixedFt (1.5/2/2.5/3 — for "both", the width of EACH side).
   For ANY other panel arrangement use zType=row with zAxis (cols=side-by-side / rows=stacked) and
   zPanels — the panel row written left-to-right (or top-to-bottom) as comma-separated tokens,
   "F" plus a size in feet for a fixed panel and "O" for an openable one. Examples:

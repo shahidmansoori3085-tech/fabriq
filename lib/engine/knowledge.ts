@@ -173,11 +173,12 @@ common rows:
    "fixed on top"        = stacked:      [Fixed 2ft] [Openable]
    "fixed on one side"   = side-by-side: [Fixed 2ft] [Openable]
    "fixed on both sides" = side-by-side: [Fixed 2ft] [Openable] [Fixed 2ft]
+   "fixed in the middle" = side-by-side: [Openable] [Fixed 2ft] [Openable]
    "fully fixed"         = one Fixed panel filling everything
-Any other real arrangement a fabricator draws — fixed in the MIDDLE, three
-fixed strips, four stacked bands, openable | fixed | openable — is just a
-different panel row and is fully supported. Do not try to force a drawing into
-one of the named layouts; describe the actual panel order instead.
+Any other real arrangement a fabricator draws — three fixed strips, four
+stacked bands, an uneven mix — is just a different panel row (zType=row) and
+is fully supported. Do not try to force a drawing into one of the named
+layouts; describe the actual panel order instead.
 
 THE CRITICAL ODDITY — the sash is BIGGER than its opening
 In every other system a shutter is cut smaller than the space it fills. In

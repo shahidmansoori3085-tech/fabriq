@@ -208,15 +208,19 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
             { value: "top", label: "On top (horizontal band)", hint: "Fixed above, opens below" },
             { value: "side", label: "On one side (vertical band)", hint: "One side fixed, other opens" },
             { value: "both", label: "On both sides", hint: "Fixed | openable | fixed — openable in the middle" },
+            { value: "center", label: "In the middle", hint: "Openable | fixed | openable — fixed in the middle" },
           ],
         });
       }
       // Sash count applies to the openable band (openable window OR the
       // openable part of a fix+openable combo). Not for a plain fixed or door.
+      // For "center", it means sashes on EACH side of the fixed middle, not
+      // the window total — there are two separate openable groups there.
       if ((zType === "openable" || zType === "combo") && !ctx.known.zSashCount) {
+        const perSide = zType === "combo" && ctx.known.zComboDir === "center";
         qs.push({
           id: "zSashCount",
-          question: "How many sashes in the openable part?",
+          question: perSide ? "How many sashes on EACH side of the fixed middle?" : "How many sashes in the openable part?",
           why: "Sash count decides the number of mullions and shutters",
           options: [
             { value: "1", label: "1 sash", hint: "No mullion" },
@@ -225,12 +229,13 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           ],
         });
       }
-      // For a combo, how big is the fixed part (height if top, width if side).
+      // For a combo, how big is the fixed part (height if top, width if side/centre).
       if (zType === "combo" && !ctx.known.zFixedFt) {
         const dir = ctx.known.zComboDir;
         qs.push({
           id: "zFixedFt",
           question: dir === "both" ? "How wide is EACH fixed side (feet)?"
+            : dir === "center" ? "How wide is the fixed part in the middle (feet)?"
             : dir === "side" ? "How wide is the fixed part on the side (feet)?"
             : "How tall is the fixed part on top (feet)?",
           why: dir === "both"
