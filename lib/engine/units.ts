@@ -25,36 +25,42 @@ export const BAR_16FT: Um = 16 * UM_PER_FOOT; // 4876800 µm = 4876.8 mm
 export const BAR_8FT: Um = 8 * UM_PER_FOOT; // 2438400 µm = 2438.4 mm
 
 /**
- * Word-based units — "feet", "inch", "sut", "mm" — spelled out rather than as a
- * symbol. A fabricator writes these in whichever order comes naturally: "10
- * feet" as often as "feet 10", and a compound size in any order of parts
- * ("4 feet 6 inch 4 sut" or "6 inch 4 feet"). The symbol forms (4'6", 1372mm)
- * already parse correctly below and are left alone; this only triggers when an
- * actual unit WORD is present, so it never touches those.
+ * Word-based units — "feet", "inch", "sut", "mm" — spelled out rather than as
+ * a symbol, PLUS the symbols (" ') as their own tokens so a MIXED size like
+ * `33" 5sut` (inches by symbol, sut by word — exactly how a photo-read sheet
+ * comes through) tokenizes and totals correctly instead of the symbol part
+ * going unclaimed and silently vanishing from the total. "fit"/"fits" is
+ * accepted alongside "feet"/"ft" — a common misspelling/OCR reading a
+ * fabricator's own handwriting produces often enough to be worth handling
+ * rather than rejecting. A fabricator writes these in whichever order comes
+ * naturally: "10 feet" as often as "feet 10", and a compound size in any
+ * order of parts ("4 feet 6 inch 4 sut" or "6 inch 4 feet").
  */
 const UNIT_WORD_VALUE: Record<string, number> = {
   mm: UM_PER_MM, cm: UM_PER_MM * 10,
-  ft: UM_PER_FOOT, feet: UM_PER_FOOT, "फुट": UM_PER_FOOT,
-  in: UM_PER_INCH, inch: UM_PER_INCH, inches: UM_PER_INCH,
+  ft: UM_PER_FOOT, feet: UM_PER_FOOT, fit: UM_PER_FOOT, fits: UM_PER_FOOT, "फुट": UM_PER_FOOT, "'": UM_PER_FOOT,
+  in: UM_PER_INCH, inch: UM_PER_INCH, inches: UM_PER_INCH, "\"": UM_PER_INCH,
   sut: UM_PER_SUT,
 };
-const UNIT_WORD_RE = /^(mm|cm|ft|feet|फुट|in|inch|inches|sut)$/;
+const UNIT_WORD_RE = /^(mm|cm|ft|feet|fit|fits|फुट|'|in|inch|inches|"|sut)$/;
 const NUMBER_TOKEN_RE = /^\d+(?:\.\d+)?$/;
 
 /**
- * "feet 10 inch 6", "10 feet 6 inch", "sut 4", "inch 54" — any order, any
- * spacing, unit word before or after its number. Every number must sit next
- * to a unit word or the whole thing is refused (never guess which part is
- * unitless) — that is what keeps this safe to try before the older,
- * order-fixed parsing below.
+ * "feet 10 inch 6", "10 feet 6 inch", "sut 4", "inch 54", `33" 5sut` — any
+ * order, any spacing, symbol or word, unit before or after its number. Every
+ * number must sit next to a unit token or the whole thing is refused (never
+ * guess which part is unitless) — that is what keeps this safe to try before
+ * the older, order-fixed parsing below.
  */
 function parseUnitPhrase(raw: string): Um | null {
   const lower = raw.trim().toLowerCase();
-  // insert a boundary at every digit<->letter edge so "4feet6inch" and
-  // "4 feet 6 inch" tokenize the same way
+  // insert a boundary at every digit<->letter edge AND around every quote/
+  // apostrophe, so "4feet6inch", "4 feet 6 inch" and `33"5sut` all tokenize
+  // the same way
   const spaced = lower
-    .replace(/(\d)([a-zA-Zऀ-ॿ])/g, "$1 $2")
-    .replace(/([a-zA-Zऀ-ॿ])(\d)/g, "$1 $2");
+    .replace(/(\d)([a-zA-Zऀ-ॿ'"])/g, "$1 $2")
+    .replace(/([a-zA-Zऀ-ॿ'"])(\d)/g, "$1 $2")
+    .replace(/(['"])/g, " $1 ");
   const tokens = spaced.split(/\s+/).filter(Boolean);
   if (tokens.length < 2 || !tokens.some((t) => UNIT_WORD_RE.test(t))) return null;
 
@@ -70,8 +76,10 @@ function parseUnitPhrase(raw: string): Um | null {
     used[i] = true;
     used[numIdx] = true;
   }
-  // a number nothing claimed has no stated unit — ambiguous, refuse rather than guess
-  if (tokens.some((t, i) => !used[i] && NUMBER_TOKEN_RE.test(t))) return null;
+  // anything left unclaimed — a bare number with no unit, or a stray symbol —
+  // means the string wasn't fully accounted for. Refuse rather than silently
+  // total up only the part we understood.
+  if (tokens.some((t, i) => !used[i])) return null;
   return Math.round(total);
 }
 
@@ -221,7 +229,7 @@ export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | 
 
   // anything carrying its own unit — mm / cm / inch / feet / sut forms,
   // symbol or spelled-out word, in either order (parseDimension handles both)
-  if (/(mm|cm|"|in|inch|'|ft|feet|फुट|sut)/.test(s)) {
+  if (/(mm|cm|"|in|inch|'|ft|feet|fit|फुट|sut)/.test(s)) {
     const um = parseDimension(s);
     return um === null ? null : explicit(um);
   }
