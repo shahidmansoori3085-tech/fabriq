@@ -78,6 +78,51 @@ written exactly as written, in its own script and words — the app shows it bac
 "Written on the sheet: …", so translating it would misquote the fabricator's own note.
 Anything you write in your own voice stays simple, professional English.`;
 
+/**
+ * Turn a provider error into something the fabricator can act on.
+ *
+ * Every failure used to render as the same "Could not read the photo. Try
+ * again" — which is actively wrong advice when the cause is a rate limit
+ * (trying again immediately is the one thing that cannot work) and useless
+ * when the key is bad. The `reason` code is a short slug, never the raw
+ * provider text: it is enough to diagnose from a log or a bug report without
+ * leaking provider internals to the client.
+ */
+function readFailure(e: unknown): { error: string; message: string; reason: string } {
+  const raw = e instanceof Error ? e.message : String(e);
+  const status = raw.match(/_(\d{3})\b/)?.[1];
+  const lower = raw.toLowerCase();
+
+  if (status === "429" || lower.includes("quota") || lower.includes("rate limit")) {
+    return {
+      error: "read_failed", reason: "rate_limited",
+      message: "Too many photo reads just now. Wait a minute and try again — or enter the sizes yourself.",
+    };
+  }
+  if (status === "401" || status === "403" || lower.includes("auth") || lower.includes("api key")) {
+    return {
+      error: "read_failed", reason: "bad_key",
+      message: "The AI key was rejected — check it under Settings (⚙).",
+    };
+  }
+  if (lower.includes("timeout") || lower.includes("aborted") || lower.includes("etimedout")) {
+    return {
+      error: "read_failed", reason: "timeout",
+      message: "Reading the photo took too long. Try a clearer or smaller photo, or enter the sizes yourself.",
+    };
+  }
+  if (lower.includes("bad_json") || lower.includes("no_text")) {
+    return {
+      error: "read_failed", reason: "bad_response",
+      message: "The photo could not be read cleanly. Try again, or enter the sizes yourself.",
+    };
+  }
+  return {
+    error: "read_failed", reason: "unknown",
+    message: "Could not read the photo. Try again, or enter the sizes yourself.",
+  };
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { image, mediaType, images, notes, apiKey } = body as {
@@ -122,10 +167,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[read-sheet/gemini]", e);
-      return NextResponse.json(
-        { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
-        { status: 500 },
-      );
+      return NextResponse.json(readFailure(e), { status: 500 });
     }
   }
 
@@ -137,10 +179,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[read-sheet/nvidia]", e);
-      return NextResponse.json(
-        { error: "read_failed", message: "Could not read the photo. Try again, or enter the sizes yourself." },
-        { status: 500 },
-      );
+      return NextResponse.json(readFailure(e), { status: 500 });
     }
   }
 

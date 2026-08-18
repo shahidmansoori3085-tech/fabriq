@@ -22,6 +22,43 @@
  */
 
 /**
+ * The words a workshop actually uses, in the scripts they actually write.
+ *
+ * Two independent reasons this matters. Reading a sheet: these words ARE the
+ * sheet — a heading is as likely to say "दो पट्टी" as "2 track", and a model
+ * that doesn't know the word cannot carry it down to the boxes under it.
+ * Talking to the fabricator: he says "palla", not "shutter leaf", and an
+ * assistant that answers in textbook English reads as not knowing the trade.
+ *
+ * Sourced from the founder-verified system docs (09-zsection, 10-domal) and
+ * from real sheets read during testing — not from a dictionary.
+ */
+const TRADE_VOCABULARY = `
+TRADE VOCABULARY — what the words on the paper and in his speech mean
+
+Openings and parts
+- चौखट / chokhat / "outer"    = the fixed outer frame, mounted to the wall
+- पल्ला / palla                = the shutter (sliding leaf, openable sash, or door leaf)
+- जाली / jali / "patti jali"   = mesh (insect net). Say "mesh" in English, "jali" in Hindi.
+- मुलियन / "middle" / "midal"  = mullion, the vertical divider between two shutters
+- टिप / "flip" / clip          = the glazing clip that snaps in and locks the glass
+- पट्टी / patti                = a strip or track. "दो पट्टी" = 2 track, "तीन पट्टी" = 3 track.
+- सूत / sut                    = 1/8 inch. Always a fraction of an inch, never a whole unit.
+- कट / कctar / "kaatar"        = a 45-degree mitre cut (how frames are cut)
+
+Systems, as a shop names them
+- "Normal", "normal sliding", "18mm", "Bombay" = Normal Sliding
+- "Domal", "Doomal", "27mm", "29mm", "Euro"    = Domal. One system, all these names.
+- "Z", "Z section", "जेड"                       = Z-Section
+- "SP" / "DP"                                   = the two partition profiles (single/double groove)
+
+Layout words on a drawing
+- "fix" / "फिक्स"        = a fixed panel (does not open)
+- "openable" / "खुलने वाला" = an openable panel
+- "upar fix" / "ऊपर फिक्स" = a fixed glass band ABOVE the sliding portion (Domal)
+`;
+
+/**
  * The rules that hold across every system. Read this first — most of what
  * looks like a per-system special case is really one of these applied.
  */
@@ -330,11 +367,57 @@ You are not filling in a fixed form. Work it out for this specific opening:
 `;
 
 /**
+ * Concrete right/wrong calls, all taken from real mistakes this app actually
+ * made in front of the fabricator. Rules alone kept being read too loosely —
+ * "ask what's missing" sounds obvious and was still getting violated in both
+ * directions (asking what the sheet already said, AND skipping something
+ * genuinely unknown), so the judgement calls are spelled out as examples.
+ */
+const ASKING_WORKED_EXAMPLES = `
+JUDGEMENT CALLS — real ones, right and wrong
+
+WRONG: a sheet has 2 Normal windows, 2 Z-section windows and a partition,
+and the app asks "Which system for all 5 windows?"
+RIGHT: ask nothing about system. Every window on that sheet already carries
+its own system from the heading above it. A job may freely mix systems;
+"they are not all the same" is not the same as "it is unknown".
+
+WRONG: the sheet says fix 22" | openable | fix 22", and the app still asks
+"What is the panel layout for this window?"
+RIGHT: the layout AND both sizes are already given — ask neither. The only
+thing genuinely still unknown for that window is the pipe size family
+(zSize), which the sheet never states. Ask exactly that.
+
+WRONG: the sheet says openable | fix | openable with no size on the fixed
+panel, and the app assumes a common 2ft and computes.
+RIGHT: ask for that one width. The order is known, the size is not, and a
+guessed width produces a confident wrong cutting list.
+
+WRONG: an 8-foot-wide Normal Sliding window, and the app decides "wide, so
+3 track" and moves on.
+RIGHT: ask. Shops fit 2-track on wide windows and 3-track on narrow ones
+depending on what the customer wants. Offer 3 track FIRST as the likely
+answer if you like — but it is an offer, not an assumption.
+
+WRONG: a Z-section window whose layout is fully known, and the app asks
+"how many openable sashes?"
+RIGHT: don't ask. For a known panel row the sash count is already implied by
+the row itself (each openable panel is one sash). A question whose answer
+cannot change any cut piece is a question not worth the fabricator's time.
+
+WRONG: a partition drawn with a 4x3 grid, and the app asks "what bay spacing
+do you want?"
+RIGHT: the drawing already answers it — 4 columns across the width, 3 rows
+up the height. Read the spacing off the grid.
+`;
+
+/**
  * The full briefing — every system, plus how to reason about what to ask.
  * Injected into the question-generation and Copilot prompts.
  */
 export const ENGINE_KNOWLEDGE = [
-  UNIVERSAL, NORMAL_SLIDING, DOMAL, Z_SECTION, DOOR, PARTITION, ASKING,
+  UNIVERSAL, TRADE_VOCABULARY, NORMAL_SLIDING, DOMAL, Z_SECTION, DOOR, PARTITION,
+  ASKING, ASKING_WORKED_EXAMPLES,
 ].join("\n");
 
 /**
@@ -360,4 +443,93 @@ WHAT MATTERS ON A MEASUREMENT SHEET (because it changes the build)
 • GLASS vs MESH — diagonal strokes mean glass; "jali" / "जाली" means mesh.
 • FIXED BAND — a Domal window may be drawn with a separate band above the
   sliding portion. That band's height is a real, separate measurement.
+
+${TRADE_VOCABULARY}
+
+HOW SIZES ARE ACTUALLY WRITTEN (all of these are real, from real sheets)
+The app's parser accepts every form below — copy what is written, never
+convert it, and never "tidy" it into a form it wasn't written in.
+  36"           inches
+  4'6"          feet + inches
+  4-6-4         4 feet 6 inch 4 sut (three dash-separated parts)
+  33" 5sut      inches + sut, sut spelled out. NOT feet — there is no feet
+                term here at all. Keep BOTH parts: dropping the 33" and
+                reporting only "5sut" is a real mistake that has happened.
+  57"2sut       the same thing with no space
+  15 fit        feet, spelled the way it is often written/read ("fit" for
+                "feet"). Also seen: 15 ft, 15 feet, फुट.
+  1372mm        millimetres
+Rule of thumb for a BARE number with no unit at all: 2–12 is feet, 24–96 is
+inches, 300+ is millimetres. Set unit_guess accordingly, but still copy the
+raw number as written.
+
+────────────────────────────────────────────────────────────────────────
+WORKED EXAMPLE — a complete real sheet, and exactly what it should produce
+This is a real fabricator's sheet, verified end to end. Match this shape.
+
+What is on the paper:
+
+    Normal  3 track
+      [box]  36"  ...  60"
+      [box]  33" 5sut  ...  57" 2sut
+
+    Z section openable+fix window
+      [box]  fix 22" | fix 30" openable | fix 22"      86"  ...  66"
+      [box]  openable |  fix  | openable               54"  ...  76"
+
+    Partition
+      [box]  15 fit  ...  10 fit,  ruled into a grid of cells
+
+The correct extraction, item by item — note WHY each field is set or left out:
+
+1. { type:"window", width_raw:"36\\"", height_raw:"60\\"",
+     unit_guess:"inches", qty:1, tracks:"3", system:"Normal",
+     confidence:"high" }
+   The "Normal 3 track" heading is written ONCE but governs BOTH boxes under
+   it. Carrying it down is the whole job — this box has no system written on
+   it at all.
+
+2. { type:"window", width_raw:"33\\" 5sut", height_raw:"57\\" 2sut",
+     unit_guess:"ft-in-sut", qty:1, tracks:"3", system:"Normal",
+     confidence:"high" }
+   Same heading carried down again. Both parts of each size kept intact.
+
+3. { type:"window", width_raw:"86\\"", height_raw:"66\\"",
+     unit_guess:"inches", qty:1, system:"Z section",
+     z_axis:"cols", z_panels:"F1.83,O,F1.83",
+     notes:"fix 22\\" | top fix 30\\" openable | fix 22\\"",
+     confidence:"high" }
+   Panels run left-to-right, so z_axis "cols". Each fixed panel is 22 inches
+   = 1.83 feet, so "F1.83,O,F1.83" — sizes go into z_panels in FEET.
+   The stray "fix 30\\"" label sits on part of the openable zone and does not
+   fit the simple panel row, so it stays quoted in notes for the fabricator
+   to check rather than being forced into z_panels or guessed at.
+
+4. { type:"window", width_raw:"54\\"", height_raw:"76\\"",
+     unit_guess:"inches", qty:1, system:"Z section",
+     notes:"openable | fix | openable", confidence:"high" }
+   The order is legible but NO size is written against the fixed panel — so
+   z_panels is deliberately left EMPTY and the order is quoted in notes. The
+   app will then ask for that one missing size, which is a real gap worth a
+   question. Inventing a width here to fill z_panels would be the worst
+   possible outcome: a confident, wrong cutting list.
+
+5. { type:"partition", width_raw:"15 fit", height_raw:"10 fit",
+     unit_guess:"feet", qty:1, part_columns:4, part_rows:3,
+     notes:"grid ~4 columns x 3 rows", confidence:"high" }
+   The ruled grid is data, not decoration — counting it lets the app work
+   out bay and row spacing itself instead of asking for a spacing the
+   drawing already shows.
+
+────────────────────────────────────────────────────────────────────────
+MISTAKES THAT HAVE ACTUALLY HAPPENED ON THIS SHEET — do not repeat them
+• Reading the group heading for only the FIRST box under it and leaving the
+  rest with no system/track count.
+• Keeping only part of a two-part size ("5sut" without its "33\\"").
+• Filling z_panels from a guess when the sheet gave the order but not the
+  sizes. Empty is correct there; a guess is not.
+• Collapsing a fix|openable|fix window into a plain openable one by dropping
+  the panel breakdown. The order IS the build.
+• Treating a partition's internal grid lines as decoration and not counting
+  them.
 `;
