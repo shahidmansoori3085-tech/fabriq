@@ -197,6 +197,41 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
         });
       }
       const zType = ctx.known.zType ?? "openable";
+
+      // A panel row read off a photographed sheet can carry the ORDER
+      // without every fixed panel's size — "openable | fix | openable" with
+      // no width written against the fix. The layout is NOT the gap there
+      // (the sheet showed it, and the preset layouts above cannot even
+      // express that shape); the one missing size is. Ask for exactly that,
+      // one panel at a time, so the fabricator is never made to restate a
+      // layout he already drew.
+      if (zType === "row" && ctx.known.zOrder && !ctx.known.zPanels) {
+        const order = ctx.known.zOrder.split(",").map((s) => s.trim()).filter(Boolean);
+        const idx = order.findIndex(
+          (tok, i) => tok === "F" && !(parseFloat(ctx.known[`zPanelFt${i}`] ?? "") > 0));
+        if (idx >= 0) {
+          const sideways = ctx.known.zAxis !== "rows";
+          const dim = sideways ? "wide" : "tall";
+          const fixedCount = order.filter((t) => t === "F").length;
+          const nth = order.slice(0, idx + 1).filter((t) => t === "F").length;
+          const which = fixedCount === 1
+            ? "the fixed panel"
+            : `fixed panel ${nth} of ${fixedCount} (position ${idx + 1} in the row)`;
+          const drawn = order.map((t) => (t === "F" ? "fix" : "openable")).join(" | ");
+          qs.push({
+            id: `zPanelFt${idx}`,
+            question: `How ${dim} is ${which}?`,
+            why: `Your sheet shows ${drawn} — only this size was not written on it`,
+            options: [
+              { value: "2", label: "2 ft", hint: "Most common" },
+              { value: "1.5", label: "1.5 ft" },
+              { value: "2.5", label: "2.5 ft" },
+              { value: "3", label: "3 ft" },
+            ],
+          });
+        }
+      }
+
       // For a combo: is the fixed part on TOP (horizontal transom) or on the
       // SIDE (vertical mullion)?
       if (zType === "combo" && !ctx.known.zComboDir) {

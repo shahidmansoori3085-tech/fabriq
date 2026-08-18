@@ -12,7 +12,7 @@ import {
   mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
 import { estimate } from "@/lib/engine/estimator";
-import { buildJobItem, countZPanelSashes } from "@/lib/engine/quick-item";
+import { buildJobItem, countZPanelSashes, composeZPanels } from "@/lib/engine/quick-item";
 import {
   getSection, SECTIONS, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
 } from "@/lib/engine/sections";
@@ -114,6 +114,14 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
       k.zType = "row";
       k.zAxis = row.z_axis;
       k.zPanels = row.z_panels.trim();
+    } else if (k.system === "z_section" && row.z_axis && row.z_order?.trim()) {
+      // Order known, at least one fixed size not. Seed the layout so the app
+      // never re-asks what the sheet already showed (and whose shape the
+      // preset layouts cannot express anyway) — the question engine then
+      // asks only for the missing size(s) and composes zPanels from both.
+      k.zType = "row";
+      k.zAxis = row.z_axis;
+      k.zOrder = row.z_order.trim().toUpperCase().replace(/[^OF,]/g, "");
     }
   }
   if (row.type === "partition" && row.part_columns && row.part_rows) {
@@ -410,6 +418,12 @@ export default function FabriQ() {
         const zType = next.zType ?? "openable";
         next.zDoor = zType === "door" ? "yes" : "no";
         next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
+        // Sheet gave the panel order, the missing size(s) have now been
+        // answered — build the full row the engine reads.
+        if (zType === "row" && !next.zPanels && next.zOrder) {
+          const composed = composeZPanels(next.zOrder, next);
+          if (composed) next.zPanels = composed;
+        }
         const n = zType === "fixed" || zType === "door"
           ? 1
           : zType === "row"

@@ -507,12 +507,17 @@ The correct extraction, item by item — note WHY each field is set or left out:
 
 4. { type:"window", width_raw:"54\\"", height_raw:"76\\"",
      unit_guess:"inches", qty:1, system:"Z section",
+     z_axis:"cols", z_order:"O,F,O",
      notes:"openable | fix | openable", confidence:"high" }
-   The order is legible but NO size is written against the fixed panel — so
-   z_panels is deliberately left EMPTY and the order is quoted in notes. The
-   app will then ask for that one missing size, which is a real gap worth a
-   question. Inventing a width here to fill z_panels would be the worst
-   possible outcome: a confident, wrong cutting list.
+   The order is legible but NO size is written against the fixed panel. So
+   the ORDER still gets recorded — in z_order, which carries just the
+   sequence — while z_panels stays EMPTY because a size is genuinely
+   missing. The app then asks only "how wide is the fixed panel?" instead of
+   asking what the layout is, which the sheet already showed. Two things
+   would both be wrong here: inventing a width to fill z_panels (a
+   confident, wrong cutting list), and dropping the order entirely (the app
+   would then have to ask about a layout the sheet already gave, and its
+   preset layouts cannot even express openable|fix|openable).
 
 5. { type:"partition", width_raw:"15 fit", height_raw:"10 fit",
      unit_guess:"feet", qty:1, part_columns:4, part_rows:3,

@@ -21,6 +21,11 @@ export interface ExtractedItem {
    *  sheet already answered. */
   z_axis?: "cols" | "rows";
   z_panels?: string;
+  /** The panel ORDER alone ("O,F,O"), when the sheet showed the sequence but
+   *  not every fixed panel's size. Keeps that real information instead of
+   *  discarding it, so the app asks only for the missing size rather than
+   *  re-asking a layout the sheet already gave. */
+  z_order?: string;
   /** Partition grid, counted straight off the drawing. */
   part_columns?: number;
   part_rows?: number;

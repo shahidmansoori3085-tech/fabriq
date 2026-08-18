@@ -14,6 +14,29 @@ import type { JobItem, MaterialList, OpeningType, SystemId } from "./types";
 /** How many openable Z-pipe shutters a custom panel row (e.g. "F2,O,F2") needs —
  *  mirrors estimator.ts's own panel parsing, just counting sashes rather than
  *  building cut pieces. */
+/**
+ * Turn a sheet-read panel ORDER ("O,F,O") plus the answered per-panel sizes
+ * (meta.zPanelFt<index>) into the full panel row the engine reads
+ * ("O,F2,O"). Returns null when any fixed panel still has no size — the
+ * caller must then NOT build, because a fixed panel of unknown width has no
+ * safe default: guessing one produces a confident, wrong cutting list.
+ */
+export function composeZPanels(
+  order: string | undefined, meta: Record<string, string>,
+): string | null {
+  if (!order?.trim()) return null;
+  const toks = order.split(",").map((s) => s.trim()).filter(Boolean);
+  if (toks.length === 0) return null;
+  const out: string[] = [];
+  for (let i = 0; i < toks.length; i++) {
+    if (toks[i] !== "F") { out.push("O"); continue; }
+    const ft = parseFloat(meta[`zPanelFt${i}`] ?? "");
+    if (!(ft > 0)) return null;
+    out.push(`F${ft}`);
+  }
+  return out.join(",");
+}
+
 export function countZPanelSashes(spec: string | undefined): number {
   if (!spec) return 1;
   const n = spec.split(",").reduce((total, raw) => {
@@ -52,6 +75,12 @@ export function buildJobItem(
     next.zSize = next.zSize ?? "light";
     next.zDoor = zType === "door" ? "yes" : "no";
     next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
+    // Panel order came off the sheet with a size still to be answered —
+    // fold the answers back in now that they exist.
+    if (zType === "row" && !next.zPanels && next.zOrder) {
+      const composed = composeZPanels(next.zOrder, next);
+      if (composed) next.zPanels = composed;
+    }
     if (zType === "combo") {
       next.zComboDir = next.zComboDir ?? "top";
       next.zFixedFt = next.zFixedFt ?? "2";
