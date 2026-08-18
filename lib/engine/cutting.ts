@@ -22,9 +22,19 @@ const KERF = 5000;
  */
 const BAR_ALLOWANCE = 15000; // 15mm
 
+/**
+ * A cut piece that no single bar can supply.
+ *
+ * Carries the piece and the bar length rather than only a message, because the
+ * screen has to name the opening, the part and both lengths — a fabricator can
+ * act on "W10's 18 ft top rail needs a 16 ft bar", not on a sentence with the
+ * numbers missing. It is thrown, never swallowed: silently splitting a rail
+ * would change the material count without the shop agreeing to a joint.
+ */
 export class PieceTooLongError extends Error {
-  constructor(public piece: CutPiece) {
+  constructor(public piece: CutPiece, public barLength: Um = 0) {
     super(`Piece longer than the bar: ${piece.label}`);
+    this.name = "PieceTooLongError";
   }
 }
 
@@ -36,7 +46,7 @@ export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] 
   const hasHalfBar = sec.hasHalfBar ?? true;
 
   const sorted = [...pieces].sort((a, b) => b.length - a.length);
-  for (const p of sorted) if (p.length > barFull) throw new PieceTooLongError(p);
+  for (const p of sorted) if (p.length > barFull) throw new PieceTooLongError(p, barFull);
 
   interface OpenBar { pieces: CutPiece[]; used: Um }
   const bars: OpenBar[] = [];

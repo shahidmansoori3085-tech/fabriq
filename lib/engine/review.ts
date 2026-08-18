@@ -5,11 +5,20 @@
  */
 import { mm, formatFtInSut } from "./units";
 import type { JobItem, MaterialList, ReviewFinding, ReviewResult } from "./types";
-import { DEFAULTS, DOMAL_DEFAULTS, shutterSize } from "./estimator";
+import { DEFAULTS, DOMAL_DEFAULTS, shutterSize, zGeometry } from "./estimator";
+
+/** Below this a hinged Z-section leaf is not something a shop actually builds —
+ *  the hinge, the handle and the lock have nowhere to go. */
+const Z_SASH_UNBUILDABLE = mm(330);
+/** Buildable, but narrow enough to be worth a second look before cutting. */
+const Z_SASH_AWKWARD = mm(450);
 
 export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResult {
   const findings: ReviewFinding[] = [];
   let confidence = 98;
+  /** Openable Z-section leaves across the whole job — hardware for these is
+   *  ordered outside this list, and this count is what the shop buys against. */
+  let zLeaves = 0;
 
   for (const item of items) {
     if (item.system === "door_single") {
@@ -29,6 +38,40 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
         message: `${item.id}: the panel clearance for sheet and glass has not yet been verified against a real job — confirm the glazing groove with your dealer.`,
       });
       confidence -= 2;
+      continue;
+    }
+
+    // A Z-section panel row takes its openable width from whatever the fixed
+    // panels leave over, so a fixed panel written a little too big quietly
+    // produces a leaf too narrow to hang. The arithmetic stays correct and the
+    // cut list still prints, which is exactly why it needs saying out loud —
+    // the sizes come from zGeometry itself, not a second copy of the formula.
+    // Hinges, stays and handles are deliberately outside the Z-section list
+    // (founder scope). Left unsaid it reads as a complete list with the
+    // hardware forgotten, and the shop orders pipe and glass for windows that
+    // cannot be hung. Counted here, said ONCE below — four openings repeating
+    // the same sentence is noise a fabricator learns to scroll past.
+    if (item.system === "z_section") zLeaves += zGeometry(item).sashes.length * item.qty;
+
+    if (item.system === "z_section" && item.meta.zDoor !== "yes") {
+      const g = zGeometry(item);
+      const narrowest = g.sashes.reduce<number | null>(
+        (min, s) => (min === null || s.shW < min ? s.shW : min), null);
+      if (narrowest !== null && narrowest < Z_SASH_UNBUILDABLE) {
+        findings.push({
+          severity: "blocker",
+          category: "panel-size",
+          message: `${item.id}: this layout leaves an openable leaf only ${formatFtInSut(narrowest)} wide — too narrow to hang a hinge and handle on. Check the fixed panel sizes against the overall width before cutting.`,
+        });
+        confidence -= 20;
+      } else if (narrowest !== null && narrowest < Z_SASH_AWKWARD) {
+        findings.push({
+          severity: "warning",
+          category: "panel-size",
+          message: `${item.id}: the narrowest openable leaf comes to ${formatFtInSut(narrowest)}. It will build, but it is a tight leaf — confirm the fixed panel sizes are right.`,
+        });
+        confidence -= 6;
+      }
       continue;
     }
 
@@ -73,6 +116,14 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       });
       confidence -= 3;
     }
+  }
+
+  if (zLeaves > 0) {
+    findings.push({
+      severity: "suggestion",
+      category: "hardware",
+      message: `Hinges, friction stays and handles are not counted in this list — Z-section hardware is ordered separately. This job has ${zLeaves} openable Z-section ${zLeaves > 1 ? "leaves" : "leaf"} to buy for.`,
+    });
   }
 
   // Scrap analysis

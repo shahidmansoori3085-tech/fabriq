@@ -31,6 +31,9 @@ const EXTRACT_SCHEMA = {
           z_order: { type: "string" as const },
           part_columns: { type: "integer" as const },
           part_rows: { type: "integer" as const },
+          fixed_top_ft: { type: "number" as const },
+          rails: { type: "integer" as const },
+          frame_needed: { type: "boolean" as const },
           notes: { type: "string" as const },
           confidence: { type: "string" as const, enum: ["high", "medium", "low"] },
         },
@@ -68,7 +71,19 @@ Rules (CRITICAL):
 - unit_guess: small numbers (2-12) = feet; 24-96 = inches; 300+ = mm
 - qty defaults to 1 when not written
 - tracks: "2"/"3" when the sheet says or draws it, otherwise omit
-- mix: G=glass, J=mesh, e.g. "GGJ" when visible, otherwise omit
+- mix: G=glass, J=mesh, e.g. "GGJ" when visible, otherwise omit. A written mesh COUNT is a mix
+  the sheet has already stated — "jali 1" on a 2 track means one of the two shutters is mesh, so
+  mix "GJ"; "jali 1" on a 3 track means "GGJ". Work it out from the track count and fill mix.
+  Only omit mix when the sheet says nothing at all about mesh.
+- fixed_top_ft: a sliding window (Normal or Domal) with a FIXED GLASS BAND above the sliding part —
+  written "upar fix 2 ft", "ऊपर फिक्स", "top fix 2'". Put the band's HEIGHT IN FEET here (2 ft -> 2,
+  18 inches -> 1.5). This is NOT a Z-section panel row: the window below still slides on tracks.
+  Omit when the sheet does not mention a fixed band.
+- rails: for a DOOR, the number of CENTER RAILS written on the sheet ("3 rails", "3 patti",
+  "तीन पट्टी"). A door with 3 rails has 4 panels. Omit when not written.
+- frame_needed: for a DOOR, whether the frame (chokhat) has to be made. "chokhat banana hai",
+  "चौखट बनानी है", "frame banega" -> true. "chokhat lagi hai", "frame ready", "chokhat already"
+  -> false. Omit when the sheet is silent — do not guess, the app will ask.
 - z_axis/z_panels/z_order, part_columns/part_rows: fill these whenever the drawing actually shows them (see rules above) — the whole point is to ask the fabricator only about what the sheet DIDN'T already tell you. Never fill them from a guess; leave empty/omitted when genuinely not legible.
 - notes: for each item, anything extra written next to that box — including the exact panel wording and grid counts per the rules above, even when you also filled the structured fields
 - If the photo is blurred or unreadable, return legible: false and items: []

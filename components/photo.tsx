@@ -29,6 +29,16 @@ export interface ExtractedItem {
   /** Partition grid, counted straight off the drawing. */
   part_columns?: number;
   part_rows?: number;
+  /** Sliding window with a fixed glass band on top ("upar fix 2 ft") — the
+   *  band's height in feet. A sheet that states this has already answered
+   *  both of the questions the app would otherwise ask about it. */
+  fixed_top_ft?: number;
+  /** Door: centre rails written on the sheet ("3 rails" / "3 patti"). */
+  rails?: number;
+  /** Door: true when the sheet says the frame has to be made ("chokhat
+   *  banana hai"), false when it says the frame is already fitted. Left
+   *  undefined when the sheet is silent, so the app still asks. */
+  frame_needed?: boolean;
   notes?: string;
   confidence: "high" | "medium" | "low";
 }

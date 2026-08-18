@@ -262,18 +262,18 @@ function applyZRowPanels(
   });
 }
 
-interface ZSash {
+export interface ZSash {
   kind: "glass" | "jali" | "sheet";
   shW: Um; shH: Um;         // shutter (Z-pipe) outer cut sizes
   pocketW: Um; pocketH: Um; // glass pocket (shutter inside-to-inside)
   glassW: Um; glassH: Um;   // actual glass cut
 }
-interface ZFixed {
+export interface ZFixed {
   kind: "glass" | "jali" | "sheet";
   pocketW: Um; pocketH: Um; // opening the panel fills (frame/transom inside)
   glassW: Um; glassH: Um;
 }
-interface ZGeom {
+export interface ZGeom {
   outer: string; pipe: string; center: string;
   outerW: Um; outerH: Um;
   mullions: Um[];   // vertical dividers (z_center), length = openable zone height
@@ -316,7 +316,7 @@ function zMakeFixed(kind: ZFixed["kind"], openW: Um, openH: Um): ZFixed {
  *   • combo     → top fixed panel + horizontal transom + bottom openable
  *                 (N sashes + mullions), the classic "upar fix, neeche khule"
  */
-function zGeometry(item: JobItem): ZGeom {
+export function zGeometry(item: JobItem): ZGeom {
   const family = zSizeFamily(item);
   const { outer, pipe, center } = zSectionIds(family);
   const isDoor = item.meta.zDoor === "yes";

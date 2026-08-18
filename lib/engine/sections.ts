@@ -106,7 +106,7 @@ export const SECTIONS: Record<string, Section> = {
     omeo: "3050", size: "75×25", tier: "VERIFIED",
   },
   door_palla_60: {
-    id: "door_palla_60", name: "Door Shutter 63×25 (Moulding Handle)", label: "Shutter 60×25",
+    id: "door_palla_60", name: "Door Shutter 63×25 (Moulding Handle)", label: "Shutter 63×25",
     omeo: "5000", size: "63×25", tier: "VERIFIED",
   },
   door_palla_50: {
@@ -126,7 +126,7 @@ export const SECTIONS: Record<string, Section> = {
     omeo: "3081", size: "75×25", tier: "VERIFIED",
   },
   door_center_60: {
-    id: "door_center_60", name: "Door Center Rail 63×25", label: "Center Rail 60×25",
+    id: "door_center_60", name: "Door Center Rail 63×25", label: "Center Rail 63×25",
     size: "63×25", tier: "NEEDS_VERIFICATION",
   },
   door_center_50: {

@@ -11,6 +11,7 @@ import {
   generateQuestions, jobLevelQuestions, JOB_LEVEL_IDS,
   mixToShutters, doorMixToZones, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
+import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate } from "@/lib/engine/estimator";
 import { buildJobItem, countZPanelSashes, composeZPanels } from "@/lib/engine/quick-item";
 import {
@@ -123,6 +124,21 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
       k.zAxis = row.z_axis;
       k.zOrder = row.z_order.trim().toUpperCase().replace(/[^OF,]/g, "");
     }
+    // "upar fix 2 ft" on a sliding window answers BOTH fixed-band questions.
+    // Only Domal builds a fixed band today, so a band written against a
+    // Normal window is left for the fabricator rather than silently dropped
+    // into a system that cannot express it.
+    if (k.system === "domal" && typeof row.fixed_top_ft === "number" && row.fixed_top_ft > 0) {
+      k.domalFix = "yes";
+      k.domalFixFt = String(row.fixed_top_ft);
+    }
+  }
+  if (row.type === "door") {
+    if (row.rails === 2 || row.rails === 3) k.rails = String(row.rails);
+    // A sheet that says "chokhat banana hai" has answered this. Defaulting it
+    // the other way drops the whole frame from the material list, so the
+    // sheet's own word has to win over the question's first option.
+    if (typeof row.frame_needed === "boolean") k.chokhat = row.frame_needed ? "needed" : "existing";
   }
   if (row.type === "partition" && row.part_columns && row.part_rows) {
     // Grid counted straight off the drawing — derive the bay/row spacing
@@ -134,6 +150,11 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
     if (h && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
   }
   return k;
+}
+
+/** How many of these rows the sheet already identified as Z-section. */
+function countZSection(rows: ExtractedItem[]): number {
+  return rows.filter((r) => seedFromRow(r).system === "z_section").length;
 }
 
 /* ————————————————— theme ————————————————— */
@@ -325,7 +346,9 @@ export default function FabriQ() {
     }
 
     const types = [...new Set(valid.map((r) => r.type))];
-    const qs = jobLevelQuestions({ types, count: valid.length, known: sharedFromSheet });
+    const qs = jobLevelQuestions({
+      types, count: valid.length, known: sharedFromSheet, zCount: countZSection(valid),
+    });
     // One opening is not a "job" — asking it twice would just be the same
     // question in different words.
     if (valid.length < 2 || qs.length === 0) { runRows(valid, sharedFromSheet); return; }
@@ -342,7 +365,9 @@ export default function FabriQ() {
     const next = { ...jobAnswers, [qid]: value };
     setJobAnswers(next);
     const types = [...new Set(pendingRows.map((r) => r.type))];
-    const remaining = jobLevelQuestions({ types, count: pendingRows.length, known: next });
+    const remaining = jobLevelQuestions({
+      types, count: pendingRows.length, known: next, zCount: countZSection(pendingRows),
+    });
     if (remaining.length > 0) {
       setJobQs([...jobQs.slice(0, jobQIndex + 1), ...remaining]);
       setJobQIndex(jobQIndex + 1);
@@ -1316,7 +1341,7 @@ function encodeZPanels(rows: ZPanelRow[]): string {
 function parseWithUnit(raw: string): Um | null {
   return parseOpening(raw)?.um ?? null;
 }
-const DOOR_PALLA: [string, string][] = [["60", "60×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
+const DOOR_PALLA: [string, string][] = [["60", "63×25mm"], ["75", "75×25mm"], ["50", "50×25mm"]];
 const DOOR_CHOKHAT: [string, string][] = [["needed", "Frame + Shutter"], ["existing", "Shutter Only"]];
 const PART_VAR: [string, string][] = [["no", "Panels Only"], ["yes", "With A Door"]];
 
@@ -2231,6 +2256,31 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
       const list = estimate(items);
       return { list, error: null as string | null };
     } catch (e) {
+      if (e instanceof PieceTooLongError) {
+        // Name the opening, the part and both lengths. A shop hits this two
+        // ways — a size typed in feet that meant inches, and a genuinely long
+        // run (an 18 ft partition is an ordinary job) whose rail has to be
+        // joined. The old text assumed the typo and never mentioned the joint,
+        // which left the second case looking like the app was broken.
+        const it = items.find((i) => i.id === e.piece.itemId);
+        const where = it ? `${itemName(it)} (${it.id})` : e.piece.itemId;
+        return {
+          list: null,
+          error:
+            // Both units on the long piece: comparing an inch figure against a
+            // "16 ft bar" is the mixed-unit reading that causes the confusion in
+            // the first place. The role keeps its own case — "SP Top" is the
+            // section's name, and lowercasing it made it read as plain English.
+            `${where}: the ${e.piece.role} needs one piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
+            `(${formatFtInSut(e.piece.length)}) long, but this section only comes in ` +
+            `${toFeet(e.barLength).toFixed(0)} ft bars.\n\n` +
+            `If the opening is really that big, this part has to be JOINED — split it into two ` +
+            `pieces with a coupler and enter it as two openings, because the cut list cannot ` +
+            `decide a joint for you.\n\n` +
+            `If it is not that big, the size went in as feet when it meant inches — go back and ` +
+            `add " after the number (for example 66").`,
+        };
+      }
       return { list: null, error: e instanceof Error ? e.message : "error" };
     }
   }, [items]);
@@ -2298,13 +2348,12 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
   }, [scrapPct, grandPayable, customer, onSnapshot]);
 
   if (error || !list) {
-    const friendly = error?.startsWith("Piece longer than 16 feet")
-      ? `${error} — this size was probably entered in the wrong unit. If you meant inches rather than feet, go back and add " after the number (for example 66").`
-      : error;
     return (
       <div className="card mt-10 p-6 text-center">
         <div className="text-3xl">⚠️</div>
-        <p className="mt-2 font-semibold">{friendly}</p>
+        {/* whitespace-pre-line keeps the paragraph breaks the message writes —
+            one wall of text is what made the old error unreadable. */}
+        <p className="mt-2 whitespace-pre-line text-left font-medium">{error}</p>
         <button onClick={onNew} className="btn-ghost mt-4 px-6 py-2">Go back</button>
       </div>
     );

@@ -55,8 +55,13 @@ export function jobLevelQuestions(opts: {
   types: ("window" | "door" | "partition")[];
   count: number;
   known: Record<string, string>;
+  /** How many windows on the sheet are Z-section. A MIXED sheet has no single
+   *  `known.system`, so gating the pipe-size question on `system === "z_section"`
+   *  alone let it fall through to the per-item round and get asked once per
+   *  Z window — the exact repetition this round exists to prevent. */
+  zCount?: number;
 }): Question[] {
-  const { types, count, known } = opts;
+  const { types, count, known, zCount = 0 } = opts;
   const qs: Question[] = [];
   const many = count > 1;
   const all = many ? `all ${count}` : "this";
@@ -74,11 +79,17 @@ export function jobLevelQuestions(opts: {
     });
   }
 
-  // Only meaningful once Z-section is the chosen system.
-  if (types.includes("window") && known.system === "z_section" && !known.zSize) {
+  // Meaningful when the whole job is Z-section, and equally when only some of
+  // the sheet's windows are — a shop buys one pipe size for the Z work either
+  // way, so it is still one answer, just worded for the part it applies to.
+  const zOnly = known.system === "z_section";
+  if (types.includes("window") && (zOnly || zCount > 0) && !known.zSize) {
+    const zLabel = zOnly
+      ? `${all} window${many ? "s" : ""}`
+      : zCount > 1 ? `the ${zCount} Z-Section windows` : "the Z-Section window";
     qs.push({
       id: "zSize",
-      question: `Which pipe size for ${all} window${many ? "s" : ""}?`,
+      question: `Which pipe size for ${zLabel}?`,
       why: "Size changes the outer, shutter and center sections, and the weight",
       options: [
         { value: "light", label: "Small (40×40)", hint: "For normal windows" },
@@ -105,7 +116,7 @@ export function jobLevelQuestions(opts: {
         question: "Which shutter (palla) profile size?",
         why: "Size changes the section code and the weight",
         options: [
-          { value: "60", label: "60×25mm", hint: "Moulding handle — common" },
+          { value: "60", label: "63×25mm", hint: "Moulding handle — common" },
           { value: "75", label: "75×25mm", hint: "3×1 handle — heavy" },
           { value: "50", label: "50×25mm", hint: "2×1 handle — light" },
         ],
@@ -378,7 +389,7 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
         question: "Which shutter (palla) profile size?",
         why: "Size changes the section code and the weight",
         options: [
-          { value: "60", label: "60×25mm", hint: "Moulding handle — common" },
+          { value: "60", label: "63×25mm", hint: "Moulding handle — common" },
           { value: "75", label: "75×25mm", hint: "3×1 handle — heavy" },
           { value: "50", label: "50×25mm", hint: "2×1 handle — light" },
         ],
