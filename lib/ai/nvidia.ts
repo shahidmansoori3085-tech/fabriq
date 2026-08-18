@@ -32,12 +32,31 @@ interface TextPart { type: "text"; text: string }
 interface ImagePart { type: "image_url"; image_url: { url: string } }
 type Part = TextPart | ImagePart;
 
-async function call(body: unknown, apiKey: string): Promise<string> {
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+/**
+ * `timeoutMs` matters here in a way it doesn't for the other providers: some
+ * models on this catalogue simply never return on a complex image (a 90B
+ * vision variant was left running past 200s during testing). Without a cap,
+ * one of those would hold the whole request open until the platform killed
+ * it, and the fabricator would watch a spinner instead of getting the
+ * "enter the sizes yourself" fallback he could act on.
+ */
+async function call(body: unknown, apiKey: string, timeoutMs?: number): Promise<string> {
+  const ac = new AbortController();
+  const timer = timeoutMs ? setTimeout(() => ac.abort(), timeoutMs) : undefined;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: ac.signal,
+    });
+  } catch (e) {
+    if (ac.signal.aborted) throw new Error(`nvidia_timeout after ${timeoutMs}ms`);
+    throw e;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`nvidia_${res.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
@@ -78,6 +97,7 @@ export async function nvidiaJson<T>(opts: {
   images?: { data: string; mediaType: string }[];
   model?: string;
   maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<T> {
   const parts: Part[] = [];
   for (const img of opts.images ?? []) {
@@ -99,7 +119,7 @@ export async function nvidiaJson<T>(opts: {
       type: "json_schema",
       json_schema: { name: "result", schema: opts.schema },
     },
-  }, opts.apiKey);
+  }, opts.apiKey, opts.timeoutMs);
 
   try {
     return JSON.parse(text) as T;

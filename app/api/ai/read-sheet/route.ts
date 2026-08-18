@@ -5,7 +5,7 @@
  * calculates — raw values + confidence only (D2).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { resolveProvider } from "@/lib/ai/client";
+import { resolveProvider, NVIDIA_SERVER_KEY } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
 import { nvidiaJson } from "@/lib/ai/nvidia";
 import { SHEET_READING_KNOWLEDGE } from "@/lib/engine/knowledge";
@@ -124,6 +124,21 @@ function readFailure(e: unknown): { error: string; message: string; reason: stri
   };
 }
 
+/**
+ * Cap on the fallback read — deliberately short.
+ *
+ * The fallback is opportunistic, not expected to succeed: no NVIDIA vision
+ * model tried so far has completed a real multi-item sheet, on either a
+ * photographed handwritten one or a clean generated one (a 90B variant ran
+ * past 200s; Nemotron Omni, correct on a trivial image, timed out on both
+ * real sheets). Every second spent here is a second the fabricator waits
+ * before being told to type the sizes himself, so the attempt gets a small
+ * bounded slice: worth taking in case the spare is quick for a simple
+ * sheet, never worth making the failure noticeably slower than no fallback
+ * at all.
+ */
+const FALLBACK_TIMEOUT_MS = 20_000;
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { image, mediaType, images, notes, apiKey } = body as {
@@ -168,7 +183,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[read-sheet/gemini]", e);
-      return NextResponse.json(readFailure(e), { status: 500 });
+      const failure = readFailure(e);
+      // Gemini's free tier has a DAILY request cap, and a shop photographing
+      // a morning's sheets can reach it — at which point "try again" is
+      // useless advice, because nothing will work until the cap resets. If a
+      // second provider is configured on the server, use it rather than
+      // making the fabricator stop and type every size by hand. Only on a
+      // quota failure: a blurred photo would fail on any provider, and
+      // retrying that just costs him another wait.
+      const spare = NVIDIA_SERVER_KEY();
+      if (failure.reason === "rate_limited" && spare) {
+        try {
+          const parsed = await nvidiaJson({
+            apiKey: spare, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
+            timeoutMs: FALLBACK_TIMEOUT_MS,
+          });
+          return NextResponse.json(parsed);
+        } catch (e2) {
+          console.error("[read-sheet/gemini->nvidia fallback]", e2);
+        }
+      }
+      return NextResponse.json(failure, { status: 500 });
     }
   }
 
