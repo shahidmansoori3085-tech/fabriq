@@ -85,7 +85,7 @@ const GLASS_OPTS: [GlassKind, string, string][] = [
 
 /* ————————————————— types ————————————————— */
 
-type Step = "home" | "choose" | "quotestart" | "entry" | "jobqs" | "questions" | "addmore" | "result" | "extract" | "offcutbank";
+type Step = "home" | "choose" | "quotestart" | "entry" | "jobqs" | "questions" | "confirm" | "addmore" | "result" | "extract" | "offcutbank";
 
 interface Draft {
   type: OpeningType;
@@ -158,6 +158,52 @@ function countZSection(rows: ExtractedItem[]): number {
   return rows.filter((r) => seedFromRow(r).system === "z_section").length;
 }
 
+/** Turns a type + size + answers-so-far into the JobItem the engine reads —
+ *  the one place this translation happens, so the live preview shown
+ *  DURING the Q&A and the item actually built once it's done can never
+ *  drift apart (e.g. the sash count for a preview looking different from
+ *  the sash count that gets cut). Answers not yet given fall back to the
+ *  same defaults the finished build uses, so an early preview is rough but
+ *  never wrong about what has already been decided. */
+function deriveItem(
+  id: string, type: OpeningType, width: Um, height: Um, qty: number, answers: Record<string, string>,
+): JobItem {
+  const next = { ...answers };
+  let sys: SystemId;
+  let shutters: JobItem["shutters"];
+  if (type === "door") {
+    sys = "door_single";
+    const rails = next.rails ?? "2";
+    const zonemix = next.zonemix ?? (rails === "3" ? "SSSJ" : "SSJ");
+    shutters = doorMixToZones(zonemix);
+  } else if (type === "partition") {
+    sys = "partition";
+    next.partSheetFt = next.partSheetFt ?? "0";
+    shutters = [];
+  } else if (next.system === "z_section") {
+    sys = "z_section";
+    const zType = next.zType ?? "openable";
+    next.zDoor = zType === "door" ? "yes" : "no";
+    next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
+    if (zType === "row" && !next.zPanels && next.zOrder) {
+      const composed = composeZPanels(next.zOrder, next);
+      if (composed) next.zPanels = composed;
+    }
+    const n = zType === "fixed" || zType === "door"
+      ? 1
+      : zType === "row"
+      ? countZPanelSashes(next.zPanels)
+      : Math.max(1, parseInt(next.zSashCount ?? "1", 10));
+    shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
+  } else {
+    sys = next.system === "domal" ? "domal" : (next.tracks ?? "2") === "3" ? "normal_3t" : "normal_2t";
+    next.handle = next.handle ?? "std";
+    const mix = next.mix ?? ((next.tracks ?? "2") === "4" ? "GGGJ" : (next.tracks ?? "2") === "3" ? "GGJ" : "GG");
+    shutters = mixToShutters(mix);
+  }
+  return { id, type, width, height, qty, system: sys, shutters, meta: next };
+}
+
 /* ————————————————— theme ————————————————— */
 
 type Theme = "light" | "dark" | "system";
@@ -185,6 +231,11 @@ export default function FabriQ() {
   // question engine (seeded with what the photo already gave, so only the
   // MISSING info is asked). photoQueue holds the rows still to process.
   const [photoQueue, setPhotoQueue] = useState<ExtractedItem[]>([]);
+  /** The item just built from a finished Q&A round, waiting for the
+   *  fabricator to look at its drawing and confirm it before it joins the
+   *  job — the sizes are right by construction, but "AI understood the
+   *  layout correctly" is not, and this is where that gets checked. */
+  const [pendingItem, setPendingItem] = useState<JobItem | null>(null);
   const [theme, setThemeState] = useState<Theme>("system");
   const [intent, setIntent] = useState<"list" | "quote">("list");
   /** Collected up-front by the quotation flow, before any size is entered. */
@@ -421,72 +472,40 @@ export default function FabriQ() {
     }
 
     {
-      // build the item
-      let sys: SystemId;
-      let shutters: JobItem["shutters"];
-      if (draft.type === "door") {
-        sys = "door_single";
-        const rails = next.rails ?? "2";
-        const zonemix = next.zonemix ?? (rails === "3" ? "SSSJ" : "SSJ");
-        shutters = doorMixToZones(zonemix);
-      } else if (draft.type === "partition") {
-        // Partition layout is derived in the engine from meta (partDoor,
-        // partDoorW, partSheetFt, partBayFt) — no shutter list needed.
-        // partSheetFt is no longer asked → default to full glass ("0").
-        sys = "partition";
-        next.partSheetFt = next.partSheetFt ?? "0";
-        shutters = [];
-      } else if (next.system === "z_section") {
-        // Z-section: glass-only. zType picks the layout; translate it into the
-        // zDoor + zLayout meta flags the engine reads, then build the sashes
-        // (all glass — no jali/sheet in this system).
-        sys = "z_section";
-        const zType = next.zType ?? "openable";
-        next.zDoor = zType === "door" ? "yes" : "no";
-        next.zLayout = zType === "fixed" ? "fixed" : zType === "combo" ? "combo" : zType === "row" ? "row" : "openable";
-        // Sheet gave the panel order, the missing size(s) have now been
-        // answered — build the full row the engine reads.
-        if (zType === "row" && !next.zPanels && next.zOrder) {
-          const composed = composeZPanels(next.zOrder, next);
-          if (composed) next.zPanels = composed;
-        }
-        const n = zType === "fixed" || zType === "door"
-          ? 1
-          : zType === "row"
-          ? countZPanelSashes(next.zPanels)
-          : Math.max(1, parseInt(next.zSashCount ?? "1", 10));
-        shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
-      } else {
-        sys = next.system === "domal" ? "domal"
-          : (next.tracks ?? "2") === "3" ? "normal_3t" : "normal_2t";
-        next.handle = next.handle ?? "std"; // handle no longer asked → default
-        const mix =
-          next.mix ??
-          ((next.tracks ?? "2") === "4" ? "GGGJ" : (next.tracks ?? "2") === "3" ? "GGJ" : "GG");
-        shutters = mixToShutters(mix);
-      }
-      const item: JobItem = {
-        id: `W${items.length + 1}`,
-        type: draft.type,
-        width: width!,
-        height: height!,
-        qty: draft.qty,
-        system: sys,
-        shutters,
-        meta: next,
-      };
-      ensureProject();
-      setItems((prev) => [...prev, item]);
-      // If we're mid photo-batch, move on to the next extracted row's questions
-      // (only its MISSING info); otherwise land on the add-more screen.
-      if (photoQueue.length > 0) {
-        const [nextRow, ...rest] = photoQueue;
-        startPhotoItem(nextRow, rest, jobShared.current);
-      } else {
-        setStep("addmore");
-      }
+      const item = deriveItem(`W${items.length + 1}`, draft.type, width!, height!, draft.qty, next);
+      // Every question about this opening has now been answered — before it
+      // joins the job, show the fabricator the actual drawing built from
+      // those answers, so a misread size or a wrong panel layout is caught
+      // on screen instead of after the pipe is cut.
+      setPendingItem(item);
+      setStep("confirm");
     }
-  }, [answers, qIndex, questions, items, draft, width, height, qSource, photoQueue, startPhotoItem]);
+  }, [answers, qIndex, questions, items, draft, width, height, qSource]);
+
+  /** Fabricator confirmed the drawing matches what he measured — the item
+   *  now actually joins the job. */
+  const approveItem = useCallback(() => {
+    if (!pendingItem) return;
+    ensureProject();
+    setItems((prev) => [...prev, pendingItem]);
+    setPendingItem(null);
+    // If we're mid photo-batch, move on to the next extracted row's questions
+    // (only its MISSING info); otherwise land on the add-more screen.
+    if (photoQueue.length > 0) {
+      const [nextRow, ...rest] = photoQueue;
+      startPhotoItem(nextRow, rest, jobShared.current);
+    } else {
+      setStep("addmore");
+    }
+  }, [pendingItem, photoQueue, startPhotoItem]);
+
+  /** Something about the drawing is wrong — go back and fix the answer that
+   *  caused it, instead of throwing away everything answered so far. */
+  const editItem = useCallback(() => {
+    setPendingItem(null);
+    setQIndex(Math.max(0, questions.length - 1));
+    setStep("questions");
+  }, [questions.length]);
 
   /* —— autosave: every job the fabricator builds survives a refresh ——
      Writes localStorage only (no setState), so it is safe inside an effect and
@@ -529,7 +548,7 @@ export default function FabriQ() {
     // The next job is for someone else — never carry a party name across.
     setQuoteCustomer(""); setQuoteJobFinish(undefined);
     setPendingRows([]); setJobQs([]); setJobAnswers({}); setJobQIndex(0);
-    setQIndex(0); setStep("home");
+    setQIndex(0); setPendingItem(null); setStep("home");
   };
 
   // First-run onboarding gate (skippable). Avoid a flash for returning users.
@@ -620,6 +639,9 @@ export default function FabriQ() {
           onAnswer={answer}
           onBack={() => (qIndex > 0 ? setQIndex(qIndex - 1) : setStep("entry"))}
         />
+      )}
+      {step === "confirm" && pendingItem && (
+        <ConfirmDrawing item={pendingItem} shop={shop} onApprove={approveItem} onEdit={editItem} />
       )}
       {step === "addmore" && (
         <AddMore
@@ -1864,6 +1886,20 @@ function Questions({
     return mixToShutters(mix);
   }, [answers]);
 
+  // Door and Z-section get no dedicated live diagram elsewhere in this
+  // screen, so build the same rough preview the confirm screen will later
+  // build for real — a fabricator who reads slowly should see a picture
+  // change as he answers, not just wait for it at the very end.
+  const previewItem = useMemo(() => {
+    if (!width || !height) return null;
+    if (draft.type !== "door" && answers.system !== "z_section") return null;
+    try {
+      return deriveItem("PREVIEW", draft.type, width, height, draft.qty, answers);
+    } catch {
+      return null;
+    }
+  }, [draft.type, draft.qty, width, height, answers]);
+
   if (!q) {
     return (
       <div className="fade-up flex flex-col items-center gap-4 pt-20">
@@ -1910,6 +1946,17 @@ function Questions({
       {width && height && draft.type === "window" && answers.system !== "z_section" && (
         <div className="card flex justify-center p-4">
           <WindowDiagram width={width} height={height} shutters={previewShutters} size={190} />
+        </div>
+      )}
+
+      {/* Door / Z-section rough preview — updates as answers come in, so
+          the question is being asked ABOUT a picture, not in the abstract. */}
+      {previewItem && (
+        <div className="card flex flex-col items-center gap-1 p-4">
+          <MiniElevation item={previewItem} size={150} />
+          <span className="text-[10px]" style={{ color: "var(--ink-3)" }}>
+            Rough preview — updates as you answer
+          </span>
         </div>
       )}
 
@@ -2007,6 +2054,63 @@ function Questions({
           <Spinner tiny /> Refining the questions…
         </p>
       )}
+    </div>
+  );
+}
+
+/* ————————————————— CONFIRM DRAWING ————————————————— */
+
+/**
+ * The last question answered still leaves one gap: the fabricator has no
+ * way to see, in one picture, what all those answers actually add up to.
+ * This is that picture — the same dimensioned engineering drawing the
+ * workshop sheet prints, shown right after the Q&A, before the opening is
+ * allowed to join the job at all. A wrong size or a misunderstood layout
+ * gets caught here, on screen, not after the pipe is cut.
+ */
+function ConfirmDrawing({
+  item, shop, onApprove, onEdit,
+}: {
+  item: JobItem; shop: ShopProfile;
+  onApprove: () => void; onEdit: () => void;
+}) {
+  const preview = useMemo((): { list: MaterialList | null; error: string | null } => {
+    try {
+      return { list: estimate([item]), error: null };
+    } catch (e) {
+      if (e instanceof PieceTooLongError) {
+        return {
+          list: null,
+          error:
+            `The ${e.piece.role} needs one piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
+            `(${formatFtInSut(e.piece.length)}) long, but this section only comes in ` +
+            `${toFeet(e.barLength).toFixed(0)} ft bars. Check the size that was entered for this opening.`,
+        };
+      }
+      return { list: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }, [item]);
+
+  return (
+    <div className="fade-up flex flex-col gap-4">
+      <Header title="Confirm this drawing" sub="Does this match the opening you measured?" onBack={onEdit} />
+
+      {preview.list ? (
+        <EngineeringSheet item={item} list={preview.list} shop={shop} />
+      ) : (
+        <div className="card whitespace-pre-line p-4 text-sm font-medium" style={{ color: "var(--bad)" }}>
+          {preview.error}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button onClick={onEdit} className="btn-ghost flex-1 py-3 text-sm">
+          ✗ Something&rsquo;s wrong — go back
+        </button>
+        <button onClick={onApprove} className="btn-dark flex-1 py-3 text-sm" disabled={!preview.list}>
+          ✓ Yes, this is correct — add it
+        </button>
+      </div>
     </div>
   );
 }
