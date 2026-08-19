@@ -29,8 +29,9 @@ import {
   type ProjectRec,
 } from "@/lib/projects";
 import type {
-  JobItem, MaterialList, OpeningType, SystemId, PackedBar, CutPiece,
+  JobItem, MaterialList, OpeningType, SystemId, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
+import { reviewEstimate } from "@/lib/engine/review";
 import { WindowDiagram, TrackDiagram, CuttingGuide, PartitionDiagram, PartitionBayDiagram, PartitionRowDiagram, MiniElevation } from "@/components/diagrams";
 import { SectionProfile, SectionDrawing, hasImage } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
@@ -2436,7 +2437,7 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
 
       {tab === "aluminium" && (
         <>
-          <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} shop={shop}
+          <AluminiumPanel list={list} cost={cost} aluRate={aluRate} onRate={saveAluRate} shop={shop} items={items}
             jobFinish={jobFinish} onFinish={changeJobFinish} hiddenByColour={hiddenByColour}
             plan={offcutPlan} rawPlan={rawPlan} useStock={useStock} onToggleStock={setUseStock}
             onUseBank={applyOffcutPlan} />
@@ -2735,7 +2736,7 @@ function NextSteps({ made, onOpen, offcutCount }: {
 /* —— result sub-panels —— */
 
 function AluminiumPanel({
-  list, cost, aluRate, onRate, shop, jobFinish, onFinish, hiddenByColour,
+  list, cost, aluRate, onRate, shop, items, jobFinish, onFinish, hiddenByColour,
   plan, rawPlan, useStock, onToggleStock, onUseBank,
 }: {
   list: MaterialList;
@@ -2743,6 +2744,7 @@ function AluminiumPanel({
   aluRate: number;
   onRate: (v: number) => void;
   shop: ShopProfile;
+  items: JobItem[];
   jobFinish: FinishId | undefined;
   onFinish: (v: FinishId | undefined) => void;
   hiddenByColour: number;
@@ -2956,6 +2958,8 @@ function AluminiumPanel({
         />
       )}
 
+      <BeforeYouCut items={items} list={list} />
+
       <EngineVerified />
     </div>
   );
@@ -3143,6 +3147,49 @@ function OffcutSavings({ plan, rawPlan, useStock, onToggleStock, aluRate, onUseB
       <p className="mt-1.5 text-center text-[10.5px]" style={{ color: "var(--ink-3)" }}>
         Only tap this once the pieces are actually cut — that is when they leave the bank.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Checks worth reading before anyone cuts — a leaf too narrow to hang, a
+ * 3-track that did not need to be one, an unverified section code.
+ *
+ * These have always been computed and never shown: reviewEstimate() had no
+ * caller anywhere in the app, so every warning it produced went nowhere. A
+ * silent check is the same as no check, and the blocker is the one that matters
+ * most — it is the difference between catching a bad panel size on screen and
+ * catching it after the pipe is cut.
+ *
+ * Deterministic only, no key and no network: these have to show on every job,
+ * not only the ones where a provider happens to answer.
+ */
+const SEVERITY_STYLE: Record<ReviewFinding["severity"], { icon: string; tint: string }> = {
+  blocker: { icon: "⛔", tint: "var(--bad)" },
+  warning: { icon: "⚠️", tint: "var(--warn)" },
+  suggestion: { icon: "💡", tint: "var(--ink-2)" },
+  ok: { icon: "✓", tint: "var(--good)" },
+};
+
+function BeforeYouCut({ items, list }: { items: JobItem[]; list: MaterialList }) {
+  const review = useMemo(() => reviewEstimate(items, list), [items, list]);
+  // "Scrap is only 11%" on its own is not a reason to open a checks panel.
+  const worth = review.findings.filter((f) => f.severity !== "ok");
+  if (worth.length === 0) return null;
+  const order: ReviewFinding["severity"][] = ["blocker", "warning", "suggestion", "ok"];
+  const sorted = [...worth].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+
+  return (
+    <div className="card p-4">
+      <div className="eyebrow mb-2">Check before you cut</div>
+      <div className="flex flex-col gap-2">
+        {sorted.map((f, i) => (
+          <div key={i} className="flex gap-2 text-[12px] leading-relaxed">
+            <span aria-hidden>{SEVERITY_STYLE[f.severity].icon}</span>
+            <span style={{ color: SEVERITY_STYLE[f.severity].tint }}>{f.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -3520,6 +3567,21 @@ function CuttingPanel({ list, shop, items, plan }: {
     return [...map.entries()];
   }, [list.bars]);
 
+  // Openings that came out with the exact same system, shutter mix, meta
+  // answers AND size get ONE drawing between them instead of one each — a
+  // sheet with 5 identical windows should not print 5 identical drawings.
+  const drawingGroups = useMemo(() => {
+    const map = new Map<string, JobItem[]>();
+    for (const it of items) {
+      const sortedMeta = Object.keys(it.meta).sort().map((k) => `${k}=${it.meta[k]}`).join(",");
+      const key = `${it.type}|${it.system}|${it.width}|${it.height}|${JSON.stringify(it.shutters)}|${sortedMeta}`;
+      const arr = map.get(key) ?? [];
+      arr.push(it);
+      map.set(key, arr);
+    }
+    return [...map.values()];
+  }, [items]);
+
   const hasDomal = list.sections.some((s) => s.sectionId.startsWith("domal_"));
   const hasDoor = list.sections.some((s) => s.sectionId.startsWith("door_"));
   const hasPartition = list.sections.some((s) => s.sectionId.startsWith("partition_"));
@@ -3563,8 +3625,8 @@ function CuttingPanel({ list, shop, items, plan }: {
 
       {/* STEP 1 — what to build: a dimensioned drawing + parts per opening */}
       <StepBar n={1} title="What to build" sub="Drawing, sections and parts for every opening" />
-      {items.map((it) => (
-        <EngineeringSheet key={it.id} item={it} list={list} shop={shop} />
+      {drawingGroups.map((g) => (
+        <EngineeringSheet key={g[0].id} item={g[0]} others={g.slice(1)} list={list} shop={shop} />
       ))}
 
       {/* STEP 2 — how to cut it: section-wise saw plan */}

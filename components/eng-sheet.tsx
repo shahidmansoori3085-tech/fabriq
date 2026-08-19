@@ -132,8 +132,14 @@ function baseRole(role: string): string {
   return role.replace(/^S\d+\s+/, "").replace(/\s*\((Mesh|Jali|Glass|Sheet)\)\s*$/i, "").trim();
 }
 
-/** Full engineering sheet: title block + elevation + sections + parts schedule. */
-export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: MaterialList; shop?: { name?: string } }) {
+/** Full engineering sheet: title block + elevation + sections + parts schedule.
+ *  `others` — openings that came out with the exact same system, shutter mix,
+ *  meta answers AND size as `item`. When a sheet lists 5 identical windows the
+ *  AI still creates 5 separate JobItems (one per row), but they don't need 5
+ *  drawings — one drawing, checked against every opening it applies to, is
+ *  what a shop actually works from. Listed here so the fabricator can tick
+ *  each physical opening against the one drawing before cutting. */
+export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; others?: JobItem[]; list: MaterialList; shop?: { name?: string } }) {
   const sec = getSection;
   // Parts for THIS opening. Identical cuts collapse into one row with a qty —
   // "Handle × 3 @ 58\"3s", not three near-identical S1/S2/S3 lines.
@@ -157,6 +163,10 @@ export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: Ma
 
   const label = item.type === "window" ? "WINDOW" : item.type === "door" ? "DOOR" : "PARTITION";
 
+  const group = [item, ...(others ?? [])];
+  const groupIds = group.map((g) => g.id).join(", ");
+  const totalQty = group.reduce((a, g) => a + g.qty, 0);
+
   return (
     <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", background: "#fff", color: INK,
       fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif", breakInside: "avoid" }}>
@@ -164,10 +174,10 @@ export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: Ma
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
         padding: "10px 16px", borderBottom: `1px solid ${LINE}`, background: "#f6f8fa" }}>
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.04em" }}>
-          {item.id} — {label} <span style={{ color: DIM, fontWeight: 600 }}>ELEVATION &amp; SECTIONS</span>
+          {groupIds} — {label} <span style={{ color: DIM, fontWeight: 600 }}>ELEVATION &amp; SECTIONS</span>
         </div>
         <div style={{ fontSize: 11, color: DIM, fontVariantNumeric: "tabular-nums" }}>
-          {formatFtInSut(item.width)} × {formatFtInSut(item.height)} · ×{item.qty}
+          {formatFtInSut(item.width)} × {formatFtInSut(item.height)} · ×{totalQty}
         </div>
       </div>
 
@@ -217,6 +227,27 @@ export function EngineeringSheet({ item, list, shop }: { item: JobItem; list: Ma
           </table>
         </div>
       </div>
+
+      {/* applies-to checklist — only shown when this one drawing covers more
+          than one opening, so the fabricator knows which physical openings
+          to check against it before cutting */}
+      {group.length > 1 && (
+        <div style={{ padding: "0 16px 14px" }}>
+          <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, margin: "6px 0 8px" }}>
+            This Drawing Applies To ({group.length} openings, same size &amp; design)
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {group.map((g) => (
+              <div key={g.id} style={{ border: `1px solid ${LINE}`, borderRadius: 6, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, background: "#fcfdfe" }}>
+                {g.id} <span style={{ color: DIM, fontWeight: 600 }}>× {g.qty}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10.5, color: DIM, marginTop: 8 }}>
+            Measure each opening on site before cutting — if any one of these is not really {formatFtInSut(item.width)} × {formatFtInSut(item.height)}, it needs its own drawing.
+          </div>
+        </div>
+      )}
 
       {/* title block */}
       <div style={{ display: "flex", borderTop: `1px solid ${LINE}`, fontSize: 10.5 }}>
