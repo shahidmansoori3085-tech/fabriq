@@ -234,7 +234,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
       {group.length > 1 && (
         <div style={{ padding: "0 16px 14px" }}>
           <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, margin: "6px 0 8px" }}>
-            This Drawing Applies To ({group.length} openings, same size &amp; design)
+            Yeh Drawing In {group.length} Openings Ke Liye Hai (same size &amp; design)
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {group.map((g) => (
@@ -244,7 +244,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: DIM, marginTop: 8 }}>
-            Measure each opening on site before cutting — if any one of these is not really {formatFtInSut(item.width)} × {formatFtInSut(item.height)}, it needs its own drawing.
+            Cutting se pehle har opening site pe naap lo — agar inme se koi bhi asal me {formatFtInSut(item.width)} × {formatFtInSut(item.height)} nahi hai, uski alag drawing banegi.
           </div>
         </div>
       )}

@@ -158,6 +158,24 @@ function countZSection(rows: ExtractedItem[]): number {
   return rows.filter((r) => seedFromRow(r).system === "z_section").length;
 }
 
+/** Rows that are the same type, same size and would be seeded with the same
+ *  known answers don't need to be asked about separately — they get bundled
+ *  into one group, one Q&A round, and the answers are then replayed onto
+ *  every row in the group. Order is preserved: the first time a signature is
+ *  seen fixes that group's place in the queue. */
+function groupIdenticalRows(rows: ExtractedItem[], shared: Record<string, string>): ExtractedItem[][] {
+  const groups = new Map<string, ExtractedItem[]>();
+  for (const row of rows) {
+    const w = parseDimension(normalizeRaw(row.width_raw, row.unit_guess));
+    const h = parseDimension(normalizeRaw(row.height_raw, row.unit_guess));
+    const known = { ...shared, ...seedFromRow(row) };
+    const key = `${row.type}|${w}|${h}|${JSON.stringify(known)}`;
+    const g = groups.get(key);
+    if (g) g.push(row); else groups.set(key, [row]);
+  }
+  return [...groups.values()];
+}
+
 /** Turns a type + size + answers-so-far into the JobItem the engine reads —
  *  the one place this translation happens, so the live preview shown
  *  DURING the Q&A and the item actually built once it's done can never
@@ -227,10 +245,14 @@ export default function FabriQ() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [extracted, setExtracted] = useState<ExtractedItem[]>([]);
-  // Photo flow: extracted rows are processed one-by-one through the SAME
-  // question engine (seeded with what the photo already gave, so only the
-  // MISSING info is asked). photoQueue holds the rows still to process.
-  const [photoQueue, setPhotoQueue] = useState<ExtractedItem[]>([]);
+  // Photo flow: rows with the exact same type, size and known answers are
+  // grouped BEFORE questions start, so 5 identical windows go through the
+  // Q&A once, not 5 times — photoQueue holds the still-to-process GROUPS,
+  // each one a batch of rows that all get the same final answers.
+  const [photoQueue, setPhotoQueue] = useState<ExtractedItem[][]>([]);
+  /** The rows the round currently on screen will answer for. Length > 1
+   *  means this Q&A round is standing in for that many identical openings. */
+  const [groupRows, setGroupRows] = useState<ExtractedItem[]>([]);
   /** The item just built from a finished Q&A round, waiting for the
    *  fabricator to look at its drawing and confirm it before it joins the
    *  job — the sizes are right by construction, but "AI understood the
@@ -328,13 +350,18 @@ export default function FabriQ() {
     setLoadingQs(false);
   }, [apiKey]);
 
-  /* —— photo: process one extracted row through the question flow —— */
-  const startPhotoItem = useCallback((row: ExtractedItem, rest: ExtractedItem[], shared: Record<string, string> = {}) => {
+  /* —— photo: process one GROUP of identical rows through the question
+     flow, asking about the first row in it — the rest ride along on
+     whatever it answers, since by construction they're the same opening
+     repeated. —— */
+  const startPhotoItem = useCallback((group: ExtractedItem[], restGroups: ExtractedItem[][], shared: Record<string, string> = {}) => {
+    const row = group[0];
     const wRaw = normalizeRaw(row.width_raw, row.unit_guess);
     const hRaw = normalizeRaw(row.height_raw, row.unit_guess);
     const w = parseDimension(wRaw);
     const h = parseDimension(hRaw);
-    setPhotoQueue(rest);
+    setPhotoQueue(restGroups);
+    setGroupRows(group);
     setDraft({ type: row.type, widthRaw: wRaw, heightRaw: hRaw, qty: row.qty });
     // Job-level answers are folded in first so the per-item round never asks
     // again what was already settled once for the whole sheet.
@@ -358,11 +385,18 @@ export default function FabriQ() {
    *  questions again — which is the entire point of asking them once. */
   const jobShared = useRef<Record<string, string>>({});
 
-  /** Hand the (possibly job-seeded) rows to the per-item flow. */
+  /** Rows that are the same type, same size and would be seeded with the
+   *  same known answers don't need to be asked about separately — they get
+   *  bundled into one group, one Q&A round, and the answers are then
+   *  replayed onto every row in the group. Order is preserved: the first
+   *  time a signature is seen fixes that group's place in the queue. */
+  /** Hand the (possibly job-seeded) rows to the per-item flow, grouped first
+   *  so identical openings are only ever asked about once. */
   const runRows = useCallback((rows: ExtractedItem[], shared: Record<string, string>) => {
     jobShared.current = shared;
-    const [first, ...rest] = rows;
-    startPhotoItem(first, rest, shared);
+    const groups = groupIdenticalRows(rows, shared);
+    const [firstGroup, ...restGroups] = groups;
+    startPhotoItem(firstGroup, restGroups, shared);
   }, [startPhotoItem]);
 
   /* —— photo extract → ask the job-level things ONCE, then per-item —— */
@@ -487,17 +521,25 @@ export default function FabriQ() {
   const approveItem = useCallback(() => {
     if (!pendingItem) return;
     ensureProject();
-    setItems((prev) => [...prev, pendingItem]);
+    // groupRows holds every opening this Q&A round stood in for — replay the
+    // same finished answers (pendingItem.meta) onto each one, so 5 identical
+    // windows become 5 items from a single round of questions, not one.
+    const newItems = groupRows.length > 1
+      ? groupRows.map((row, i) =>
+          deriveItem(`W${items.length + 1 + i}`, pendingItem.type, pendingItem.width, pendingItem.height, row.qty, pendingItem.meta))
+      : [pendingItem];
+    setItems((prev) => [...prev, ...newItems]);
     setPendingItem(null);
-    // If we're mid photo-batch, move on to the next extracted row's questions
-    // (only its MISSING info); otherwise land on the add-more screen.
+    setGroupRows([]);
+    // If we're mid photo-batch, move on to the next group's questions (only
+    // its MISSING info); otherwise land on the add-more screen.
     if (photoQueue.length > 0) {
-      const [nextRow, ...rest] = photoQueue;
-      startPhotoItem(nextRow, rest, jobShared.current);
+      const [nextGroup, ...restGroups] = photoQueue;
+      startPhotoItem(nextGroup, restGroups, jobShared.current);
     } else {
       setStep("addmore");
     }
-  }, [pendingItem, photoQueue, startPhotoItem]);
+  }, [pendingItem, groupRows, items.length, photoQueue, startPhotoItem]);
 
   /** Something about the drawing is wrong — go back and fix the answer that
    *  caused it, instead of throwing away everything answered so far. */
@@ -548,7 +590,7 @@ export default function FabriQ() {
     // The next job is for someone else — never carry a party name across.
     setQuoteCustomer(""); setQuoteJobFinish(undefined);
     setPendingRows([]); setJobQs([]); setJobAnswers({}); setJobQIndex(0);
-    setQIndex(0); setPendingItem(null); setStep("home");
+    setQIndex(0); setPendingItem(null); setGroupRows([]); setPhotoQueue([]); setStep("home");
   };
 
   // First-run onboarding gate (skippable). Avoid a flash for returning users.
@@ -636,12 +678,17 @@ export default function FabriQ() {
           questions={questions} qIndex={qIndex} answers={answers}
           loading={loadingQs} source={qSource}
           draft={draft} width={width} height={height}
+          scopeLabel={
+            groupRows.length > 1 && width && height
+              ? `Yeh sawaal ${groupRows.length} ${draft.type === "window" ? "khidkiyon" : draft.type === "door" ? "darwazon" : "partitions"} ke liye ek saath hai — sabki size same hai (${formatFtInSut(width)} × ${formatFtInSut(height)}), isliye alag-alag nahi poochna padega.`
+              : undefined
+          }
           onAnswer={answer}
           onBack={() => (qIndex > 0 ? setQIndex(qIndex - 1) : setStep("entry"))}
         />
       )}
       {step === "confirm" && pendingItem && (
-        <ConfirmDrawing item={pendingItem} shop={shop} onApprove={approveItem} onEdit={editItem} />
+        <ConfirmDrawing item={pendingItem} shop={shop} groupCount={groupRows.length} onApprove={approveItem} onEdit={editItem} />
       )}
       {step === "addmore" && (
         <AddMore
@@ -2069,9 +2116,9 @@ function Questions({
  * gets caught here, on screen, not after the pipe is cut.
  */
 function ConfirmDrawing({
-  item, shop, onApprove, onEdit,
+  item, shop, groupCount = 1, onApprove, onEdit,
 }: {
-  item: JobItem; shop: ShopProfile;
+  item: JobItem; shop: ShopProfile; groupCount?: number;
   onApprove: () => void; onEdit: () => void;
 }) {
   const preview = useMemo((): { list: MaterialList | null; error: string | null } => {
@@ -2082,9 +2129,9 @@ function ConfirmDrawing({
         return {
           list: null,
           error:
-            `The ${e.piece.role} needs one piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
-            `(${formatFtInSut(e.piece.length)}) long, but this section only comes in ` +
-            `${toFeet(e.barLength).toFixed(0)} ft bars. Check the size that was entered for this opening.`,
+            `${e.piece.role} ke liye ek piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
+            `(${formatFtInSut(e.piece.length)}) lamba chahiye, lekin yeh section sirf ` +
+            `${toFeet(e.barLength).toFixed(0)} ft ki bar me aata hai. Is opening ki size ek baar phir check kar lo.`,
         };
       }
       return { list: null, error: e instanceof Error ? e.message : String(e) };
@@ -2093,7 +2140,13 @@ function ConfirmDrawing({
 
   return (
     <div className="fade-up flex flex-col gap-4">
-      <Header title="Confirm this drawing" sub="Does this match the opening you measured?" onBack={onEdit} />
+      <Header
+        title="Drawing check karo"
+        sub={groupCount > 1
+          ? `Ye ${groupCount} openings ke liye ek hi drawing hai — jo size measure ki thi, usse match ho raha hai?`
+          : "Jo size measure ki thi, kya drawing usse match ho raha hai?"}
+        onBack={onEdit}
+      />
 
       {preview.list ? (
         <EngineeringSheet item={item} list={preview.list} shop={shop} />
@@ -2105,10 +2158,10 @@ function ConfirmDrawing({
 
       <div className="flex gap-2">
         <button onClick={onEdit} className="btn-ghost flex-1 py-3 text-sm">
-          ✗ Something&rsquo;s wrong — go back
+          ✗ Kuch galat hai — wapas jao
         </button>
         <button onClick={onApprove} className="btn-dark flex-1 py-3 text-sm" disabled={!preview.list}>
-          ✓ Yes, this is correct — add it
+          ✓ Haan, sahi hai — add karo
         </button>
       </div>
     </div>
@@ -2376,14 +2429,14 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
             // "16 ft bar" is the mixed-unit reading that causes the confusion in
             // the first place. The role keeps its own case — "SP Top" is the
             // section's name, and lowercasing it made it read as plain English.
-            `${where}: the ${e.piece.role} needs one piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
-            `(${formatFtInSut(e.piece.length)}) long, but this section only comes in ` +
-            `${toFeet(e.barLength).toFixed(0)} ft bars.\n\n` +
-            `If the opening is really that big, this part has to be JOINED — split it into two ` +
-            `pieces with a coupler and enter it as two openings, because the cut list cannot ` +
-            `decide a joint for you.\n\n` +
-            `If it is not that big, the size went in as feet when it meant inches — go back and ` +
-            `add " after the number (for example 66").`,
+            `${where}: ${e.piece.role} ke liye ek piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
+            `(${formatFtInSut(e.piece.length)}) lamba chahiye, lekin ye section sirf ` +
+            `${toFeet(e.barLength).toFixed(0)} ft ki bar me aata hai.\n\n` +
+            `Agar opening sach me itni badi hai, to ye part JOIN karna padega — coupler se do ` +
+            `pieces jodo aur isko do alag openings ki tarah enter karo, kyunki cut list khud ` +
+            `se joint decide nahi kar sakti.\n\n` +
+            `Agar itni badi nahi hai, to size feet me daali gayi thi jabki inch me thi — wapas ` +
+            `jaake number ke baad " lagao (jaise 66").`,
         };
       }
       return { list: null, error: e instanceof Error ? e.message : "error" };
@@ -3285,7 +3338,7 @@ function BeforeYouCut({ items, list }: { items: JobItem[]; list: MaterialList })
 
   return (
     <div className="card p-4">
-      <div className="eyebrow mb-2">Check before you cut</div>
+      <div className="eyebrow mb-2">Cutting se pehle check kar lo</div>
       <div className="flex flex-col gap-2">
         {sorted.map((f, i) => (
           <div key={i} className="flex gap-2 text-[12px] leading-relaxed">

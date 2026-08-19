@@ -25,7 +25,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: the exact OMEO code for the center rail is not yet verified. The size is confirmed — ask your dealer for the section number.`,
+        message: `${item.id}: center rail ka exact OMEO code abhi verify nahi hua hai. Size confirm hai — section number apne dealer se pooch lo.`,
       });
       confidence -= 2;
       continue;
@@ -35,7 +35,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: the panel clearance for sheet and glass has not yet been verified against a real job — confirm the glazing groove with your dealer.`,
+        message: `${item.id}: sheet aur glass ka panel clearance kisi real job pe abhi verify nahi hua — glazing groove apne dealer se confirm kar lo.`,
       });
       confidence -= 2;
       continue;
@@ -61,14 +61,14 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
         findings.push({
           severity: "blocker",
           category: "panel-size",
-          message: `${item.id}: this layout leaves an openable leaf only ${formatFtInSut(narrowest)} wide — too narrow to hang a hinge and handle on. Check the fixed panel sizes against the overall width before cutting.`,
+          message: `${item.id}: is layout me openable leaf sirf ${formatFtInSut(narrowest)} chaudi bach rahi hai — itni jagah me hinge-handle nahi lagega. Cutting se pehle fixed panel ki sizes aur overall width dobara check karo.`,
         });
         confidence -= 20;
       } else if (narrowest !== null && narrowest < Z_SASH_AWKWARD) {
         findings.push({
           severity: "warning",
           category: "panel-size",
-          message: `${item.id}: the narrowest openable leaf comes to ${formatFtInSut(narrowest)}. It will build, but it is a tight leaf — confirm the fixed panel sizes are right.`,
+          message: `${item.id}: sabse narrow openable leaf ${formatFtInSut(narrowest)} ki aa rahi hai. Ban to jayegi, par tight hai — fixed panel ki sizes ek baar confirm kar lo.`,
         });
         confidence -= 6;
       }
@@ -83,7 +83,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "warning",
         category: "shutter-size",
-        message: `${item.id}: the shutter is ${formatFtInSut(shutterW)} wide. Anything over 1400mm runs heavy — consider more tracks, or splitting it.`,
+        message: `${item.id}: shutter ${formatFtInSut(shutterW)} chaudi hai. 1400mm se zyada wala shutter bhaari ho jata hai — ek track aur badha do, ya isse split kar do.`,
       });
       confidence -= 6;
     }
@@ -93,7 +93,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "glass-thickness",
-        message: `${item.id}: this is a large glass panel (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). 5mm glass is safer here than 4mm.`,
+        message: `${item.id}: ye glass panel bada hai (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). Yahan 4mm ki jagah 5mm glass zyada safe rahega.`,
       });
       confidence -= 2;
     }
@@ -103,7 +103,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "shutter-mix",
-        message: `${item.id}: all three shutters on this 3-track are glass — there is no mesh. If an insect screen was wanted, change the shutter mix.`,
+        message: `${item.id}: is 3-track ke teeno shutter glass hain — jali kahi nahi hai. Agar mesh chahiye thi to shutter mix badal do.`,
       });
     }
 
@@ -112,7 +112,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "system-choice",
-        message: `${item.id}: at ${formatFtInSut(item.width)} a 3-track is not necessary — a 2-track works out cheaper, with a smaller bottom section.`,
+        message: `${item.id}: ${formatFtInSut(item.width)} chaudi khidki ke liye 3-track ki zaroorat nahi — 2-track sasta padega aur bottom section bhi chota rahega.`,
       });
       confidence -= 3;
     }
@@ -122,7 +122,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     findings.push({
       severity: "suggestion",
       category: "hardware",
-      message: `Hinges, friction stays and handles are not counted in this list — Z-section hardware is ordered separately. This job has ${zLeaves} openable Z-section ${zLeaves > 1 ? "leaves" : "leaf"} to buy for.`,
+      message: `Hinges, friction stays aur handles is list me nahi hain — Z-section ka hardware alag se order hota hai. Is job me ${zLeaves} openable Z-section ${zLeaves > 1 ? "leaves" : "leaf"} ke liye khareedna hoga.`,
     });
   }
 
@@ -131,30 +131,30 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     findings.push({
       severity: "warning",
       category: "scrap",
-      message: `Total scrap is ${list.totals.wastePct}% (${list.totals.wasteFt} ft). Save the leftover pieces to the Offcut Bank — they will be used on the next job.`,
+      message: `Total scrap ${list.totals.wastePct}% (${list.totals.wasteFt} ft) hai. Bache hue pieces Offcut Bank me daal do — agli job me kaam aa jayenge.`,
     });
     confidence -= 4;
   } else if (list.totals.wastePct > 12) {
     findings.push({
       severity: "suggestion",
       category: "scrap",
-      message: `Scrap is ${list.totals.wastePct}% — acceptable, but keep the leftover pieces safe.`,
+      message: `Scrap ${list.totals.wastePct}% hai — theek hai, par bache hue pieces sambhal ke rakhna.`,
     });
   } else if (list.totals.wastePct > 0) {
     findings.push({
       severity: "ok",
       category: "scrap",
-      message: `Scrap is only ${list.totals.wastePct}% — excellent nesting.`,
+      message: `Scrap sirf ${list.totals.wastePct}% hai — nesting badhiya hui hai.`,
     });
   }
 
 
   const summary =
     confidence >= 95
-      ? "This estimate is solid — download it and start work."
+      ? "Estimate solid hai — download karke kaam shuru karo."
       : confidence >= 88
-        ? "This estimate is fine. Have a look at the suggestions."
-        : "A few things need checking first — read the warnings below.";
+        ? "Estimate theek hai. Neeche ke suggestions ek baar dekh lo."
+        : "Kuch cheezein pehle check karni hongi — neeche ki warnings padh lo.";
 
   return { confidence: Math.max(confidence, 60), findings, summary };
 }
