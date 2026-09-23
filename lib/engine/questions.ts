@@ -53,6 +53,11 @@ export const JOB_LEVEL_IDS = new Set(["system", "zSize", "chokhat", "palla"]);
  */
 export function jobLevelQuestions(opts: {
   types: ("window" | "door" | "partition")[];
+  /** How many WINDOWS are in this round — not the total item count. A sheet
+   *  with 3 windows, a door and a partition (5 items) asking "which system
+   *  for all 5 windows?" told the fabricator two things that aren't windows
+   *  were windows, which is exactly the kind of number a fabricator checks
+   *  the sheet against and now doesn't trust. */
   count: number;
   known: Record<string, string>;
   /** How many windows on the sheet are Z-section. A MIXED sheet has no single

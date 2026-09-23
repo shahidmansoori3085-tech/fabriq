@@ -433,7 +433,8 @@ export default function FabriQ() {
 
     const types = [...new Set(valid.map((r) => r.type))];
     const qs = jobLevelQuestions({
-      types, count: valid.length, known: sharedFromSheet, zCount: countZSection(valid),
+      types, count: valid.filter((r) => r.type === "window").length,
+      known: sharedFromSheet, zCount: countZSection(valid),
     });
     // One opening is not a "job" — asking it twice would just be the same
     // question in different words.
@@ -452,7 +453,8 @@ export default function FabriQ() {
     setJobAnswers(next);
     const types = [...new Set(pendingRows.map((r) => r.type))];
     const remaining = jobLevelQuestions({
-      types, count: pendingRows.length, known: next, zCount: countZSection(pendingRows),
+      types, count: pendingRows.filter((r) => r.type === "window").length,
+      known: next, zCount: countZSection(pendingRows),
     });
     if (remaining.length > 0) {
       setJobQs([...jobQs.slice(0, jobQIndex + 1), ...remaining]);
@@ -505,16 +507,32 @@ export default function FabriQ() {
       }
     }
 
-    {
-      const item = deriveItem(`W${items.length + 1}`, draft.type, width!, height!, draft.qty, next);
-      // Every question about this opening has now been answered — before it
-      // joins the job, show the fabricator the actual drawing built from
-      // those answers, so a misread size or a wrong panel layout is caught
-      // on screen instead of after the pipe is cut.
-      setPendingItem(item);
-      setStep("confirm");
-    }
+    finalizeItem(next);
   }, [answers, qIndex, questions, items, draft, width, height, qSource]);
+
+  /** Every question about this opening has now been answered — before it
+   *  joins the job, show the fabricator the actual drawing built from those
+   *  answers, so a misread size or a wrong panel layout is caught on screen
+   *  instead of after the pipe is cut. */
+  const finalizeItem = useCallback((next: Record<string, string>) => {
+    const item = deriveItem(`W${items.length + 1}`, draft.type, width!, height!, draft.qty, next);
+    setPendingItem(item);
+    setStep("confirm");
+  }, [items, draft, width, height]);
+
+  /** A sheet can already answer every question this opening would ask (e.g.
+   *  a plain 2-track window whose track count and mix were both read off
+   *  the sheet) — the rule engine then has nothing left to ask from the
+   *  very first render, `questions` stays empty, and without this the
+   *  fabricator hit a dead-end "No questions for this type yet" screen with
+   *  no way forward except abandoning the opening. Finalize straight away
+   *  instead of showing a screen with nothing on it. */
+  useEffect(() => {
+    if (step !== "questions" || loadingQs || questions.length !== 0) return;
+    if (!width || !height) return;
+    finalizeItem(answers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, loadingQs, questions.length, width, height]);
 
   /** Fabricator confirmed the drawing matches what he measured — the item
    *  now actually joins the job. */

@@ -31,9 +31,14 @@ export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
  */
 export const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || GEMINI_MODEL;
 
-/** Google AI Studio keys look like `AIza…`; Anthropic's look like `sk-ant-…`. */
+/** Google AI Studio keys look like `AIza…` (the classic format) or `AQ.…`
+ *  (issued for some Google AI Pro subscription accounts — confirmed working
+ *  against the live API, just a different prefix). Anthropic's look like
+ *  `sk-ant-…`. Missing either Google prefix here silently misrouted a real,
+ *  working key to the Anthropic branch below, which then failed with a
+ *  confusing "that API key is wrong" — the key was fine, the sniffing wasn't. */
 export function isGeminiKey(key: string): boolean {
-  return /^AIza/.test(key.trim());
+  return /^(AIza|AQ\.)/.test(key.trim());
 }
 
 interface TextPart { type: "text"; text: string }
