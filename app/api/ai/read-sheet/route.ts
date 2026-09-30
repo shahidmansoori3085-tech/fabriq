@@ -32,6 +32,8 @@ const EXTRACT_SCHEMA = {
           z_order: { type: "string" as const },
           part_columns: { type: "integer" as const },
           part_rows: { type: "integer" as const },
+          part_door: { type: "boolean" as const },
+          part_door_ft: { type: "number" as const },
           fixed_top_ft: { type: "number" as const },
           rails: { type: "integer" as const },
           frame_needed: { type: "boolean" as const },
@@ -63,6 +65,7 @@ What these sheets contain (this describes the INPUT — the paper is written in 
 - A heading written once above a GROUP of boxes ("Normal 3 track", "Z section openable+fix window", "Domal", ...) applies to EVERY box in that group, not just the first — carry it down to each box until a new heading appears. Missing this is a common misread; double-check every box in a group got the heading's system/track info before moving to the next group.
 - A window box split into sections labelled "fix" and "openable" (sometimes with a width against each, e.g. "fix 22\" | openable | fix 22\"") is a multi-panel Z-section window. Report ONE item for the whole box using its overall width/height. THE APP CANNOT ASK A GOOD FOLLOW-UP QUESTION ABOUT SOMETHING THE SHEET ALREADY ANSWERED — so when the panel order and each fixed panel's size are legible, fill z_axis ("cols" for side-by-side panels, "rows" for stacked) and z_panels: a left-to-right (or top-to-bottom) comma list, "F" plus the size in FEET for a fixed panel, "O" for an openable one — e.g. fix 22in | openable | fix 22in -> z_axis "cols", z_panels "F1.83,O,F1.83". This lets the app skip asking a question it already has the answer to. Still put the exact wording in "notes" too, including anything that doesn't fit the panel list cleanly (an odd extra label like "top fix 30\"" on part of a panel) — that stays as a quote for the fabricator to check, not something to silently fold into z_panels or guess about. If the ORDER is legible but a fixed panel's SIZE is not written (e.g. "openable | fix | openable" with no width against the fix), still record the order — set z_axis and z_order, a comma list of just "F" and "O" in the same left-to-right (or top-to-bottom) order, e.g. "O,F,O" — and leave z_panels empty. The order is real information the sheet gave and must not be thrown away; the app will then ask ONLY for the one missing size instead of asking what the layout is, which the sheet already showed. Use z_panels when every fixed size is known, z_order when the order is known but a size is not. Never invent a size to be able to use z_panels.
 - A partition box drawn with an internal grid (extra lines dividing it into rows/columns of cells) — count the columns and rows and fill part_columns/part_rows (best count you can make from the drawing), so the app can work out bay/row spacing itself instead of asking the fabricator to state a spacing the drawing already shows. Also quote the grid into "notes" for the fabricator to double check, e.g. "grid ~4 columns x 3 rows".
+- A partition described as having a door ("1 door left side", "beech me door", a door drawn inside the partition box) — set part_door true, and part_door_ft to its width in feet if a width was written against it (leave part_door_ft empty if only "a door" was said with no size). If the sheet says panels/glass only with no door mentioned, set part_door false — leaving it unset only when you genuinely cannot tell means the app asks a question the sheet already answered.
 - W (window), D (door), quantity written as "x5" or "5 nos"
 
 Rules (CRITICAL):
@@ -85,7 +88,7 @@ Rules (CRITICAL):
 - frame_needed: for a DOOR, whether the frame (chokhat) has to be made. "chokhat banana hai",
   "चौखट बनानी है", "frame banega" -> true. "chokhat lagi hai", "frame ready", "chokhat already"
   -> false. Omit when the sheet is silent — do not guess, the app will ask.
-- z_axis/z_panels/z_order, part_columns/part_rows: fill these whenever the drawing actually shows them (see rules above) — the whole point is to ask the fabricator only about what the sheet DIDN'T already tell you. Never fill them from a guess; leave empty/omitted when genuinely not legible.
+- z_axis/z_panels/z_order, part_columns/part_rows, part_door/part_door_ft: fill these whenever the drawing actually shows them (see rules above) — the whole point is to ask the fabricator only about what the sheet DIDN'T already tell you. Never fill them from a guess; leave empty/omitted when genuinely not legible.
 - notes: for each item, anything extra written next to that box — including the exact panel wording and grid counts per the rules above, even when you also filled the structured fields
 - If the photo is blurred or unreadable, return legible: false and items: []
 - Do NOT hallucinate — report only what is actually visible

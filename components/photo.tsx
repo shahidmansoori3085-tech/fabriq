@@ -29,6 +29,11 @@ export interface ExtractedItem {
   /** Partition grid, counted straight off the drawing. */
   part_columns?: number;
   part_rows?: number;
+  /** Partition: whether the sheet showed a door inside it ("1 door left
+   *  side"), and its width in feet if one was written. Left undefined only
+   *  when the sheet genuinely doesn't say — the app then still asks. */
+  part_door?: boolean;
+  part_door_ft?: number;
   /** Sliding window with a fixed glass band on top ("upar fix 2 ft") — the
    *  band's height in feet. A sheet that states this has already answered
    *  both of the questions the app would otherwise ask about it. */

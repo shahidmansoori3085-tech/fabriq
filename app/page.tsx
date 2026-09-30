@@ -141,14 +141,32 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
     // sheet's own word has to win over the question's first option.
     if (typeof row.frame_needed === "boolean") k.chokhat = row.frame_needed ? "needed" : "existing";
   }
-  if (row.type === "partition" && row.part_columns && row.part_rows) {
-    // Grid counted straight off the drawing — derive the bay/row spacing
-    // the engine actually needs instead of asking for a spacing the
-    // drawing already implies.
-    const w = parseDimension(normalizeRaw(row.width_raw, row.unit_guess));
-    const h = parseDimension(normalizeRaw(row.height_raw, row.unit_guess));
-    if (w && row.part_columns > 0) k.partBayFt = (toFeet(w) / row.part_columns).toFixed(2);
-    if (h && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
+  if (row.type === "partition") {
+    // "1 door left side" on the sheet has already answered the question the
+    // app would otherwise ask — a partition drawn with no door mentioned is
+    // just as real an answer (panels/glass only), so false is seeded too,
+    // not just true.
+    if (typeof row.part_door === "boolean") {
+      k.partDoor = row.part_door ? "yes" : "no";
+      if (row.part_door && typeof row.part_door_ft === "number" && row.part_door_ft > 0) {
+        k.partDoorW = String(row.part_door_ft);
+      }
+    }
+    if (row.part_columns && row.part_rows) {
+      // Grid counted straight off the drawing — derive the bay/row spacing
+      // the engine actually needs instead of asking for a spacing the
+      // drawing already implies. The columns were counted across the PANEL
+      // field the fabricator drew, not the door's own bay, so the door's
+      // width comes out of the total before dividing — otherwise a 10ft
+      // partition with a 3ft door and "3 columns" seeds bays as if all
+      // 10ft were glass, one column too wide.
+      const w = parseDimension(normalizeRaw(row.width_raw, row.unit_guess));
+      const h = parseDimension(normalizeRaw(row.height_raw, row.unit_guess));
+      const doorW = row.part_door ? mm((row.part_door_ft ?? 3) * 304.8) : 0;
+      const fieldW = w ? Math.max(0, w - doorW) : null;
+      if (fieldW && row.part_columns > 0) k.partBayFt = (toFeet(fieldW) / row.part_columns).toFixed(2);
+      if (h && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
+    }
   }
   return k;
 }
