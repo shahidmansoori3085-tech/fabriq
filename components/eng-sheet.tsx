@@ -141,9 +141,16 @@ function baseRole(role: string): string {
  *  each physical opening against the one drawing before cutting. */
 export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; others?: JobItem[]; list: MaterialList; shop?: { name?: string } }) {
   const sec = getSection;
-  // Parts for THIS opening. Identical cuts collapse into one row with a qty —
-  // "Handle × 3 @ 58\"3s", not three near-identical S1/S2/S3 lines.
-  const parts = list.pieces.filter((p) => p.itemId === item.id);
+  // Parts for ONE unit of this opening — the table header says "per unit"
+  // and means it. When qty > 1, expandItem gives each physical unit its own
+  // piece id ("W1.1", "W1.2", …), never the bare item id, so filtering on
+  // item.id alone found nothing at all for any opening built more than
+  // once — the whole parts schedule and section list came back empty. Only
+  // the first unit's pieces are wanted here regardless; grouping ALL units'
+  // pieces together would multiply every quantity by item.qty while the
+  // header still claimed "per unit".
+  const repId = item.qty > 1 ? `${item.id}.1` : item.id;
+  const parts = list.pieces.filter((p) => p.itemId === repId);
   const grouped = new Map<string, { section: string; role: string; len: number; qty: number }>();
   for (const p of parts) {
     const role = baseRole(p.role);

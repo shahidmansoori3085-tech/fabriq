@@ -2465,7 +2465,13 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
         // run (an 18 ft partition is an ordinary job) whose rail has to be
         // joined. The old text assumed the typo and never mentioned the joint,
         // which left the second case looking like the app was broken.
-        const it = items.find((i) => i.id === e.piece.itemId);
+        // An opening built more than once carries a per-unit piece id
+        // ("W1.3" for the third W1), which never matches a JobItem's own id
+        // directly — strip it back before looking the opening up, or a
+        // 5-off window's too-long piece names itself "W1.3" instead of the
+        // opening the fabricator actually recognizes.
+        const baseItemId = e.piece.itemId.replace(/\.\d+$/, "");
+        const it = items.find((i) => i.id === baseItemId);
         const where = it ? `${itemName(it)} (${it.id})` : e.piece.itemId;
         return {
           list: null,
@@ -3689,7 +3695,11 @@ function rollUp(pieces: CutPiece[]) {
   const map = new Map<number, { count: number; roles: Set<string>; items: Set<string> }>();
   for (const p of pieces) {
     const e = map.get(p.length) ?? { count: 0, roles: new Set<string>(), items: new Set<string>() };
-    e.count += 1; e.roles.add(baseRole(p.role)); e.items.add(p.itemId);
+    // An opening built more than once gets one itemId per physical unit
+    // ("W1.1", "W1.2", …) — strip that back to the opening's own id before
+    // showing it, or a 5-off window's "Used for" line reads as 5 different
+    // openings ("W1.1, W1.2, W1.3, W1.4, W1.5") instead of one ("W1").
+    e.count += 1; e.roles.add(baseRole(p.role)); e.items.add(p.itemId.replace(/\.\d+$/, ""));
     map.set(p.length, e);
   }
   return map;
