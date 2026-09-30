@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveProvider, NVIDIA_SERVER_KEY } from "@/lib/ai/client";
 import { geminiJson } from "@/lib/ai/gemini";
 import { nvidiaJson } from "@/lib/ai/nvidia";
+import { isOpenRouterKey, openrouterJson } from "@/lib/ai/openrouter";
 import { SHEET_READING_KNOWLEDGE } from "@/lib/engine/knowledge";
 
 const EXTRACT_SCHEMA = {
@@ -181,6 +182,24 @@ export async function POST(req: NextRequest) {
       : "Read this measurement sheet and extract the items.",
     notes?.trim() ? `\nThe fabricator added this note (context only — never take a dimension from it):\n"${notes.trim()}"` : "",
   ].join("");
+
+  // OpenRouter is a founder-supplied fallback (not one of the shapes
+  // resolveProvider() knows about, which is only Anthropic/Gemini/NVIDIA/
+  // Bedrock) — checked first, ahead of resolveProvider, so a key in this
+  // format never falls through to the Anthropic branch and fails with a
+  // confusing "that key is wrong" the way an unrecognized Gemini format
+  // once did.
+  if (apiKey && isOpenRouterKey(apiKey)) {
+    try {
+      const parsed = await openrouterJson({
+        apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
+      });
+      return NextResponse.json(parsed);
+    } catch (e) {
+      console.error("[read-sheet/openrouter]", e);
+      return NextResponse.json(readFailure(e), { status: 500 });
+    }
+  }
 
   const resolved = await resolveProvider(apiKey);
   if (!resolved) {
