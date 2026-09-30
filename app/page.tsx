@@ -110,6 +110,15 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
     else if (/normal|18|bombay|sliding/.test(sys)) k.system = "normal";
     if (row.tracks === "2" || row.tracks === "3" || row.tracks === "4") k.tracks = row.tracks;
     if (row.mix && /^[GJS]+$/i.test(row.mix)) k.mix = row.mix.toUpperCase();
+    // The mix string IS the track count — "GJJ" is only a 3-shutter mix on a
+    // 3-track window, so a sheet that wrote the shutters ("glass, glass,
+    // jali") but not the track number in so many words has still answered
+    // this question. Never asked otherwise: track count came only from an
+    // explicit row.tracks, so a mix-only sheet asked for a number it had
+    // already implied.
+    if (!k.tracks && k.mix && k.mix.length >= 2 && k.mix.length <= 4) {
+      k.tracks = String(k.mix.length);
+    }
     // The sheet already showed the panel layout — asking "what is the
     // layout?" again would be a question the app already has the answer to.
     if (k.system === "z_section" && row.z_axis && row.z_panels?.trim()) {
