@@ -857,13 +857,20 @@ export function estimate(items: JobItem[]): MaterialList {
       const gW = shutterW - DOMAL_DEFAULTS.glassDeductionW;
       const gH = shutterH - DOMAL_DEFAULTS.glassDeductionH;
       const glassShutters = item.shutters.filter((s) => s.kind === "glass").length;
-      const jaliShutters = n - glassShutters;
+      const jaliShutters = item.shutters.filter((s) => s.kind === "jali").length;
+      // Solid sheet shutter: same infill size as its glass would have been,
+      // held in the same groove — it only changes what is ordered.
+      const sheetShutters = item.shutters.filter((s) => s.kind === "sheet").length;
 
       if (glassShutters > 0)
         glass.push({ itemId: item.id, width: gW, height: gH, count: glassShutters * item.qty });
       if (jaliShutters > 0) {
         mesh.push({ itemId: item.id, width: gW, height: gH, count: jaliShutters * item.qty });
         meshSplineFt += 2 * (toFeet(gW) + toFeet(gH)) * jaliShutters * item.qty;
+      }
+      if (sheetShutters > 0) {
+        sheet.push({ itemId: item.id, width: gW, height: gH, count: sheetShutters * item.qty });
+        sheetSplineFt += 2 * (toFeet(gW) + toFeet(gH)) * sheetShutters * item.qty;
       }
       if (fx.hasFix)
         glass.push({ itemId: item.id, width: fx.fixedGlassW, height: fx.fixedGlassH, count: item.qty });
@@ -883,13 +890,18 @@ export function estimate(items: JobItem[]): MaterialList {
     const gH = shutterH - d.glassDeductionH;
 
     const glassShutters = item.shutters.filter((s) => s.kind === "glass").length;
-    const jaliShutters = n - glassShutters;
+    const jaliShutters = item.shutters.filter((s) => s.kind === "jali").length;
+    const sheetShutters = item.shutters.filter((s) => s.kind === "sheet").length;
 
     if (glassShutters > 0)
       glass.push({ itemId: item.id, width: gW, height: gH, count: glassShutters * item.qty });
     if (jaliShutters > 0) {
       mesh.push({ itemId: item.id, width: gW, height: gH, count: jaliShutters * item.qty });
       meshSplineFt += 2 * (toFeet(gW) + toFeet(gH)) * jaliShutters * item.qty;
+    }
+    if (sheetShutters > 0) {
+      sheet.push({ itemId: item.id, width: gW, height: gH, count: sheetShutters * item.qty });
+      sheetSplineFt += 2 * (toFeet(gW) + toFeet(gH)) * sheetShutters * item.qty;
     }
 
     rollers += 2 * n * item.qty;

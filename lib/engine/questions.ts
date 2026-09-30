@@ -492,9 +492,11 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
   return qs.slice(0, 4);
 }
 
-/** turn answers into shutter config */
-export function mixToShutters(mix: string): { kind: "glass" | "jali" }[] {
-  return mix.split("").map((c) => ({ kind: c === "J" ? "jali" : "glass" }));
+/** turn a window shutter mix into shutter configs — G glass, J mesh, S solid
+ *  aluminium sheet (store room, bathroom). S used to fall through to glass,
+ *  so a sheet shutter written on the sheet was ordered as glass. */
+export function mixToShutters(mix: string): { kind: "glass" | "jali" | "sheet" }[] {
+  return mix.split("").map((c) => ({ kind: c === "J" ? "jali" : c === "S" ? "sheet" : "glass" }));
 }
 
 /** turn door zone-mix answer into zone configs (S=sheet, J=jali) */

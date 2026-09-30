@@ -75,7 +75,10 @@ Rules (CRITICAL):
 - unit_guess: small numbers (2-12) = feet; 24-96 = inches; 300+ = mm
 - qty defaults to 1 when not written
 - tracks: "2"/"3" when the sheet says or draws it, otherwise omit
-- mix: G=glass, J=mesh, e.g. "GGJ" when visible, otherwise omit. A written mesh COUNT is a mix
+- mix: G=glass, J=mesh (jali), S=solid aluminium SHEET (a "sheet"/"चादर" shutter — store rooms,
+  bathrooms, "glass nahi, sheet chahiye"). Never write J for a sheet shutter: sheet is not mesh.
+  "2trk, sheet 1" means one of the two shutters is sheet — "GS"; "2trk, dono sheet" is "SS".
+  e.g. "GGJ" when visible, otherwise omit. A written mesh COUNT is a mix
   the sheet has already stated — "jali 1" on a 2 track means one of the two shutters is mesh, so
   mix "GJ"; "jali 1" on a 3 track means "GGJ". Work it out from the track count and fill mix.
   Only omit mix when the sheet says nothing at all about mesh.

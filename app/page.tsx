@@ -121,7 +121,15 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
     }
     // The sheet already showed the panel layout — asking "what is the
     // layout?" again would be a question the app already has the answer to.
-    if (k.system === "z_section" && row.z_axis && row.z_panels?.trim()) {
+    // "ALL FIX" — a single fixed panel spanning the whole opening, whichever
+    // field the reader put it in (seen as both z_panels "F" and z_order "F").
+    // As a one-panel row it asked "how wide is the fixed panel?" when the
+    // answer can only be the full width, or broke on an unsized "F"; it is
+    // simply the fixed layout.
+    const zLayout = (row.z_panels?.trim() || row.z_order?.trim() || "").toUpperCase().split(",").filter(Boolean);
+    if (k.system === "z_section" && zLayout.length === 1 && zLayout[0].startsWith("F")) {
+      k.zType = "fixed";
+    } else if (k.system === "z_section" && row.z_axis && row.z_panels?.trim()) {
       k.zType = "row";
       k.zAxis = row.z_axis;
       k.zPanels = row.z_panels.trim();
@@ -2267,6 +2275,7 @@ function AddMore({
                     {it.qty} nos · {it.system === "normal_3t" ? "3-Track" : it.system === "normal_2t" ? "2-Track" : "Domal"} ·{" "}
                     {it.shutters.filter((s) => s.kind === "glass").length}G+
                     {it.shutters.filter((s) => s.kind === "jali").length}M
+                    {it.shutters.some((s) => s.kind === "sheet") && `+${it.shutters.filter((s) => s.kind === "sheet").length}S`}
                   </>
                 )}
               </div>

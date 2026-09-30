@@ -128,9 +128,9 @@ export function WindowDiagram({
         return (
           <g key={i}>
             <rect x={x + 2} y={frame + 2} width={shW - 4} height={innerH - 4}
-              fill={sh.kind === "glass" ? "#dbeafe" : "#f1f5f0"}
+              fill={sh.kind === "glass" ? "#dbeafe" : sh.kind === "sheet" ? "#d4d8de" : "#f1f5f0"}
               stroke="#5a5f6a" strokeWidth={1.2} />
-            {sh.kind === "glass" ? (
+            {sh.kind === "sheet" ? null : sh.kind === "glass" ? (
               <>
                 <line x1={x + 8} y1={frame + innerH * 0.6} x2={x + shW * 0.55} y2={frame + 10}
                   stroke="#93c5fd" strokeWidth={1.5} />
@@ -151,7 +151,7 @@ export function WindowDiagram({
             )}
             <text x={x + shW / 2} y={h - frame - 8} textAnchor="middle"
               fontSize={11} fontWeight={700} fill="#5a5f6a">
-              {sh.kind === "glass" ? "GLASS" : "MESH"}
+              {sh.kind === "glass" ? "GLASS" : sh.kind === "sheet" ? "SHEET" : "MESH"}
             </text>
           </g>
         );
