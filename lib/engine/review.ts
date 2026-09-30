@@ -75,6 +75,17 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       continue;
     }
 
+    // The sheet drew a fixed band on top, the fabricator chose plain sliding.
+    // Deliberate, but the band still has to be made — say so where he orders.
+    if (item.meta.sheetFixFt && item.system !== "domal") {
+      findings.push({
+        severity: "warning",
+        category: "fixed-band",
+        message: `${item.id}: sheet pe upar ${item.meta.sheetFixFt} ft fix likha tha — ye list sirf sliding ki hai, fix ka pipe aur glass isme nahi hai. Fix alag se banana/order karna hoga.`,
+      });
+      confidence -= 6;
+    }
+
     const d = item.system === "domal" ? DOMAL_DEFAULTS : DEFAULTS;
     const { shutterW, shutterH } = shutterSize(item, d);
 

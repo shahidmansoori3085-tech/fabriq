@@ -143,12 +143,12 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
       k.zOrder = row.z_order.trim().toUpperCase().replace(/[^OF,]/g, "");
     }
     // "upar fix 2 ft" on a sliding window answers BOTH fixed-band questions.
-    // Only Domal builds a fixed band today, so a band written against a
-    // Normal window is left for the fabricator rather than silently dropped
-    // into a system that cannot express it.
-    if (k.system === "domal" && typeof row.fixed_top_ft === "number" && row.fixed_top_ft > 0) {
-      k.domalFix = "yes";
-      k.domalFixFt = String(row.fixed_top_ft);
+    // Only Domal builds a fixed band today. The band is kept as sheetFixFt
+    // whatever the system turns out to be — deriveItem applies it if the
+    // window ends up Domal, and a Normal window gets asked how to build it
+    // (it used to be dropped without a word, cutting every shutter too tall).
+    if (k.system !== "z_section" && typeof row.fixed_top_ft === "number" && row.fixed_top_ft > 0) {
+      k.sheetFixFt = String(row.fixed_top_ft);
     }
   }
   if (row.type === "door") {
@@ -169,7 +169,10 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
         k.partDoorW = String(row.part_door_ft);
       }
     }
-    if (row.part_columns && row.part_rows) {
+    // Columns and rows are independent facts — a sheet saying "4 columns"
+    // and nothing about rows has still answered the bay width. Requiring
+    // both threw the column count away and asked for it again.
+    if (row.part_columns || row.part_rows) {
       // Grid counted straight off the drawing — derive the bay/row spacing
       // the engine actually needs instead of asking for a spacing the
       // drawing already implies. The columns were counted across the PANEL
@@ -181,8 +184,8 @@ function seedFromRow(row: ExtractedItem): Record<string, string> {
       const h = parseDimension(normalizeRaw(row.height_raw, row.unit_guess));
       const doorW = row.part_door ? mm((row.part_door_ft ?? 3) * 304.8) : 0;
       const fieldW = w ? Math.max(0, w - doorW) : null;
-      if (fieldW && row.part_columns > 0) k.partBayFt = (toFeet(fieldW) / row.part_columns).toFixed(2);
-      if (h && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
+      if (fieldW && row.part_columns && row.part_columns > 0) k.partBayFt = (toFeet(fieldW) / row.part_columns).toFixed(2);
+      if (h && row.part_rows && row.part_rows > 0) k.partRowFt = (toFeet(h) / row.part_rows).toFixed(2);
     }
   }
   return k;
@@ -249,6 +252,12 @@ function deriveItem(
       : Math.max(1, parseInt(next.zSashCount ?? "1", 10));
     shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
   } else {
+    if (next.fixPlan === "domal") next.system = "domal";
+    // A fixed band from the sheet goes onto the only build that has one.
+    if (next.system === "domal" && next.sheetFixFt && !next.domalFix) {
+      next.domalFix = "yes";
+      next.domalFixFt = next.sheetFixFt;
+    }
     sys = next.system === "domal" ? "domal" : (next.tracks ?? "2") === "3" ? "normal_3t" : "normal_2t";
     next.handle = next.handle ?? "std";
     const mix = next.mix ?? ((next.tracks ?? "2") === "4" ? "GGGJ" : (next.tracks ?? "2") === "3" ? "GGJ" : "GG");
@@ -594,6 +603,22 @@ export default function FabriQ() {
     }
   }, [pendingItem, groupRows, items.length, photoQueue, startPhotoItem]);
 
+  /** An opening that cannot be built as drawn (a 20 ft partition whose top
+   *  rail is longer than any bar) used to stop the whole photo batch: the
+   *  approve button is rightly disabled, and "go back" only re-asks the same
+   *  questions — so every opening still queued behind it was unreachable.
+   *  Leave this one out and carry on; the fabricator adds it split in two. */
+  const skipItem = useCallback(() => {
+    setPendingItem(null);
+    setGroupRows([]);
+    if (photoQueue.length > 0) {
+      const [nextGroup, ...restGroups] = photoQueue;
+      startPhotoItem(nextGroup, restGroups, jobShared.current);
+    } else {
+      setStep(items.length ? "addmore" : "choose");
+    }
+  }, [photoQueue, startPhotoItem, items.length]);
+
   /** Something about the drawing is wrong — go back and fix the answer that
    *  caused it, instead of throwing away everything answered so far. */
   const editItem = useCallback(() => {
@@ -612,7 +637,12 @@ export default function FabriQ() {
     const prev = loadProjects().find((p) => p.id === id);
     saveProject({
       id,
-      title: prev?.title || autoTitle(items),
+      // The title was frozen at the FIRST save — the photo batch saves after
+      // every opening, so a 5-window + door job stayed "1 Window" forever.
+      // Keep it in step with the items while it is still the automatic one
+      // (it equals what autoTitle gave for the items it was saved with);
+      // a title the fabricator typed himself is left alone.
+      title: prev?.title && prev.title !== autoTitle(prev.items) ? prev.title : autoTitle(items),
       created: prev?.created ?? Date.now(),
       updated: Date.now(),
       items,
@@ -741,7 +771,7 @@ export default function FabriQ() {
         />
       )}
       {step === "confirm" && pendingItem && (
-        <ConfirmDrawing item={pendingItem} shop={shop} groupCount={groupRows.length} onApprove={approveItem} onEdit={editItem} />
+        <ConfirmDrawing item={pendingItem} shop={shop} groupCount={groupRows.length} onApprove={approveItem} onEdit={editItem} onSkip={skipItem} />
       )}
       {step === "addmore" && (
         <AddMore
@@ -2169,10 +2199,10 @@ function Questions({
  * gets caught here, on screen, not after the pipe is cut.
  */
 function ConfirmDrawing({
-  item, shop, groupCount = 1, onApprove, onEdit,
+  item, shop, groupCount = 1, onApprove, onEdit, onSkip,
 }: {
   item: JobItem; shop: ShopProfile; groupCount?: number;
-  onApprove: () => void; onEdit: () => void;
+  onApprove: () => void; onEdit: () => void; onSkip: () => void;
 }) {
   const preview = useMemo((): { list: MaterialList | null; error: string | null } => {
     try {
@@ -2184,7 +2214,9 @@ function ConfirmDrawing({
           error:
             `${e.piece.role} ke liye ek piece ${toFeet(e.piece.length).toFixed(1)} ft ` +
             `(${formatFtInSut(e.piece.length)}) lamba chahiye, lekin yeh section sirf ` +
-            `${toFeet(e.barLength).toFixed(0)} ft ki bar me aata hai. Is opening ki size ek baar phir check kar lo.`,
+            `${toFeet(e.barLength).toFixed(0)} ft ki bar me aata hai.\n\n` +
+            `Agar opening sach me itni badi hai, to ise JOIN karna padega — do alag openings me baant ke daalo ` +
+            `(jaise 20 ft ko 10 + 10). Agar itni badi nahi hai, to size galat padhi gayi hai — wapas jaake theek karo.`,
         };
       }
       return { list: null, error: e instanceof Error ? e.message : String(e) };
@@ -2217,6 +2249,11 @@ function ConfirmDrawing({
           ✓ Haan, sahi hai — add karo
         </button>
       </div>
+      {!preview.list && (
+        <button onClick={onSkip} className="btn-ghost py-3 text-sm">
+          Ye opening abhi chhod do — baaki aage badhao
+        </button>
+      )}
     </div>
   );
 }

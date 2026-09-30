@@ -151,13 +151,32 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
       });
     }
 
-    const chosenSystem = ctx.known.system ?? "normal";
+    // The sheet drew a fixed band on top ("upar fix 2.5ft") but the system is
+    // Normal Sliding, which has no fixed-band build. Building it silently as
+    // plain sliding cuts every shutter too tall and drops the fixed glass, so
+    // ask — and the only verified fixed-band build is Domal's.
+    if (ctx.known.system !== "domal" && ctx.known.system !== "z_section" && ctx.known.sheetFixFt && !ctx.known.fixPlan) {
+      qs.push({
+        id: "fixPlan",
+        question: `Sheet pe upar ${ctx.known.sheetFixFt} ft fix likha hai — Normal sliding me fix band nahi banta. Kaise banayein?`,
+        why: "Bina fix ke banaya to har shutter lamba katega aur fix ka glass list me nahi aayega",
+        options: [
+          { value: "domal", label: "Domal me banao — fix ke saath", hint: "Upar fix glass, neeche sliding" },
+          { value: "skip", label: "Fix chhod do — sirf sliding", hint: "Fix alag se banana padega" },
+        ],
+      });
+    }
+
+    const chosenSystem = ctx.known.fixPlan === "domal" ? "domal" : ctx.known.system ?? "normal";
     const isDomal = chosenSystem === "domal";
     const isZSection = chosenSystem === "z_section";
 
     // Domal "sliding + upar fix" — an optional fixed glass band on top of the
     // sliding window, framed in SP partition pipe (founder-confirmed 2026-08-04).
-    if (isDomal) {
+    // A fixed band written on the sheet already answers both of these, however
+    // the window came to be Domal (read off the sheet, picked for the whole
+    // job, or chosen via "Domal me banao").
+    if (isDomal && !ctx.known.sheetFixFt) {
       if (!ctx.known.domalFix) {
         qs.push({
           id: "domalFix",
@@ -317,14 +336,15 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
               { value: "3", label: "3 track", hint: "Common at this width" },
               { value: "2", label: "2 track" },
               { value: "4", label: "4 track" },
-              { value: "2.5", label: "2 track + fixed" },
             ]
           : [
               { value: "2", label: "2 track", hint: "Enough at this width" },
               { value: "3", label: "3 track" },
               { value: "4", label: "4 track" },
-              { value: "2.5", label: "2 track + fixed" },
             ],
+      // "2 track + fixed" (2.5) was offered here but nothing ever built it —
+      // it came out as a plain 2-track with no fixed panel. Removed until a
+      // verified build exists; a fixed band on top goes through Domal.
       });
     }
 
