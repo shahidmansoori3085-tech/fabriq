@@ -21,6 +21,18 @@ jobs:
         with:
           node-version: 20
 
+      # Gate: nothing reaches production unless the type check and the
+      # offline engine tests pass (size parser, engine invariants, every
+      # question path builds). They need no API key and run in seconds.
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Engine tests
+        run: npm test
+
       - name: Pull Vercel environment
         run: npx vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
         env:
