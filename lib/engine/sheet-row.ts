@@ -29,6 +29,9 @@ export interface ExtractedItem {
    *  when the sheet genuinely doesn't say — the app then still asks. */
   part_door?: boolean;
   part_door_ft?: number;
+  /** Partition: height in feet of a solid sheet band along the bottom
+   *  ("neeche 3ft sheet"); 0 for full glass. */
+  part_sheet_ft?: number;
   /** Sliding window with a fixed glass band on top ("upar fix 2 ft") — the
    *  band's height in feet. A sheet that states this has already answered
    *  both of the questions the app would otherwise ask about it. */

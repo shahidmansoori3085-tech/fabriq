@@ -90,7 +90,22 @@ function parseUnitPhrase(raw: string): Um | null {
  *          4.5 (decimal feet) | 1372mm | 137.2cm | 4 (feet) | 4x3 handled at caller level |
  *          spelled-out units in any order — "feet 10", "10 feet 6 inch", "sut 4"
  */
+/**
+ * Sheets write half feet as "4½", "3 1/2'" or "3-1/2", and feet-inches as
+ * "5'-6\"". The reader copies them as written (it must never convert), so
+ * the parser has to accept them — they used to come back "not understood".
+ */
+function normalizeFractions(raw: string): string {
+  const VULGAR: Record<string, string> = { "½": ".5", "¼": ".25", "¾": ".75" };
+  return raw
+    .replace(/(\d+)\s*([½¼¾])/g, (_, n, f) => `${n}${VULGAR[f]}`)
+    .replace(/^\s*([½¼¾])/, (_, f) => `0${VULGAR[f]}`)
+    .replace(/(\d+)[\s-]+(\d+)\/(\d+)/g, (_, n, a, b) => String(parseInt(n, 10) + parseInt(a, 10) / parseInt(b, 10)))
+    .replace(/(['′])\s*-\s*(?=\d)/g, "$1");
+}
+
 export function parseDimension(raw: string): Um | null {
+  raw = normalizeFractions(raw);
   const phrase = parseUnitPhrase(raw);
   if (phrase !== null) return phrase;
 

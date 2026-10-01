@@ -248,6 +248,108 @@ export const CASES = [
       { ...W({ width_raw: "3", height_raw: "4", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
     ],
   },
+
+  // ——— round 2: cases written to break what round 1 no longer catches ———
+  {
+    id: "21-devanagari-digits", title: "शर्मा फैब्रिकेशन", sub: "अंक भी देवनागरी में",
+    body: `<div>१. खिड़की ४x५ दो पट्टी, जाली १</div>
+<div>२. खिड़की ६x५ तीन पट्टी, जाली १</div>
+<div>३. दरवाजा ३x७, २ पट्टी, चौखट बनानी है</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "5", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "6", height_raw: "5", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+      { ...D({ width_raw: "3", height_raw: "7", rails: 2, frame_needed: true }), onSheet: ["rails"] },
+    ],
+  },
+  {
+    id: "22-fractions", title: "Modern Aluminium", sub: "Half feet written as fractions",
+    body: `<div>1. 4½ x 5 &mdash; 2trk jali 1</div>
+<div>2. 3 1/2' x 4' &mdash; 2trk jali 1</div>
+<div>3. 5'-6" x 4'-3" &mdash; 3trk jali 1</div>`,
+    truth: [
+      { ...W({ width_raw: "4.5", height_raw: "5", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "3.5", height_raw: "4", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "5'6\"", height_raw: "4'3\"", unit_guess: "ft-in-sut", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+    ],
+  },
+  {
+    id: "23-height-first", title: "Pooja Glass", sub: "Labelled H and W, height written first",
+    body: `<div>1. H 5' &nbsp; W 4' &mdash; 2trk jali 1</div>${box(4, 5, cols(["G", "J"]), "H 5'  W 4'")}
+<div>2. height 4 / width 6 &mdash; 3trk jali 1</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "5", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "6", height_raw: "4", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+    ],
+  },
+  {
+    id: "24-qty-words", title: "Hussain Fab", sub: "Quantity in words",
+    body: `<div>1. teen khidki 4x4, 2trk jali 1</div>
+<div>2. do darwaze 3x7, 2 patti, chokhat banana</div>
+<div>3. char khidki bathroom 2x2, 2trk glass</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "4", qty: 3, tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...D({ width_raw: "3", height_raw: "7", qty: 2, rails: 2, frame_needed: true }), onSheet: ["rails"] },
+      { ...W({ width_raw: "2", height_raw: "2", qty: 4, tracks: "2", mix: "GG" }), onSheet: ["tracks", "mix"] },
+    ],
+  },
+  {
+    id: "25-mesh-synonyms", title: "Green Home", sub: "Mesh called by other names",
+    body: `<div>1. 4x5 2trk, 1 net</div>
+<div>2. 5x5 3trk, machhardani 1</div>
+<div>3. 4x4 2trk, mosquito wala 1</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "5", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "5", height_raw: "5", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "4", height_raw: "4", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+    ],
+  },
+  {
+    id: "26-partition-sheet-band", title: "Corporate Interiors", sub: "Partition with solid sheet at the bottom",
+    body: `<div>1. partition 10x8, neeche 3ft sheet upar glass, door nahi</div>${box(10, 8, [{ x: 0, y: 0, w: 1, h: 0.62, t: "glass" }, { x: 0, y: 0.62, w: 1, h: 0.38, t: "sheet 3'" }])}
+<div>2. partition 8x8 full glass, door nahi</div>`,
+    truth: [
+      { ...P({ width_raw: "10", height_raw: "8", part_door: false, part_sheet_ft: 3 }), onSheet: ["partDoor"] },
+      { ...P({ width_raw: "8", height_raw: "8", part_door: false, part_sheet_ft: 0 }), onSheet: ["partDoor"] },
+    ],
+  },
+  {
+    id: "27-table-format", title: "Ashok Aluminium — Quotation sheet", sub: "Typed-style table",
+    body: `<table style="border-collapse:collapse;font-size:18px" border="1" cellpadding="6">
+<tr><th>Sr</th><th>Location</th><th>W</th><th>H</th><th>Qty</th><th>Type</th></tr>
+<tr><td>1</td><td>Bed</td><td>48"</td><td>60"</td><td>2</td><td>2 trk, 1 jali</td></tr>
+<tr><td>2</td><td>Hall</td><td>72"</td><td>60"</td><td>1</td><td>3 trk, 1 jali</td></tr>
+<tr><td>3</td><td>Main door</td><td>36"</td><td>84"</td><td>1</td><td>door 3 patti, frame new</td></tr></table>`,
+    truth: [
+      { ...W({ width_raw: "48", height_raw: "60", unit_guess: "inches", qty: 2, tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "72", height_raw: "60", unit_guess: "inches", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+      { ...D({ width_raw: "36", height_raw: "84", unit_guess: "inches", rails: 3, frame_needed: true }), onSheet: ["rails"] },
+    ],
+  },
+  {
+    id: "28-z-combo-side-fix", title: "Bharat Z-Section", sub: "Fix on one side, rest opens",
+    body: `<div>1. Z 6x4 &mdash; left side 2ft fix, baaki 2 sash khulne wale</div>${box(6, 4, [{ x: 0, y: 0, w: 0.33, h: 1, t: "fix 2'" }, { x: 0.33, y: 0, w: 0.335, h: 1, t: "open" }, { x: 0.665, y: 0, w: 0.335, h: 1, t: "open" }])}`,
+    truth: [
+      { ...W({ width_raw: "6", height_raw: "4", system: "Z section", z_axis: "cols", z_panels: "F2,O,O" }), onSheet: ["system", "zType"] },
+    ],
+  },
+  {
+    id: "29-overwritten-qty", title: "Raj Glass", sub: "Quantity changed on site",
+    body: `<div>1. 4x5 2trk jali 1 &mdash; qty <s style="color:#888">2</s> <b>3</b></div>
+<div>2. 3x4 2trk jali 1 &mdash; <s style="color:#888">x4</s> x2</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "5", qty: 3, tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "3", height_raw: "4", qty: 2, tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+    ],
+  },
+  {
+    id: "30-two-photos-one-job", title: "Site — page 2 of 2", sub: "Continued from page 1 (page 1 not attached)",
+    body: `<div>(...continued)</div><div>7. 4x5 2trk jali 1</div><div>8. 6x5 3trk jali 1</div><div>9. darwaza 3x7 2 patti chokhat hai</div>`,
+    truth: [
+      { ...W({ width_raw: "4", height_raw: "5", tracks: "2", mix: "GJ" }), onSheet: ["tracks", "mix"] },
+      { ...W({ width_raw: "6", height_raw: "5", tracks: "3", mix: "GGJ" }), onSheet: ["tracks", "mix"] },
+      { ...D({ width_raw: "3", height_raw: "7", rails: 2, frame_needed: false }), onSheet: ["rails"] },
+    ],
+  },
 ];
 
 export function pageHtml(c) {

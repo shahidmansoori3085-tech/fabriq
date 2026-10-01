@@ -94,6 +94,10 @@ export function seedFromRow(row: ExtractedItem): Record<string, string> {
     // Columns and rows are independent facts — a sheet saying "4 columns"
     // and nothing about rows has still answered the bay width. Requiring
     // both threw the column count away and asked for it again.
+    // The engine has always built a bottom sheet band; the sheet saying
+    // "neeche 3ft sheet" just had nowhere to land, so the partition came out
+    // full glass with no word about it.
+    if (typeof row.part_sheet_ft === "number" && row.part_sheet_ft >= 0) k.partSheetFt = String(row.part_sheet_ft);
     if (row.part_columns || row.part_rows) {
       // Grid counted straight off the drawing — derive the bay/row spacing
       // the engine actually needs instead of asking for a spacing the
