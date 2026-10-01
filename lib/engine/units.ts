@@ -40,9 +40,11 @@ const UNIT_WORD_VALUE: Record<string, number> = {
   mm: UM_PER_MM, cm: UM_PER_MM * 10,
   ft: UM_PER_FOOT, feet: UM_PER_FOOT, fit: UM_PER_FOOT, fits: UM_PER_FOOT, "फुट": UM_PER_FOOT, "'": UM_PER_FOOT,
   in: UM_PER_INCH, inch: UM_PER_INCH, inches: UM_PER_INCH, "\"": UM_PER_INCH,
-  sut: UM_PER_SUT,
+  // "s" is how this app itself writes sut (58"3s) — a size copied back from
+  // the app's own screen has to parse.
+  sut: UM_PER_SUT, s: UM_PER_SUT,
 };
-const UNIT_WORD_RE = /^(mm|cm|ft|feet|fit|fits|फुट|'|in|inch|inches|"|sut)$/;
+const UNIT_WORD_RE = /^(mm|cm|ft|feet|fit|fits|फुट|'|in|inch|inches|"|sut|s)$/;
 const NUMBER_TOKEN_RE = /^\d+(?:\.\d+)?$/;
 
 /**

@@ -110,7 +110,10 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     }
 
     // 3-track with 3 glass and no jali — confirm intent
-    if (item.system === "normal_3t" && item.shutters.every((s) => s.kind === "glass")) {
+    // Skipped when the sheet itself spoke about mesh ("no jali, dukaan hai") —
+    // re-asking what the fabricator wrote down is noise, not a check.
+    if (item.system === "normal_3t" && item.shutters.every((s) => s.kind === "glass")
+        && !/jali|jaali|mesh|glass|जाली/i.test(item.meta.notes ?? "")) {
       findings.push({
         severity: "suggestion",
         category: "shutter-mix",

@@ -60,8 +60,10 @@ ${SHEET_READING_KNOWLEDGE}
 What these sheets contain (this describes the INPUT — the paper is written in local trade shorthand):
 - Ballpoint-pen rectangles (windows, doors, partitions) with sizes written on them
 - Sizes: "4x3" (usually FEET), "4'6\"x3'", "54x42" (inches when the numbers are large), "4-6-4" = 4 feet 6 inch 4 sut, "57\"2sut" = 57 inches + 2 sut (no feet component — a bare quote mark plus "sut" is still ft-in-sut shorthand, just missing the feet term)
-- Hindi/Urdu labels — "जाली"/"jali" means mesh, "दो पट्टी"/"2 patti" means 2 track
-- System shorthand: "domal", "18mm", "section", "Z"
+- Hindi/Urdu labels — "जाली"/"jali" means mesh. "पट्टी"/"patti" depends on WHAT it is written on: on a WINDOW "2 patti" means 2 track; on a DOOR (darwaza) "2 patti"/"3 patti" is the number of CENTER RAILS -> rails 2/3, never tracks
+- System shorthand: "domal", "18mm", "section", "Z". A "Z door" / "Z darwaza" is a Z-SECTION opening, not a
+  shutter door: report it as type "window" with system "Z section" and keep "door" in notes. type "door" is
+  only the palla/shutter door with rails and chokhat.
 - A heading written once above a GROUP of boxes ("Normal 3 track", "Z section openable+fix window", "Domal", ...) applies to EVERY box in that group, not just the first — carry it down to each box until a new heading appears. Missing this is a common misread; double-check every box in a group got the heading's system/track info before moving to the next group.
 - A window box split into sections labelled "fix" and "openable" (sometimes with a width against each, e.g. "fix 22\" | openable | fix 22\"") is a multi-panel Z-section window. Report ONE item for the whole box using its overall width/height. THE APP CANNOT ASK A GOOD FOLLOW-UP QUESTION ABOUT SOMETHING THE SHEET ALREADY ANSWERED — so when the panel order and each fixed panel's size are legible, fill z_axis ("cols" for side-by-side panels, "rows" for stacked) and z_panels: a left-to-right (or top-to-bottom) comma list, "F" plus the size in FEET for a fixed panel, "O" for an openable one — e.g. fix 22in | openable | fix 22in -> z_axis "cols", z_panels "F1.83,O,F1.83". This lets the app skip asking a question it already has the answer to. Still put the exact wording in "notes" too, including anything that doesn't fit the panel list cleanly (an odd extra label like "top fix 30\"" on part of a panel) — that stays as a quote for the fabricator to check, not something to silently fold into z_panels or guess about. If the ORDER is legible but a fixed panel's SIZE is not written (e.g. "openable | fix | openable" with no width against the fix), still record the order — set z_axis and z_order, a comma list of just "F" and "O" in the same left-to-right (or top-to-bottom) order, e.g. "O,F,O" — and leave z_panels empty. The order is real information the sheet gave and must not be thrown away; the app will then ask ONLY for the one missing size instead of asking what the layout is, which the sheet already showed. Use z_panels when every fixed size is known, z_order when the order is known but a size is not. Never invent a size to be able to use z_panels.
 - A partition box drawn with an internal grid (extra lines dividing it into rows/columns of cells) — count the columns and rows and fill part_columns/part_rows (best count you can make from the drawing), so the app can work out bay/row spacing itself instead of asking the fabricator to state a spacing the drawing already shows. Also quote the grid into "notes" for the fabricator to double check, e.g. "grid ~4 columns x 3 rows".
@@ -72,6 +74,9 @@ Rules (CRITICAL):
 - Width × Height order: Indian fabricators usually write W×H
 - NEVER guess a digit. If a number is unclear, set confidence "low" and give your best reading
 - NEVER convert units — put exactly what is written into width_raw/height_raw (e.g. "4'6\"", "54", "4-6-4")
+- width_raw holds ONLY the width and height_raw ONLY the height — never "5x4" in one field. A size that was
+  CROSSED OUT and rewritten: use only the new, un-struck value, and mention the struck one in notes
+  ("6x4 kaat ke 5x4"). Never read a struck-through number as the size.
 - unit_guess: small numbers (2-12) = feet; 24-96 = inches; 300+ = mm
 - qty defaults to 1 when not written
 - tracks: "2"/"3" when the sheet says or draws it, otherwise omit
@@ -88,11 +93,14 @@ Rules (CRITICAL):
   written "upar fix 2 ft", "ऊपर फिक्स", "top fix 2'". Put the band's HEIGHT IN FEET here (2 ft -> 2,
   18 inches -> 1.5). This is NOT a Z-section panel row: the window below still slides on tracks.
   Omit when the sheet does not mention a fixed band.
-- rails: for a DOOR, the number of CENTER RAILS written on the sheet ("3 rails", "3 patti",
-  "तीन पट्टी"). A door with 3 rails has 4 panels. Omit when not written.
+- rails: for a DOOR, the number of CENTER RAILS written on the sheet ("3 rails", "3 patti", "2 patti",
+  "तीन पट्टी", "2 पट्टी"). A door with 3 rails has 4 panels. ANY "N patti" next to a door IS rails N —
+  always fill it (only 2 or 3 exist; if you read 1, look again). Omit only when not written.
 - frame_needed: for a DOOR, whether the frame (chokhat) has to be made. "chokhat banana hai",
-  "चौखट बनानी है", "frame banega" -> true. "chokhat lagi hai", "frame ready", "chokhat already"
-  -> false. Omit when the sheet is silent — do not guess, the app will ask.
+  "चौखट बनानी है", "frame banega" -> true. "chokhat lagi hai", "frame ready", "chokhat already",
+  "chokhat hai", "chokhat laga hai", "चौखट लगी हुई है" -> false (the frame EXISTS). Read the verb: "hai"/"laga"/"lagi" =
+  already there (false); "banana"/"banani"/"banega" = to be made (true); "chokhat nahi hai" = there is
+  no frame, so it must be made (true). Omit when the sheet is silent — do not guess, the app will ask.
 - z_axis/z_panels/z_order, part_columns/part_rows, part_door/part_door_ft: fill these whenever the drawing actually shows them (see rules above) — the whole point is to ask the fabricator only about what the sheet DIDN'T already tell you. Never fill them from a guess; leave empty/omitted when genuinely not legible.
 - notes: for each item, anything extra written next to that box — including the exact panel wording and grid counts per the rules above, even when you also filled the structured fields
 - If the photo is blurred or unreadable, return legible: false and items: []
@@ -118,6 +126,14 @@ function readFailure(e: unknown): { error: string; message: string; reason: stri
   const status = raw.match(/_(\d{3})\b/)?.[1];
   const lower = raw.toLowerCase();
 
+  // Out of credit is not a bad photo and not a bad key — "try again" can never
+  // work until the account is topped up, so say that instead.
+  if (status === "402" || lower.includes("credits")) {
+    return {
+      error: "read_failed", reason: "no_credit",
+      message: "AI account ka balance khatam ho gaya hai — Settings (⚙) me doosri key daalo ya account recharge karo. Tab tak sizes khud enter kar sakte ho.",
+    };
+  }
   if (status === "429" || lower.includes("quota") || lower.includes("rate limit")) {
     return {
       error: "read_failed", reason: "rate_limited",
@@ -146,6 +162,27 @@ function readFailure(e: unknown): { error: string; message: string; reason: stri
     error: "read_failed", reason: "unknown",
     message: "Could not read the photo. Try again, or enter the sizes yourself.",
   };
+}
+
+/**
+ * Every provider sometimes puts a whole size into one field — width_raw "4x4"
+ * with height_raw "4", or "5x4" / "4x4" after a corrected size. The prompt
+ * forbids it, but a size field the parser can't read reaches the fabricator
+ * as "Width not understood" on an opening the photo read fine. When a field
+ * holds a full "A x B", it is the reader's own reading of the whole size, so
+ * it wins over a stray value in the other field.
+ */
+const PAIR = /^\s*([^x×*]+?)\s*[x×*]\s*([^x×*]+?)\s*$/i;
+function splitPairedSizes<T>(parsed: T): T {
+  const items = (parsed as { items?: { width_raw?: string; height_raw?: string }[] })?.items;
+  if (!Array.isArray(items)) return parsed;
+  for (const it of items) {
+    const w = PAIR.exec(it.width_raw ?? "");
+    const h = PAIR.exec(it.height_raw ?? "");
+    if (w) { it.width_raw = w[1]; it.height_raw = w[2]; }
+    else if (h) { it.width_raw = it.width_raw?.trim() ? it.width_raw : h[1]; it.height_raw = h[2]; }
+  }
+  return parsed;
 }
 
 /**
@@ -202,7 +239,7 @@ export async function POST(req: NextRequest) {
       const parsed = await openrouterJson({
         apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
       });
-      return NextResponse.json(parsed);
+      return NextResponse.json(splitPairedSizes(parsed));
     } catch (e) {
       console.error("[read-sheet/openrouter]", e);
       return NextResponse.json(readFailure(e), { status: 500 });
@@ -222,7 +259,7 @@ export async function POST(req: NextRequest) {
       const parsed = await geminiJson({
         apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
       });
-      return NextResponse.json(parsed);
+      return NextResponse.json(splitPairedSizes(parsed));
     } catch (e) {
       console.error("[read-sheet/gemini]", e);
       const failure = readFailure(e);
@@ -240,7 +277,7 @@ export async function POST(req: NextRequest) {
             apiKey: spare, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
             timeoutMs: FALLBACK_TIMEOUT_MS,
           });
-          return NextResponse.json(parsed);
+          return NextResponse.json(splitPairedSizes(parsed));
         } catch (e2) {
           console.error("[read-sheet/gemini->nvidia fallback]", e2);
         }
@@ -254,7 +291,7 @@ export async function POST(req: NextRequest) {
       const parsed = await nvidiaJson({
         apiKey: resolved.apiKey, system: SYSTEM, schema: EXTRACT_SCHEMA, images: shots, userText,
       });
-      return NextResponse.json(parsed);
+      return NextResponse.json(splitPairedSizes(parsed));
     } catch (e) {
       console.error("[read-sheet/nvidia]", e);
       return NextResponse.json(readFailure(e), { status: 500 });
@@ -289,7 +326,7 @@ export async function POST(req: NextRequest) {
     const text = response.content.find((b) => b.type === "text");
     if (!text || text.type !== "text") throw new Error("no text");
     const parsed = JSON.parse(text.text);
-    return NextResponse.json(parsed);
+    return NextResponse.json(splitPairedSizes(parsed));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     const friendly = msg.includes("401") || msg.toLowerCase().includes("auth")

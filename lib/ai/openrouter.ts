@@ -64,7 +64,9 @@ export async function openrouterJson<T>(opts: {
 
   const text = await call({
     model: opts.model || OPENROUTER_VISION_MODEL,
-    max_tokens: opts.maxTokens ?? 4096,
+    // The extraction JSON is small; a 4096 ceiling only reserves credit it never
+    // uses, and a low-balance account refuses the request outright for it.
+    max_tokens: opts.maxTokens ?? 3000,
     messages: [
       { role: "system", content: opts.system },
       { role: "user", content: parts },

@@ -12,7 +12,8 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { VoiceButton } from "@/components/voice";
-import { downscale, type ExtractedItem } from "@/components/photo";
+import { downscale } from "@/components/photo";
+import type { ExtractedItem } from "@/lib/engine/sheet-row";
 import type { JobItem } from "@/lib/engine/types";
 
 /** Mirrors the allow-list the copilot route validates against. */
