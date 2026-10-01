@@ -12,7 +12,7 @@ import {
   mixToShutters, partitionMixToZones, zMixToSashes, type Question,
 } from "@/lib/engine/questions";
 import { PieceTooLongError } from "@/lib/engine/cutting";
-import { estimate } from "@/lib/engine/estimator";
+import { estimate, ImpossibleLayoutError } from "@/lib/engine/estimator";
 import { buildJobItem } from "@/lib/engine/quick-item";
 import {
   getSection, SECTIONS, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
@@ -2041,6 +2041,14 @@ function ConfirmDrawing({
     try {
       return { list: estimate([item]), error: null };
     } catch (e) {
+      if (e instanceof ImpossibleLayoutError) {
+        return {
+          list: null,
+          error:
+            `${e.itemId}: ${e.part} ki size ${formatFtInSut(e.size)} aa rahi hai — matlab fix / sheet ka hissa poori opening se bada ho gaya hai. ` +
+            `Fix panel ya band ki size, aur opening ki width/height ek baar check karo.`,
+        };
+      }
       if (e instanceof PieceTooLongError) {
         return {
           list: null,
@@ -2338,6 +2346,14 @@ function Result({ items, onNew, initialTab, initialCustomer, initialFinish, onSn
       const list = estimate(items);
       return { list, error: null as string | null };
     } catch (e) {
+      if (e instanceof ImpossibleLayoutError) {
+        return {
+          list: null,
+          error:
+            `${e.itemId}: ${e.part} ki size ${formatFtInSut(e.size)} aa rahi hai — matlab fix / sheet ka hissa poori opening se bada ho gaya hai. ` +
+            `Fix panel ya band ki size, aur opening ki width/height ek baar check karo.`,
+        };
+      }
       if (e instanceof PieceTooLongError) {
         // Name the opening, the part and both lengths. A shop hits this two
         // ways — a size typed in feet that meant inches, and a genuinely long

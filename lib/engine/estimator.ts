@@ -767,8 +767,22 @@ function expandZSectionItem(item: JobItem): CutPiece[] {
   return pieces;
 }
 
+/**
+ * A layout that cannot exist — fixed panels wider than the opening, a fixed or
+ * sheet band taller than it. The formulas then produce zero or negative cut
+ * lengths and pane sizes, which used to print straight onto the cutting sheet
+ * and the glass order. Refuse instead, naming the opening and the part.
+ */
+export class ImpossibleLayoutError extends Error {
+  constructor(public itemId: string, public part: string, public size: Um) {
+    super(`Impossible layout: ${itemId} ${part} ${size}`);
+    this.name = "ImpossibleLayoutError";
+  }
+}
+
 export function estimate(items: JobItem[]): MaterialList {
   const pieces = items.flatMap((it, i) => expandItem(it, i));
+  for (const p of pieces) if (!(p.length > 0)) throw new ImpossibleLayoutError(p.itemId.replace(/\.\d+$/, ""), p.role, p.length);
   const bars = packAllSections(pieces);
   const sections = summarize(bars);
 
@@ -954,6 +968,12 @@ export function estimate(items: JobItem[]): MaterialList {
     return a + s.bars16 * full + s.bars8 * (full / 2);
   }, 0);
   const wasteFt = sections.reduce((a, s) => a + toFeet(s.waste), 0);
+
+  for (const [part, list] of [["glass", glass], ["mesh", mesh], ["sheet", sheet]] as const) {
+    for (const p of list) {
+      if (!(p.width > 0 && p.height > 0)) throw new ImpossibleLayoutError(p.itemId, `${part} panel`, Math.min(p.width, p.height));
+    }
+  }
 
   return {
     pieces, bars, sections, glass, glassSqft,
