@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts",
+    "eval:sheets": "tsx evals/sheets/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/bedrock-sdk": "^0.32.1",
@@ -31,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

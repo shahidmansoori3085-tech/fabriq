@@ -12,7 +12,7 @@
  * two Hindi words that DO have a clear English equivalent lead in English with
  * the trade word in brackets on first use: Frame (chokhat), Shutter (palla).
  */
-import { Um, mm, formatFtInSut } from "./units";
+import { Um, mm, formatFtInSut, UM_PER_FOOT } from "./units";
 
 export interface Question {
   id: string;
@@ -132,6 +132,26 @@ export function jobLevelQuestions(opts: {
   return qs;
 }
 
+/**
+ * Keep only the fixed-size options that leave room for the rest of the
+ * opening. Offering "3 ft" for each fixed side of a 3 ft window let a single
+ * tap build an impossible layout (now refused at estimate time, but better
+ * never offered). `used(ft)` is how much of `room` the option takes; at least
+ * `leave` must remain. If nothing fits, the smallest option stays so the
+ * question still has an answer — the estimate then explains what's wrong.
+ */
+function fitting(opts: Question["options"], room: Um, used: (ft: number) => number, leave: Um): Question["options"] {
+  const ok = opts.filter((o) => room - used(parseFloat(o.value)) * UM_PER_FOOT >= leave);
+  if (ok.length) return ok;
+  // None of the usual sizes fit (a narrow opening whose layout the sheet
+  // drew): offer the largest size that does, to the quarter foot.
+  const perFt = used(1);
+  const maxFt = perFt > 0 ? Math.floor(((room - leave) / UM_PER_FOOT / perFt) * 4) / 4 : 0;
+  if (maxFt >= 0.5) return [{ value: String(maxFt), label: `${maxFt} ft`, hint: "Jitna is opening me fit hota hai" }];
+  return [...opts].sort((a, b) => parseFloat(a.value) - parseFloat(b.value)).slice(0, 1);
+}
+const MIN_LEAF = mm(450); // the review's "tight leaf" line — below this a sash is hard to build
+
 export function generateQuestions(ctx: QuestionContext): Question[] {
   const qs: Question[] = [];
   const wide = ctx.width >= mm(1500);
@@ -193,12 +213,13 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           id: "domalFixFt",
           question: "How tall is the fixed band on top (feet)?",
           why: "This sets where the coupler sits and the size of the fixed glass",
-          options: [
+          // the sliding part below still needs a real shutter height
+          options: fitting([
             { value: "1", label: "1 ft", hint: "Narrow band" },
             { value: "1.5", label: "1.5 ft" },
             { value: "2", label: "2 ft", hint: "Most common" },
             { value: "2.5", label: "2.5 ft" },
-          ],
+          ], ctx.height, (ft) => ft, mm(600)),
         });
       }
     }
@@ -228,7 +249,9 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
             { value: "combo", label: "Fixed on top, openable below", hint: "Split by a transom — most common" },
             { value: "fixed", label: "Fully fixed (does not open)", hint: "Glass + clip only, no shutter" },
             { value: "door", label: "Door", hint: "Single shutter, no mullion" },
-          ],
+          ].filter((o) => o.value !== "combo"
+            // a fixed part (1.5 ft at its smallest) plus a buildable leaf must fit one way or the other
+            || Math.max(ctx.width, ctx.height) - 1.5 * UM_PER_FOOT >= MIN_LEAF),
         });
       }
       const zType = ctx.known.zType ?? "openable";
@@ -257,12 +280,17 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
             id: `zPanelFt${idx}`,
             question: `How ${dim} is ${which}?`,
             why: `Your sheet shows ${drawn} — only this size was not written on it`,
-            options: [
+            // fixed panels still unsized are assumed this size too (they
+            // usually match); every openable panel needs a buildable leaf
+            options: fitting([
               { value: "2", label: "2 ft", hint: "Most common" },
               { value: "1.5", label: "1.5 ft" },
               { value: "2.5", label: "2.5 ft" },
               { value: "3", label: "3 ft" },
-            ],
+            ], (sideways ? ctx.width : ctx.height)
+                - order.reduce((t, tok, i) => t + (tok === "F" ? (parseFloat(ctx.known[`zPanelFt${i}`] ?? "") || 0) * UM_PER_FOOT : 0), 0),
+              (ft) => ft * order.filter((t, i) => t === "F" && !(parseFloat(ctx.known[`zPanelFt${i}`] ?? "") > 0)).length,
+              MIN_LEAF * order.filter((t) => t === "O").length),
           });
         }
       }
@@ -274,12 +302,20 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           id: "zComboDir",
           question: "Where is the fixed part?",
           why: "Top or side changes the transom/mullion and both glass sizes",
+          // only placements that leave the smallest fixed size (1.5 ft) plus a
+          // buildable leaf — "both sides" on a 2 ft window cannot be built
           options: [
             { value: "top", label: "On top (horizontal band)", hint: "Fixed above, opens below" },
             { value: "side", label: "On one side (vertical band)", hint: "One side fixed, other opens" },
             { value: "both", label: "On both sides", hint: "Fixed | openable | fixed — openable in the middle" },
             { value: "center", label: "In the middle", hint: "Openable | fixed | openable — fixed in the middle" },
-          ],
+          ].filter((o) => {
+            const fix = 1.5 * UM_PER_FOOT;
+            if (o.value === "top") return ctx.height - fix >= MIN_LEAF;
+            if (o.value === "side") return ctx.width - fix >= MIN_LEAF;
+            if (o.value === "both") return ctx.width - 2 * fix >= MIN_LEAF;
+            return ctx.width - fix >= 2 * MIN_LEAF;
+          }),
         });
       }
       // Sash count applies to the openable band (openable window OR the
@@ -292,11 +328,15 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           id: "zSashCount",
           question: perSide ? "How many sashes on EACH side of the fixed middle?" : "How many sashes in the openable part?",
           why: "Sash count decides the number of mullions and shutters",
-          options: [
+          // each sash needs a buildable leaf in whatever width the fixed part
+          // (at its smallest, 1.5 ft) leaves for the openable band
+          options: fitting([
             { value: "1", label: "1 sash", hint: "No mullion" },
             { value: "2", label: "2 sashes", hint: "1 mullion" },
             { value: "3", label: "3 sashes", hint: "2 mullions" },
-          ],
+          ], ctx.width - (zType !== "combo" || ctx.known.zComboDir === "top" ? 0
+              : (ctx.known.zComboDir === "both" ? 3 : 1.5) * UM_PER_FOOT),
+            (n) => (n * (perSide ? 2 : 1) * MIN_LEAF) / UM_PER_FOOT, 0),
         });
       }
       // For a combo, how big is the fixed part (height if top, width if side/centre).
@@ -311,12 +351,14 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
           why: dir === "both"
             ? "Both fixed strips are cut to this same width — this sets where both dividers sit"
             : "This sets where the divider sits and the size of both glass panels",
-          options: [
+          options: fitting([
             { value: "1.5", label: "1.5 ft", hint: "Small fixed band" },
             { value: "2", label: "2 ft", hint: "Most common" },
             { value: "2.5", label: "2.5 ft" },
             { value: "3", label: "3 ft", hint: "Large fixed band" },
-          ],
+          ], dir === "top" || !dir ? ctx.height : ctx.width,
+            (ft) => (dir === "both" ? 2 : 1) * ft,
+            MIN_LEAF * (dir === "center" ? 2 : 1) * Math.max(1, parseInt(ctx.known.zSashCount ?? "1", 10))),
         });
       }
     }
@@ -460,10 +502,11 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
         id: "partDoor",
         question: "Is there a door in the partition?",
         why: "The door takes its own space; panels fill the rest",
+        // a door (2.5 ft at its narrowest) plus one panel must fit the width
         options: [
           { value: "no", label: "No, panels only", hint: "Full glass or sheet grid" },
           { value: "yes", label: "Yes, there is a door", hint: "Usually ~3 ft, separate door shutter" },
-        ],
+        ].filter((o) => o.value === "no" || ctx.width - 2.5 * UM_PER_FOOT >= MIN_LEAF),
       });
     }
     if (ctx.known.partDoor === "yes" && !ctx.known.partDoorW) {
@@ -471,11 +514,12 @@ export function generateQuestions(ctx: QuestionContext): Question[] {
         id: "partDoorW",
         question: "How wide is the door?",
         why: "The door width decides how much space is left for the panels",
-        options: [
+        // the panels beside the door still need a buildable bay
+        options: fitting([
           { value: "2.5", label: "2.5 ft (30\")" },
           { value: "3", label: "3 ft (36\")", hint: "Standard" },
           { value: "3.5", label: "3.5 ft (42\")" },
-        ],
+        ], ctx.width, (ft) => ft, MIN_LEAF),
       });
     }
     // Sheet-band question removed — defaults to full glass (partSheetFt="0").
