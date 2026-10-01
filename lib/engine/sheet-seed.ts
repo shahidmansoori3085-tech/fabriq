@@ -38,12 +38,19 @@ export function seedFromRow(row: ExtractedItem): Record<string, string> {
     // answer can only be the full width, or broke on an unsized "F"; it is
     // simply the fixed layout.
     const zLayout = (row.z_panels?.trim() || row.z_order?.trim() || "").toUpperCase().split(",").filter(Boolean);
-    if (k.system === "z_section" && !zLayout.length && /\bdoor\b|darwaza|दरवाज/i.test(row.notes ?? "")) {
-      // "Z door 3x7" — the Z-section door layout; asking "fixed, openable or
-      // door?" would re-ask what the sheet just said.
+    const loneOpen = zLayout.length === 1 && zLayout[0] === "O";
+    if (k.system === "z_section" && (!zLayout.length || loneOpen) && /\bdoor\b|darwaza|दरवाज/i.test(row.notes ?? "")) {
+      // "Z door 3x7" — the Z-section door layout (the reader sometimes also
+      // marks it as one openable panel); asking "fixed, openable or door?"
+      // would re-ask what the sheet just said.
       k.zType = "door";
     } else if (k.system === "z_section" && zLayout.length === 1 && zLayout[0].startsWith("F")) {
       k.zType = "fixed";
+    } else if (k.system === "z_section" && loneOpen) {
+      // One openable panel across the whole opening is the plain openable
+      // layout with one sash, not a one-panel custom row.
+      k.zType = "openable";
+      k.zSashCount = "1";
     } else if (k.system === "z_section" && row.z_axis && row.z_panels?.trim()) {
       k.zType = "row";
       k.zAxis = row.z_axis;
