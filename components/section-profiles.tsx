@@ -307,10 +307,12 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
           <img src={`/sections/${sectionId}.png`} alt={`${sec.label} — engineering cross-section (mm)`}
             style={{ maxWidth: "100%", maxHeight: 190, objectFit: "contain" }} />
         </div>
-        <figcaption className="flex items-center justify-between px-3 py-2"
+        {/* Wraps instead of squeezing: in a narrow drawing-sheet column the
+            name and the size used to crush into one broken-up column. */}
+        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2"
           style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
           <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
-          <span className="mono text-[11px]" style={{ color: "var(--ink-3)" }}>Cross-section · {sec.size} mm</span>
+          <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
         </figcaption>
       </figure>
     );
@@ -325,9 +327,13 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
   const A = "var(--accent)";
   const dim = { stroke: A, strokeWidth: 1 };
   const M = 30;
+  // Same named card as the catalogue crops — a bare outline left the workshop
+  // guessing which section it was.
   return (
+    <figure className="overflow-hidden rounded-xl" style={{ background: "#fff", border: "1px solid var(--line)" }}>
+    <div className="grid place-items-center px-3 py-3">
     <svg viewBox={`0 0 ${dw + M} ${dh + M}`} width={dw + M} height={dh + M}
-      role="img" aria-label={`${sec.label} dimensioned cross-section`} style={{ overflow: "visible" }}>
+      role="img" aria-label={`${sec.label} dimensioned cross-section`} style={{ overflow: "visible", maxWidth: "100%" }}>
       <g transform={`translate(2 2)`}>{face(spec, dw, dh)}</g>
       <line x1={2} y1={dh + 12} x2={dw + 2} y2={dh + 12} {...dim} />
       <line x1={2} y1={dh + 8} x2={2} y2={dh + 16} {...dim} />
@@ -339,5 +345,12 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
       <text x={dw + 24} y={dh / 2 + 2} textAnchor="middle" fontSize={11} fontWeight={700} fill={A}
         transform={`rotate(90 ${dw + 24} ${dh / 2 + 2})`} className="mono">{hmm}mm</text>
     </svg>
+    </div>
+    <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2"
+      style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
+      <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
+      <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
+    </figcaption>
+    </figure>
   );
 }

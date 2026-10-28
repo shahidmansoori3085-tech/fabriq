@@ -5,7 +5,7 @@
  */
 import { mm, formatFtInSut } from "./units";
 import type { JobItem, MaterialList, ReviewFinding, ReviewResult } from "./types";
-import { DEFAULTS, DOMAL_DEFAULTS, shutterSize, zGeometry } from "./estimator";
+import { DEFAULTS, DOMAL_DEFAULTS, shutterSize, zGeometry, domalFix } from "./estimator";
 
 /** Below this a hinged Z-section leaf is not something a shop actually builds —
  *  the hinge, the handle and the lock have nowhere to go. */
@@ -25,7 +25,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: center rail ka exact OMEO code abhi verify nahi hua hai. Size confirm hai — section number apne dealer se pooch lo.`,
+        message: `${item.id}: the catalogue code for the center rail is not verified yet. The size is correct — confirm the section number with your dealer.`,
       });
       confidence -= 2;
       continue;
@@ -35,7 +35,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "section-verify",
-        message: `${item.id}: sheet aur glass ka panel clearance kisi real job pe abhi verify nahi hua — glazing groove apne dealer se confirm kar lo.`,
+        message: `${item.id}: panel clearance for sheet and glass is not yet verified on a real job — confirm the glazing groove with your dealer.`,
       });
       confidence -= 2;
       continue;
@@ -61,14 +61,14 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
         findings.push({
           severity: "blocker",
           category: "panel-size",
-          message: `${item.id}: is layout me openable leaf sirf ${formatFtInSut(narrowest)} chaudi bach rahi hai — itni jagah me hinge-handle nahi lagega. Cutting se pehle fixed panel ki sizes aur overall width dobara check karo.`,
+          message: `${item.id}: the openable leaf in this layout is only ${formatFtInSut(narrowest)} wide — too narrow for hinges and a handle. Check the fixed panel sizes and the overall width before cutting.`,
         });
         confidence -= 20;
       } else if (narrowest !== null && narrowest < Z_SASH_AWKWARD) {
         findings.push({
           severity: "warning",
           category: "panel-size",
-          message: `${item.id}: sabse narrow openable leaf ${formatFtInSut(narrowest)} ki aa rahi hai. Ban to jayegi, par tight hai — fixed panel ki sizes ek baar confirm kar lo.`,
+          message: `${item.id}: the narrowest openable leaf is ${formatFtInSut(narrowest)}. It can be built, but it is tight — confirm the fixed panel sizes.`,
         });
         confidence -= 6;
       }
@@ -81,20 +81,36 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "warning",
         category: "fixed-band",
-        message: `${item.id}: sheet pe upar ${item.meta.sheetFixFt} ft fix likha tha — ye list sirf sliding ki hai, fix ka pipe aur glass isme nahi hai. Fix alag se banana/order karna hoga.`,
+        message: `${item.id}: a ${item.meta.sheetFixFt} ft fixed panel on top was noted — this list covers the sliding part only. The fixed panel's pipe and glass must be made and ordered separately.`,
       });
       confidence -= 6;
     }
 
+    // A 4-track job saved by an older version was built on a 2-track frame —
+    // more shutters than the frame has tracks. Say so instead of cutting it.
+    const tracksInFrame = item.system === "normal_2t" ? 2 : item.system === "normal_3t" ? 3 : Infinity;
+    if (item.shutters.length > tracksInFrame) {
+      findings.push({
+        severity: "blocker",
+        category: "system-choice",
+        message: `${item.id}: ${item.shutters.length} shutters cannot fit a ${tracksInFrame}-track frame. Edit this item and choose 2 or 3 Track.`,
+      });
+      confidence -= 20;
+    }
+
     const d = item.system === "domal" ? DOMAL_DEFAULTS : DEFAULTS;
-    const { shutterW, shutterH } = shutterSize(item, d);
+    const { shutterW } = shutterSize(item, d);
+    // A Domal with a fixed top only slides in the zone below it — the same
+    // height the cut list uses, or this check talks about a shutter 2 ft taller
+    // than the one being made.
+    const shutterH = (item.system === "domal" ? domalFix(item).slidingH : item.height) - d.shutterHeightDeduction;
 
     // Sanity: shutter too wide
     if (shutterW > mm(1400)) {
       findings.push({
         severity: "warning",
         category: "shutter-size",
-        message: `${item.id}: shutter ${formatFtInSut(shutterW)} chaudi hai. 1400mm se zyada wala shutter bhaari ho jata hai — ek track aur badha do, ya isse split kar do.`,
+        message: `${item.id}: each shutter is ${formatFtInSut(shutterW)} wide. Shutters wider than 1400 mm get heavy — add a track or split the opening.`,
       });
       confidence -= 6;
     }
@@ -104,29 +120,20 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       findings.push({
         severity: "suggestion",
         category: "glass-thickness",
-        message: `${item.id}: ye glass panel bada hai (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). Yahan 4mm ki jagah 5mm glass zyada safe rahega.`,
+        message: `${item.id}: this glass panel is large (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). 5 mm glass is safer here than 4 mm.`,
       });
       confidence -= 2;
     }
 
-    // 3-track with 3 glass and no jali — confirm intent
-    // Skipped when the sheet itself spoke about mesh ("no jali, dukaan hai") —
-    // re-asking what the fabricator wrote down is noise, not a check.
-    if (item.system === "normal_3t" && item.shutters.every((s) => s.kind === "glass")
-        && !/jali|jaali|mesh|glass|जाली/i.test(item.meta.notes ?? "")) {
-      findings.push({
-        severity: "suggestion",
-        category: "shutter-mix",
-        message: `${item.id}: is 3-track ke teeno shutter glass hain — jali kahi nahi hai. Agar mesh chahiye thi to shutter mix badal do.`,
-      });
-    }
+    // (No "3 glass, no mesh?" check: the shutter mix is now always an explicit
+    // choice on the form, so questioning it only second-guesses the fabricator.)
 
     // Very small window on 3-track
     if (item.system === "normal_3t" && item.width < mm(1200)) {
       findings.push({
         severity: "suggestion",
         category: "system-choice",
-        message: `${item.id}: ${formatFtInSut(item.width)} chaudi khidki ke liye 3-track ki zaroorat nahi — 2-track sasta padega aur bottom section bhi chota rahega.`,
+        message: `${item.id}: a ${formatFtInSut(item.width)} wide window does not need 3 tracks — 2 tracks costs less and uses a smaller bottom section.`,
       });
       confidence -= 3;
     }
@@ -136,7 +143,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     findings.push({
       severity: "suggestion",
       category: "hardware",
-      message: `Hinges, friction stays aur handles is list me nahi hain — Z-section ka hardware alag se order hota hai. Is job me ${zLeaves} openable Z-section ${zLeaves > 1 ? "leaves" : "leaf"} ke liye khareedna hoga.`,
+      message: `Hinges, friction stays and handles are not in this list — Z-section hardware is ordered separately. This job needs it for ${zLeaves} openable Z-section ${zLeaves > 1 ? "leaves" : "leaf"}.`,
     });
   }
 
@@ -145,30 +152,30 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     findings.push({
       severity: "warning",
       category: "scrap",
-      message: `Total scrap ${list.totals.wastePct}% (${list.totals.wasteFt} ft) hai. Bache hue pieces Offcut Bank me daal do — agli job me kaam aa jayenge.`,
+      message: `Total scrap is ${list.totals.wastePct}% (${list.totals.wasteFt} ft). Keep the long leftover pieces — they can be used on the next job.`,
     });
     confidence -= 4;
   } else if (list.totals.wastePct > 12) {
     findings.push({
       severity: "suggestion",
       category: "scrap",
-      message: `Scrap ${list.totals.wastePct}% hai — theek hai, par bache hue pieces sambhal ke rakhna.`,
+      message: `Scrap is ${list.totals.wastePct}% — acceptable. Keep the usable leftover pieces.`,
     });
   } else if (list.totals.wastePct > 0) {
     findings.push({
       severity: "ok",
       category: "scrap",
-      message: `Scrap sirf ${list.totals.wastePct}% hai — nesting badhiya hui hai.`,
+      message: `Scrap is only ${list.totals.wastePct}% — efficient cutting.`,
     });
   }
 
 
   const summary =
     confidence >= 95
-      ? "Estimate solid hai — download karke kaam shuru karo."
+      ? "The estimate looks good — you can start work."
       : confidence >= 88
-        ? "Estimate theek hai. Neeche ke suggestions ek baar dekh lo."
-        : "Kuch cheezein pehle check karni hongi — neeche ki warnings padh lo.";
+        ? "The estimate is fine. Please review the suggestions below."
+        : "Some items need checking first — please read the warnings below.";
 
   return { confidence: Math.max(confidence, 60), findings, summary };
 }

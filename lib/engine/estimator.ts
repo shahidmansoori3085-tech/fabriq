@@ -69,7 +69,7 @@ interface DomalFix {
 }
 
 /** Split an item into its sliding zone + optional fixed-top band. */
-function domalFix(item: JobItem): DomalFix {
+export function domalFix(item: JobItem): DomalFix {
   const hasFix = item.meta.domalFix === "yes";
   const fixRaw = hasFix ? mm((parseFloat(item.meta.domalFixFt ?? "2") || 2) * 304.8) : 0;
   const slidingH = item.height - fixRaw;
@@ -247,14 +247,18 @@ function applyZRowPanels(
       g.fixed.push(axis === "cols" ? zMakeFixed(fill, pocketLen, crossLen) : zMakeFixed(fill, crossLen, pocketLen));
     } else {
       const sashCount = Math.max(1, p.sashes);
-      const sashLen = sashCount > 1 ? Math.round(pocketLen / sashCount) : pocketLen;
       // Sashes within one panel always sit side by side, so the divider
-      // between them is a vertical mullion regardless of the row's axis.
-      const mullionLen = axis === "cols" ? crossLen : pocketLen;
-      for (let s = 0; s < sashCount - 1; s++) g.mullions.push(mullionLen);
-      for (let s = 0; s < sashCount; s++) {
-        g.sashes.push(axis === "cols" ? zMakeSash("glass", sashLen, crossLen, false) : zMakeSash("glass", crossLen, sashLen, false));
-      }
+      // between them is a vertical mullion regardless of the row's axis —
+      // and the sashes therefore share the panel's WIDTH. In a stacked row
+      // ("fixed on top") that width is crossLen, not the band's height: using
+      // the height made two 69"×17" strips instead of two ~35" square sashes.
+      // Each mullion eats half its face from the sash on either side, exactly
+      // like a join between panels.
+      const widthToSplit = axis === "cols" ? pocketLen : crossLen;
+      const sashHeight = axis === "cols" ? crossLen : pocketLen;
+      const sashW = Math.round((widthToSplit - (sashCount - 1) * 2 * Z_TRANSOM_HALF) / sashCount);
+      for (let s = 0; s < sashCount - 1; s++) g.mullions.push(sashHeight);
+      for (let s = 0; s < sashCount; s++) g.sashes.push(zMakeSash("glass", sashW, sashHeight, false));
     }
     // boundary to the NEXT panel — a vertical mullion between side-by-side
     // panels, a horizontal transom between stacked ones.
@@ -358,7 +362,10 @@ export function zGeometry(item: JobItem): ZGeom {
     ? [item.shutters[0] ?? { kind: "glass" as const }]
     : (item.shutters.length ? item.shutters : [{ kind: "glass" as const }]);
   const n = sashes.length;
-  const sashOpenW = n > 1 ? Math.round(openW / n) : openW;
+  // Every mullion takes half its face from each sash beside it, so a sash
+  // only climbs its 5 mm onto the mullion — splitting the raw opening evenly
+  // let two sashes each lap 25 mm onto a 40 mm mullion and hit each other.
+  const sashOpenW = n > 1 ? Math.round((openW - (n - 1) * 2 * Z_TRANSOM_HALF) / n) : openW;
   if (!isDoor) for (let m = 0; m < n - 1; m++) g.mullions.push(openH);
   sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openH, isDoor)));
   return g;
@@ -385,7 +392,7 @@ export function shutterSize(item: JobItem, d: { shutterHeightDeduction: Um }) {
 }
 
 /** Expand one item (×qty) into cut pieces */
-export function expandItem(item: JobItem, index: number): CutPiece[] {
+export function expandItem(item: JobItem): CutPiece[] {
   if (item.system === "domal") return expandDomalItem(item);
   if (item.system === "door_single") return expandDoorItem(item);
   if (item.system === "partition") return expandPartitionItem(item);
@@ -552,60 +559,6 @@ function expandDoorItem(item: JobItem): CutPiece[] {
 }
 
 /**
- * Vertical column split for one zone's width (fabricator-confirmed
- * 2026-07-28: verticals go roughly every 4 feet — structural support +
- * matches standard sheet stock width).
- *
- * Sheet zones: decompose width into 3ft/4ft segments (matching 3×8/4×8/3×12
- * sheet stock) so panels cut with near-zero width waste — a coin-change DP
- * minimizing segment count. Falls back to a greedy 4ft-then-remainder split
- * if no exact 3/4ft combination exists (e.g. 5ft).
- *
- * Glass zones: glass has no fixed stock width, so just equal-split into
- * columns ≤4ft (no stock-matching needed, only the structural limit).
- */
-function sheetColumnsFt(totalFt: number): number[] {
-  const w = Math.round(totalFt);
-  if (w <= 0) return [];
-  if (w <= 4) return [w];
-  const dp: (number[] | null)[] = new Array(w + 1).fill(null);
-  dp[0] = [];
-  for (let i = 1; i <= w; i++) {
-    for (const coin of [3, 4]) {
-      if (i - coin >= 0 && dp[i - coin]) {
-        const candidate = [...dp[i - coin]!, coin];
-        if (!dp[i] || candidate.length < dp[i]!.length) dp[i] = candidate;
-      }
-    }
-  }
-  if (dp[w]) return dp[w]!;
-  // no exact combo (e.g. 5ft) — greedy 4ft segments + one custom remainder
-  const segments: number[] = [];
-  let remaining = w;
-  while (remaining > 4) { segments.push(4); remaining -= 4; }
-  if (remaining > 0) segments.push(remaining);
-  return segments;
-}
-
-function glassColumnsFt(totalFt: number): number[] {
-  const cols = Math.max(1, Math.ceil(totalFt / 4));
-  const each = totalFt / cols;
-  return new Array(cols).fill(each);
-}
-
-/**
- * Row split for one zone's HEIGHT — same ~4ft structural spacing rule,
- * applied to both sheet and glass (purely structural, not stock-driven:
- * sheet stock length is 8-12ft, well beyond typical zone heights, so only
- * the support-spacing limit matters here, same as the vertical/width case).
- */
-function rowsFt(totalFt: number): number[] {
-  const cols = Math.max(1, Math.ceil(totalFt / 4));
-  const each = totalFt / cols;
-  return new Array(cols).fill(each);
-}
-
-/**
  * Partition (fixed, office-style): SP (Single Partition, 17003) forms the
  * outer 4-side frame. DP (Double Partition, 17502) forms N horizontal
  * dividers splitting the frame into N+1 zones, each filled with sheet or
@@ -628,14 +581,23 @@ function rowsFt(totalFt: number): number[] {
 const PART_FACE = mm(38.1); // SP/DP 1.5" sight-line face
 
 interface PartPanel { kind: "glass" | "sheet"; w: Um; h: Um; }
-interface PartPiece { section: string; length: Um; role: string; clipMul: number }
-interface PartGeom { pieces: PartPiece[]; panels: PartPanel[] }
+/** clipLen: how much of this member actually borders a panel — a crossing
+ *  member or a door blocks the groove, so the clip is shorter than the pipe. */
+interface PartPiece { section: string; length: Um; role: string; clipMul: number; clipLen?: Um }
+/** The grid the cut list is built from — exported so the drawing shows the
+ *  very same bays and rows instead of re-deriving (and disagreeing with) them. */
+export interface PartLayout {
+  hasDoor: boolean; doorW: Um; fieldW: Um; innerH: Um; face: Um;
+  bays: number; cellW: Um; sheetH: Um; glassRows: number; glassRowH: Um;
+}
+interface PartGeom { pieces: PartPiece[]; panels: PartPanel[]; layout: PartLayout }
 
-function partitionGeometry(item: JobItem): PartGeom {
+export function partitionGeometry(item: JobItem): PartGeom {
   const hasDoor = item.meta.partDoor === "yes";
   const doorW = hasDoor ? mm((parseFloat(item.meta.partDoorW ?? "3") || 3) * 304.8) : 0;
   const sheetFt = Math.max(0, parseFloat(item.meta.partSheetFt ?? "0") || 0);
   const bayFt = Math.max(1, parseFloat(item.meta.partBayFt ?? "2.5") || 2.5);
+  const rowFt = Math.max(1, parseFloat(item.meta.partRowFt ?? "3.5") || 3.5);
 
   const face = PART_FACE;
   const clear = PARTITION_DEFAULTS.panelClearance;
@@ -643,51 +605,75 @@ function partitionGeometry(item: JobItem): PartGeom {
 
   const pieces: PartPiece[] = [];
   const panels: PartPanel[] = [];
-  const P = (section: string, length: Um, role: string, clipMul = 1) =>
-    pieces.push({ section, length, role, clipMul });
+  const P = (section: string, length: Um, role: string, clipMul = 1, clipLen?: Um) =>
+    pieces.push({ section, length, role, clipMul, clipLen });
 
-  // Outer SP frame — top & sides full, bottom minus both verticals (−3").
-  P("partition_frame", item.width, "SP Top");
-  P("partition_frame", item.width - 2 * face, "SP Bottom");
-  P("partition_frame", item.height, "SP Left");
-  P("partition_frame", item.height, "SP Right");
+  // The field is what is left for glass/sheet once the outer SP and the
+  // optional door column (DP jamb + door width) are taken out.
+  const fieldW = item.width - 2 * face - (hasDoor ? doorW + face : 0);
 
-  // Door column on the right (optional): DP jamb + a leaf with 1 middle rail.
-  let fieldW = item.width - 2 * face;
-  if (hasDoor) {
-    fieldW = fieldW - doorW - face;
-    P("partition_divider", innerH, "DP Door-jamb", 2);
-    const leafW = doorW - inches(0.75);
-    const leafH = innerH - inches(0.75);
-    P("door_palla_60", leafW, "Door Top", 0);
-    P("door_palla_60", leafW, "Door Bottom", 0);
-    P("door_palla_60", leafH, "Door Left", 0);
-    P("door_palla_60", leafH, "Door Right", 0);
-    P("door_center_60", leafW, "Door Middle", 0);
-  }
-
-  // Vertical bays across the field (from the chosen bay width).
+  // Vertical bays across the field (from the chosen bay width). Each bay's
+  // clear width shares the DP faces between them — n bays have n−1 DPs.
   const bays = Math.max(1, Math.round(toFeet(fieldW) / bayFt));
-  const bayW = fieldW / bays;
-  for (let i = 0; i < bays - 1; i++) P("partition_divider", innerH, `DP Vertical ${i + 1}`, 2);
+  const cellW = (fieldW - (bays - 1) * face) / bays;
 
-  // Horizontal bands: bottom sheet (optional) + glass rows above. The glass
-  // row height (horizontal-divider gap) is the fabricator's chosen value.
-  const rowFt = Math.max(1, parseFloat(item.meta.partRowFt ?? "3.5") || 3.5);
-  const sheetH = mm(sheetFt * 304.8);
+  // Horizontal bands: bottom sheet (optional) + glass rows above.
+  const sheetH = sheetFt > 0 ? mm(sheetFt * 304.8) : 0;
   const glassBandH = innerH - (sheetFt > 0 ? sheetH + face : 0);
   const glassRows = Math.max(1, Math.round(toFeet(glassBandH) / rowFt));
-  if (sheetFt > 0) P("partition_divider", fieldW, "DP Sheet-line", 2);
-  for (let r = 0; r < glassRows - 1; r++) P("partition_divider", fieldW, `DP Glass-row ${r + 1}`, 2);
+  const glassRowH = (glassBandH - (glassRows - 1) * face) / glassRows;
+  const hLines = (sheetFt > 0 ? 1 : 0) + (glassRows - 1);
+  // A vertical member's groove only runs between the horizontal DPs crossing it.
+  const vClip = innerH - hLines * face;
+  const hClip = fieldW - (bays - 1) * face;
+
+  // Outer SP frame. Top runs the full width; the bottom stops at the door
+  // jamb — nobody puts a rail across a doorway. Sides are full height.
+  P("partition_frame", item.width, "SP Top", 1, hClip);
+  P("partition_frame", fieldW, "SP Bottom", 1, hClip);
+  P("partition_frame", item.height, "SP Left", 1, vClip);
+  // Beside a door the right SP borders the door leaf, which takes no clip.
+  P("partition_frame", item.height, "SP Right", hasDoor ? 0 : 1, vClip);
+
+  if (hasDoor) {
+    // DP jamb: glass on one side, the door on the other — one clip.
+    P("partition_divider", innerH, "DP Door-jamb", 1, vClip);
+    // Door leaf, built like the standalone door: stiles full height, rails
+    // fitted BETWEEN the stiles (leaf width − clearance), one middle rail.
+    const leafW = doorW - inches(0.75);
+    const leafH = innerH - inches(0.75);
+    const dClr = doorClearance("60");
+    const railW = leafW - dClr;
+    P("door_palla_60", railW, "Door Top", 0);
+    P("door_palla_60", railW, "Door Bottom", 0);
+    P("door_palla_60", leafH, "Door Left", 0);
+    P("door_palla_60", leafH, "Door Right", 0);
+    P("door_center_60", railW, "Door Middle", 0);
+    // Its two infill panels — top glass; bottom matches the partition's own
+    // bottom band (sheet if it has one). Sized like a door zone.
+    const zoneH = Math.round(leafH / 2) - dClr;
+    panels.push({ kind: "glass", w: railW, h: zoneH });
+    panels.push({ kind: sheetFt > 0 ? "sheet" : "glass", w: railW, h: zoneH });
+  }
+
+  // Verticals run full height; horizontals are cut BETWEEN them, one piece
+  // per bay — both running full length would put two profiles in one crossing.
+  for (let i = 0; i < bays - 1; i++) P("partition_divider", innerH, `DP Vertical ${i + 1}`, 2, vClip);
+  for (let b = 0; b < bays; b++) {
+    const bay = bays > 1 ? ` (bay ${b + 1})` : "";
+    if (sheetFt > 0) P("partition_divider", cellW, `DP Sheet-line${bay}`, 2);
+    for (let r = 0; r < glassRows - 1; r++) P("partition_divider", cellW, `DP Glass-row ${r + 1}${bay}`, 2);
+  }
 
   // Panels per bay — a sheet cell (if any) + the glass rows.
-  const glassRowH = (glassBandH - (glassRows - 1) * face) / glassRows;
-  const cellW = bayW - face; // clear opening between DP faces
   for (let b = 0; b < bays; b++) {
     if (sheetFt > 0) panels.push({ kind: "sheet", w: cellW - clear, h: sheetH - clear });
     for (let r = 0; r < glassRows; r++) panels.push({ kind: "glass", w: cellW - clear, h: glassRowH - clear });
   }
-  return { pieces, panels };
+  return {
+    pieces, panels,
+    layout: { hasDoor, doorW, fieldW, innerH, face, bays, cellW, sheetH, glassRows, glassRowH },
+  };
 }
 
 function expandPartitionItem(item: JobItem): CutPiece[] {
@@ -702,7 +688,7 @@ function expandPartitionItem(item: JobItem): CutPiece[] {
         label: `${wId} ${sizeLabel} — ${pc.role}` });
       // Glazing clip runs each groove that faces a panel: SP = 1 side, DP = 2.
       for (let c = 0; c < pc.clipMul; c++) {
-        pieces.push({ sectionId: "glazing_clip", length: pc.length, itemId: wId,
+        pieces.push({ sectionId: "glazing_clip", length: pc.clipLen ?? pc.length, itemId: wId,
           role: `${pc.role} Clip${pc.clipMul > 1 ? ` ${c + 1}` : ""}`,
           label: `${wId} ${sizeLabel} — ${pc.role} Clip` });
       }
@@ -781,7 +767,7 @@ export class ImpossibleLayoutError extends Error {
 }
 
 export function estimate(items: JobItem[]): MaterialList {
-  const pieces = items.flatMap((it, i) => expandItem(it, i));
+  const pieces = items.flatMap((it) => expandItem(it));
   for (const p of pieces) if (!(p.length > 0)) throw new ImpossibleLayoutError(p.itemId.replace(/\.\d+$/, ""), p.role, p.length);
   const bars = packAllSections(pieces);
   const sections = summarize(bars);
@@ -793,7 +779,6 @@ export function estimate(items: JobItem[]): MaterialList {
   let meshSplineFt = 0;
   let sheetSplineFt = 0;
   let woolpileFt = 0;
-  let glazingClipFt = 0;
   let rollers = 0, locks = 0, cleats = 0, hinges = 0;
 
   for (const item of items) {
@@ -807,8 +792,12 @@ export function estimate(items: JobItem[]): MaterialList {
       const iH = zoneH - clearance;
 
       const sheetZones = item.shutters.filter((s) => s.kind === "sheet").length;
-      const jaliZones = zones - sheetZones;
+      const glassZones = item.shutters.filter((s) => s.kind === "glass").length;
+      const jaliZones = zones - sheetZones - glassZones;
 
+      if (glassZones > 0) {
+        glass.push({ itemId: item.id, width: iW, height: iH, count: glassZones * item.qty });
+      }
       if (sheetZones > 0) {
         sheet.push({ itemId: item.id, width: iW, height: iH, count: sheetZones * item.qty });
         sheetSplineFt += 2 * (toFeet(iW) + toFeet(iH)) * sheetZones * item.qty;
@@ -950,15 +939,6 @@ export function estimate(items: JobItem[]): MaterialList {
       name: "Sheet rubber gasket", formula: `sheet perimeter +${DEFAULTS.wastagePct}%`,
       qty: Math.ceil(sheetSplineFt * wastage), unit: "rft",
     });
-  if (glazingClipFt > 0) {
-    const clipRft = Math.ceil(glazingClipFt * wastage);
-    hardware.push({
-      // Glazing clip stock is 12ft (SP/DP are 16ft — different length)
-      name: "Glazing Clip", formula: `SP+DP member length +${PARTITION_DEFAULTS.wastagePct}% ÷ 12'`,
-      qty: Math.ceil(clipRft / 12), unit: "× 12' bars",
-    });
-  }
-
   const bars16 = sections.reduce((a, s) => a + s.bars16, 0);
   const bars8 = sections.reduce((a, s) => a + s.bars8, 0);
   // Sum the ACTUAL stock length of each section's bars (some sections — e.g.

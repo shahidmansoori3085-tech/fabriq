@@ -74,7 +74,11 @@ export function patchProject(id: string, patch: Partial<Omit<ProjectRec, "id" | 
   const list = loadProjects();
   const cur = list.find((x) => x.id === id);
   if (!cur) return;
-  write([{ ...cur, ...patch, updated: Date.now() }, ...list.filter((x) => x.id !== id)]);
+  // A summary figure is not an edit: only write when something changed, and
+  // keep `updated` — viewing a job must not move it to the top as "Just now".
+  const k = Object.keys(patch) as (keyof typeof patch)[];
+  if (k.every((key) => cur[key] === patch[key])) return;
+  write([{ ...cur, ...patch }, ...list.filter((x) => x.id !== id)]);
 }
 
 export function removeProject(id: string): ProjectRec[] {

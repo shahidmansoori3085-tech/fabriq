@@ -563,9 +563,10 @@ export function mixToShutters(mix: string): { kind: "glass" | "jali" | "sheet" }
   return mix.split("").map((c) => ({ kind: c === "J" ? "jali" : c === "S" ? "sheet" : "glass" }));
 }
 
-/** turn door zone-mix answer into zone configs (S=sheet, J=jali) */
-export function doorMixToZones(mix: string): { kind: "sheet" | "jali" }[] {
-  return mix.split("").map((c) => ({ kind: c === "J" ? "jali" : "sheet" }));
+/** turn door zone-mix answer into zone configs (S=sheet, J=jali, G=glass),
+ *  top zone first */
+export function doorMixToZones(mix: string): { kind: "sheet" | "jali" | "glass" }[] {
+  return mix.split("").map((c) => ({ kind: c === "J" ? "jali" : c === "G" ? "glass" : "sheet" }));
 }
 
 /** turn partition zone-mix answer into zone configs (S=sheet, G=glass) */

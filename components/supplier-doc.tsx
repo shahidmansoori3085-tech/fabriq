@@ -9,7 +9,7 @@
  * identically regardless of the app's own light/dark theme) — this is a
  * printed document, not a themed screen.
  */
-import type { ShopProfile } from "./quotation";
+import type { ShopProfile } from "@/lib/shop";
 
 const INK = "#14181d";
 const MUT = "#6b7280";
@@ -27,11 +27,13 @@ export interface SupplierOrderLine {
 }
 
 export function SupplierOrderDoc({
-  shop, title, date, lines, totalLabel, totalValue, note, className,
+  shop, title, date, job, lines, totalLabel, totalValue, note, className,
 }: {
   shop: ShopProfile;
   title: string;
   date: string;
+  /** job / customer name, so the dealer can tell two orders apart */
+  job?: string;
   lines: SupplierOrderLine[];
   totalLabel: string;
   totalValue: string;
@@ -52,8 +54,10 @@ export function SupplierOrderDoc({
         <div style={{ position: "absolute", top: 0, right: 0, width: 220, height: "100%",
           background: `linear-gradient(135deg, transparent 40%, ${ACCENT}22 100%)`, pointerEvents: "none" }} />
         <div style={{ minWidth: 220, position: "relative" }}>
+          {/* No placeholder name: this sheet goes to a real dealer, and
+              "Your Shop Name" printed on it looks like a broken app. */}
           <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
-            {shop.name || "Your Shop Name"}
+            {shop.name || title}
           </div>
           {shop.tagline && <div style={{ color: ACCENT2, fontWeight: 600, fontSize: 13, marginTop: 4 }}>{shop.tagline}</div>}
           <div style={{ color: "#c2c8d0", fontSize: 12.5, marginTop: 10, lineHeight: 1.55 }}>
@@ -67,6 +71,7 @@ export function SupplierOrderDoc({
             color: "#fff", padding: "6px 16px", borderRadius: 999, fontSize: 12, fontWeight: 800,
             letterSpacing: "0.16em", boxShadow: "0 3px 10px rgba(226,102,31,.35)" }}>{title.toUpperCase()}</div>
           <div style={{ marginTop: 12, fontSize: 12.5, color: "#c2c8d0", ...mono }}>
+            {job && <div>Job: <b style={{ color: "#fff" }}>{job}</b></div>}
             <div>Date: <b style={{ color: "#fff" }}>{date}</b></div>
             <div>Items: <b style={{ color: "#fff" }}>{lines.length}</b></div>
           </div>
@@ -114,7 +119,7 @@ export function SupplierOrderDoc({
         background: "#f6f8fa", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 13 }}>✓</span>
         <span style={{ fontSize: 11, color: MUT }}>
-          Quantities computed by FabriQ&apos;s deterministic engine from checked measurements — not estimated by AI.
+          Quantities calculated by FabriQ from the measured sizes.
         </span>
       </div>
 

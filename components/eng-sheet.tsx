@@ -6,9 +6,10 @@
  * PARTS / cut schedule, wrapped in a title block. 100% code-generated SVG from
  * engine data — deterministic, print-clean, no image-gen (anti-jugad).
  */
-import { formatFtInSut, toFeet } from "@/lib/engine/units";
+import { formatFtInSut, toFeet, mm } from "@/lib/engine/units";
 import type { JobItem, MaterialList } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
+import { partitionGeometry, zGeometry, domalFix } from "@/lib/engine/estimator";
 import { SectionDrawing } from "./section-profiles";
 
 const INK = "#1b2330";
@@ -70,56 +71,113 @@ function panelFill(x: number, y: number, w: number, h: number, kind: string, key
   );
 }
 
-/** Dimensioned front elevation, drawn to the opening's real proportions. */
+/**
+ * Dimensioned front elevation, drawn to the opening's real proportions.
+ *
+ * Every panel position comes from the same geometry the cut list is built
+ * from (partition grid, Domal fixed band, Z-section panels) — a drawing that
+ * re-derives its own layout ends up showing a different number of panes than
+ * the pipes being cut, which is worse than no drawing at all.
+ */
 export function DimensionedElevation({ item }: { item: JobItem }) {
   const wFt = toFeet(item.width), hFt = toFeet(item.height);
   const DW = 300;
   const DH = Math.min(Math.max((DW * hFt) / wFt, 150), 430);
   const P = 52; // margin for dimension lines + labels
-  const x0 = P, y0 = P, W = DW + P * 2, H = DH + P * 2;
-  const fr = 7; // frame thickness (visual)
+  const x0 = P, y0 = P, W = DW + P * 2, H = DH + P * 2 + 14;
+  const sx = DW / item.width, sy = DH / item.height;
+  const fr = 7; // visual frame band for systems drawn without real faces
 
   const cells: React.ReactNode[] = [];
   const botDims: React.ReactNode[] = [];
+  let note = "";
+  /** A panel placed in real µm from the opening's top-left corner. */
+  const at = (x: number, y: number, w: number, h: number, kind: string, key: string) =>
+    panelFill(x0 + x * sx + 0.5, y0 + y * sy + 0.5, Math.max(w * sx - 1, 1), Math.max(h * sy - 1, 1), kind, key);
   const ix = x0 + fr, iy = y0 + fr, iw = DW - fr * 2, ih = DH - fr * 2;
 
   if (item.type === "partition") {
-    const hasDoor = item.meta.partDoor === "yes";
-    const doorFrac = hasDoor ? Math.min(0.42, (parseFloat(item.meta.partDoorW ?? "3") || 3) / wFt) : 0;
-    const bayFt = parseFloat(item.meta.partBayFt ?? "2.5") || 2.5;
-    const bays = Math.max(1, Math.round((wFt * (1 - doorFrac)) / bayFt));
-    const rowFt = parseFloat(item.meta.partRowFt ?? "3.5") || 3.5;
-    const rows = Math.max(1, Math.round(hFt / rowFt));
-    const fieldW = iw * (1 - doorFrac), bw = fieldW / bays, rh = ih / rows;
-    for (let b = 0; b < bays; b++) for (let r = 0; r < rows; r++)
-      cells.push(panelFill(ix + b * bw + 0.5, iy + r * rh + 0.5, bw - 1, rh - 1, "glass", `p${b}-${r}`));
-    if (hasDoor) cells.push(<rect key="door" x={ix + fieldW + 1} y={iy} width={iw * doorFrac - 1} height={ih} fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.5} />);
-    // bottom panel-width dims
-    for (let b = 0; b < Math.min(bays, 6); b++)
-      botDims.push(<HDim key={`bd${b}`} x1={ix + b * bw} x2={ix + (b + 1) * bw} y={y0 + DH + 24} edgeY={y0 + DH} label={`${Math.round((wFt * (1 - doorFrac) * 304.8) / bays)}`} />);
+    const L = partitionGeometry(item).layout;
+    const f = L.face;
+    const glassBandH = L.glassRows * L.glassRowH + (L.glassRows - 1) * f;
+    for (let b = 0; b < L.bays; b++) {
+      const x = f + b * (L.cellW + f);
+      for (let r = 0; r < L.glassRows; r++) cells.push(at(x, f + r * (L.glassRowH + f), L.cellW, L.glassRowH, "glass", `p${b}-${r}`));
+      if (L.sheetH > 0) cells.push(at(x, f + glassBandH + f, L.cellW, L.sheetH, "sheet", `s${b}`));
+    }
+    if (L.hasDoor) {
+      const dx = f + L.fieldW + f;
+      cells.push(<rect key="door" x={x0 + dx * sx} y={y0 + f * sy} width={L.doorW * sx} height={L.innerH * sy}
+        fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.5} />);
+      cells.push(<line key="door-mid" x1={x0 + dx * sx} x2={x0 + (dx + L.doorW) * sx} y1={y0 + (f + L.innerH / 2) * sy}
+        y2={y0 + (f + L.innerH / 2) * sy} stroke="#0f6e56" strokeWidth={1.5} />);
+    }
+    for (let b = 0; b < Math.min(L.bays, 6); b++) {
+      const x = x0 + (f + b * (L.cellW + f)) * sx;
+      botDims.push(<HDim key={`bd${b}`} x1={x} x2={x + L.cellW * sx} y={y0 + DH + 24} edgeY={y0 + DH} label={`${mmOf(L.cellW)} mm`} />);
+    }
+    note = `${L.bays} bay${L.bays > 1 ? "s" : ""} × ${L.glassRows} glass row${L.glassRows > 1 ? "s" : ""}${L.sheetH > 0 ? " + bottom sheet" : ""}${L.hasDoor ? ` · ${mmOf(L.doorW)} mm door` : ""}`;
   } else if (item.type === "door") {
     const zones = item.shutters.length || 1, zh = ih / zones;
     for (let z = 0; z < zones; z++)
       cells.push(panelFill(ix + 0.5, iy + z * zh + 0.5, iw - 1, zh - 1, item.shutters[z]?.kind ?? "sheet", `d${z}`));
+  } else if (item.system === "z_section") {
+    const g = zGeometry(item);
+    const face = mm(40);
+    const openW = item.width - 2 * face, openH = item.height - 2 * face;
+    const fixedFt = mm((parseFloat(item.meta.zFixedFt ?? "2") || 2) * 304.8);
+    const sashKinds = g.sashes.map((s) => s.kind);
+    const row = (x: number, y: number, w: number, h: number, tag: string) => {
+      const n = Math.max(1, sashKinds.length), each = w / n;
+      sashKinds.forEach((k, i) => cells.push(at(x + i * each, y, each, h, k, `${tag}${i}`)));
+    };
+    if (item.meta.zLayout === "fixed") {
+      cells.push(at(face, face, openW, openH, g.fixed[0]?.kind ?? "glass", "zf"));
+    } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "top") {
+      cells.push(at(face, face, openW, fixedFt - face, g.fixed[0]?.kind ?? "glass", "zf"));
+      row(face, fixedFt, openW, item.height - fixedFt - face, "zs");
+    } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "side") {
+      cells.push(at(face, face, fixedFt - face, openH, g.fixed[0]?.kind ?? "glass", "zf"));
+      row(fixedFt, face, item.width - fixedFt - face, openH, "zs");
+    } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "both") {
+      cells.push(at(face, face, fixedFt - face, openH, "glass", "zf1"));
+      cells.push(at(item.width - fixedFt, face, fixedFt - face, openH, "glass", "zf2"));
+      row(fixedFt, face, item.width - 2 * fixedFt, openH, "zs");
+    } else {
+      row(face, face, openW, openH, "zs");
+    }
+    if (g.sashes.length) note = `${g.sashes.length} openable sash${g.sashes.length > 1 ? "es" : ""}, each ${mmOf(g.sashes[0].shW)} × ${mmOf(g.sashes[0].shH)} mm`;
   } else {
-    const n = Math.max(1, item.shutters.length), sw = iw / n;
+    // Sliding (normal / Domal): every shutter is HALF the window wide — they
+    // overlap in the tracks — so the panes are drawn side by side but the
+    // label states the real shutter width rather than W ÷ shutters.
+    const fx = item.system === "domal" ? domalFix(item) : null;
+    let top = 0;
+    if (fx?.hasFix) {
+      cells.push(at(mm(38.1), mm(38.1), item.width - 2 * mm(38.1), fx.fixRaw - mm(38.1), "glass", "fix"));
+      top = fx.fixRaw;
+      note = `Fixed top ${mmOf(fx.fixRaw)} mm · `;
+    }
+    const n = Math.max(1, item.shutters.length);
+    const each = (item.width - 2 * mm(30)) / n;
     for (let i = 0; i < n; i++)
-      cells.push(panelFill(ix + i * sw + 0.5, iy + 0.5, sw - 1, ih - 1, item.shutters[i]?.kind ?? "glass", `w${i}`));
-    // bottom per-shutter width dims
-    for (let i = 0; i < Math.min(n, 6); i++)
-      botDims.push(<HDim key={`sd${i}`} x1={ix + i * sw} x2={ix + (i + 1) * sw} y={y0 + DH + 24} edgeY={y0 + DH} label={`${Math.round((wFt * 304.8) / n)}`} />);
+      cells.push(at(mm(30) + i * each, top + mm(30), each, item.height - top - 2 * mm(30), item.shutters[i]?.kind ?? "glass", `w${i}`));
+    note += `${n} shutters, each ${mmOf(Math.round(item.width / 2))} mm wide (overlapping)`;
   }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, display: "block" }} role="img" aria-label="elevation">
       {/* frame */}
       <rect x={x0} y={y0} width={DW} height={DH} fill="#dfe4ea" stroke={INK} strokeWidth={2} />
-      <rect x={ix} y={iy} width={iw} height={ih} fill="#fff" stroke={INK} strokeWidth={1} />
+      {item.type === "door" && <rect x={ix} y={iy} width={iw} height={ih} fill="#fff" stroke={INK} strokeWidth={1} />}
       {cells}
       {/* overall dimensions */}
       <HDim x1={x0} x2={x0 + DW} y={y0 - 26} edgeY={y0} label={dimLabel(item.width)} />
       <VDim y1={y0} y2={y0 + DH} x={x0 + DW + 26} edgeX={x0 + DW} label={dimLabel(item.height)} />
       {botDims}
+      {note && (
+        <text x={x0 + DW / 2} y={H - 8} textAnchor="middle" fontSize={10} fill={DIM}>{note}</text>
+      )}
     </svg>
   );
 }
@@ -161,7 +219,9 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
   }
   const rows = [...grouped.values()];
   // unique sections used → show their real cross-sections
-  const sectionIds = [...new Set(parts.map((p) => p.sectionId))].slice(0, 4);
+  // Every section this opening uses — a Domal with a fixed top needs six, and
+  // a cross-section left off the sheet is one the workshop has to guess.
+  const sectionIds = [...new Set(parts.map((p) => p.sectionId))];
   const SYS_NAME: Record<string, string> = {
     normal_2t: "Normal Sliding 2-Track", normal_3t: "Normal Sliding 3-Track", domal: "Domal",
     z_section: "Z-Section", door_single: "Door", partition: "Partition",
@@ -241,7 +301,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
       {group.length > 1 && (
         <div style={{ padding: "0 16px 14px" }}>
           <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, margin: "6px 0 8px" }}>
-            Yeh Drawing In {group.length} Openings Ke Liye Hai (same size &amp; design)
+            This drawing covers {group.length} openings (same size &amp; design)
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {group.map((g) => (
@@ -251,7 +311,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: DIM, marginTop: 8 }}>
-            Cutting se pehle har opening site pe naap lo — agar inme se koi bhi asal me {formatFtInSut(item.width)} × {formatFtInSut(item.height)} nahi hai, uski alag drawing banegi.
+            Measure each opening on site before cutting — any opening that is not exactly {formatFtInSut(item.width)} × {formatFtInSut(item.height)} needs its own drawing.
           </div>
         </div>
       )}

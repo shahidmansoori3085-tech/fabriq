@@ -95,9 +95,18 @@ function parseUnitPhrase(raw: string): Um | null {
  * "5'-6\"". The reader copies them as written (it must never convert), so
  * the parser has to accept them — they used to come back "not understood".
  */
+/**
+ * Phones replace typed quotes with "smart" ones — iOS does it by default — so
+ * `4'6"` arrives as `4’6”`. Fold every look-alike back to the plain symbols
+ * the parser knows, or the size is simply not read.
+ */
+function normalizeQuotes(raw: string): string {
+  return raw.replace(/[’‘′`´]/g, "'").replace(/[”“″]/g, '"');
+}
+
 function normalizeFractions(raw: string): string {
   const VULGAR: Record<string, string> = { "½": ".5", "¼": ".25", "¾": ".75" };
-  return raw
+  return normalizeQuotes(raw)
     .replace(/(\d+)\s*([½¼¾])/g, (_, n, f) => `${n}${VULGAR[f]}`)
     .replace(/^\s*([½¼¾])/, (_, f) => `0${VULGAR[f]}`)
     .replace(/(\d+)[\s-]+(\d+)\/(\d+)/g, (_, n, a, b) => String(parseInt(n, 10) + parseInt(a, 10) / parseInt(b, 10)))
@@ -124,12 +133,14 @@ export function parseDimension(raw: string): Um | null {
   m = s.match(/^(\d+(?:\.\d+)?)(?:"|in|inch)$/);
   if (m) return Math.round(parseFloat(m[1]) * UM_PER_INCH);
 
-  // ft-in-sut: 4-6-4
+  // ft-in-sut: 4-6-4 — an inch part of 12+ or a sut part of 8+ is a typo,
+  // not a value to fold silently into the next unit up.
   m = s.match(/^(\d+)-(\d+)(?:-(\d+))?$/);
   if (m) {
     const ft = parseInt(m[1], 10);
     const inch = parseInt(m[2], 10);
     const sut = m[3] ? parseInt(m[3], 10) : 0;
+    if (inch >= 12 || sut >= 8) return null;
     return ft * UM_PER_FOOT + inch * UM_PER_INCH + sut * UM_PER_SUT;
   }
 
@@ -138,6 +149,7 @@ export function parseDimension(raw: string): Um | null {
   if (m) {
     const ft = parseInt(m[1], 10);
     const inch = m[2] ? parseFloat(m[2]) : 0;
+    if (inch >= 12) return null;
     return ft * UM_PER_FOOT + Math.round(inch * UM_PER_INCH);
   }
 
@@ -219,17 +231,31 @@ export const MAX_OPENING: Um = feet(25);
  * Values written WITH a unit always win, whatever the mode.
  */
 export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | null {
-  const s = raw.trim().toLowerCase().replace(/\s+/g, "");
-  if (!s) return null;
+  const spaced = normalizeFractions(raw).trim().toLowerCase();
+  if (!spaced) return null;
 
   const explicit = (um: Um): ParsedDim => ({ um, explicit: true, ambiguous: false });
 
-  // ft-in-sut: "4-6-4" — three parts is unambiguous
-  let m = s.match(/^(\d+)-(\d+)-(\d+)$/);
+  // "54 3s" — inches then sut, the way the app itself prints a size
+  let m = spaced.match(/^(\d+)\s+(\d)\s*(?:s|sut)$/);
   if (m) {
-    return explicit(
-      parseInt(m[1], 10) * UM_PER_FOOT + parseInt(m[2], 10) * UM_PER_INCH + parseInt(m[3], 10) * UM_PER_SUT,
-    );
+    const sut = parseInt(m[2], 10);
+    return sut >= 8 ? null : explicit(parseInt(m[1], 10) * UM_PER_INCH + sut * UM_PER_SUT);
+  }
+
+  // A space between plain numbers means the same as a dash: "4 6" is 4'6",
+  // "4 6 4" is 4'6"4s. Joining them into "46" read a 4'6" window as 3'10".
+  const s = spaced.replace(/^(\d+)\s+(\d+)(?:\s+(\d+))?$/, (_, a, b, c) => (c ? `${a}-${b}-${c}` : `${a}-${b}`))
+    .replace(/\s+/g, "");
+
+  // ft-in-sut: "4-6-4" — three parts is unambiguous, but an inch part of 12+
+  // or a sut part of 8+ is a typo, never a value to carry over silently
+  m = s.match(/^(\d+)-(\d+)-(\d+)$/);
+  if (m) {
+    const inch = parseInt(m[2], 10);
+    const sut = parseInt(m[3], 10);
+    if (inch >= 12 || sut >= 8) return null;
+    return explicit(parseInt(m[1], 10) * UM_PER_FOOT + inch * UM_PER_INCH + sut * UM_PER_SUT);
   }
 
   // two-part dash is genuinely two notations: "4-6" is 4ft 6in, but "54-4" is
@@ -239,15 +265,15 @@ export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | 
   if (m) {
     const a = parseInt(m[1], 10);
     const b = parseInt(m[2], 10);
-    return a >= 13 && b <= 7
-      ? explicit(a * UM_PER_INCH + b * UM_PER_SUT)
-      : explicit(a * UM_PER_FOOT + b * UM_PER_INCH);
+    if (a >= 13) return b <= 7 ? explicit(a * UM_PER_INCH + b * UM_PER_SUT) : null;
+    return b >= 12 ? null : explicit(a * UM_PER_FOOT + b * UM_PER_INCH);
   }
 
   // anything carrying its own unit — mm / cm / inch / feet / sut forms,
-  // symbol or spelled-out word, in either order (parseDimension handles both)
+  // symbol or spelled-out word, in either order (parseDimension handles both;
+  // it gets the spaced text so "4 ft 6 in" keeps its word boundaries)
   if (/(mm|cm|"|in|inch|'|ft|feet|fit|फुट|sut)/.test(s)) {
-    const um = parseDimension(s);
+    const um = parseDimension(spaced);
     return um === null ? null : explicit(um);
   }
 
@@ -256,6 +282,10 @@ export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | 
   if (!m) return null;
   const n = parseFloat(m[1]);
   if (!(n > 0)) return null;
+  // "4.6" is written in the trade for 4'6" as often as for 4.6 ft. Quarters
+  // and halves read the same either way; anything else is worth flagging.
+  const frac = Math.round((n % 1) * 100);
+  const oddDecimal = frac !== 0 && frac !== 25 && frac !== 50 && frac !== 75;
 
   if (mode === "mm") return { um: Math.round(n * UM_PER_MM), explicit: false, assumed: "mm", ambiguous: false };
   if (mode === "inch") return { um: Math.round(n * UM_PER_INCH), explicit: false, assumed: "inch", ambiguous: false };
@@ -273,17 +303,19 @@ export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | 
     um: Math.round(n * UM_PER_FOOT),
     explicit: false,
     assumed: "feet",
-    ambiguous: n > BARE_FEET_UPTO,
+    ambiguous: n > BARE_FEET_UPTO || oddDecimal,
   };
 }
 
 /** Human echo of a parsed size: `4'0" (48")` — what the app actually understood. */
 export function describeDim(um: Um): string {
   const totalInch = um / UM_PER_INCH;
-  const ft = Math.floor(um / UM_PER_FOOT);
-  const rem = um - ft * UM_PER_FOOT;
-  const inch = Math.floor(rem / UM_PER_INCH);
-  const sut = Math.round((rem - inch * UM_PER_INCH) / UM_PER_SUT);
+  // Round to whole sut FIRST, then split — rounding the sut last printed
+  // "4'5"8s" instead of carrying it into 4'6".
+  const totalSut = Math.round(um / UM_PER_SUT);
+  const ft = Math.floor(totalSut / 96);
+  const inch = Math.floor((totalSut % 96) / 8);
+  const sut = totalSut % 8;
   // Under a foot, "0'4"" reads like a typo — just say 4".
   let head = ft > 0 ? `${ft}'` : "";
   if (!ft || inch || sut) head += `${inch}"`;
@@ -296,11 +328,13 @@ export function describeDim(um: Um): string {
 export function openingWarning(w: Um, h: Um): string | null {
   const small = Math.min(w, h);
   const large = Math.max(w, h);
+  // The size was read in whatever unit its magnitude suggested — the advice
+  // must not assume which one, or "300" (read as mm) is told to become 300 ft.
   if (small < MIN_OPENING) {
-    return `${describeDim(small)} is too small. Was this in feet? Add ' after the number.`;
+    return `${describeDim(small)} is too small. Check the unit — feet: 4'6, inches: 54", mm: 1372mm.`;
   }
   if (large > MAX_OPENING) {
-    return `${describeDim(large)} is too large. Was this in inches? Add " after the number.`;
+    return `${describeDim(large)} is too large. Check the unit — feet: 4'6, inches: 54", mm: 1372mm.`;
   }
   return null;
 }

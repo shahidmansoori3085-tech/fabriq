@@ -60,7 +60,8 @@ export const SECTIONS: Record<string, Section> = {
   },
   handle_2x1: {
     id: "handle_2x1", name: 'Handle 2"×1" (large)', label: "2×1 Handle",
-    omeo: "2000", size: "63×25", tier: "VERIFIED",
+    // 2"×1" = 50×25 — the same OMEO 2000 die listed as door_palla_50 below.
+    omeo: "2000", size: "50×25", tier: "VERIFIED",
   },
   interlock: {
     id: "interlock", name: "Interlock", label: "Interlock",

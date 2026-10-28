@@ -431,7 +431,11 @@ export function BarDiagram({ bar }: { bar: PackedBar }) {
   const W = 640, H = 64;
   const barFt = toFeet(bar.barLength);
   const scale = W / bar.barLength;
-  let x = 0;
+  // Each piece's start, worked out up front — mutating a running `x` inside
+  // the JSX map breaks React's render purity rule.
+  const starts = bar.pieces.reduce<number[]>((acc, p, i) => [...acc, i === 0 ? 0 : acc[i - 1] + bar.pieces[i - 1].length * scale], []);
+  /** where the last piece ends and the waste begins */
+  const x = bar.pieces.reduce((a, p) => a + p.length * scale, 0);
   const section = getSection(bar.sectionId);
   const colors = ["#dbeafe", "#fde8d4", "#e6f4ea", "#f3e8ff", "#fef9c3", "#fce7f3"];
 
@@ -443,8 +447,8 @@ export function BarDiagram({ bar }: { bar: PackedBar }) {
           fill="#f1f3f5" stroke="#5a5f6a" strokeWidth={1} />
         {bar.pieces.map((p, i) => {
           const pw = p.length * scale;
-          const px = x;
-          x += pw;
+          const px = starts[i];
+          const x = px + pw;
           return (
             <g key={i}>
               <rect x={px + 1} y={15} width={Math.max(pw - 2, 2)} height={32} rx={3}

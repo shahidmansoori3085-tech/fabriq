@@ -66,9 +66,12 @@ export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] 
   }
 
   // Downgrade: any bar whose contents fit a half bar becomes a half bar
-  // (only for sections that actually sell a half-length option)
+  // (only for sections that actually sell a half-length option). No
+  // allowance here: a half is the dealer cutting a full bar in two, so it
+  // comes out a little UNDER nominal — the over-length margin of a full mill
+  // bar does not carry over to it.
   return bars.map((b, i) => {
-    const fitsHalf = hasHalfBar && b.used <= barHalf + BAR_ALLOWANCE;
+    const fitsHalf = hasHalfBar && b.used <= barHalf;
     const barLength = fitsHalf ? barHalf : barFull;
     return {
       barNo: i + 1,
