@@ -230,7 +230,13 @@ export const MAX_OPENING: Um = feet(25);
  * "auto" infers from magnitude, the others force a reading for bare numbers.
  * Values written WITH a unit always win, whatever the mode.
  */
-export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | null {
+export function parseOpening(
+  raw: string,
+  mode: UnitMode = "auto",
+  /** In auto mode, bare numbers below this are feet. Partitions run 20–25 ft,
+   *  so for them a bare "20" is 20 ft, not the 20" a small window would be. */
+  feetBelow: number = BARE_INCH_FROM,
+): ParsedDim | null {
   const spaced = normalizeFractions(raw).trim().toLowerCase();
   if (!spaced) return null;
 
@@ -296,7 +302,7 @@ export function parseOpening(raw: string, mode: UnitMode = "auto"): ParsedDim | 
   if (n >= BARE_MM_FROM) {
     return { um: Math.round(n * UM_PER_MM), explicit: false, assumed: "mm", ambiguous: false };
   }
-  if (n >= BARE_INCH_FROM) {
+  if (n >= feetBelow) {
     return { um: Math.round(n * UM_PER_INCH), explicit: false, assumed: "inch", ambiguous: false };
   }
   return {

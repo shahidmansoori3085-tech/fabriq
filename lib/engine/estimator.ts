@@ -3,7 +3,7 @@
  * D2: AI never calculates. Every number here is traceable to a formula.
  * Deductions are DEFAULTS — per-fabricator calibration overrides them later.
  */
-import { Um, mm, inches, formatFtInSut, toFeet, sqft } from "./units";
+import { Um, mm, inches, feet, formatFtInSut, toFeet, sqft } from "./units";
 import type {
   JobItem, CutPiece, GlassPanel, HardwareLine, MaterialList,
 } from "./types";
@@ -581,9 +581,32 @@ function expandDoorItem(item: JobItem): CutPiece[] {
 const PART_FACE = mm(38.1); // SP/DP 1.5" sight-line face
 
 interface PartPanel { kind: "glass" | "sheet"; w: Um; h: Um; }
-/** clipLen: how much of this member actually borders a panel — a crossing
- *  member or a door blocks the groove, so the clip is shorter than the pipe. */
-interface PartPiece { section: string; length: Um; role: string; clipMul: number; clipLen?: Um }
+/** clips: the glazing-clip pieces this member carries — one per panel edge it
+ *  borders. Clip is cut panel by panel (a crossing member or a door breaks the
+ *  groove), so it never needs a run longer than one cell, however long the
+ *  partition: one full-length clip used to exceed the 12' clip bar at 13 ft. */
+interface PartPiece { section: string; length: Um; role: string; clips: Um[] }
+
+/**
+ * Split a run that is longer than one pipe into pieces that each fit, putting
+ * every joint on a divider so it is supported. `joints` are the candidate
+ * positions measured from the run's start. Returns null if no divider falls
+ * within reach — the caller then leaves it whole and the cut list refuses it.
+ */
+function splitRun(total: Um, joints: Um[], maxLen: Um): Um[] | null {
+  if (total <= maxLen) return [total];
+  const cands = joints.filter((j) => j > 0 && j < total).sort((a, b) => b - a);
+  const out: Um[] = [];
+  let start = 0;
+  while (total - start > maxLen) {
+    const next = cands.find((j) => j > start && j - start <= maxLen);
+    if (next === undefined) return null;
+    out.push(next - start);
+    start = next;
+  }
+  out.push(total - start);
+  return out;
+}
 /** The grid the cut list is built from — exported so the drawing shows the
  *  very same bays and rows instead of re-deriving (and disagreeing with) them. */
 export interface PartLayout {
@@ -605,8 +628,16 @@ export function partitionGeometry(item: JobItem): PartGeom {
 
   const pieces: PartPiece[] = [];
   const panels: PartPanel[] = [];
-  const P = (section: string, length: Um, role: string, clipMul = 1, clipLen?: Um) =>
-    pieces.push({ section, length, role, clipMul, clipLen });
+  const P = (section: string, length: Um, role: string, clips: Um[] = []) =>
+    pieces.push({ section, length, role, clips });
+  const maxLen = feet(getSection("partition_frame").barLengthFt ?? 16);
+  /** A member that may be longer than a pipe: joined on a divider when it is. */
+  const RUN = (section: string, total: Um, role: string, joints: Um[], clips: Um[]) => {
+    const parts = splitRun(total, joints, maxLen) ?? [total];
+    parts.forEach((len, i) =>
+      P(section, len, parts.length > 1 ? `${role} (part ${i + 1} of ${parts.length})` : role, i === 0 ? clips : []));
+  };
+  const times = (arr: Um[], m: number) => Array.from({ length: m }).flatMap(() => arr);
 
   // The field is what is left for glass/sheet once the outer SP and the
   // optional door column (DP jamb + door width) are taken out.
@@ -622,33 +653,41 @@ export function partitionGeometry(item: JobItem): PartGeom {
   const glassBandH = innerH - (sheetFt > 0 ? sheetH + face : 0);
   const glassRows = Math.max(1, Math.round(toFeet(glassBandH) / rowFt));
   const glassRowH = (glassBandH - (glassRows - 1) * face) / glassRows;
-  const hLines = (sheetFt > 0 ? 1 : 0) + (glassRows - 1);
-  // A vertical member's groove only runs between the horizontal DPs crossing it.
-  const vClip = innerH - hLines * face;
-  const hClip = fieldW - (bays - 1) * face;
+  // The panel edges each member borders — the clip is cut to these.
+  const rowCells: Um[] = [...(sheetFt > 0 ? [sheetH] : []), ...Array<Um>(glassRows).fill(glassRowH)];
+  const colCells: Um[] = Array<Um>(bays).fill(cellW);
+
+  // Where a long run may be joined: on the centre of a divider.
+  // x from the outer left edge; y from the outer top edge.
+  const dpX = Array.from({ length: bays - 1 }, (_, i) => face + (i + 1) * (cellW + face) - face / 2);
+  const jambX = hasDoor ? [face + fieldW + face / 2] : [];
+  const hY = [
+    ...Array.from({ length: glassRows - 1 }, (_, r) => face + (r + 1) * (glassRowH + face) - face / 2),
+    ...(sheetFt > 0 ? [face + glassBandH + face / 2] : []),
+  ];
 
   // Outer SP frame. Top runs the full width; the bottom stops at the door
   // jamb — nobody puts a rail across a doorway. Sides are full height.
-  P("partition_frame", item.width, "SP Top", 1, hClip);
-  P("partition_frame", fieldW, "SP Bottom", 1, hClip);
-  P("partition_frame", item.height, "SP Left", 1, vClip);
+  RUN("partition_frame", item.width, "SP Top", [...dpX, ...jambX], colCells);
+  RUN("partition_frame", fieldW, "SP Bottom", dpX.map((x) => x - face), colCells);
+  RUN("partition_frame", item.height, "SP Left", hY, rowCells);
   // Beside a door the right SP borders the door leaf, which takes no clip.
-  P("partition_frame", item.height, "SP Right", hasDoor ? 0 : 1, vClip);
+  RUN("partition_frame", item.height, "SP Right", hY, hasDoor ? [] : rowCells);
 
   if (hasDoor) {
     // DP jamb: glass on one side, the door on the other — one clip.
-    P("partition_divider", innerH, "DP Door-jamb", 1, vClip);
+    RUN("partition_divider", innerH, "DP Door-jamb", hY.map((y) => y - face), rowCells);
     // Door leaf, built like the standalone door: stiles full height, rails
     // fitted BETWEEN the stiles (leaf width − clearance), one middle rail.
     const leafW = doorW - inches(0.75);
     const leafH = innerH - inches(0.75);
     const dClr = doorClearance("60");
     const railW = leafW - dClr;
-    P("door_palla_60", railW, "Door Top", 0);
-    P("door_palla_60", railW, "Door Bottom", 0);
-    P("door_palla_60", leafH, "Door Left", 0);
-    P("door_palla_60", leafH, "Door Right", 0);
-    P("door_center_60", railW, "Door Middle", 0);
+    P("door_palla_60", railW, "Door Top");
+    P("door_palla_60", railW, "Door Bottom");
+    P("door_palla_60", leafH, "Door Left");
+    P("door_palla_60", leafH, "Door Right");
+    P("door_center_60", railW, "Door Middle");
     // Its two infill panels — glass on top, sheet below (founder-confirmed
     // 2026-10-28: "upar glass niche sheet"). Sized like a door zone.
     const zoneH = Math.round(leafH / 2) - dClr;
@@ -658,11 +697,13 @@ export function partitionGeometry(item: JobItem): PartGeom {
 
   // Verticals run full height; horizontals are cut BETWEEN them, one piece
   // per bay — both running full length would put two profiles in one crossing.
-  for (let i = 0; i < bays - 1; i++) P("partition_divider", innerH, `DP Vertical ${i + 1}`, 2, vClip);
+  for (let i = 0; i < bays - 1; i++) {
+    RUN("partition_divider", innerH, `DP Vertical ${i + 1}`, hY.map((y) => y - face), times(rowCells, 2));
+  }
   for (let b = 0; b < bays; b++) {
     const bay = bays > 1 ? ` (bay ${b + 1})` : "";
-    if (sheetFt > 0) P("partition_divider", cellW, `DP Sheet-line${bay}`, 2);
-    for (let r = 0; r < glassRows - 1; r++) P("partition_divider", cellW, `DP Glass-row ${r + 1}${bay}`, 2);
+    if (sheetFt > 0) P("partition_divider", cellW, `DP Sheet-line${bay}`, [cellW, cellW]);
+    for (let r = 0; r < glassRows - 1; r++) P("partition_divider", cellW, `DP Glass-row ${r + 1}${bay}`, [cellW, cellW]);
   }
 
   // Panels per bay — a sheet cell (if any) + the glass rows.
@@ -686,11 +727,12 @@ function expandPartitionItem(item: JobItem): CutPiece[] {
     for (const pc of g.pieces) {
       pieces.push({ sectionId: pc.section, length: pc.length, itemId: wId, role: pc.role,
         label: `${wId} ${sizeLabel} — ${pc.role}` });
-      // Glazing clip runs each groove that faces a panel: SP = 1 side, DP = 2.
-      for (let c = 0; c < pc.clipMul; c++) {
-        pieces.push({ sectionId: "glazing_clip", length: pc.clipLen ?? pc.length, itemId: wId,
-          role: `${pc.role} Clip${pc.clipMul > 1 ? ` ${c + 1}` : ""}`,
-          label: `${wId} ${sizeLabel} — ${pc.role} Clip` });
+      // Glazing clip, one piece per panel edge this member borders (SP = one
+      // side, DP = both). The "(part n of m)" of a joined member is dropped.
+      const clipRole = `${pc.role.replace(/ \(part \d+ of \d+\)$/, "")} Clip`;
+      for (const len of pc.clips) {
+        pieces.push({ sectionId: "glazing_clip", length: len, itemId: wId, role: clipRole,
+          label: `${wId} ${sizeLabel} — ${clipRole}` });
       }
     }
   }

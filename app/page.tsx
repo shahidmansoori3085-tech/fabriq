@@ -410,8 +410,10 @@ function JobScreen({
   // Changing the track count changes which shutter mixes exist.
   const setTracks = (t: string) => setO((p) => ({ ...p, tracks: t, mix: MIXES[t][0][0] }));
 
-  const pw = parseOpening(w);
-  const ph = parseOpening(h);
+  // A partition's bare "20" is 20 ft (they run up to 25 ft); a window's is 20".
+  const feetBelow = type === "partition" ? 26 : undefined;
+  const pw = parseOpening(w, "auto", feetBelow);
+  const ph = parseOpening(h, "auto", feetBelow);
   const sizeWarn = pw && ph ? openingWarning(pw.um, ph.um) : null;
   // Build this one opening right now, so a layout that cannot exist (a 2 ft
   // fix on a 2 ft window, a rail longer than any pipe) is stopped here with

@@ -32,6 +32,18 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     }
 
     if (item.system === "partition") {
+      // Longer than one pipe: say where it is joined, so nobody hunts for a
+      // 20 ft SP pipe or butts the joint between two dividers.
+      const joined = [...new Set(list.pieces
+        .filter((p) => p.itemId.replace(/\.\d+$/, "") === item.id && / \(part \d+ of \d+\)$/.test(p.role))
+        .map((p) => p.role.replace(/ \(part \d+ of \d+\)$/, "")))];
+      if (joined.length) {
+        findings.push({
+          severity: "warning",
+          category: "joint",
+          message: `${item.id}: ${joined.join(", ")} ${joined.length > 1 ? "are longer than one 16' pipe, so they are" : "is longer than one 16' pipe, so it is"} cut in parts. Make each joint on a vertical divider.`,
+        });
+      }
       findings.push({
         severity: "suggestion",
         category: "section-verify",
