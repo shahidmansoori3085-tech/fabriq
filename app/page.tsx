@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, toFeet, sqft, parseOpening, describeDim, openingWarning, type Um,
+  formatFtInSut, toFeet, feet, sqft, parseOpening, describeDim, openingWarning, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError } from "@/lib/engine/estimator";
@@ -27,7 +27,7 @@ import { reviewEstimate } from "@/lib/engine/review";
 import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
-import { CuttingGuide } from "@/components/diagrams";
+import { CuttingGuide, MiniElevation } from "@/components/diagrams";
 import { SectionProfile, SectionDrawing, hasImage } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
@@ -86,7 +86,6 @@ const MIXES: Record<string, Opt[]> = {
   "3": [["GGJ", "2 Glass + 1 Mesh"], ["GGG", "3 Glass"]],
   "4": [["GGGJ", "3 Glass + 1 Mesh"], ["GGJJ", "2 Glass + 2 Mesh"], ["GGGG", "4 Glass"]],
 };
-const YES_NO: Opt[] = [["no", "No"], ["yes", "Yes"]];
 const FIX_FT: Opt[] = [["1.5", "1.5 ft"], ["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
 const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"]];
 const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"]];
@@ -356,11 +355,11 @@ export default function FabriQ() {
   );
 }
 
-/* ————————————————— job screen: add items ————————————————— */
+/* ————————————————— job screen ————————————————— */
 
 /** The form's last choices, kept for the session: opening the Material List
- *  unmounts this screen, and coming back to add one more of the same window
- *  must not mean re-picking Domal / 3 Track / fixed top all over again. */
+ *  unmounts this screen, and "add same again" must remember Domal / 3 Track /
+ *  fixed top without asking again. */
 const lastForm: { type: OpeningType; opts: Opts } = { type: "window", opts: DEFAULT_OPTS };
 
 /** One plain sentence for a layout that doesn't fit, naming the part. */
@@ -374,6 +373,55 @@ function layoutError(e: unknown): string {
   }
   return "This size cannot be built with this system — please check the size.";
 }
+
+/**
+ * Adding an item is a short series of screens, ONE question each, every
+ * answer a picture of what it builds — a fabricator recognises a drawing of
+ * a 3-track window faster than he reads "3 Track · 2 Glass + 1 Mesh". The
+ * old single form put 28–36 buttons and 5–7 questions on the first screen
+ * and pushed its own "Add" button off-screen as choices opened up.
+ */
+type StepId =
+  | "type" | "system" | "tracks" | "mix" | "domalFix"
+  | "zType" | "zDetails" | "doorPanels" | "doorDetails"
+  | "partDoor" | "partSheet" | "partSpacing" | "size";
+
+function stepsFor(type: OpeningType, o: Opts): StepId[] {
+  if (type === "door") return ["type", "doorPanels", "doorDetails", "size"];
+  if (type === "partition") return ["type", "partDoor", "partSheet", "partSpacing", "size"];
+  if (o.sys === "z_section") return ["type", "system", "zType", "zDetails", "size"];
+  return ["type", "system", "tracks", "mix", ...(o.sys === "domal" ? ["domalFix" as const] : []), "size"];
+}
+
+const STEP_TITLE: Record<StepId, string> = {
+  type: "What are you making?",
+  system: "Which window system?",
+  tracks: "How many tracks?",
+  mix: "Which shutters?",
+  domalFix: "Fixed glass on top?",
+  zType: "Which type?",
+  zDetails: "A few details",
+  doorPanels: "Door panels, top to bottom",
+  doorDetails: "Frame and shutter",
+  partDoor: "Door in the partition?",
+  partSheet: "Sheet panel at the bottom?",
+  partSpacing: "Divider spacing",
+  size: "Size",
+};
+
+const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
+
+/** The item these choices build, at a typical size — drawn on the option cards. */
+function sample(type: OpeningType, o: Opts): JobItem {
+  const [w, h] = SAMPLE_SIZE[type];
+  return buildJobItem(1, type, feet(w), feet(h), 1, metaFor(type, o));
+}
+
+const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
+  normal: { img: "/sections/2t_top.png", sub: "18 mm · most common" },
+  domal: { img: "/sections/domal_frame.png", sub: "27 mm · premium" },
+  z_section: { img: "/sections/z_outer_40.png", sub: "Hinged, opens out" },
+};
 
 function JobScreen({
   items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings,
@@ -395,29 +443,68 @@ function JobScreen({
   const [type, setType] = useState<OpeningType>(() => lastForm.type);
   const [o, setO] = useState<Opts>(() => lastForm.opts);
   useEffect(() => { lastForm.type = type; lastForm.opts = o; }, [type, o]);
-  const [showAll, setShowAll] = useState(false);
+  /** The add/edit flow, when open: which screen, and which item is being edited. */
+  const [flow, setFlow] = useState<{ step: StepId; editing: string | null } | null>(null);
   const [w, setW] = useState("");
   const [h, setH] = useState("");
   const [qty, setQty] = useState(1);
-  const [editing, setEditing] = useState<string | null>(null);
-  /** Set when "Get Material List" was tapped with a size that can't be added. */
-  const [blocked, setBlocked] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
-  const widthRef = useRef<HTMLInputElement>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const heightRef = useRef<HTMLInputElement>(null);
+  /** The exact size of the item being edited, with the text it was shown as —
+   *  the text is rounded to the sut, so an untouched size keeps its real value. */
+  const editDims = useRef<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
 
-  const set = <K extends keyof Opts>(k: K, v: Opts[K]) => setO((p) => ({ ...p, [k]: v }));
-  // Changing the track count changes which shutter mixes exist.
-  const setTracks = (t: string) => setO((p) => ({ ...p, tracks: t, mix: MIXES[t][0][0] }));
+  // The phone's back button steps out of the add flow instead of the app.
+  useEffect(() => {
+    const onPop = () => { if (window.history.state?.fabriq !== "add") setFlow(null); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const openFlow = (step: StepId, editing: string | null = null) => {
+    if (window.history.state?.fabriq !== "add") window.history.pushState({ fabriq: "add" }, "");
+    setFlow({ step, editing });
+    window.scrollTo({ top: 0 });
+  };
+  const closeFlow = () => {
+    setFlow(null);
+    if (window.history.state?.fabriq === "add") window.history.back();
+    window.scrollTo({ top: 0 });
+  };
 
+  // A just-added item is scrolled into view and glows briefly, so the
+  // fabricator SEES it land in the list.
+  useEffect(() => {
+    if (!justAdded || flow) return;
+    document.getElementById(`item-${justAdded}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const t = setTimeout(() => setJustAdded(null), 2500);
+    return () => clearTimeout(t);
+  }, [justAdded, flow]);
+
+  const steps = stepsFor(type, o);
+  const go = (step: StepId) => { setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
+  /** Apply a choice; move on unless the screen has more to ask. */
+  const choose = (patch: Partial<Opts>, advance = true, nextType: OpeningType = type) => {
+    const next = { ...o, ...patch };
+    setO(next);
+    if (!advance || !flow) return;
+    const st = stepsFor(nextType, next);
+    go(st[Math.min(st.indexOf(flow.step) + 1, st.length - 1)]);
+  };
+  const back = () => {
+    if (!flow) return;
+    const i = steps.indexOf(flow.step);
+    if (i > 0) go(steps[i - 1]); else closeFlow();
+  };
+
+  /* —— size —— */
   // A partition's bare "20" is 20 ft (they run up to 25 ft); a window's is 20".
   const feetBelow = type === "partition" ? 26 : undefined;
   const pw = parseOpening(w, "auto", feetBelow);
   const ph = parseOpening(h, "auto", feetBelow);
   const sizeWarn = pw && ph ? openingWarning(pw.um, ph.um) : null;
-  // Build this one opening right now, so a layout that cannot exist (a 2 ft
-  // fix on a 2 ft window, a rail longer than any pipe) is stopped here with
-  // a reason — not discovered later, blocking the whole job's list.
+  // Build this opening right now, so a layout that cannot exist is stopped
+  // here with a reason — not discovered later, blocking the whole job's list.
   const buildWarn = useMemo(() => {
     if (!pw || !ph || sizeWarn) return null;
     try {
@@ -430,43 +517,28 @@ function JobScreen({
   const warn = sizeWarn ?? buildWarn;
   const ready = !!pw && !!ph && !warn;
   const touched = w.trim() !== "" || h.trim() !== "";
-  // A bare number that could also be read another way (19 → feet, 4.6 → 4.6 ft)
   const unsure = ready && (pw!.ambiguous || ph!.ambiguous);
 
-  const clearForm = () => { setW(""); setH(""); setQty(1); setEditing(null); setBlocked(false); };
-
-  /** The exact size of the item being edited, with the text it was shown as —
-   *  the text is rounded to the sut, so an untouched size keeps its real value
-   *  instead of drifting up to 1.6 mm on every save. */
-  const editDims = useRef<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
-
-  /** Commit what's in the form. Returns false if there is nothing valid to commit. */
-  const commit = (): boolean => {
-    if (!pw || !ph || warn) return false;
-    const e = editing ? editDims.current : null;
+  const commit = () => {
+    if (!pw || !ph || warn || !flow) return;
+    const e = flow.editing ? editDims.current : null;
     const wu = e && w === e.w ? e.wu : pw.um;
     const hu = e && h === e.h ? e.hu : ph.um;
-    if (editing) onReplace(editing, type, wu, hu, qty, metaFor(type, o));
-    else onAdd(type, wu, hu, qty, metaFor(type, o));
-    clearForm();
-    return true;
-  };
-
-  const add = () => { if (commit()) widthRef.current?.focus(); };
-
-  /** The big button never drops a size the fabricator has typed: a valid one
-   *  is added first; an unfinished or invalid one stops and says so. */
-  const finish = () => {
-    if (touched || editing) {
-      if (!commit()) {
-        setBlocked(true);
-        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
+    if (flow.editing) {
+      onReplace(flow.editing, type, wu, hu, qty, metaFor(type, o));
+      setJustAdded(flow.editing);
+    } else {
+      onAdd(type, wu, hu, qty, metaFor(type, o));
+      // Same numbering the list uses: the next free W-number.
+      setJustAdded(`W${items.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0) + 1}`);
     }
-    onDone();
+    closeFlow();
   };
 
+  const startAdd = (step: StepId) => {
+    setW(""); setH(""); setQty(1); editDims.current = null;
+    openFlow(step);
+  };
   const startEdit = (it: JobItem) => {
     setType(it.type);
     setO(optsFromItem(it));
@@ -474,13 +546,255 @@ function JobScreen({
     setH(ftIn(it.height));
     editDims.current = { w: ftIn(it.width), h: ftIn(it.height), wu: it.width, hu: it.height };
     setQty(it.qty);
-    setEditing(it.id);
-    setBlocked(false);
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    openFlow("size", it.id);
   };
 
+  /* ————— the add / edit flow ————— */
+  if (flow) {
+    const i = steps.indexOf(flow.step);
+    const pick = (t: OpeningType) => { setType(t); choose({}, true, t); };
+    const live = ready
+      ? buildJobItem(1, type, pw!.um, ph!.um, qty, metaFor(type, o))
+      : sample(type, o);
+
+    return (
+      <div className="flex flex-col gap-4">
+        {/* header: back · title · progress */}
+        <div className="flex items-center gap-3 py-1">
+          <button onClick={back} aria-label="Back" className="btn-ghost grid h-10 w-10 shrink-0 place-items-center text-lg">←</button>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
+              {flow.editing ? `Editing ${flow.editing}` : `Add ${type}`} · Step {i + 1} of {steps.length}
+            </div>
+            <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
+          </div>
+          <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
+        </div>
+        <div className="flex gap-1">
+          {steps.map((s, k) => (
+            <span key={s} className="h-1 flex-1 rounded-full" style={{ background: k <= i ? "var(--accent)" : "var(--line)" }} />
+          ))}
+        </div>
+
+        {flow.step === "type" && (
+          <div className="grid grid-cols-3 gap-2">
+            {TYPES.map(([v, label]) => (
+              <Choice key={v} selected={type === v} onClick={() => pick(v as OpeningType)} title={label}
+                picture={<MiniElevation item={sample(v as OpeningType, o)} size={v === "door" ? 40 : 76} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "system" && (
+          <div className="flex flex-col gap-2">
+            {SYSTEMS.map(([v, label]) => (
+              <Choice key={v} wide selected={o.sys === v} onClick={() => choose({ sys: v as WinSys })}
+                title={label} sub={SYSTEM_INFO[v as WinSys].sub}
+                // eslint-disable-next-line @next/next/no-img-element
+                picture={<img src={SYSTEM_INFO[v as WinSys].img} alt="" style={{ maxHeight: 64, maxWidth: 96, objectFit: "contain" }} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "tracks" && (
+          <div className="grid grid-cols-2 gap-2">
+            {TRACKS.map(([v, label]) => (
+              <Choice key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, tracks: v, mix: MIXES[v][0][0] })} size={110} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "mix" && (
+          <div className="grid grid-cols-2 gap-2">
+            {(MIXES[o.tracks] ?? MIXES["2"]).map(([v, label]) => (
+              <Choice key={v} selected={o.mix === v} onClick={() => choose({ mix: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, mix: v })} size={110} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "domalFix" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="No"
+                picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={100} />} />
+              <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" }, false)} title="Yes"
+                picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={100} />} />
+            </div>
+            {o.domalFix === "yes" && (
+              <>
+                <Field label="Fixed glass height">
+                  <Seg options={FIX_FT} value={o.domalFixFt} onChange={(v) => choose({ domalFixFt: v }, false)} />
+                </Field>
+                <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+              </>
+            )}
+          </>
+        )}
+
+        {flow.step === "zType" && (
+          <div className="grid grid-cols-2 gap-2">
+            {Z_TYPES.map(([v, label]) => (
+              <Choice key={v} selected={o.zType === v} title={label}
+                // A Z door is built from the heavy series — picked for him.
+                onClick={() => choose({ zType: v, zSize: v === "door" ? "heavy" : o.zSize })}
+                picture={v === "door"
+                  ? <MiniElevation item={buildJobItem(1, "window", feet(3), feet(7), 1, metaFor("window", { ...o, zType: v }))} size={42} />
+                  : <MiniElevation item={sample("window", { ...o, zType: v })} size={100} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "zDetails" && (
+          <div className="card flex flex-col gap-4 p-4">
+            <div className="grid place-items-center"><MiniElevation item={sample("window", o)} size={130} /></div>
+            {o.zType === "combo" && (
+              <>
+                <Field label="Fixed part position">
+                  <Seg options={Z_DIRS} value={o.zComboDir} onChange={(v) => choose({ zComboDir: v }, false)} />
+                </Field>
+                <Field label="Fixed part size">
+                  <Seg options={FIX_FT} value={o.zFixedFt} onChange={(v) => choose({ zFixedFt: v }, false)} />
+                </Field>
+              </>
+            )}
+            {(o.zType === "openable" || o.zType === "combo") && (
+              <Field label="Openable sashes">
+                <Seg options={Z_SASH} value={o.zSash} onChange={(v) => choose({ zSash: v }, false)} />
+              </Field>
+            )}
+            <Field label="Profile">
+              <Seg options={Z_SIZE} value={o.zSize} onChange={(v) => choose({ zSize: v }, false)} />
+            </Field>
+            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+          </div>
+        )}
+
+        {flow.step === "doorPanels" && (
+          <div className="grid grid-cols-4 gap-2">
+            {DOOR_MIX.map(([v, label]) => (
+              <Choice key={v} selected={o.doorMix === v} onClick={() => choose({ doorMix: v })} title={label}
+                picture={<MiniElevation item={sample("door", { ...o, doorMix: v })} size={40} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "doorDetails" && (
+          <div className="card flex flex-col gap-4 p-4">
+            <Field label="What do you need?">
+              <Seg options={CHOKHAT} value={o.chokhat} onChange={(v) => choose({ chokhat: v }, false)} />
+            </Field>
+            <Field label="Shutter section (mm)">
+              <Seg options={PALLA} value={o.palla} onChange={(v) => choose({ palla: v }, false)} />
+            </Field>
+            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+          </div>
+        )}
+
+        {flow.step === "partDoor" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Choice selected={o.partDoor === "no"} onClick={() => choose({ partDoor: "no" })} title="No door"
+                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "no" })} size={120} />} />
+              <Choice selected={o.partDoor === "yes"} onClick={() => choose({ partDoor: "yes" }, false)} title="With a door"
+                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes" })} size={120} />} />
+            </div>
+            {o.partDoor === "yes" && (
+              <>
+                <Field label="Door width">
+                  <Seg options={PART_DOOR_W} value={o.partDoorW} onChange={(v) => choose({ partDoorW: v }, false)} />
+                </Field>
+                <button onClick={() => go("partSheet")} className="btn-primary w-full py-3.5">Next</button>
+              </>
+            )}
+          </>
+        )}
+
+        {flow.step === "partSheet" && (
+          <div className="grid grid-cols-2 gap-2">
+            {PART_SHEET.map(([v, label]) => (
+              <Choice key={v} selected={o.partSheetFt === v} onClick={() => choose({ partSheetFt: v })} title={label}
+                picture={<MiniElevation item={sample("partition", { ...o, partSheetFt: v })} size={120} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "partSpacing" && (
+          <div className="card flex flex-col gap-4 p-4">
+            <div className="grid place-items-center"><MiniElevation item={sample("partition", o)} size={200} /></div>
+            <Field label="Vertical divider every">
+              <Seg options={BAY_FT} value={o.partBayFt} onChange={(v) => choose({ partBayFt: v }, false)} />
+            </Field>
+            <Field label="Horizontal divider every">
+              <Seg options={ROW_FT} value={o.partRowFt} onChange={(v) => choose({ partRowFt: v }, false)} />
+            </Field>
+            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+          </div>
+        )}
+
+        {flow.step === "size" && (
+          <div className="flex flex-col gap-4">
+            {/* what is being added — tap to change any of it */}
+            <button onClick={() => go(steps[1] ?? "type")} className="card flex items-center gap-3 p-3 text-left">
+              <span className="grid w-16 shrink-0 place-items-center"><MiniElevation item={live} size={type === "door" ? 34 : 60} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{itemLabel(live)}</span>
+                <span className="block text-xs font-semibold" style={{ color: "var(--accent)" }}>Change</span>
+              </span>
+            </button>
+
+            <div className="card flex flex-col gap-3 p-4">
+              <div className="flex gap-3">
+                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
+                  Width
+                  <input autoFocus value={w} onChange={(e) => setW(e.target.value)} aria-label="Width"
+                    placeholder="4'6" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
+                    className="dim-input w-full px-3 py-3 text-xl font-semibold"
+                    onKeyDown={(e) => { if (e.key === "Enter") heightRef.current?.focus(); }} />
+                </label>
+                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
+                  Height
+                  <input ref={heightRef} value={h} onChange={(e) => setH(e.target.value)} aria-label="Height"
+                    placeholder="4" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
+                    className="dim-input w-full px-3 py-3 text-xl font-semibold"
+                    onKeyDown={(e) => { if (e.key === "Enter") commit(); }} />
+                </label>
+              </div>
+              <div className="min-h-[18px] text-xs font-medium"
+                style={{ color: !touched ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : "var(--bad)" }}>
+                {!touched
+                  ? "In feet: 4, 4'6, 4-6 — or in inches: 54\""
+                  : !pw || !ph
+                    ? "Enter both width and height"
+                    : warn
+                      ? warn
+                      : `= ${describeDim(pw.um)} × ${describeDim(ph.um)}${
+                          unsure ? " · read as feet — for inches add \", for 4 ft 6 in type 4'6" : ""}`}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>How many?</span>
+                <Stepper value={qty} onChange={setQty} />
+              </div>
+              <button onClick={commit} disabled={!ready} className="btn-primary w-full py-4 text-base">
+                {flow.editing ? "Save changes" : "Add to list"}
+              </button>
+              {flow.editing && (
+                <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
+                  className="text-sm font-semibold" style={{ color: "var(--bad)" }}>
+                  Remove {flow.editing} from the job
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ————— the job: what's been added, and the one next step ————— */
   const openings = items.reduce((a, it) => a + it.qty, 0);
-  const pendingCount = ready && !editing ? qty : 0;
+  const last = items[items.length - 1];
 
   return (
     <div className="flex flex-col gap-4">
@@ -497,190 +811,80 @@ function JobScreen({
         <button onClick={onSettings} className="btn-ghost px-3 py-2 text-sm">Settings</button>
       </div>
 
-      {/* add (or edit) one item */}
-      <div ref={formRef} className="card flex scroll-mt-3 flex-col gap-4 p-4"
-        style={editing ? { borderColor: "var(--accent)" } : undefined}>
-        {editing && (
-          <div className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold"
-            style={{ background: "var(--accent-soft)" }}>
-            <span>Editing {editing}</span>
-            <button onClick={clearForm} className="text-sm font-semibold" style={{ color: "var(--accent)" }}>Cancel</button>
+      {items.length === 0 ? (
+        /* first screen: one thing to do */
+        <div className="card flex flex-col items-center gap-4 px-5 py-8 text-center">
+          <div className="flex items-end gap-3" aria-hidden>
+            <MiniElevation item={sample("window", DEFAULT_OPTS)} size={64} />
+            <MiniElevation item={sample("door", DEFAULT_OPTS)} size={26} />
+            <MiniElevation item={sample("partition", DEFAULT_OPTS)} size={72} />
           </div>
-        )}
-
-        <Field label="Item">
-          <Seg options={TYPES} value={type} onChange={(v) => setType(v as OpeningType)} />
-        </Field>
-
-        {type === "window" && (
-          <>
-            <Field label="System">
-              <Seg options={SYSTEMS} value={o.sys} onChange={(v) => set("sys", v as WinSys)} />
-            </Field>
-            {o.sys !== "z_section" && (
-              <>
-                <Field label="Track">
-                  <Seg options={TRACKS} value={o.tracks} onChange={setTracks} />
-                </Field>
-                <Field label="Shutters">
-                  <Seg options={MIXES[o.tracks] ?? MIXES["2"]} value={o.mix} onChange={(v) => set("mix", v)} />
-                </Field>
-              </>
-            )}
-            {o.sys === "domal" && (
-              <>
-                <Field label="Fixed glass on top">
-                  <Seg options={YES_NO} value={o.domalFix} onChange={(v) => set("domalFix", v)} />
-                </Field>
-                {o.domalFix === "yes" && (
-                  <Field label="Fixed glass height">
-                    <Seg options={FIX_FT} value={o.domalFixFt} onChange={(v) => set("domalFixFt", v)} />
-                  </Field>
-                )}
-              </>
-            )}
-            {o.sys === "z_section" && (
-              <>
-                <Field label="Type">
-                  {/* A Z door is built from the heavy series — pick it for him;
-                      he can still switch back. */}
-                  <Seg options={Z_TYPES} value={o.zType}
-                    onChange={(v) => setO((p) => ({ ...p, zType: v, zSize: v === "door" ? "heavy" : p.zSize }))} />
-                </Field>
-                <Field label="Profile">
-                  <Seg options={Z_SIZE} value={o.zSize} onChange={(v) => set("zSize", v)} />
-                </Field>
-                {o.zType === "combo" && (
-                  <>
-                    <Field label="Fixed part position">
-                      <Seg options={Z_DIRS} value={o.zComboDir} onChange={(v) => set("zComboDir", v)} />
-                    </Field>
-                    <Field label="Fixed part size">
-                      <Seg options={FIX_FT} value={o.zFixedFt} onChange={(v) => set("zFixedFt", v)} />
-                    </Field>
-                  </>
-                )}
-                {(o.zType === "openable" || o.zType === "combo") && (
-                  <Field label="Openable sashes">
-                    <Seg options={Z_SASH} value={o.zSash} onChange={(v) => set("zSash", v)} />
-                  </Field>
-                )}
-              </>
-            )}
-          </>
-        )}
-
-        {type === "door" && (
-          <>
-            <Field label="Shutter section (mm)">
-              <Seg options={PALLA} value={o.palla} onChange={(v) => set("palla", v)} />
-            </Field>
-            <Field label="Scope">
-              <Seg options={CHOKHAT} value={o.chokhat} onChange={(v) => set("chokhat", v)} />
-            </Field>
-            <Field label="Panels (3, top to bottom)">
-              <Seg options={DOOR_MIX} value={o.doorMix} onChange={(v) => set("doorMix", v)} />
-            </Field>
-          </>
-        )}
-
-        {type === "partition" && (
-          <>
-            <Field label="Door in partition">
-              <Seg options={YES_NO} value={o.partDoor} onChange={(v) => set("partDoor", v)} />
-            </Field>
-            {o.partDoor === "yes" && (
-              <Field label="Door width">
-                <Seg options={PART_DOOR_W} value={o.partDoorW} onChange={(v) => set("partDoorW", v)} />
-              </Field>
-            )}
-            <Field label="Bottom sheet panel">
-              <Seg options={PART_SHEET} value={o.partSheetFt} onChange={(v) => set("partSheetFt", v)} />
-            </Field>
-            <Field label="Vertical divider spacing">
-              <Seg options={BAY_FT} value={o.partBayFt} onChange={(v) => set("partBayFt", v)} />
-            </Field>
-            <Field label="Horizontal divider spacing">
-              <Seg options={ROW_FT} value={o.partRowFt} onChange={(v) => set("partRowFt", v)} />
-            </Field>
-          </>
-        )}
-
-        {/* size */}
-        <div>
-          <div className="mb-1.5 flex text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
-            <span className="flex-1">Width</span>
-            <span className="w-5" />
-            <span className="flex-1">Height</span>
-            <span className="w-[112px] text-center">Qty</span>
+          <div>
+            <h1 className="text-xl font-bold">Start a new job</h1>
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
+              Add each window, door or partition with its size.
+              <br />Then get the material list and cutting sheet.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <input ref={widthRef} value={w} onChange={(e) => { setW(e.target.value); setBlocked(false); }}
-              aria-label="Width" placeholder="4'6" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
-              className="dim-input min-w-0 flex-1 px-3 py-3 text-lg font-semibold"
-              onKeyDown={(e) => { if (e.key === "Enter") heightRef.current?.focus(); }} />
-            <span className="w-3 text-center" style={{ color: "var(--ink-3)" }}>×</span>
-            <input ref={heightRef} value={h} onChange={(e) => { setH(e.target.value); setBlocked(false); }}
-              aria-label="Height" placeholder="4" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
-              className="dim-input min-w-0 flex-1 px-3 py-3 text-lg font-semibold"
-              onKeyDown={(e) => { if (e.key === "Enter") add(); }} />
-            <Stepper value={qty} onChange={setQty} />
-          </div>
-          <div className="mt-1.5 min-h-[18px] text-xs font-medium"
-            style={{ color: !touched && !blocked ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : "var(--bad)" }}>
-            {!touched
-              ? blocked ? "Enter the size first, or tap Cancel." : "In feet: 4, 4'6, 4-6 — or in inches: 54\""
-              : !pw || !ph
-                ? blocked ? "Finish this size (width and height) or clear it before continuing." : "Enter both width and height"
-                : warn
-                  ? warn
-                  : `= ${describeDim(pw.um)} × ${describeDim(ph.um)}${
-                      unsure ? " · read as feet — for inches add \", for 4 ft 6 in type 4'6" : ""}`}
-          </div>
+          <button onClick={() => startAdd("type")} className="btn-primary w-full py-4 text-base">
+            + Add first item
+          </button>
         </div>
-
-        <button onClick={add} disabled={!ready} className="btn-primary w-full py-3.5 text-base">
-          {editing ? "Save changes" : "+ Add to list"}
-        </button>
-      </div>
-
-      {/* this job */}
-      {items.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-4 pb-3 pt-3" style={{ background: "var(--surface-2)" }}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold">This job</span>
-              <span className="text-xs" style={{ color: "var(--ink-3)" }}>
-                {plural(items.length, "size")} · {plural(openings, "pc")}
-              </span>
-            </div>
-            <input value={jobName} onChange={(e) => onJobName(e.target.value)} maxLength={60}
-              aria-label="Job or customer name" placeholder="Job / customer name (optional)"
-              className="dim-input mt-2 w-full px-3 py-2 text-sm" />
-          </div>
-          {items.map((it) => (
-            <div key={it.id} className="flex items-center gap-2 pl-2 pr-2"
-              style={{ borderTop: "1px solid var(--line)", background: editing === it.id ? "var(--accent-soft)" : undefined }}>
-              <button onClick={() => startEdit(it)} aria-label={`Edit ${it.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left">
-                <span className="mono shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold"
-                  style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>{it.id}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold tabnum">
-                    {openingText(it)}{it.qty > 1 && <span style={{ color: "var(--accent)" }}> × {it.qty}</span>}
-                  </span>
-                  <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
+      ) : (
+        <>
+          <div className="card overflow-hidden">
+            <div className="px-4 pb-3 pt-3" style={{ background: "var(--surface-2)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold">This job</span>
+                <span className="text-xs" style={{ color: "var(--ink-3)" }}>
+                  {plural(items.length, "size")} · {plural(openings, "pc")}
                 </span>
-              </button>
-              <button onClick={() => { if (editing === it.id) clearForm(); onRemove(it.id); }} aria-label={`Remove ${it.id}`}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
-                style={{ color: "var(--ink-3)" }}>×</button>
+              </div>
+              <input value={jobName} onChange={(e) => onJobName(e.target.value)} maxLength={60}
+                aria-label="Job or customer name" placeholder="Job / customer name (optional)"
+                className="dim-input mt-2 w-full px-3 py-2 text-sm" />
             </div>
-          ))}
-          <div className="px-4 py-2 text-[11px]" style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
-            Tap an item to edit it.
+            {items.map((it) => (
+              <div key={it.id} id={`item-${it.id}`} className="flex items-center gap-2 pl-2 pr-2 transition-colors"
+                style={{ borderTop: "1px solid var(--line)", background: justAdded === it.id ? "var(--good-soft)" : undefined }}>
+                <button onClick={() => startEdit(it)} aria-label={`Edit ${it.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left">
+                  <span className="grid w-12 shrink-0 place-items-center">
+                    <MiniElevation item={it} size={it.type === "door" ? 22 : 44} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold tabnum">
+                      <span className="mono mr-1.5 text-xs" style={{ color: "var(--ink-3)" }}>{it.id}</span>
+                      {openingText(it)}{it.qty > 1 && <span style={{ color: "var(--accent)" }}> × {it.qty}</span>}
+                      {justAdded === it.id && <span className="ml-2 text-xs font-bold" style={{ color: "var(--good)" }}>✓ Added</span>}
+                    </span>
+                    <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
+                  </span>
+                </button>
+                <button onClick={() => onRemove(it.id)} aria-label={`Remove ${it.id}`}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
+                  style={{ color: "var(--ink-3)" }}>×</button>
+              </div>
+            ))}
+            <div className="px-4 py-2 text-[11px]" style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
+              Tap an item to change it.
+            </div>
           </div>
-        </div>
+
+          {/* the two ways to add more: the same again (straight to the size)
+              — ten identical windows is the common job — or something else */}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => { setType(last.type); setO(optsFromItem(last)); startAdd("size"); }}
+              className="card flex flex-col items-start gap-0.5 p-3 text-left">
+              <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>+ Add same again</span>
+              <span className="line-clamp-2 text-[11px]" style={{ color: "var(--ink-3)" }}>{itemLabel(last)}</span>
+            </button>
+            <button onClick={() => startAdd("type")} className="card flex flex-col items-start gap-0.5 p-3 text-left">
+              <span className="text-sm font-bold">+ Add a different item</span>
+              <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>Window, door or partition</span>
+            </button>
+          </div>
+        </>
       )}
 
       {/* earlier jobs — only when nothing is being entered, so it never competes */}
@@ -712,18 +916,35 @@ function JobScreen({
         </div>
       )}
 
-      {/* the one action that matters, always in reach */}
-      {(items.length > 0 || pendingCount > 0) && (
+      {/* the one next step, always in reach — this screen has no keyboard,
+          so nothing ever covers it */}
+      {items.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3"
           style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(12px + env(safe-area-inset-bottom))" }}>
           <div className="mx-auto max-w-xl">
-            <button onClick={finish} className="btn-dark w-full py-4 text-base">
-              Get Material List ({plural(openings + pendingCount, "pc")}) →
+            <button onClick={onDone} className="btn-dark w-full py-4 text-base">
+              Get Material List ({plural(openings, "pc")}) →
             </button>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+/** One answer, as a picture with its name — tap to choose. */
+function Choice({ picture, title, sub, selected, onClick, wide }: {
+  picture: React.ReactNode; title: string; sub?: string; selected: boolean; onClick: () => void; wide?: boolean;
+}) {
+  return (
+    <button onClick={onClick} aria-pressed={selected}
+      className={`chip flex ${wide ? "flex-row items-center gap-4 px-4 py-3 text-left" : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
+      <span className={`grid shrink-0 place-items-center ${wide ? "w-24" : "min-h-[72px] w-full"}`}>{picture}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{title}</span>
+        {sub && <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>}
+      </span>
+    </button>
   );
 }
 

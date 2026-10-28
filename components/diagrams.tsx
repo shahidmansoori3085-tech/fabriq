@@ -6,6 +6,7 @@
 import { Um, formatFtInSut, toFeet } from "@/lib/engine/units";
 import type { ShutterConfig, PackedBar, JobItem } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
+import { partitionGeometry } from "@/lib/engine/estimator";
 
 /* ——— fills shared by elevations ——— */
 function glassFill(x: number, y: number, w: number, h: number, key: string) {
@@ -47,23 +48,25 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
   const cells: React.ReactNode[] = [];
 
   if (item.type === "partition") {
-    const hasDoor = item.meta.partDoor === "yes";
-    const doorFrac = hasDoor ? Math.min(0.42, (parseFloat(item.meta.partDoorW ?? "3") || 3) / toFeet(item.width)) : 0;
-    const sheetFt = parseFloat(item.meta.partSheetFt ?? "0") || 0;
-    const sheetFrac = sheetFt > 0 ? Math.min(0.5, sheetFt / toFeet(item.height)) : 0;
-    const fieldW = iw * (1 - doorFrac);
-    const bays = Math.max(1, Math.round(toFeet(item.width) * (1 - doorFrac) / (parseFloat(item.meta.partBayFt ?? "2.5") || 2.5)));
-    const bw = fieldW / bays;
-    const sheetH = ih * sheetFrac, glassH = ih - sheetH;
-    for (let b = 0; b < bays; b++) {
-      const x = fr + b * bw;
-      cells.push(glassFill(x + 0.5, fr, bw - 1, glassH - 0.5, `g${b}`));
-      if (sheetH > 0) cells.push(sheetFill(x + 0.5, fr + glassH, bw - 1, sheetH, `s${b}`));
+    // The same grid the cut list is built from — bays, glass rows, bottom
+    // sheet and door — scaled into the picture, so changing a spacing on the
+    // option screen visibly changes the drawing.
+    const L = partitionGeometry(item).layout;
+    const sx = iw / (item.width - 2 * L.face), sy = ih / L.innerH;
+    const glassBandH = L.glassRows * L.glassRowH + (L.glassRows - 1) * L.face;
+    for (let b = 0; b < L.bays; b++) {
+      const x = fr + b * (L.cellW + L.face) * sx;
+      for (let r = 0; r < L.glassRows; r++)
+        cells.push(glassFill(x + 0.5, fr + r * (L.glassRowH + L.face) * sy + 0.5, L.cellW * sx - 1, L.glassRowH * sy - 1, `g${b}-${r}`));
+      if (L.sheetH > 0)
+        cells.push(sheetFill(x + 0.5, fr + (glassBandH + L.face) * sy + 0.5, L.cellW * sx - 1, L.sheetH * sy - 1, `s${b}`));
     }
-    if (hasDoor) {
-      const dx = fr + fieldW;
-      cells.push(<rect key="door" x={dx + 1} y={fr} width={iw * doorFrac - 1} height={ih} fill="#e6efe9" stroke="#0f6e56" strokeWidth={1.5} />);
-      cells.push(<line key="dh" x1={dx + 3} y1={fr + ih * 0.5} x2={dx + iw * doorFrac - 2} y2={fr + ih * 0.5} stroke="#0f6e56" strokeWidth={0.6} />);
+    if (L.hasDoor) {
+      // glass above the middle rail, sheet below — as the cut list orders it
+      const dx = fr + (L.fieldW + L.face) * sx, dw = L.doorW * sx;
+      cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih / 2 - 2, "dg"));
+      cells.push(sheetFill(dx + 1, fr + ih / 2 + 1, dw - 2, ih / 2 - 2, "ds"));
+      cells.push(<rect key="door" x={dx + 0.5} y={fr} width={dw - 1} height={ih} fill="none" stroke="#0f6e56" strokeWidth={1.5} />);
     }
   } else if (item.type === "door") {
     const zones = item.shutters.length || 1;
@@ -71,18 +74,61 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
     for (let z = 0; z < zones; z++) {
       const y = fr + z * zh;
       const k = item.shutters[z]?.kind;
-      cells.push(k === "jali" ? jaliFill(fr + 1, y + 1, iw - 2, zh - 2, `d${z}`) : sheetFill(fr + 1, y + 1, iw - 2, zh - 2, `d${z}`));
+      cells.push(k === "jali" ? jaliFill(fr + 1, y + 1, iw - 2, zh - 2, `d${z}`)
+        : k === "glass" ? glassFill(fr + 1, y + 1, iw - 2, zh - 2, `d${z}`)
+          : sheetFill(fr + 1, y + 1, iw - 2, zh - 2, `d${z}`));
     }
   } else {
-    // window — N shutters side by side
-    const n = Math.max(1, item.shutters.length);
-    const sw = iw / n;
-    for (let i = 0; i < n; i++) {
-      const x = fr + i * sw;
-      const k = item.shutters[i]?.kind;
-      cells.push(k === "jali" ? jaliFill(x + 1, fr + 1, sw - 2, ih - 2, `w${i}`)
-        : k === "sheet" ? sheetFill(x + 1, fr + 1, sw - 2, ih - 2, `w${i}`)
-          : glassFill(x + 1, fr + 1, sw - 2, ih - 2, `w${i}`));
+    const fill = (k: string | undefined, x: number, y: number, w: number, h: number, key: string) =>
+      k === "jali" ? jaliFill(x, y, w, h, key) : k === "sheet" ? sheetFill(x, y, w, h, key) : glassFill(x, y, w, h, key);
+    /** A hinged sash: the opening "V" a fabricator draws on a casement. */
+    const hinge = (x: number, y: number, w: number, h: number, key: string) => (
+      <polyline key={key} points={`${x + 2},${y + 2} ${x + w - 2},${y + h / 2} ${x + 2},${y + h - 2}`}
+        fill="none" stroke="#5a5f6a" strokeWidth={0.8} strokeDasharray="2 1.5" />
+    );
+    if (item.system === "z_section") {
+      const sashes = item.meta.zLayout === "fixed" ? 0 : Math.max(1, item.shutters.length);
+      const fixedFrac = Math.min(0.5, (parseFloat(item.meta.zFixedFt ?? "2") || 2) /
+        toFeet(item.meta.zComboDir === "top" ? item.height : item.width));
+      let ox = fr, oy = fr, ow = iw, oh = ih; // the openable zone
+      if (item.meta.zLayout === "fixed") {
+        cells.push(glassFill(fr + 1, fr + 1, iw - 2, ih - 2, "zf"));
+      } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "top") {
+        cells.push(glassFill(fr + 1, fr + 1, iw - 2, ih * fixedFrac - 2, "zf"));
+        oy = fr + ih * fixedFrac; oh = ih * (1 - fixedFrac);
+      } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "both") {
+        const fw = iw * Math.min(0.3, fixedFrac);
+        cells.push(glassFill(fr + 1, fr + 1, fw - 2, ih - 2, "zf1"));
+        cells.push(glassFill(fr + iw - fw + 1, fr + 1, fw - 2, ih - 2, "zf2"));
+        ox = fr + fw; ow = iw - 2 * fw;
+      } else if (item.meta.zLayout === "combo") {
+        cells.push(glassFill(fr + 1, fr + 1, iw * fixedFrac - 2, ih - 2, "zf"));
+        ox = fr + iw * fixedFrac; ow = iw * (1 - fixedFrac);
+      }
+      const sw = ow / Math.max(1, sashes);
+      for (let i = 0; i < sashes; i++) {
+        cells.push(fill(item.shutters[i]?.kind, ox + i * sw + 1, oy + 1, sw - 2, oh - 2, `zs${i}`));
+        cells.push(hinge(ox + i * sw + 1, oy + 1, sw - 2, oh - 2, `zh${i}`));
+      }
+    } else {
+      // Sliding (normal / Domal): an optional fixed glass band on top, then
+      // the shutters side by side, each marked with a slide arrow.
+      let top = fr;
+      if (item.system === "domal" && item.meta.domalFix === "yes") {
+        const fh = ih * Math.min(0.5, (parseFloat(item.meta.domalFixFt ?? "2") || 2) / toFeet(item.height));
+        cells.push(glassFill(fr + 1, fr + 1, iw - 2, fh - 2, "fix"));
+        top = fr + fh;
+      }
+      const h = fr + ih - top;
+      const n = Math.max(1, item.shutters.length);
+      const sw = iw / n;
+      for (let i = 0; i < n; i++) {
+        const x = fr + i * sw;
+        cells.push(fill(item.shutters[i]?.kind, x + 1, top + 1, sw - 2, h - 2, `w${i}`));
+        const ay = top + h / 2, ax = x + sw / 2, aw = Math.min(sw * 0.25, 8);
+        cells.push(<path key={`a${i}`} d={`M${ax - aw} ${ay} H${ax + aw} M${ax - aw + 2} ${ay - 2} L${ax - aw} ${ay} L${ax - aw + 2} ${ay + 2} M${ax + aw - 2} ${ay - 2} L${ax + aw} ${ay} L${ax + aw - 2} ${ay + 2}`}
+          stroke="#5a5f6a" strokeWidth={0.8} fill="none" />);
+      }
     }
   }
 
