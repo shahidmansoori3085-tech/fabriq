@@ -649,11 +649,11 @@ export function partitionGeometry(item: JobItem): PartGeom {
     P("door_palla_60", leafH, "Door Left", 0);
     P("door_palla_60", leafH, "Door Right", 0);
     P("door_center_60", railW, "Door Middle", 0);
-    // Its two infill panels — top glass; bottom matches the partition's own
-    // bottom band (sheet if it has one). Sized like a door zone.
+    // Its two infill panels — glass on top, sheet below (founder-confirmed
+    // 2026-10-28: "upar glass niche sheet"). Sized like a door zone.
     const zoneH = Math.round(leafH / 2) - dClr;
     panels.push({ kind: "glass", w: railW, h: zoneH });
-    panels.push({ kind: sheetFt > 0 ? "sheet" : "glass", w: railW, h: zoneH });
+    panels.push({ kind: "sheet", w: railW, h: zoneH });
   }
 
   // Verticals run full height; horizontals are cut BETWEEN them, one piece

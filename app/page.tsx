@@ -68,7 +68,7 @@ interface Opts {
 const DEFAULT_OPTS: Opts = {
   sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
-  palla: "60", chokhat: "needed", doorMix: "SSS",
+  palla: "60", chokhat: "needed", doorMix: "GSS",
   partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
 
@@ -94,8 +94,9 @@ const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
 const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
-/** Door panels, top to bottom (3 panels, 2 center rails). */
-const DOOR_MIX: Opt[] = [["SSS", "All sheet"], ["GSS", "Glass top"], ["JSS", "Mesh top"], ["SSJ", "Mesh bottom"]];
+/** Door panels, top to bottom (3 panels, 2 center rails). Glass top is the
+ *  usual door (founder, 2026-10-28), so it comes first and is the default. */
+const DOOR_MIX: Opt[] = [["GSS", "Glass top"], ["SSS", "All sheet"], ["JSS", "Mesh top"], ["SSJ", "Mesh bottom"]];
 const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
 const BAY_FT: Opt[] = [["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
 const ROW_FT: Opt[] = [["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
