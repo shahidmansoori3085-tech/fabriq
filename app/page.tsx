@@ -503,6 +503,9 @@ function JobScreen({
   };
   const back = () => {
     if (!flow) return;
+    // Once sizes are in, "back" means "I'm done here" — returning to a
+    // shutter question at that point only confused.
+    if (flow.step === "size" && session.length) { finishFlow(); return; }
     const i = steps.indexOf(flow.step);
     if (i > 0) go(steps[i - 1]); else closeFlow();
   };
@@ -531,6 +534,7 @@ function JobScreen({
 
   /** Items added during this visit to the size screen, newest last. */
   const [session, setSession] = useState<string[]>([]);
+  const lastAdded = session.length ? items.find((it) => it.id === session[session.length - 1]) : undefined;
 
   /** Add one size and stay: the boxes clear and the width box is ready for
    *  the next line on the sheet — a job is typed straight through, not one
@@ -672,10 +676,9 @@ function JobScreen({
             </div>
             <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
           </div>
-          {session.length > 0
-            ? <button onClick={finishFlow} className="rounded-[var(--radius)] px-4 py-2.5 text-sm font-bold text-white"
-                style={{ background: "var(--ink)" }}>Done ✓</button>
-            : <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>}
+          {session.length === 0 && (
+            <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
+          )}
         </div>
         <div className="flex gap-1">
           {steps.map((s, k) => (
@@ -841,51 +844,41 @@ function JobScreen({
         )}
 
         {flow.step === "size" && (
-          <div className="flex flex-col gap-4">
-            {/* what is being added — tap to change any of it */}
-            <button onClick={() => go(steps[1] ?? "type")} className="card flex items-center gap-3 p-3 text-left">
-              <span className="grid w-16 shrink-0 place-items-center"><MiniElevation item={live} size={type === "door" ? 34 : 60} /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">{itemLabel(live)}</span>
-                <span className="block text-xs font-semibold" style={{ color: "var(--accent)" }}>Change</span>
-              </span>
+          <div className="flex flex-col gap-3">
+            {/* what is being added — one slim line, tap to change it */}
+            <button onClick={() => go(steps[1] ?? "type")} className="card flex items-center gap-3 px-3 py-2 text-left">
+              <span className="grid w-10 shrink-0 place-items-center"><MiniElevation item={live} size={type === "door" ? 20 : 40} /></span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{itemLabel(live)}</span>
+              <span className="shrink-0 text-xs font-bold" style={{ color: "var(--accent)" }}>Change</span>
             </button>
 
-            {/* sizes added in this go — the newest two, quantity fixable here.
-                Only two: a growing list would push the keypad off the screen,
-                the very thing this screen exists to avoid. */}
-            {session.length > 0 && (
-              <div className="card overflow-hidden">
-                {session.length > 2 && (
-                  <div className="px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                    {plural(session.length, "size")} added so far — all are in the job list
-                  </div>
-                )}
-                {[...session].reverse().slice(0, 2).map((id, k) => {
-                  const it = items.find((x) => x.id === id);
-                  if (!it) return null;
-                  return (
-                    <div key={id} className="flex items-center gap-2 px-3 py-1.5"
-                      style={{ borderTop: k || session.length > 2 ? "1px solid var(--line)" : undefined, background: k === 0 ? "var(--good-soft)" : undefined }}>
-                      <span className="text-xs font-bold" style={{ color: "var(--good)" }}>✓</span>
-                      <span className="mono text-xs" style={{ color: "var(--ink-3)" }}>{id}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold tabnum">{openingText(it)}</span>
-                      <MiniQty value={it.qty} label={id}
-                        onChange={(n) => onReplace(id, it.type, it.width, it.height, n, it.meta)} />
-                      <button onClick={() => { onRemove(id); setSession((s) => s.filter((x) => x !== id)); }}
-                        aria-label={`Remove ${id}`} className="grid h-8 w-8 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
-                    </div>
-                  );
-                })}
+            {/* the size just added — proof it landed, and its quantity fixable.
+                One line only: the keypad and the Finish button must stay on
+                screen however many sizes go in. */}
+            {lastAdded && (
+              <div className="card flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--good-soft)" }}>
+                <span className="text-sm font-bold" style={{ color: "var(--good)" }}>✓</span>
+                <span className="mono text-xs" style={{ color: "var(--ink-3)" }}>{lastAdded.id}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold tabnum">{openingText(lastAdded)} added</span>
+                <MiniQty value={lastAdded.qty} label={lastAdded.id}
+                  onChange={(n) => onReplace(lastAdded.id, lastAdded.type, lastAdded.width, lastAdded.height, n, lastAdded.meta)} />
+                <button onClick={() => { onRemove(lastAdded.id); setSession((s) => s.filter((x) => x !== lastAdded.id)); }}
+                  aria-label={`Remove ${lastAdded.id}`} className="grid h-8 w-8 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
               </div>
             )}
 
-            <div className="card flex flex-col gap-3 p-3">
+            <div className="card flex flex-col gap-2.5 p-3">
               <div className="flex gap-2">
                 <SizeBox label="Width" value={w} placeholder="4'6" active={field === "w"}
                   onClick={() => { stopAdvance(); setField("w"); }} />
                 <SizeBox label="Height" value={h} placeholder="4" active={field === "h"}
                   onClick={() => { stopAdvance(); setField("h"); }} />
+                {/* quantity sits on the same line as the size it belongs to */}
+                <div className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-[var(--radius)] px-1"
+                  style={{ border: "1.5px solid var(--line)" }}>
+                  <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Qty</span>
+                  <MiniQty value={qty} onChange={setQty} label="this size" />
+                </div>
               </div>
               <div className="min-h-[18px] text-xs font-medium"
                 style={{ color: !touched ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : (pw || ph) && !warn ? "var(--ink-3)" : "var(--bad)" }}>
@@ -898,10 +891,6 @@ function JobScreen({
                       : `= ${describeDim(pw.um)} × ${describeDim(ph.um)}${
                           unsure ? " · read as feet — for inches add \"" : ""}`}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>How many of this size?</span>
-                <Stepper value={qty} onChange={setQty} />
-              </div>
               <Keypad onKey={press} lastLabel={field === "w" ? "Next →" : flow.editing ? "Save ✓" : "Add ✓"}
                 lastDisabled={field === "h" && !ready} />
               {flow.editing && (
@@ -911,6 +900,18 @@ function JobScreen({
                 </button>
               )}
             </div>
+
+            {/* The way out, big and spelled out: what it does and where it
+                goes. A small "Done" in the corner was missed or not understood. */}
+            {session.length > 0 && (
+              <button onClick={finishFlow} className="btn-dark flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left">
+                <span>
+                  <span className="block text-base font-bold">✓ Finish — {plural(session.length, "size")} added</span>
+                  <span className="block text-xs font-normal opacity-80">See the list and get the material list</span>
+                </span>
+                <span aria-hidden className="text-xl">→</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1750,31 +1751,6 @@ function Seg({ options, value, onChange }: { options: Opt[]; value: string; onCh
           {label}
         </button>
       ))}
-    </div>
-  );
-}
-
-/** Quantity: tap − / + or type it — 25 windows should not take 24 taps. */
-function Stepper({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  const [text, setText] = useState(String(value));
-  const [prev, setPrev] = useState(value);
-  if (prev !== value) { setPrev(value); setText(String(value)); }
-  const clamp = (n: number) => Math.min(999, Math.max(1, n));
-  return (
-    <div className="flex w-[112px] shrink-0 items-center overflow-hidden rounded-[var(--radius)]"
-      style={{ border: "1.5px solid var(--line)" }}>
-      <button onClick={() => onChange(clamp(value - 1))} aria-label="Decrease quantity"
-        className="h-12 w-9 shrink-0 text-lg font-bold" style={{ background: "var(--surface-2)" }}>−</button>
-      <input value={text} inputMode="numeric" aria-label="Quantity"
-        onChange={(e) => {
-          const t = e.target.value.replace(/\D/g, "").slice(0, 3);
-          setText(t);
-          if (t) onChange(clamp(parseInt(t, 10)));
-        }}
-        onBlur={() => setText(String(value))}
-        className="min-w-0 flex-1 bg-transparent text-center text-base font-bold tabnum outline-none" />
-      <button onClick={() => onChange(clamp(value + 1))} aria-label="Increase quantity"
-        className="h-12 w-9 shrink-0 text-lg font-bold" style={{ background: "var(--surface-2)" }}>+</button>
     </div>
   );
 }
