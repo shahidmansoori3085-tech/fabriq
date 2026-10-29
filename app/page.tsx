@@ -37,6 +37,7 @@ import {
   type ProjectRec,
 } from "@/lib/projects";
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
+import { InstallButton } from "@/components/install";
 
 /* ————————————————— item options ————————————————— */
 
@@ -410,9 +411,9 @@ const STEP_TITLE: Record<StepId, string> = {
 };
 
 /** How long a readable size is left alone before the app moves on by itself.
- *  0.6 s (founder, 2026-10-29): quick, yet slower than a tap — so 54, 4'6 or 12
- *  are finished before the box moves. Much shorter cuts sizes off mid-way. */
-const AUTO_NEXT_MS = 600;
+ *  1.3 s (founder, 2026-10-29) — slower than a tap, so 54, 4'6 or 12
+ *  are finished before the box moves; a full part (4'11, 1372) moves at once. */
+const AUTO_NEXT_MS = 1300;
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
@@ -925,16 +926,19 @@ function JobScreen({
   return (
     <div className="flex flex-col gap-4">
       {/* top bar */}
-      <div className="flex items-center justify-between py-1">
-        <div>
+      <div className="flex items-center justify-between gap-2 py-1">
+        <div className="min-w-0">
           <div className="text-xl font-extrabold tracking-tight">
             Fabri<span style={{ color: "var(--accent)" }}>Q</span>
           </div>
-          <div className="text-xs" style={{ color: "var(--ink-3)" }}>
+          <div className="truncate text-xs" style={{ color: "var(--ink-3)" }}>
             {shopName || "Material list & cutting sheet"}
           </div>
         </div>
-        <button onClick={onSettings} className="btn-ghost px-3 py-2 text-sm">Settings</button>
+        <div className="flex shrink-0 items-center gap-2">
+          <InstallButton />
+          <button onClick={onSettings} className="btn-ghost px-3 py-2 text-sm">Settings</button>
+        </div>
       </div>
 
       {items.length === 0 ? (
