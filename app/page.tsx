@@ -450,7 +450,12 @@ function JobScreen({
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const heightRef = useRef<HTMLInputElement>(null);
+  /** Which size box the keypad is typing into. */
+  const [field, setField] = useState<"w" | "h">("w");
+  /** Moves to the height box once the width has been left alone a moment. */
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopAdvance = () => { if (advanceTimer.current) { clearTimeout(advanceTimer.current); advanceTimer.current = null; } };
+  useEffect(() => stopAdvance, []);
   /** The exact size of the item being edited, with the text it was shown as —
    *  the text is rounded to the sut, so an untouched size keeps its real value. */
   const editDims = useRef<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
@@ -519,25 +524,51 @@ function JobScreen({
   const touched = w.trim() !== "" || h.trim() !== "";
   const unsure = ready && (pw!.ambiguous || ph!.ambiguous);
 
+  /** Items added during this visit to the size screen, newest last. */
+  const [session, setSession] = useState<string[]>([]);
+
+  /** Add one size and stay: the boxes clear and the width box is ready for
+   *  the next line on the sheet — a job is typed straight through, not one
+   *  trip back to the list per window. Returns false if it can't be built. */
+  const addAndContinue = (wStr: string, hStr: string): boolean => {
+    const a = parseOpening(wStr, "auto", feetBelow);
+    const b = parseOpening(hStr, "auto", feetBelow);
+    if (!a || !b || openingWarning(a.um, b.um)) return false;
+    try { estimate([buildJobItem(1, type, a.um, b.um, 1, metaFor(type, o))]); } catch { return false; }
+    // Same numbering the list uses: the next free W-number.
+    const id = `W${[...items.map((it) => it.id), ...session].reduce((m, x) => Math.max(m, parseInt(x.slice(1), 10) || 0), 0) + 1}`;
+    onAdd(type, a.um, b.um, qty, metaFor(type, o));
+    setSession((s) => [...s, id]);
+    setW(""); setH(""); setQty(1); setField("w"); stopAdvance();
+    return true;
+  };
+
   const commit = () => {
     if (!pw || !ph || warn || !flow) return;
-    const e = flow.editing ? editDims.current : null;
+    if (!flow.editing) { addAndContinue(w, h); return; }
+    const e = editDims.current;
     const wu = e && w === e.w ? e.wu : pw.um;
     const hu = e && h === e.h ? e.hu : ph.um;
-    if (flow.editing) {
-      onReplace(flow.editing, type, wu, hu, qty, metaFor(type, o));
-      setJustAdded(flow.editing);
-    } else {
-      onAdd(type, wu, hu, qty, metaFor(type, o));
-      // Same numbering the list uses: the next free W-number.
-      setJustAdded(`W${items.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0) + 1}`);
-    }
+    onReplace(flow.editing, type, wu, hu, qty, metaFor(type, o));
+    setJustAdded(flow.editing);
+    closeFlow();
+  };
+
+  /** Leave the size screen; the last size added glows in the list. */
+  const finishFlow = () => {
+    if (session.length) setJustAdded(session[session.length - 1]);
     closeFlow();
   };
 
   const startAdd = (step: StepId) => {
-    setW(""); setH(""); setQty(1); editDims.current = null;
+    setW(""); setH(""); setQty(1); setField("w"); stopAdvance(); setSession([]); editDims.current = null;
     openFlow(step);
+  };
+  /** Straight from the home screen's Window / Door / Partition — the type is
+   *  already answered, so the flow opens on the first real question. */
+  const startType = (t: OpeningType) => {
+    setType(t);
+    startAdd(stepsFor(t, o)[1]);
   };
   const startEdit = (it: JobItem) => {
     setType(it.type);
@@ -546,8 +577,68 @@ function JobScreen({
     setH(ftIn(it.height));
     editDims.current = { w: ftIn(it.width), h: ftIn(it.height), wu: it.width, hu: it.height };
     setQty(it.qty);
+    setField("w"); stopAdvance(); setSession([]);
     openFlow("size", it.id);
   };
+
+  /* —— the size keypad ——
+   * The app's own pad, not the phone keyboard: ft ( ' ) and inch ( " ) sit
+   * beside the digits, so "4'6" needs no keyboard switch — which is what
+   * makes moving on by itself safe. With the phone keyboard, hunting for
+   * the ' key took long enough that a pause-based jump would leave mid-size.
+   * The width hands over to the height box the moment it is complete by form
+   * (it ends in ", or is a full 4-6-2), or once a readable width has been
+   * left alone for a moment. */
+  const completeByForm = (v: string) => /"$/.test(v) || /^\d+-\d+-\d+$/.test(v);
+  const press = (k: string) => {
+    stopAdvance();
+    if (k === "next") {
+      if (field === "w") setField("h"); else commit();
+      return;
+    }
+    const cur = field === "w" ? w : h;
+    let v: string;
+    if (k === "back") v = cur.slice(0, -1);
+    else {
+      // Only sizes that can be read: every mark follows a digit, ft and inch
+      // once each, one decimal point per number, at most two dashes (4-6-2),
+      // and dashes never mixed with ft / inch marks.
+      const endsDigit = /\d$/.test(cur);
+      // the inch mark closes a size — nothing may follow it
+      if (cur.includes('"')) return;
+      const ok = /\d/.test(k)
+        || (k === "'" && endsDigit && !/['"-]/.test(cur))
+        || (k === '"' && endsDigit && !cur.includes('"'))
+        || (k === "." && endsDigit && !/\.\d*$/.test(cur))
+        || (k === "-" && endsDigit && !/['"]/.test(cur) && (cur.match(/-/g)?.length ?? 0) < 2);
+      if (!ok) return;
+      v = (cur + k).slice(0, 12);
+    }
+    if (field === "w") setW(v); else setH(v);
+    if (k === "back") return;
+    if (field === "w") {
+      if (completeByForm(v)) setField("h");
+      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setField("h"), 1300);
+    } else if (!flow?.editing) {
+      // Height done → the size is added and the boxes are ready for the next.
+      const wNow = w;
+      if (completeByForm(v)) addAndContinue(wNow, v);
+      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => addAndContinue(wNow, v), 1300);
+    }
+  };
+  // A computer's keyboard types into the same boxes.
+  useEffect(() => {
+    if (flow?.step !== "size") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (document.activeElement instanceof HTMLInputElement) return; // the quantity box
+      const map: Record<string, string> = { "’": "'", "‘": "'", "”": '"', "“": '"', Backspace: "back", Enter: "next", Tab: "next" };
+      const k = map[e.key] ?? e.key;
+      if (/^[0-9.\-'"]$/.test(k) || k === "back" || k === "next") { e.preventDefault(); press(k); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   /* ————— the add / edit flow ————— */
   if (flow) {
@@ -568,7 +659,10 @@ function JobScreen({
             </div>
             <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
           </div>
-          <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
+          {session.length > 0
+            ? <button onClick={finishFlow} className="rounded-[var(--radius)] px-4 py-2.5 text-sm font-bold text-white"
+                style={{ background: "var(--ink)" }}>Done ✓</button>
+            : <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>}
         </div>
         <div className="flex gap-1">
           {steps.map((s, k) => (
@@ -744,41 +838,59 @@ function JobScreen({
               </span>
             </button>
 
-            <div className="card flex flex-col gap-3 p-4">
-              <div className="flex gap-3">
-                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
-                  Width
-                  <input autoFocus value={w} onChange={(e) => setW(e.target.value)} aria-label="Width"
-                    placeholder="4'6" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
-                    className="dim-input w-full px-3 py-3 text-xl font-semibold"
-                    onKeyDown={(e) => { if (e.key === "Enter") heightRef.current?.focus(); }} />
-                </label>
-                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
-                  Height
-                  <input ref={heightRef} value={h} onChange={(e) => setH(e.target.value)} aria-label="Height"
-                    placeholder="4" inputMode="text" autoComplete="off" autoCorrect="off" spellCheck={false}
-                    className="dim-input w-full px-3 py-3 text-xl font-semibold"
-                    onKeyDown={(e) => { if (e.key === "Enter") commit(); }} />
-                </label>
+            {/* sizes added in this go — the newest two, quantity fixable here.
+                Only two: a growing list would push the keypad off the screen,
+                the very thing this screen exists to avoid. */}
+            {session.length > 0 && (
+              <div className="card overflow-hidden">
+                {session.length > 2 && (
+                  <div className="px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                    {plural(session.length, "size")} added so far — all are in the job list
+                  </div>
+                )}
+                {[...session].reverse().slice(0, 2).map((id, k) => {
+                  const it = items.find((x) => x.id === id);
+                  if (!it) return null;
+                  return (
+                    <div key={id} className="flex items-center gap-2 px-3 py-1.5"
+                      style={{ borderTop: k || session.length > 2 ? "1px solid var(--line)" : undefined, background: k === 0 ? "var(--good-soft)" : undefined }}>
+                      <span className="text-xs font-bold" style={{ color: "var(--good)" }}>✓</span>
+                      <span className="mono text-xs" style={{ color: "var(--ink-3)" }}>{id}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold tabnum">{openingText(it)}</span>
+                      <MiniQty value={it.qty} label={id}
+                        onChange={(n) => onReplace(id, it.type, it.width, it.height, n, it.meta)} />
+                      <button onClick={() => { onRemove(id); setSession((s) => s.filter((x) => x !== id)); }}
+                        aria-label={`Remove ${id}`} className="grid h-8 w-8 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="card flex flex-col gap-3 p-3">
+              <div className="flex gap-2">
+                <SizeBox label="Width" value={w} placeholder="4'6" active={field === "w"}
+                  onClick={() => { stopAdvance(); setField("w"); }} />
+                <SizeBox label="Height" value={h} placeholder="4" active={field === "h"}
+                  onClick={() => { stopAdvance(); setField("h"); }} />
               </div>
               <div className="min-h-[18px] text-xs font-medium"
-                style={{ color: !touched ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : "var(--bad)" }}>
+                style={{ color: !touched ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : (pw || ph) && !warn ? "var(--ink-3)" : "var(--bad)" }}>
                 {!touched
-                  ? "In feet: 4, 4'6, 4-6 — or in inches: 54\""
+                  ? session.length ? "Next size — it is added by itself when the height is done." : "Type the width, then the height. ft = ' · inch = \""
                   : !pw || !ph
-                    ? "Enter both width and height"
+                    ? (pw ? `Width = ${describeDim(pw.um)} · now the height` : "Keep typing the size")
                     : warn
                       ? warn
                       : `= ${describeDim(pw.um)} × ${describeDim(ph.um)}${
-                          unsure ? " · read as feet — for inches add \", for 4 ft 6 in type 4'6" : ""}`}
+                          unsure ? " · read as feet — for inches add \"" : ""}`}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>How many?</span>
+                <span className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>How many of this size?</span>
                 <Stepper value={qty} onChange={setQty} />
               </div>
-              <button onClick={commit} disabled={!ready} className="btn-primary w-full py-4 text-base">
-                {flow.editing ? "Save changes" : "Add to list"}
-              </button>
+              <Keypad onKey={press} lastLabel={field === "w" ? "Next →" : flow.editing ? "Save ✓" : "Add ✓"}
+                lastDisabled={field === "h" && !ready} />
               {flow.editing && (
                 <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
                   className="text-sm font-semibold" style={{ color: "var(--bad)" }}>
@@ -812,23 +924,15 @@ function JobScreen({
       </div>
 
       {items.length === 0 ? (
-        /* first screen: one thing to do */
-        <div className="card flex flex-col items-center gap-4 px-5 py-8 text-center">
-          <div className="flex items-end gap-3" aria-hidden>
-            <MiniElevation item={sample("window", DEFAULT_OPTS)} size={64} />
-            <MiniElevation item={sample("door", DEFAULT_OPTS)} size={26} />
-            <MiniElevation item={sample("partition", DEFAULT_OPTS)} size={72} />
-          </div>
+        /* first screen: what are you making — tap one to start */
+        <div className="card flex flex-col gap-4 p-4">
           <div>
-            <h1 className="text-xl font-bold">Start a new job</h1>
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
-              Add each window, door or partition with its size.
-              <br />Then get the material list and cutting sheet.
+            <h1 className="text-xl font-bold">What are you making?</h1>
+            <p className="mt-0.5 text-sm" style={{ color: "var(--ink-2)" }}>
+              Tap one, then type your sizes one after another.
             </p>
           </div>
-          <button onClick={() => startAdd("type")} className="btn-primary w-full py-4 text-base">
-            + Add first item
-          </button>
+          <TypeCards onPick={startType} big />
         </div>
       ) : (
         <>
@@ -873,16 +977,17 @@ function JobScreen({
 
           {/* the two ways to add more: the same again (straight to the size)
               — ten identical windows is the common job — or something else */}
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => { setType(last.type); setO(optsFromItem(last)); startAdd("size"); }}
-              className="card flex flex-col items-start gap-0.5 p-3 text-left">
-              <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>+ Add same again</span>
-              <span className="line-clamp-2 text-[11px]" style={{ color: "var(--ink-3)" }}>{itemLabel(last)}</span>
-            </button>
-            <button onClick={() => startAdd("type")} className="card flex flex-col items-start gap-0.5 p-3 text-left">
-              <span className="text-sm font-bold">+ Add a different item</span>
-              <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>Window, door or partition</span>
-            </button>
+          <button onClick={() => { setType(last.type); setO(optsFromItem(last)); startAdd("size"); }}
+            className="card flex items-center gap-3 p-3 text-left">
+            <span className="grid w-12 shrink-0 place-items-center"><MiniElevation item={last} size={last.type === "door" ? 22 : 44} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ More sizes of the same</span>
+              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(last)}</span>
+            </span>
+          </button>
+          <div>
+            <div className="mb-1.5 px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Or add something else</div>
+            <TypeCards onPick={startType} />
           </div>
         </>
       )}
@@ -928,6 +1033,78 @@ function JobScreen({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Window / Door / Partition as pictures — the first thing on the home screen. */
+function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: boolean }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {TYPES.map(([v, label]) => (
+        <button key={v} onClick={() => onPick(v as OpeningType)} aria-label={`Add ${label}`}
+          className={`chip flex flex-col items-center gap-2 px-2 text-center ${big ? "py-4" : "py-2.5"}`}>
+          <span className={`grid w-full place-items-center ${big ? "min-h-[84px]" : "min-h-[48px]"}`}>
+            <MiniElevation item={sample(v as OpeningType, DEFAULT_OPTS)}
+              size={v === "door" ? (big ? 42 : 24) : big ? 84 : 52} />
+          </span>
+          <span className={`${big ? "text-base" : "text-sm"} font-bold`} style={{ color: "var(--ink)" }}>{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A size box the keypad types into — tap it to make it the active one. */
+function SizeBox({ label, value, placeholder, active, onClick }: {
+  label: string; value: string; placeholder: string; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} aria-label={label} aria-pressed={active}
+      className="dim-input min-w-0 flex-1 px-3 py-2 text-left"
+      style={active ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" } : undefined}>
+      <span className="block text-[11px] font-semibold" style={{ color: active ? "var(--accent)" : "var(--ink-3)" }}>{label}</span>
+      <span className="flex min-h-[34px] items-center text-2xl font-semibold tabnum" data-value={value}>
+        {value || <span style={{ color: "#c2c7cf" }}>{placeholder}</span>}
+        {active && <span className="caret ml-0.5 inline-block h-7 w-[2px]" style={{ background: "var(--accent)" }} />}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * The app's own number pad, laid out like a phone dial, with ft ( ' ),
+ * inch ( " ), dash and point on the same pad — no keyboard switching, no
+ * iPhone "smart" quotes, nothing sliding up over the screen.
+ */
+function Keypad({ onKey, lastLabel, lastDisabled }: { onKey: (k: string) => void; lastLabel: string; lastDisabled: boolean }) {
+  const keys: [string, React.ReactNode, string][] = [
+    ["1", "1", "1"], ["2", "2", "2"], ["3", "3", "3"], ["back", "⌫", "Delete"],
+    ["4", "4", "4"], ["5", "5", "5"], ["6", "6", "6"], ["'", <><span className="text-xl">&apos;</span><span className="ml-1 text-xs">ft</span></>, "Feet"],
+    ["7", "7", "7"], ["8", "8", "8"], ["9", "9", "9"], ['"', <><span className="text-xl">&quot;</span><span className="ml-1 text-xs">inch</span></>, "Inch"],
+    [".", ".", "Point"], ["0", "0", "0"], ["-", "–", "Dash"], ["next", lastLabel, lastLabel],
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-1.5" style={{ touchAction: "manipulation" }}>
+      {keys.map(([k, label, aria]) => (
+        <button key={k} onClick={() => onKey(k)} aria-label={aria}
+          disabled={k === "next" && lastDisabled}
+          className={`h-14 rounded-[var(--radius)] font-semibold disabled:opacity-40 ${k === "next" ? "btn-primary text-base" : "text-xl"}`}
+          style={k === "next" ? undefined : { background: /\d/.test(k) ? "var(--surface)" : "var(--surface-2)", border: "1px solid var(--line)" }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Compact − n + for a size already added. */
+function MiniQty({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+  return (
+    <div className="flex items-center rounded-lg" style={{ border: "1px solid var(--line)" }}>
+      <button onClick={() => onChange(Math.max(1, value - 1))} aria-label={`Fewer ${label}`} className="h-8 w-8 font-bold">−</button>
+      <span className="w-7 text-center text-sm font-bold tabnum">{value}</span>
+      <button onClick={() => onChange(Math.min(999, value + 1))} aria-label={`More ${label}`} className="h-8 w-8 font-bold">+</button>
     </div>
   );
 }

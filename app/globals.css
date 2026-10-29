@@ -115,6 +115,11 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.01em
 :where(button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---- print ---- */
+/* blinking cursor in the active size box — the one place that moves */
+.caret { animation: caret-blink 1s steps(1) infinite; }
+@keyframes caret-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; color: #111; }
