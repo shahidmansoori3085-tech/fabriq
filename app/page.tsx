@@ -409,6 +409,11 @@ const STEP_TITLE: Record<StepId, string> = {
   size: "Size",
 };
 
+/** How long a readable size is left alone before the app moves on by itself.
+ *  0.6 s (founder, 2026-10-29): quick, yet slower than a tap — so 54, 4'6 or 12
+ *  are finished before the box moves. Much shorter cuts sizes off mid-way. */
+const AUTO_NEXT_MS = 600;
+
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
 /** The item these choices build, at a typical size — drawn on the option cards. */
@@ -589,7 +594,12 @@ function JobScreen({
    * The width hands over to the height box the moment it is complete by form
    * (it ends in ", or is a full 4-6-2), or once a readable width has been
    * left alone for a moment. */
-  const completeByForm = (v: string) => /"$/.test(v) || /^\d+-\d+-\d+$/.test(v);
+  /** How many digits the number part being typed may have. */
+  const maxDigits = (cur: string) => (/['.\-]/.test(cur) ? 2 : 4);
+  /** A size that cannot take another key: it ends in ", is a full 4-6-2, or
+   *  its last number part is full (4'11, 1372) — move on at once. */
+  const completeByForm = (v: string) =>
+    /"$/.test(v) || /^\d+-\d+-\d+$/.test(v) || /'\d{2}$/.test(v) || /^\d{4}$/.test(v);
   const press = (k: string) => {
     stopAdvance();
     if (k === "next") {
@@ -606,6 +616,9 @@ function JobScreen({
       const endsDigit = /\d$/.test(cur);
       // the inch mark closes a size — nothing may follow it
       if (cur.includes('"')) return;
+      // and no number part runs on: 2 digits of inches after ' or in a dash
+      // part or after a point, 4 for a bare number (up to mm)
+      if (/\d/.test(k) && (/\d*$/.exec(cur)?.[0].length ?? 0) >= maxDigits(cur)) return;
       const ok = /\d/.test(k)
         || (k === "'" && endsDigit && !/['"-]/.test(cur))
         || (k === '"' && endsDigit && !cur.includes('"'))
@@ -618,12 +631,12 @@ function JobScreen({
     if (k === "back") return;
     if (field === "w") {
       if (completeByForm(v)) setField("h");
-      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setField("h"), 1300);
+      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setField("h"), AUTO_NEXT_MS);
     } else if (!flow?.editing) {
       // Height done → the size is added and the boxes are ready for the next.
       const wNow = w;
       if (completeByForm(v)) addAndContinue(wNow, v);
-      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => addAndContinue(wNow, v), 1300);
+      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => addAndContinue(wNow, v), AUTO_NEXT_MS);
     }
   };
   // A computer's keyboard types into the same boxes.
