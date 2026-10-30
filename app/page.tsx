@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, formatFtIn, toFeet, feet, sqft, parseOpening, describeDim, openingWarning, type Um,
+  formatFtInSut, formatFtIn, toFeet, feet, inches, sqft, openingWarning, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionGeometry } from "@/lib/engine/estimator";
@@ -379,15 +379,29 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "system" | "tracks" | "mix" | "domalFix"
-  | "zType" | "zDetails" | "doorPanels" | "doorDetails"
-  | "partDoor" | "size" | "partBays" | "partRows";
+  | "type" | "system" | "tracks" | "mix" | "domalFix" | "domalFixFt"
+  | "zType" | "zDir" | "zFixed" | "zSash" | "zProfile"
+  | "doorPanels" | "doorFrame" | "doorSection"
+  | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
 
+/** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
-  if (type === "door") return ["type", "doorPanels", "doorDetails", "size"];
-  if (type === "partition") return ["type", "partDoor", "size", "partBays", "partRows"];
-  if (o.sys === "z_section") return ["type", "system", "zType", "zDetails", "size"];
-  return ["type", "system", "tracks", "mix", ...(o.sys === "domal" ? ["domalFix" as const] : []), "size"];
+  if (type === "door") return ["type", "doorPanels", "doorFrame", "doorSection", "size"];
+  if (type === "partition") {
+    return ["type", "partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : []), "size", "partBays", "partRows"];
+  }
+  if (o.sys === "z_section") {
+    return [
+      "type", "system", "zType",
+      ...(o.zType === "combo" ? ["zDir" as const, "zFixed" as const] : []),
+      ...(o.zType === "openable" || o.zType === "combo" ? ["zSash" as const] : []),
+      // a Z door is always the big section — nothing to ask
+      ...(o.zType !== "door" ? ["zProfile" as const] : []),
+      "size",
+    ];
+  }
+  const fix: StepId[] = o.sys === "domal" ? ["domalFix", ...(o.domalFix === "yes" ? ["domalFixFt" as const] : [])] : [];
+  return ["type", "system", "tracks", "mix", ...fix, "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -396,20 +410,42 @@ const STEP_TITLE: Record<StepId, string> = {
   tracks: "How many tracks?",
   mix: "Which shutters?",
   domalFix: "Fixed glass on top?",
+  domalFixFt: "Fixed glass height?",
   zType: "Which type?",
-  zDetails: "A few details",
+  zDir: "Where is the fixed glass?",
+  zFixed: "Fixed glass size?",
+  zSash: "How many shutters open?",
+  zProfile: "Which section?",
   doorPanels: "Door panels, top to bottom",
-  doorDetails: "Frame and shutter",
+  doorFrame: "Frame (chaukhat) too?",
+  doorSection: "Shutter section?",
   partDoor: "Door in the partition?",
+  partDoorW: "Door width?",
   size: "Sizes",
   partBays: "Vertical lines ( | )",
   partRows: "Horizontal lines ( — )",
 };
 
-/** How long a readable size is left alone before the app moves on by itself.
- *  1.3 s (founder, 2026-10-29) — slower than a tap, so 54, 4'6 or 12
- *  are finished before the box moves; a full part (4'11, 1372) moves at once. */
-const AUTO_NEXT_MS = 1300;
+/**
+ * A size typed as feet + inches, each in its own box on the phone's own
+ * number keyboard — no ' or " to hunt for. Inches alone work too (54 in the
+ * inch box is 4'6"), and so does a decimal (6.5 in = 6½"). null = nothing typed.
+ */
+function dimOf(ft: string, inch: string): Um | null | "bad" {
+  const read = (t: string) => (!t.trim() ? 0 : /^\d+(\.\d+)?$/.test(t.trim()) ? parseFloat(t) : NaN);
+  if (!ft.trim() && !inch.trim()) return null;
+  const f = read(ft), i = read(inch);
+  if (Number.isNaN(f) || Number.isNaN(i)) return "bad";
+  const um = Math.round(feet(f) + inches(i));
+  return um > 0 ? um : "bad";
+}
+
+/** A size back into its two boxes, to edit it: 10'6"4s → "10" and "6.5". */
+function boxesOf(um: Um): [string, string] {
+  const sut = Math.round(um / 3175);
+  const inch = (sut % 96) / 8;
+  return [String(Math.floor(sut / 96)), inch ? String(inch) : ""];
+}
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
@@ -428,8 +464,12 @@ const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
 /** One line of the size list: width, height and how many of that size —
  *  and, for a partition, its own divider gaps (each partition is drawn and
  *  asked about on its own; two partitions rarely want the same grid). */
-interface SizeRow { w: string; h: string; qty: number; bay?: string; row?: string }
-const emptyRow = (): SizeRow => ({ w: "", h: "", qty: 1 });
+interface SizeRow { wf: string; wi: string; hf: string; hi: string; qty: number; bay?: string; row?: string }
+const emptyRow = (): SizeRow => ({ wf: "", wi: "", hf: "", hi: "", qty: 1 });
+const isEmptyRow = (r: SizeRow) => !(r.wf + r.wi + r.hf + r.hi).trim();
+/** The four boxes of a size line, in the order the keyboard's Next walks them. */
+const BOXES = ["wf", "wi", "hf", "hi"] as const;
+type BoxKey = typeof BOXES[number];
 
 function JobScreen({
   items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings,
@@ -456,16 +496,10 @@ function JobScreen({
   /** The sizes being typed. Every line stays on screen, editable, until the
    *  flow is finished — nothing joins the job a moment after it is typed. */
   const [rows, setRows] = useState<SizeRow[]>([emptyRow()]);
-  /** Which box the keypad is typing into: the line, and its width or height. */
-  const [cur, setCur] = useState<{ r: number; f: "w" | "h" }>({ r: 0, f: "w" });
   const [justAdded, setJustAdded] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
-  /** Moves on (height box, next line) once a size has been left alone a moment. */
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stopAdvance = () => { if (advanceTimer.current) { clearTimeout(advanceTimer.current); advanceTimer.current = null; } };
-  useEffect(() => stopAdvance, []);
-  /** The exact size of the item being edited, with the text it was shown as —
-   *  the text is rounded to the sut, so an untouched size keeps its real value. */
+  /** The exact size of the item being edited, with the boxes it was shown as —
+   *  the boxes are rounded to the sut, so an untouched size keeps its real value. */
   const [editDims, setEditDims] = useState<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
 
   /* —— the phone's back button ——
@@ -492,7 +526,6 @@ function JobScreen({
     window.scrollTo({ top: 0 });
   };
   const closeFlow = () => {
-    stopAdvance();
     setFlow(null);
     if (window.history.state?.fabriq === "add") { closing.current = true; window.history.back(); }
     window.scrollTo({ top: 0 });
@@ -508,7 +541,7 @@ function JobScreen({
   }, [justAdded, flow]);
 
   const steps = stepsFor(type, o);
-  const go = (step: StepId) => { stopAdvance(); setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
+  const go = (step: StepId) => { setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
   /** Apply a choice; move on unless the screen has more to ask. */
   const choose = (patch: Partial<Opts>, advance = true, nextType: OpeningType = type) => {
     const next = { ...o, ...patch };
@@ -519,8 +552,6 @@ function JobScreen({
   };
 
   /* —— sizes —— */
-  // A partition's bare "20" is 20 ft (they run up to 25 ft); a window's is 20".
-  const feetBelow = type === "partition" ? 26 : undefined;
   /** Why this size cannot be built as chosen — said on its own line, at once. */
   const problemOf = (wu: Um, hu: Um): string | null => {
     const warn = openingWarning(wu, hu);
@@ -533,11 +564,12 @@ function JobScreen({
     }
   };
   const parsed = useMemo(() => rows.map((row) => {
-    const pw = parseOpening(row.w, "auto", feetBelow);
-    const ph = parseOpening(row.h, "auto", feetBelow);
-    const empty = !row.w.trim() && !row.h.trim();
-    const warn = pw && ph ? problemOf(pw.um, ph.um) : null;
-    return { pw, ph, empty, warn, ready: !!pw && !!ph && !warn };
+    const w = dimOf(row.wf, row.wi), h = dimOf(row.hf, row.hi);
+    const wu = typeof w === "number" ? w : null, hu = typeof h === "number" ? h : null;
+    const empty = isEmptyRow(row);
+    const warn = w === "bad" || h === "bad" ? "Check this size — numbers only"
+      : wu !== null && hu !== null ? problemOf(wu, hu) : null;
+    return { wu, hu, empty, warn, ready: wu !== null && hu !== null && !warn };
   }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
   const filled = parsed.filter((p) => !p.empty);
   const readyCount = parsed.filter((p) => p.ready).length;
@@ -546,8 +578,8 @@ function JobScreen({
   const sizeOf = (i: number) => {
     const e = editDims, p = parsed[i];
     return {
-      wu: e && i === 0 && rows[0].w === e.w ? e.wu : p.pw!.um,
-      hu: e && i === 0 && rows[0].h === e.h ? e.hu : p.ph!.um,
+      wu: e && i === 0 && `${rows[0].wf}|${rows[0].wi}` === e.w ? e.wu : p.wu!,
+      hu: e && i === 0 && `${rows[0].hf}|${rows[0].hi}` === e.h ? e.hu : p.hu!,
     };
   };
   /** The lines that will be added, in order — the divider screens walk them one by one. */
@@ -590,7 +622,6 @@ function JobScreen({
   };
   const afterSize = steps.slice(steps.indexOf("size") + 1);
   const sizesDone = () => {
-    stopAdvance();
     if (!allReady) return;
     if (!afterSize.length) { finish(); return; }
     // Every partition starts from the last gaps used; each is then shown on its own.
@@ -624,7 +655,7 @@ function JobScreen({
     finish(rs);
   };
 
-  const typedAnything = !flow?.editing && rows.some((r) => r.w.trim() || r.h.trim());
+  const typedAnything = !flow?.editing && rows.some((r) => !isEmptyRow(r));
   /** Leaving the flow drops sizes not yet added — never without asking. */
   const leave = () => {
     if (typedAnything && !window.confirm(`Discard the ${plural(filled.length, "size")} you typed?`)) return;
@@ -640,7 +671,7 @@ function JobScreen({
   useEffect(() => { stepBack.current = back; });
 
   const startAdd = (step: StepId) => {
-    setRows([emptyRow()]); setCur({ r: 0, f: "w" }); stopAdvance(); setEditDims(null);
+    setRows([emptyRow()]); setEditDims(null);
     openFlow(step);
   };
   /** Straight from the home screen's Window / Door / Partition — the type is
@@ -652,123 +683,54 @@ function JobScreen({
   const startEdit = (it: JobItem) => {
     setType(it.type);
     setO(optsFromItem(it));
-    const w = formatFtIn(it.width), h = formatFtIn(it.height);
-    setRows([{ w, h, qty: it.qty }]);
-    setEditDims({ w, h, wu: it.width, hu: it.height });
-    setCur({ r: 0, f: "w" }); stopAdvance();
+    const [wf, wi] = boxesOf(it.width), [hf, hi] = boxesOf(it.height);
+    setRows([{ wf, wi, hf, hi, qty: it.qty }]);
+    setEditDims({ w: `${wf}|${wi}`, h: `${hf}|${hi}`, wu: it.width, hu: it.height });
     openFlow("size", it.id);
   };
 
-  /* —— the size keypad ——
-   * The app's own pad, not the phone keyboard: ft ( ' ) and inch ( " ) sit
-   * beside the digits, so "4'6" needs no keyboard switch — which is what
-   * makes moving on by itself safe. A width hands over to its height the
-   * moment it is complete by form (it ends in ", or is a full 4-6-2), or once
-   * a readable width has been left alone for a moment; a finished height opens
-   * the next line below the same way. Lines already typed stay where they are. */
-  /** How many digits the number part being typed may have. */
-  const maxDigits = (v: string) => (/['.\-]/.test(v) ? 2 : 4);
-  /** A size that cannot take another key: it ends in ", is a full 4-6-2, or
-   *  its last number part is full (4'11, 1372) — move on at once. */
-  const completeByForm = (v: string) =>
-    /"$/.test(v) || /^\d+-\d+-\d+$/.test(v) || /'\d{2}$/.test(v) || /^\d{4}$/.test(v);
-  /** Open the next size line below (or step into it), leaving line r as typed. */
-  const nextLine = (r: number) => {
-    stopAdvance();
-    if (flow?.editing) return;
-    setRows((rs) => (r >= rs.length - 1 ? [...rs, emptyRow()] : rs));
-    setCur({ r: r + 1, f: "w" });
+  /* —— typing sizes ——
+   * The phone's own number keyboard: feet and inches each have a box, so no
+   * ' or " has to be found. Its Next key walks width ft → in → height ft → in
+   * → the next size. An empty size line always waits below the last one, so
+   * the next size is open the moment one is started — and every size stays
+   * on screen, editable, until the flow is finished. */
+  const boxes = useRef<Record<string, HTMLInputElement | null>>({});
+  const setBox = (r: number, k: BoxKey, v: string) => {
+    const clean = v.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 6);
+    setRows((rs) => {
+      const next = rs.map((x, i) => (i === r ? { ...x, [k]: clean } : x));
+      if (!flow?.editing && !isEmptyRow(next[next.length - 1])) next.push(emptyRow());
+      return next;
+    });
   };
-  /** A finished line moves on only when it can be built — a size that cannot
-   *  stays in front of him with its reason, instead of scrolling away. */
-  const buildable = (wv: string, hv: string) => {
-    const a = parseOpening(wv, "auto", feetBelow), b = parseOpening(hv, "auto", feetBelow);
-    return !!a && !!b && !problemOf(a.um, b.um);
+  const focusNext = (r: number, k: BoxKey) => {
+    const at = BOXES.indexOf(k);
+    const el = boxes.current[at < 3 ? `${r}-${BOXES[at + 1]}` : `${r + 1}-wf`];
+    if (el) el.focus(); else (document.activeElement as HTMLElement | null)?.blur();
   };
-  const removeLine = (i: number) => {
-    stopAdvance();
-    const n = Math.max(1, rows.length - 1);
-    setRows((rs) => (rs.length === 1 ? [emptyRow()] : rs.filter((_, k) => k !== i)));
-    setCur((c) => (c.r > i ? { r: c.r - 1, f: c.f } : c.r === i ? { r: Math.min(i, n - 1), f: "w" } : c));
-  };
-  const press = (k: string) => {
-    stopAdvance();
-    const { r, f } = cur;
-    const row = rows[r];
-    if (!row) return;
-    if (k === "next") {
-      if (f === "w") setCur({ r, f: "h" });
-      else if (flow?.editing) sizesDone();
-      else if (row.w.trim() || row.h.trim()) nextLine(r);
-      return;
-    }
-    const v0 = row[f];
-    if (k === "back" && !v0) {
-      // Deleting past the start of a box walks back to the box before it.
-      if (f === "h") setCur({ r, f: "w" });
-      else if (r > 0) {
-        if (r === rows.length - 1 && !row.h) setRows((rs) => rs.slice(0, -1));
-        setCur({ r: r - 1, f: "h" });
-      }
-      return;
-    }
-    let v: string;
-    if (k === "back") v = v0.slice(0, -1);
-    else {
-      // Only sizes that can be read: every mark follows a digit, ft and inch
-      // once each, one decimal point per number, at most two dashes (4-6-2),
-      // and dashes never mixed with ft / inch marks.
-      const endsDigit = /\d$/.test(v0);
-      // the inch mark closes a size — nothing may follow it
-      if (v0.includes('"')) return;
-      // and no number part runs on: 2 digits of inches after ' or in a dash
-      // part or after a point, 4 for a bare number (up to mm)
-      if (/\d/.test(k) && (/\d*$/.exec(v0)?.[0].length ?? 0) >= maxDigits(v0)) return;
-      const ok = /\d/.test(k)
-        || (k === "'" && endsDigit && !/['"-]/.test(v0))
-        || (k === '"' && endsDigit && !v0.includes('"'))
-        || (k === "." && endsDigit && !/\.\d*$/.test(v0))
-        || (k === "-" && endsDigit && !/['"]/.test(v0) && (v0.match(/-/g)?.length ?? 0) < 2);
-      if (!ok) return;
-      v = (v0 + k).slice(0, 12);
-    }
-    setRows((rs) => rs.map((x, i) => (i === r ? { ...x, [f]: v } : x)));
-    if (k === "back") return;
-    if (f === "w") {
-      if (completeByForm(v)) setCur({ r, f: "h" });
-      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setCur({ r, f: "h" }), AUTO_NEXT_MS);
-    } else if (!flow?.editing && buildable(row.w, v)) {
-      if (completeByForm(v)) nextLine(r);
-      else advanceTimer.current = setTimeout(() => nextLine(r), AUTO_NEXT_MS);
-    }
-  };
-  // A computer's keyboard types into the same boxes.
-  useEffect(() => {
-    if (flow?.step !== "size") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (document.activeElement instanceof HTMLInputElement) return;
-      const map: Record<string, string> = { "’": "'", "‘": "'", "”": '"', "“": '"', Backspace: "back", Enter: "next", Tab: "next" };
-      const k = map[e.key] ?? e.key;
-      if (/^[0-9.\-'"]$/.test(k) || k === "back" || k === "next") { e.preventDefault(); press(k); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+  const removeLine = (i: number) => setRows((rs) => {
+    const next = rs.filter((_, k) => k !== i);
+    if (!next.length || !isEmptyRow(next[next.length - 1])) next.push(emptyRow());
+    return next;
   });
-  // The line being typed stays in view above the keypad.
+  // Arriving at the sizes, the first empty width box is ready to type into.
   useEffect(() => {
-    if (flow?.step !== "size") return;
-    document.getElementById(`size-line-${cur.r}`)?.scrollIntoView({ block: "nearest" });
-  }, [cur.r, rows.length, flow?.step]);
+    if (flow?.step !== "size" || flow.editing) return;
+    const r = rows.findIndex(isEmptyRow);
+    if (r >= 0) boxes.current[`${r}-wf`]?.focus();
+  }, [flow?.step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ————— the add / edit flow ————— */
   if (flow) {
     const i = steps.indexOf(flow.step);
     const pick = (t: OpeningType) => { setType(t); choose({}, true, t); };
-    const a = parsed[cur.r] ?? parsed[0];
-    const live = a.ready
-      ? buildJobItem(1, type, a.pw!.um, a.ph!.um, 1, metaFor(type, o))
-      : sample(type, o);
+    // What is being added, drawn. A partition's panels are not chosen yet,
+    // so it is named by its door only.
+    const live = sample(type, o);
+    const liveLabel = type === "partition"
+      ? `Partition · ${o.partDoor === "yes" ? `with ${o.partDoorW} ft door` : "no door"}`
+      : itemLabel(live);
     /** The partition the divider screens draw: the one being asked about. */
     const shape = readyIdx.length
       ? buildJobItem(1, type, sizeOf(pr).wu, sizeOf(pr).hu, 1, metaOf(rows[pr]))
@@ -776,7 +738,6 @@ function JobScreen({
     const manyParts = readyIdx.length > 1;
     const lastPart = part >= readyIdx.length - 1;
     const doneLabel = flow.editing ? "Save ✓" : `✓ Add ${plural(readyCount, "size")} to the job`;
-    const curRow = rows[cur.r] ?? rows[0];
     // the divider screens: which lines, how many panels, and the gap they leave
     const vertical = flow.step === "partBays";
     const grid = type === "partition" ? partitionGeometry(shape).layout : null;
@@ -784,7 +745,6 @@ function JobScreen({
     const gap = grid ? (vertical ? grid.cellW : grid.glassRowH) : 0;
     /** The length the panels share equally — what a panel count divides. */
     const span = grid ? toFeet(vertical ? grid.fieldW : grid.innerH - (grid.sheetH > 0 ? grid.sheetH + grid.face : 0)) : 0;
-    const touched = !!(curRow.w.trim() || curRow.h.trim());
 
     return (
       <div className="flex flex-col gap-4">
@@ -844,22 +804,21 @@ function JobScreen({
         )}
 
         {flow.step === "domalFix" && (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="No"
-                picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={100} />} />
-              <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" }, false)} title="Yes"
-                picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={100} />} />
-            </div>
-            {o.domalFix === "yes" && (
-              <>
-                <Field label="Fixed glass height">
-                  <Seg options={FIX_FT} value={o.domalFixFt} onChange={(v) => choose({ domalFixFt: v }, false)} />
-                </Field>
-                <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
-              </>
-            )}
-          </>
+          <div className="grid grid-cols-2 gap-2">
+            <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="No"
+              picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={100} />} />
+            <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" })} title="Yes"
+              picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={100} />} />
+          </div>
+        )}
+
+        {flow.step === "domalFixFt" && (
+          <div className="grid grid-cols-2 gap-2">
+            {FIX_FT.map(([v, label]) => (
+              <Choice key={v} selected={o.domalFixFt === v} onClick={() => choose({ domalFixFt: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, domalFixFt: v })} size={100} />} />
+            ))}
+          </div>
         )}
 
         {flow.step === "zType" && (
@@ -875,45 +834,40 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "zDetails" && (
-          <div className="flex flex-col gap-4">
-            {o.zType === "combo" && (
-              <>
-                <Field label="Where is the fixed glass?">
-                  <div className="grid grid-cols-3 gap-2">
-                    {Z_DIRS.map(([v, label]) => (
-                      <Choice key={v} selected={o.zComboDir === v} onClick={() => choose({ zComboDir: v }, false)} title={label}
-                        picture={<MiniElevation item={sample("window", { ...o, zComboDir: v })} size={72} />} />
-                    ))}
-                  </div>
-                </Field>
-                <Field label="Fixed glass size">
-                  <Seg options={FIX_FT} value={o.zFixedFt} onChange={(v) => choose({ zFixedFt: v }, false)} />
-                </Field>
-              </>
-            )}
-            {(o.zType === "openable" || o.zType === "combo") && (
-              <Field label="How many openable shutters?">
-                <div className="grid grid-cols-3 gap-2">
-                  {Z_SASH.map(([v, label]) => (
-                    <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v }, false)} title={label}
-                      picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={72} />} />
-                  ))}
-                </div>
-              </Field>
-            )}
-            {o.zType !== "door" && (
-              <Field label="Section">
-                <div className="grid grid-cols-2 gap-2">
-                  {Z_SIZE.map(([v, label]) => (
-                    <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v }, false)} title={label}
-                      sub={v === "heavy" ? "Big windows" : "Normal windows"}
-                      picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={64} h={48} />} />
-                  ))}
-                </div>
-              </Field>
-            )}
-            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+        {flow.step === "zDir" && (
+          <div className="grid grid-cols-3 gap-2">
+            {Z_DIRS.map(([v, label]) => (
+              <Choice key={v} selected={o.zComboDir === v} onClick={() => choose({ zComboDir: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, zComboDir: v })} size={80} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "zFixed" && (
+          <div className="grid grid-cols-2 gap-2">
+            {FIX_FT.map(([v, label]) => (
+              <Choice key={v} selected={o.zFixedFt === v} onClick={() => choose({ zFixedFt: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, zFixedFt: v })} size={100} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "zSash" && (
+          <div className="grid grid-cols-3 gap-2">
+            {Z_SASH.map(([v, label]) => (
+              <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={80} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "zProfile" && (
+          <div className="grid grid-cols-2 gap-2">
+            {Z_SIZE.map(([v, label]) => (
+              <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v })} title={label}
+                sub={v === "heavy" ? "For big windows" : "For normal windows"}
+                picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={72} h={56} />} />
+            ))}
           </div>
         )}
 
@@ -926,46 +880,41 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "doorDetails" && (
-          <div className="flex flex-col gap-4">
-            <Field label="What do you need?">
-              <div className="grid grid-cols-2 gap-2">
-                {CHOKHAT.map(([v, label]) => (
-                  <Choice key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v }, false)} title={label}
-                    sub={v === "needed" ? "New frame (chaukhat) and shutter" : "Frame is already fixed"}
-                    picture={<DoorScopePicture item={sample("door", o)} withFrame={v === "needed"} size={40} />} />
-                ))}
-              </div>
-            </Field>
-            <Field label="Shutter section (mm)">
-              <div className="grid grid-cols-3 gap-2">
-                {PALLA.map(([v, label]) => (
-                  <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v }, false)} title={label}
-                    picture={<SectionProfile sectionId={`door_palla_${v}`} w={56} h={44} />} />
-                ))}
-              </div>
-            </Field>
-            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+        {flow.step === "doorFrame" && (
+          <div className="grid grid-cols-2 gap-2">
+            {CHOKHAT.map(([v, label]) => (
+              <Choice key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v })} title={label}
+                sub={v === "needed" ? "New frame (chaukhat) and shutter" : "Frame is already fixed"}
+                picture={<DoorScopePicture item={sample("door", o)} withFrame={v === "needed"} size={44} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "doorSection" && (
+          <div className="grid grid-cols-3 gap-2">
+            {PALLA.map(([v, label]) => (
+              <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v })} title={label} sub="mm"
+                picture={<SectionProfile sectionId={`door_palla_${v}`} w={60} h={48} />} />
+            ))}
           </div>
         )}
 
         {flow.step === "partDoor" && (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <Choice selected={o.partDoor === "no"} onClick={() => choose({ partDoor: "no" })} title="No door"
-                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "no" })} size={120} />} />
-              <Choice selected={o.partDoor === "yes"} onClick={() => choose({ partDoor: "yes" }, false)} title="With a door"
-                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes" })} size={120} />} />
-            </div>
-            {o.partDoor === "yes" && (
-              <>
-                <Field label="Door width">
-                  <Seg options={PART_DOOR_W} value={o.partDoorW} onChange={(v) => choose({ partDoorW: v }, false)} />
-                </Field>
-                <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
-              </>
-            )}
-          </>
+          <div className="grid grid-cols-2 gap-2">
+            <Choice selected={o.partDoor === "no"} onClick={() => choose({ partDoor: "no" })} title="No door"
+              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "no" })} size={120} />} />
+            <Choice selected={o.partDoor === "yes"} onClick={() => choose({ partDoor: "yes" })} title="With a door"
+              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes" })} size={120} />} />
+          </div>
+        )}
+
+        {flow.step === "partDoorW" && (
+          <div className="grid grid-cols-3 gap-2">
+            {PART_DOOR_W.map(([v, label]) => (
+              <Choice key={v} selected={o.partDoorW === v} onClick={() => choose({ partDoorW: v })} title={label}
+                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes", partDoorW: v })} size={90} />} />
+            ))}
+          </div>
         )}
 
         {(flow.step === "partBays" || flow.step === "partRows") && (
@@ -1023,91 +972,82 @@ function JobScreen({
             {/* what is being added — one slim line, tap to change it */}
             <button onClick={() => go(steps[1] ?? "type")} className="card flex items-center gap-3 px-3 py-2 text-left">
               <span className="grid w-10 shrink-0 place-items-center"><MiniElevation item={live} size={type === "door" ? 20 : 40} /></span>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{itemLabel(live)}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{liveLabel}</span>
               <span className="shrink-0 text-xs font-bold" style={{ color: "var(--accent)" }}>Change</span>
             </button>
 
-            {/* every size typed so far, each still editable: tap a box to fix it */}
-            <div className="card overflow-hidden">
-              <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold"
-                style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-                <span className="w-5 shrink-0" />
-                <span className="min-w-0 flex-1">Width</span>
-                <span className="min-w-0 flex-1">Height</span>
-                <span className="w-[92px] shrink-0 text-center">Qty</span>
-                {!flow.editing && <span className="w-7 shrink-0" />}
-              </div>
-              {rows.map((row, r) => {
-                const p = parsed[r];
-                const here = cur.r === r;
-                const bad = !here && !p.empty && !p.ready;
-                return (
-                  <div key={r} id={`size-line-${r}`} style={{ borderTop: "1px solid var(--line)", scrollMarginBottom: 330, scrollMarginTop: 72 }}>
-                    <div className="flex items-center gap-2 px-2 py-1.5">
-                      <span className="w-5 shrink-0 text-center text-xs font-bold"
-                        style={{ color: p.ready ? "var(--good)" : bad ? "var(--bad)" : "var(--ink-3)" }}>
-                        {p.ready ? "✓" : r + 1}
-                      </span>
-                      <SizeBox label={`Width ${r + 1}`} value={row.w} placeholder={r === 0 ? "4'6" : ""} active={here && cur.f === "w"} bad={bad}
-                        onClick={() => { stopAdvance(); setCur({ r, f: "w" }); }} />
-                      <SizeBox label={`Height ${r + 1}`} value={row.h} placeholder={r === 0 ? "4" : ""} active={here && cur.f === "h"} bad={bad}
-                        onClick={() => { stopAdvance(); setCur({ r, f: "h" }); }} />
+            {/* one card per size, each still editable until the flow is finished */}
+            {rows.map((row, r) => {
+              const p = parsed[r];
+              const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
+              return (
+                <div key={r} className="card p-3"
+                  style={{ scrollMarginBottom: 110, borderColor: p.warn ? "var(--bad)" : undefined }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold">
+                      {flow.editing ?? `Size ${r + 1}`}
+                      {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Qty</span>
                       <MiniQty value={row.qty} label={`size ${r + 1}`}
                         onChange={(q) => setRows((rs) => rs.map((x, k) => (k === r ? { ...x, qty: q } : x)))} />
-                      {!flow.editing && (
+                      {!flow.editing && !waiting && rows.length > 1 && (
                         <button onClick={() => removeLine(r)} aria-label={`Remove size ${r + 1}`}
-                          className="grid h-8 w-7 shrink-0 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
+                          className="grid h-8 w-7 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
                       )}
-                    </div>
-                    {bad && (
-                      <button onClick={() => setCur({ r, f: p.pw ? "h" : "w" })} className="block w-full px-9 pb-1.5 text-left text-[11px] font-medium"
-                        style={{ color: "var(--bad)" }}>
-                        {p.warn ?? (p.pw ? "Height missing — tap to type it" : "Width not readable — tap to fix it")}
-                      </button>
-                    )}
+                    </span>
                   </div>
-                );
-              })}
-              {flow.editing && (
-                <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
-                  className="w-full px-4 py-2.5 text-sm font-semibold" style={{ borderTop: "1px solid var(--line)", color: "var(--bad)" }}>
-                  Remove {flow.editing} from the job
-                </button>
-              )}
-            </div>
-            {/* room for the keypad, which sits over the bottom of the screen */}
-            <div aria-hidden style={{ height: 300 }} />
-
-            {/* the keypad and the way on stay put at the bottom, however many
-                sizes go in — the list scrolls above them */}
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2"
-              style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
-              <div className="mx-auto flex max-w-xl flex-col gap-2">
-                <div className="min-h-[18px] truncate text-xs font-medium"
-                  style={{ color: !touched ? "var(--ink-3)" : a.ready ? (a.pw!.ambiguous || a.ph!.ambiguous ? "var(--warn)" : "var(--good)") : (a.pw || a.ph) && !a.warn ? "var(--ink-3)" : "var(--bad)" }}>
-                  {!touched
-                    ? readyCount ? "Next size — or tap the button below when all sizes are in." : "Type the width, then the height. ft = ' · inch = \""
-                    : !a.pw || !a.ph
-                      ? (a.pw ? `Width = ${describeDim(a.pw.um)} · now the height` : "Keep typing the size")
-                      : a.warn
-                        ? a.warn
-                        : `= ${describeDim(a.pw.um)} × ${describeDim(a.ph.um)}${
-                            a.pw.ambiguous || a.ph.ambiguous ? " · read as feet — for inches add \"" : ""}`}
+                  <div className="grid grid-cols-2 gap-3">
+                    {([["Width", "wf", "wi"], ["Height", "hf", "hi"]] as const).map(([label, kf, ki]) => (
+                      <div key={label}>
+                        <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>{label}</div>
+                        <div className="flex gap-1.5">
+                          {([[kf, "ft"], [ki, "in"]] as const).map(([k, unit]) => (
+                            <NumBox key={k} label={`${label} ${unit === "ft" ? "feet" : "inches"} ${r + 1}`} unit={unit}
+                              value={row[k]} last={k === "hi" && !!flow.editing}
+                              inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
+                              onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 min-h-[16px] text-xs font-medium"
+                    style={{ color: p.warn ? "var(--bad)" : p.ready ? "var(--good)" : "var(--ink-3)" }}>
+                    {p.warn ?? (p.ready
+                      ? `= ${formatFtIn(p.wu!)} × ${formatFtIn(p.hu!)}`
+                      : p.empty
+                        ? (r === 0 ? "For example: Width 4 ft 6 in · Height 4 ft" : "Next size — leave it empty if you are done")
+                        : p.wu === null ? "Type the width" : "Now the height")}
+                  </div>
                 </div>
-                <Keypad onKey={press}
-                  lastLabel={cur.f === "w" ? "Height →" : flow.editing ? "Done ✓" : <span className="text-sm leading-tight">Next<br />size ↓</span>}
-                  lastAria={cur.f === "w" ? "Go to height" : flow.editing ? "Done" : "Next size"}
-                  lastDisabled={cur.f === "h" && (flow.editing ? !allReady : !touched)} />
+              );
+            })}
+            {flow.editing && (
+              <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
+                className="py-2 text-sm font-semibold" style={{ color: "var(--bad)" }}>
+                Remove {flow.editing} from the job
+              </button>
+            )}
+            {/* room for the button, which sits over the bottom of the screen */}
+            <div aria-hidden style={{ height: 84 }} />
+
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2.5"
+              style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
+              <div className="mx-auto max-w-xl">
                 <button onClick={sizesDone} disabled={!allReady}
                   className="btn-dark flex w-full items-center justify-between gap-3 px-4 py-3 text-left disabled:opacity-40">
                   <span>
                     <span className="block text-base font-bold">
-                      {afterSize.length ? `Next — dividers (${plural(readyCount, "size")}) →` : doneLabel}
+                      {afterSize.length ? "Next — choose the lines →" : doneLabel}
                     </span>
                     <span className="block text-xs font-normal opacity-80">
-                      {!allReady && filled.length
-                        ? "Fix the size marked in red first"
-                        : afterSize.length ? "Choose the gap between the lines on a drawing" : flow.editing ? "Back to the list" : "Then get the material list"}
+                      {!filled.length
+                        ? "Type at least one size"
+                        : !allReady
+                          ? "Finish or fix the size marked in red"
+                          : afterSize.length ? `${plural(readyCount, "partition")} · lines shown on a drawing` : flow.editing ? "Back to the list" : "Then get the material list"}
                     </span>
                   </span>
                   <span aria-hidden className="text-xl">→</span>
@@ -1260,33 +1200,30 @@ function JobScreen({
 }
 
 /**
- * The gap between partition dividers: the usual ones as one tap, and any
- * other gap typed in — "2.75", "2'9" — for the shop that works to its own.
+ * The gap between partition dividers: the usual ones as one tap, any other
+ * gap an inch at a time with − / + — no keyboard opens, so the drawing above
+ * stays in view while the lines move — or simply the number of panels.
  */
 function GapPicker({ options, value, max, count, span, onChange }: {
   options: Opt[]; value: string; max: number; count: number; span: number; onChange: (v: string) => void;
 }) {
-  // The box opens only when "Other gap" is tapped: a gap set by panel count is
-  // a dividing rule, not a size to read — the drawing says the real gap.
-  const [custom, setCustom] = useState("");
   const [open, setOpen] = useState(false);
-  const read = parseOpening(custom, "feet");
-  const ft = read ? Math.round(toFeet(read.um) * 1000) / 1000 : null;
-  const err = !custom.trim() ? null : ft === null ? "Type it like 2.75 or 2'9\"" : ft < 1 ? "The gap must be at least 1 ft" : ft > max ? `The gap cannot be more than ${max.toFixed(1)} ft` : null;
+  /** The gap in whole inches, as "Other gap" shows and steps it. */
+  const inchesNow = Math.round((parseFloat(value) || 3) * 12);
+  const stepGap = (d: number) => {
+    const nv = (inchesNow + d) / 12;
+    if (nv < 1 || nv > max) return;
+    onChange(String(Math.round(nv * 1000) / 1000));
+  };
   /** Many shops think in panels ("4 khane"), not gaps: the gap that gives exactly k. */
   const setCount = (k: number) => {
     const v = Math.round((span / k) * 1000) / 1000;
     if (k < 1 || v < 1) return;
     setOpen(false);
-    setCustom("");
     onChange(String(v));
   };
   return (
     <div className="flex flex-col gap-2">
-      <div className="card flex items-center justify-between gap-3 px-3 py-2">
-        <span className="text-sm font-semibold">Or set the number of panels</span>
-        <MiniQty value={count} label="panels" onChange={setCount} />
-      </div>
       <div className="grid grid-cols-3 gap-1.5">
         {options.map(([v, label]) => (
           <button key={v} onClick={() => { setOpen(false); onChange(v); }} aria-pressed={!open && value === v}
@@ -1294,30 +1231,25 @@ function GapPicker({ options, value, max, count, span, onChange }: {
             {label}
           </button>
         ))}
-        <button onClick={() => setOpen(true)} aria-pressed={open}
+        <button onClick={() => { setOpen(true); stepGap(0); }} aria-pressed={open}
           className={`chip min-h-[48px] px-2 py-2 text-base ${open ? "selected" : ""}`}>
           Other gap
         </button>
       </div>
       {open && (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <input value={custom} autoFocus inputMode="decimal" aria-label="Gap in feet" placeholder="e.g. 2.75 or 2'9"
-              onChange={(e) => {
-                const t = e.target.value;
-                setCustom(t);
-                const r = parseOpening(t, "feet");
-                const f = r ? Math.round(toFeet(r.um) * 1000) / 1000 : 0;
-                if (f >= 1 && f <= max) onChange(String(f));
-              }}
-              className="dim-input min-w-0 flex-1 px-3 py-2.5 text-lg font-semibold" />
-            <span className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>ft</span>
+        <div className="card flex items-center justify-between gap-2 p-2">
+          <button onClick={() => stepGap(-1)} aria-label="One inch less" className="btn-ghost h-12 w-16 text-base">− 1&quot;</button>
+          <div className="text-center">
+            <div className="text-2xl font-extrabold tabnum">{formatFtIn(inches(inchesNow))}</div>
+            <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>gap you want</div>
           </div>
-          <div className="min-h-[16px] text-xs" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
-            {err ?? (ft ? `Gap ${formatFtIn(feet(ft))}` : "Feet, or feet and inches with ' and \"")}
-          </div>
+          <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost h-12 w-16 text-base">+ 1&quot;</button>
         </div>
       )}
+      <div className="card flex items-center justify-between gap-3 px-3 py-2">
+        <span className="text-sm font-semibold">Or the number of panels</span>
+        <MiniQty value={count} label="panels" onChange={setCount} />
+      </div>
     </div>
   );
 }
@@ -1340,47 +1272,20 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
   );
 }
 
-/** A size box the keypad types into — tap it to make it the active one. */
-function SizeBox({ label, value, placeholder, active, bad, onClick }: {
-  label: string; value: string; placeholder: string; active: boolean; bad?: boolean; onClick: () => void;
+/** One number box — feet or inches — on the phone's own number keyboard. */
+function NumBox({ label, unit, value, last, inputRef, onChange, onNext }: {
+  label: string; unit: string; value: string; last?: boolean;
+  inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void;
 }) {
   return (
-    <button onClick={onClick} aria-label={label} aria-pressed={active}
-      className="dim-input min-w-0 flex-1 px-2 py-1 text-left"
-      style={active ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" } : bad ? { borderColor: "var(--bad)" } : undefined}>
-      <span className="flex min-h-[34px] items-center overflow-hidden whitespace-nowrap text-lg font-semibold tabnum" data-value={value}>
-        {value || <span style={{ color: "#c2c7cf" }}>{placeholder}</span>}
-        {active && <span className="caret ml-0.5 inline-block h-6 w-[2px] shrink-0" style={{ background: "var(--accent)" }} />}
-      </span>
-    </button>
-  );
-}
-
-/**
- * The app's own number pad, laid out like a phone dial, with ft ( ' ),
- * inch ( " ), dash and point on the same pad — no keyboard switching, no
- * iPhone "smart" quotes, nothing sliding up over the screen.
- */
-function Keypad({ onKey, lastLabel, lastAria, lastDisabled }: {
-  onKey: (k: string) => void; lastLabel: React.ReactNode; lastAria: string; lastDisabled: boolean;
-}) {
-  const keys: [string, React.ReactNode, string][] = [
-    ["1", "1", "1"], ["2", "2", "2"], ["3", "3", "3"], ["back", "⌫", "Delete"],
-    ["4", "4", "4"], ["5", "5", "5"], ["6", "6", "6"], ["'", <><span className="text-xl">&apos;</span><span className="ml-1 text-xs">ft</span></>, "Feet"],
-    ["7", "7", "7"], ["8", "8", "8"], ["9", "9", "9"], ['"', <><span className="text-xl">&quot;</span><span className="ml-1 text-xs">inch</span></>, "Inch"],
-    [".", ".", "Point"], ["0", "0", "0"], ["-", "–", "Dash"], ["next", lastLabel, lastAria],
-  ];
-  return (
-    <div className="grid grid-cols-4 gap-1.5" style={{ touchAction: "manipulation" }}>
-      {keys.map(([k, label, aria]) => (
-        <button key={k} onClick={() => onKey(k)} aria-label={aria}
-          disabled={k === "next" && lastDisabled}
-          className={`h-12 rounded-[var(--radius)] font-semibold disabled:opacity-40 ${k === "next" ? "btn-primary text-base" : "text-xl"}`}
-          style={k === "next" ? undefined : { background: /\d/.test(k) ? "var(--surface)" : "var(--surface-2)", border: "1px solid var(--line)" }}>
-          {label}
-        </button>
-      ))}
-    </div>
+    <label className="dim-input flex min-w-0 flex-1 items-center gap-1 px-2 focus-within:border-[color:var(--accent)]">
+      <input ref={inputRef} value={value} aria-label={label}
+        type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
+        className="w-full min-w-0 bg-transparent py-2 text-xl font-semibold tabnum outline-none" />
+      <span className="shrink-0 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{unit}</span>
+    </label>
   );
 }
 
@@ -2014,15 +1919,6 @@ function SettingsModal({ shop, onSave, onClose }: {
 }
 
 /* ————————————————— small parts ————————————————— */
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1.5 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>{label}</div>
-      {children}
-    </div>
-  );
-}
 
 /** Single-choice row of equal buttons — one tap, no dropdowns. */
 function Seg({ options, value, onChange }: { options: Opt[]; value: string; onChange: (v: string) => void }) {
