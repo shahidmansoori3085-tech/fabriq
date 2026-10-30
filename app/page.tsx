@@ -69,6 +69,8 @@ interface Opts {
   partSys: string;
   partDoor: string;
   partDoorW: string;
+  /** Door height in feet; a partition taller than it gets fixed glass over the door. */
+  partDoorH: string;
   partBayFt: string;
   partRowFt: string;
   partSheetFt: string;
@@ -79,7 +81,7 @@ const DEFAULT_OPTS: Opts = {
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
-  partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
+  partDoor: "no", partDoorW: "3", partDoorH: "7", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
 
 type Opt = [value: string, label: string];
@@ -114,7 +116,9 @@ function doorMixOf(o: Opts): string {
   const n = Number.isNaN(c) ? 2 : Math.max(0, Math.min(4, c));
   return o.doorMix.length === n + 1 ? o.doorMix : "S".repeat(n + 1);
 }
-const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
+/** A partition door's size as said on site: 3' × 7'. */
+const doorSizeText = (m: { partDoorW?: string; partDoorH?: string }) =>
+  `${formatFtIn(feet(parseFloat(m.partDoorW ?? "3") || 3))} × ${formatFtIn(feet(parseFloat(m.partDoorH ?? "7") || 7))}`;
 /** Gap between the partition's dividers. Any other gap can be typed in. */
 const BAY_FT: Opt[] = [["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
 const ROW_FT: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
@@ -130,14 +134,14 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
   }
   if (type === "partition" && o.partSys === "z") {
     const m: Record<string, string> = { system: "z_section", zSize: o.zSize, partBayFt: o.partBayFt, partRowFt: o.partRowFt, partDoor: o.partDoor };
-    if (o.partDoor === "yes") m.partDoorW = o.partDoorW;
+    if (o.partDoor === "yes") { m.partDoorW = o.partDoorW; m.partDoorH = o.partDoorH; }
     return m;
   }
   if (type === "partition") {
     const m: Record<string, string> = {
       partDoor: o.partDoor, partBayFt: o.partBayFt, partRowFt: o.partRowFt, partSheetFt: o.partSheetFt,
     };
-    if (o.partDoor === "yes") m.partDoorW = o.partDoorW;
+    if (o.partDoor === "yes") { m.partDoorW = o.partDoorW; m.partDoorH = o.partDoorH; }
     return m;
   }
   if (o.sys === "z_section") {
@@ -165,7 +169,7 @@ function optsFromItem(it: JobItem): Opts {
     if (m.zonemix) o.doorCenters = String(Math.min(4, Math.max(0, m.zonemix.length - 1)));
   } else if (it.type === "partition") {
     if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
-    pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partBayFt", m.partBayFt);
+    pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partDoorH", m.partDoorH); pick("partBayFt", m.partBayFt);
     pick("partRowFt", m.partRowFt); pick("partSheetFt", m.partSheetFt);
   } else if (it.system === "z_section") {
     o.sys = "z_section";
@@ -187,7 +191,7 @@ function itemLabel(it: JobItem): string {
   }
   if (it.type === "partition" && it.system === "z_section") {
     const L = partitionLayout(it);
-    const door = m.partDoor === "yes" ? ` + ${m.partDoorW ?? "3"} ft door` : "";
+    const door = m.partDoor === "yes" ? ` + ${doorSizeText(m)} door` : "";
     return `Z-Section partition ${m.zSize === "heavy" ? "40×55" : "40×40"}${door} · ${L.bays} × ${L.glassRows} glass panels`;
   }
   if (it.type === "door") {
@@ -198,7 +202,7 @@ function itemLabel(it: JobItem): string {
   if (it.type === "partition") {
     // What gets built — panels across × panels high — not the gap rule behind it.
     const L = partitionLayout(it);
-    const door = m.partDoor === "yes" ? ` + ${m.partDoorW ?? "3"} ft door` : "";
+    const door = m.partDoor === "yes" ? ` + ${doorSizeText(m)} door` : "";
     const sheet = parseFloat(m.partSheetFt ?? "0") > 0 ? ` · ${m.partSheetFt} ft bottom sheet` : "";
     return `Partition${door}${sheet} · ${L.bays} × ${L.glassRows} glass panels`;
   }
@@ -421,7 +425,7 @@ type StepId =
   | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
-  | "partSys" | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
+  | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
 
 /** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
@@ -429,7 +433,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     return ["type", "doorSys", ...(o.doorSys === "z" ? ["zDoorCenters"] as const : ["doorFrame", "doorCenters", "doorSection"] as const), "size"];
   }
   if (type === "partition") {
-    const door: StepId[] = ["partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : [])];
+    const door: StepId[] = ["partDoor", ...(o.partDoor === "yes" ? ["partDoorSize" as const] : [])];
     const kind: StepId[] = o.partSys === "z" ? ["zProfile", ...door] : door;
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
@@ -463,7 +467,7 @@ const STEP_TITLE: Record<StepId, string> = {
   doorSection: "Shutter section?",
   partSys: "Which partition?",
   partDoor: "Door in the partition?",
-  partDoorW: "Door width?",
+  partDoorSize: "Door size?",
   size: "Enter your sizes",
   partBays: "Vertical lines (khadi)",
   partRows: "Horizontal lines (leti)",
@@ -768,8 +772,8 @@ function JobScreen({
     // chosen yet, so it is named by its door only.
     const liveLabel = type === "partition"
       ? o.partSys === "z"
-        ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}${o.partDoor === "yes" ? ` · ${o.partDoorW} ft door` : ""}`
-        : `Partition · ${o.partDoor === "yes" ? `${o.partDoorW} ft door` : "no door"}`
+        ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}${o.partDoor === "yes" ? ` · ${doorSizeText(o)} door` : ""}`
+        : `Partition · ${o.partDoor === "yes" ? `${doorSizeText(o)} door` : "no door"}`
       : itemLabel(sample(type, o)).replace(/ \([^)]*fixed[^)]*\)| · [\d.]+ ft fixed top/, "");
     /** The partition the divider screens draw: the one being asked about. */
     const shape = readyIdx.length
@@ -970,13 +974,8 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "partDoorW" && (
-          <div className="grid grid-cols-3 gap-2">
-            {PART_DOOR_W.map(([v, label]) => (
-              <Choice key={v} selected={o.partDoorW === v} onClick={() => choose({ partDoorW: v })} title={label}
-                picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes", partDoorW: v })} size={90} />} />
-            ))}
-          </div>
+        {flow.step === "partDoorSize" && (
+          <DoorSizeStep o={o} onChange={(w, h) => setO((x) => ({ ...x, partDoorW: w, partDoorH: h }))} onNext={() => go(steps[i + 1])} />
         )}
 
         {(flow.step === "partBays" || flow.step === "partRows") && (
@@ -1322,6 +1321,49 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
           <span className={`${big ? "text-base" : "text-sm"} font-bold`} style={{ color: "var(--ink)" }}>{label}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The partition door's width and height, typed like every other size
+ * (3 = 3 ft, 6.9 = 6'9"). A partition taller than the door gets fixed glass
+ * over it; the picture shows a 10 ft partition so that is visible.
+ */
+function DoorSizeStep({ o, onChange, onNext }: {
+  o: Opts; onChange: (w: string, h: string) => void; onNext: () => void;
+}) {
+  const [w, setW] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorW) || 3)));
+  const [h, setH] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorH) || 7)));
+  const hBox = useRef<HTMLInputElement | null>(null);
+  const wu = parseTradeSize(w), hu = parseTradeSize(h);
+  const okW = wu !== null && wu >= feet(1.5) && wu <= feet(8);
+  const okH = hu !== null && hu >= feet(5) && hu <= feet(10);
+  const put = (nw: string, nh: string) => {
+    const a = parseTradeSize(nw), b = parseTradeSize(nh);
+    if (a && b) onChange(String(Math.round(toFeet(a) * 10000) / 10000), String(Math.round(toFeet(b) * 10000) / 10000));
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="card grid place-items-center p-3">
+        <MiniElevation item={buildJobItem(1, "partition", feet(10), feet(10), 1, metaFor("partition", o))} size={150} />
+      </div>
+      <div className="card p-3">
+        <div className="flex gap-2">
+          <SizeInput label="Door width" value={w} placeholder="3" bad={!!w.trim() && !okW}
+            inputRef={() => {}} onNext={() => hBox.current?.focus()}
+            onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setW(t); put(t, h); }} />
+          <SizeInput label="Door height" value={h} placeholder="7" bad={!!h.trim() && !okH} last
+            inputRef={(el) => { hBox.current = el; }} onNext={() => { if (okW && okH) onNext(); }}
+            onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setH(t); put(w, t); }} />
+        </div>
+        <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
+          style={{ color: okW && okH ? "var(--good)" : "var(--bad)" }}>
+          {okW && okH ? `${formatFtIn(wu!)} × ${formatFtIn(hu!)}`
+            : !okW ? "Width 1.6 to 8 ft — 3.6 means 3 ft 6 in" : "Height 5 to 10 ft — 6.9 means 6 ft 9 in"}
+        </div>
+      </div>
+      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
     </div>
   );
 }

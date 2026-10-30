@@ -189,9 +189,25 @@ function zGridLayout(item: JobItem): PartLayout {
   const rows = Math.max(1, Math.round(toFeet(innerH) / rowFt));
   return {
     hasDoor, doorW, fieldW, innerH, face, bays, sheetH: 0, glassRows: rows,
+    doorTopH: doorColumn(item, Z_FACE, 2 * Z_TRANSOM_HALF).topH,
     cellW: (fieldW - (bays - 1) * 2 * Z_TRANSOM_HALF) / bays,
     glassRowH: (innerH - (rows - 1) * 2 * Z_TRANSOM_HALF) / rows,
   };
+}
+
+/**
+ * A partition's door column, up and down: the door opening from the floor to
+ * what is above it, and the fixed glass over the door when the partition is
+ * taller than the door (meta.partDoorH, in feet). A door within 6" of the
+ * top runs the full height instead — a sliver of glass is not built.
+ * `outer` is the top frame's face, `head` the face of the divider over the door.
+ */
+function doorColumn(item: JobItem, outer: Um, head: Um): { openH: Um; topH: Um } {
+  const full = { openH: item.height - outer, topH: 0 };
+  if (item.meta.partDoor !== "yes") return full;
+  const doorH = mm((parseFloat(item.meta.partDoorH ?? "0") || 0) * 304.8);
+  const topH = item.height - outer - doorH - head;
+  return doorH > 0 && topH >= inches(6) ? { openH: doorH, topH } : full;
 }
 
 /** The panel grid of any partition — SP/DP or Z-section — for drawings and labels. */
@@ -386,9 +402,14 @@ export function zGeometry(item: JobItem): ZGeom {
       // The jamb: a Z center from the top outer to the floor. The doorway has
       // no outer across its foot, so the door opening runs from the top outer
       // down to the floor, and the leaf is cut to it like a Z-section door.
-      const doorOpenH = item.height - Z_FACE;
-      g.mullions.push(doorOpenH);
-      g.sashes.push(zMakeSash("glass", L.doorW, doorOpenH, true));
+      const col = doorColumn(item, Z_FACE, 2 * Z_TRANSOM_HALF);
+      g.mullions.push(item.height - Z_FACE);
+      g.sashes.push(zMakeSash("glass", L.doorW, col.openH, true));
+      if (col.topH > 0) {
+        // a Z center over the door, fixed glass above it
+        g.transoms.push(L.doorW);
+        g.fixed.push(zMakeFixed("glass", L.doorW, col.topH));
+      }
       g.outerBottom = item.width - L.doorW - Z_FACE;
     }
     return g;
@@ -677,6 +698,9 @@ function splitRun(total: Um, joints: Um[], maxLen: Um): Um[] | null {
  *  very same bays and rows instead of re-deriving (and disagreeing with) them. */
 export interface PartLayout {
   hasDoor: boolean; doorW: Um; fieldW: Um; innerH: Um; face: Um;
+  /** Fixed glass above the door (its pocket height), when the partition is
+   *  taller than the door; 0 = the door runs the full height. */
+  doorTopH: Um;
   bays: number; cellW: Um; sheetH: Um; glassRows: number; glassRowH: Um;
 }
 interface PartGeom { pieces: PartPiece[]; panels: PartPanel[]; layout: PartLayout }
@@ -684,6 +708,7 @@ interface PartGeom { pieces: PartPiece[]; panels: PartPanel[]; layout: PartLayou
 export function partitionGeometry(item: JobItem): PartGeom {
   const hasDoor = item.meta.partDoor === "yes";
   const doorW = hasDoor ? mm((parseFloat(item.meta.partDoorW ?? "3") || 3) * 304.8) : 0;
+  const door = doorColumn(item, PART_FACE, PART_FACE);
   const sheetFt = Math.max(0, parseFloat(item.meta.partSheetFt ?? "0") || 0);
   const bayFt = Math.max(1, parseFloat(item.meta.partBayFt ?? "2.5") || 2.5);
   const rowFt = Math.max(1, parseFloat(item.meta.partRowFt ?? "3.5") || 3.5);
@@ -734,19 +759,29 @@ export function partitionGeometry(item: JobItem): PartGeom {
 
   // Outer SP frame. Top runs the full width; the bottom stops at the door
   // jamb — nobody puts a rail across a doorway. Sides are full height.
-  RUN("partition_frame", item.width, "SP Top", [...dpX, ...jambX], colCells);
+  const topClip = door.topH > 0 ? [door.topH] : [];
+  RUN("partition_frame", item.width, "SP Top", [...dpX, ...jambX], [...colCells, ...(door.topH > 0 ? [doorW] : [])]);
   RUN("partition_frame", fieldW, "SP Bottom", dpX.map((x) => x - face), colCells);
   RUN("partition_frame", item.height, "SP Left", hY, rowCells);
-  // Beside a door the right SP borders the door leaf, which takes no clip.
-  RUN("partition_frame", item.height, "SP Right", hY, hasDoor ? [] : rowCells);
+  // Beside a door the right SP borders the door leaf, which takes no clip —
+  // only the glass above the door, when there is some.
+  RUN("partition_frame", item.height, "SP Right", hY, hasDoor ? topClip : rowCells);
 
   if (hasDoor) {
-    // DP jamb: glass on one side, the door on the other — one clip.
-    RUN("partition_divider", innerH, "DP Door-jamb", hY.map((y) => y - face), rowCells);
+    // DP jamb: glass on one side, the door on the other — one clip (and the
+    // glass above the door on the door side).
+    RUN("partition_divider", innerH, "DP Door-jamb", hY.map((y) => y - face), [...rowCells, ...topClip]);
+    if (door.topH > 0) {
+      // Door head: a DP across the door column, glass above, the door below.
+      P("partition_divider", doorW, "DP Door-head", [doorW]);
+      panels.push({ kind: "glass", w: doorW - clear, h: door.topH - clear });
+    }
     // Door leaf, built like the standalone door: stiles full height, rails
     // fitted BETWEEN the stiles (leaf width − clearance), one middle rail.
+    // Its height is the door opening (floor to the SP or door head above)
+    // less one face and ¾", as it always was for a full-height door.
     const leafW = doorW - inches(0.75);
-    const leafH = innerH - inches(0.75);
+    const leafH = door.openH - face - inches(0.75);
     const dClr = doorClearance("60");
     const railW = leafW - dClr;
     P("door_palla_60", railW, "Door Top");
@@ -779,7 +814,7 @@ export function partitionGeometry(item: JobItem): PartGeom {
   }
   return {
     pieces, panels,
-    layout: { hasDoor, doorW, fieldW, innerH, face, bays, cellW, sheetH, glassRows, glassRowH },
+    layout: { hasDoor, doorW, fieldW, innerH, face, bays, cellW, sheetH, glassRows, glassRowH, doorTopH: door.topH },
   };
 }
 

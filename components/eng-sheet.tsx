@@ -107,10 +107,13 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
     }
     if (L.hasDoor) {
       const dx = f + L.fieldW + f;
-      cells.push(<rect key="door" x={x0 + dx * sx} y={y0 + f * sy} width={L.doorW * sx} height={L.innerH * sy}
+      const top = L.doorTopH > 0 ? L.doorTopH + f : 0;
+      if (top) cells.push(at(dx, f, L.doorW, L.doorTopH, "glass", "door-top"));
+      const dh = L.innerH - top;
+      cells.push(<rect key="door" x={x0 + dx * sx} y={y0 + (f + top) * sy} width={L.doorW * sx} height={dh * sy}
         fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.5} />);
-      cells.push(<line key="door-mid" x1={x0 + dx * sx} x2={x0 + (dx + L.doorW) * sx} y1={y0 + (f + L.innerH / 2) * sy}
-        y2={y0 + (f + L.innerH / 2) * sy} stroke="#0f6e56" strokeWidth={1.5} />);
+      cells.push(<line key="door-mid" x1={x0 + dx * sx} x2={x0 + (dx + L.doorW) * sx} y1={y0 + (f + top + dh / 2) * sy}
+        y2={y0 + (f + top + dh / 2) * sy} stroke="#0f6e56" strokeWidth={1.5} />);
     }
     for (let b = 0; b < Math.min(L.bays, 6); b++) {
       const x = x0 + (f + b * (L.cellW + f)) * sx;

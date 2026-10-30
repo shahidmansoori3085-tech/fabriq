@@ -65,12 +65,16 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
       // SP/DP door: glass above the middle rail, sheet below — as the cut list
       // orders it. Z-section door: one glass leaf.
       const dx = fr + (L.fieldW + L.face) * sx, dw = L.doorW * sx;
-      if (item.system === "z_section") cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih - 2, "dg"));
+      // fixed glass over a door shorter than the partition
+      const top = L.doorTopH > 0 ? (L.doorTopH + L.face) * sy : 0;
+      if (top) cells.push(glassFill(dx + 1, fr + 1, dw - 2, L.doorTopH * sy - 2, "dt"));
+      const dy = fr + top, dh = ih - top;
+      if (item.system === "z_section") cells.push(glassFill(dx + 1, dy + 1, dw - 2, dh - 2, "dg"));
       else {
-        cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih / 2 - 2, "dg"));
-        cells.push(sheetFill(dx + 1, fr + ih / 2 + 1, dw - 2, ih / 2 - 2, "ds"));
+        cells.push(glassFill(dx + 1, dy + 1, dw - 2, dh / 2 - 2, "dg"));
+        cells.push(sheetFill(dx + 1, dy + dh / 2 + 1, dw - 2, dh / 2 - 2, "ds"));
       }
-      cells.push(<rect key="door" x={dx + 0.5} y={fr} width={dw - 1} height={ih} fill="none" stroke="#0f6e56" strokeWidth={1.5} />);
+      cells.push(<rect key="door" x={dx + 0.5} y={dy} width={dw - 1} height={dh} fill="none" stroke="#0f6e56" strokeWidth={1.5} />);
     }
   } else if (item.type === "door") {
     const zones = item.shutters.length || 1;
@@ -293,8 +297,10 @@ export function PartitionGapPicture({ item, axis, maxH = 230 }: { item: JobItem;
   if (L.hasDoor) {
     const dx = f + L.fieldW + f;
     parts.push(<rect key="jamb" x={X(f + L.fieldW)} y={Y(f)} width={f * s} height={L.innerH * s} fill={SP} />);
-    parts.push(<rect key="door" x={X(dx)} y={Y(f)} width={L.doorW * s} height={L.innerH * s} fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.2} />);
-    parts.push(<text key="door-t" x={X(dx + L.doorW / 2)} y={Y(f + L.innerH / 2)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0f6e56">Door</text>);
+    const top = L.doorTopH > 0 ? L.doorTopH + f : 0;
+    if (top) parts.push(<rect key="door-top" x={X(dx)} y={Y(f)} width={L.doorW * s} height={L.doorTopH * s} fill="#dbeafe" />);
+    parts.push(<rect key="door" x={X(dx)} y={Y(f + top)} width={L.doorW * s} height={(L.innerH - top) * s} fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.2} />);
+    parts.push(<text key="door-t" x={X(dx + L.doorW / 2)} y={Y(f + top + (L.innerH - top) / 2)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0f6e56">Door</text>);
   }
 
   if (axis === "v") {

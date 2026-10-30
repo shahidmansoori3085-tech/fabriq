@@ -68,7 +68,7 @@ export function buildJobItem(
       next.partBayFt = next.partBayFt ?? "2.5";
       next.partRowFt = next.partRowFt ?? "3.5";
       next.partDoor = next.partDoor ?? "no";
-      if (next.partDoor === "yes") next.partDoorW = next.partDoorW ?? "3";
+      if (next.partDoor === "yes") { next.partDoorW = next.partDoorW ?? "3"; next.partDoorH = next.partDoorH ?? "7"; }
     }
     if (type === "door") next.zDoorCenters = next.zDoorCenters ?? "0";
     // one drawn zone per glass pane, so the door is pictured with its centers
@@ -84,7 +84,7 @@ export function buildJobItem(
   } else if (type === "partition") {
     sys = "partition";
     next.partDoor = next.partDoor ?? "no";
-    if (next.partDoor === "yes") next.partDoorW = next.partDoorW ?? "3";
+    if (next.partDoor === "yes") { next.partDoorW = next.partDoorW ?? "3"; next.partDoorH = next.partDoorH ?? "7"; }
     next.partSheetFt = next.partSheetFt ?? "0";
     next.partBayFt = next.partBayFt ?? "2.5";
     next.partRowFt = next.partRowFt ?? "3.5";
