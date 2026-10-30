@@ -59,6 +59,8 @@ interface Opts {
   palla: string;
   chokhat: string;
   doorMix: string;
+  /** Center rails across the door shutter — panels = centers + 1. */
+  doorCenters: string;
   /** Door: the normal palla door, or a Z-section (hinged glass) door. */
   doorSys: string;
   /** Partition: SP/DP pipe, or a Z-section fixed-glass grid. */
@@ -73,7 +75,7 @@ interface Opts {
 const DEFAULT_OPTS: Opts = {
   sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
-  palla: "60", chokhat: "needed", doorMix: "GSS",
+  palla: "60", chokhat: "needed", doorMix: "GSS", doorCenters: "2",
   doorSys: "normal", partSys: "spdp",
   partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
@@ -101,7 +103,15 @@ const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Door panels, top to bottom (3 panels, 2 center rails). Glass top is the
  *  usual door (founder, 2026-10-28), so it comes first and is the default. */
-const DOOR_MIX: Opt[] = [["GSS", "Glass top"], ["SSS", "All sheet"], ["JSS", "Mesh top"], ["SSJ", "Mesh bottom"]];
+const DOOR_CENTERS: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
+
+/** The door's panels, top to bottom. What fills them does not change the
+ *  aluminium, so it is not asked: glass on top, sheet below — the usual door
+ *  (founder, 2026-10-28). A job saved with its own mix keeps it. */
+function doorMixOf(o: Opts): string {
+  const n = Math.max(1, parseInt(o.doorCenters, 10) || 2);
+  return o.doorMix.length === n + 1 ? o.doorMix : "G" + "S".repeat(n);
+}
 const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
 /** Gap between the partition's dividers. Any other gap can be typed in. */
 const BAY_FT: Opt[] = [["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
@@ -113,7 +123,8 @@ const labelOf = (opts: Opt[], v: string | undefined) => opts.find(([k]) => k ===
 function metaFor(type: OpeningType, o: Opts): Record<string, string> {
   if (type === "door") {
     if (o.doorSys === "z") return { system: "z_section" };
-    return { palla: o.palla, chokhat: o.chokhat, rails: "2", zonemix: o.doorMix };
+    const mix = doorMixOf(o);
+    return { palla: o.palla, chokhat: o.chokhat, rails: String(mix.length - 1), zonemix: mix };
   }
   if (type === "partition" && o.partSys === "z") {
     return { system: "z_section", zSize: o.zSize, partBayFt: o.partBayFt, partRowFt: o.partRowFt };
@@ -147,6 +158,7 @@ function optsFromItem(it: JobItem): Opts {
   if (it.type === "door") {
     if (it.system === "z_section") o.doorSys = "z";
     pick("palla", m.palla); pick("chokhat", m.chokhat); pick("doorMix", m.zonemix);
+    if (m.zonemix) o.doorCenters = String(Math.max(1, m.zonemix.length - 1));
   } else if (it.type === "partition") {
     if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
     pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partBayFt", m.partBayFt);
@@ -172,7 +184,8 @@ function itemLabel(it: JobItem): string {
   }
   if (it.type === "door") {
     const scope = m.chokhat === "existing" ? " · shutter only" : " + frame";
-    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${labelOf(DOOR_MIX, m.zonemix).toLowerCase()}`;
+    const centers = Math.max(0, (m.zonemix?.length ?? 3) - 1);
+    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${centers} center${centers === 1 ? "" : "s"}`;
   }
   if (it.type === "partition") {
     // What gets built — panels across × panels high — not the gap rule behind it.
@@ -399,13 +412,13 @@ function layoutError(e: unknown): string {
 type StepId =
   | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
-  | "doorSys" | "doorPanels" | "doorFrame" | "doorSection"
+  | "doorSys" | "doorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
 
 /** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
   if (type === "door") {
-    return ["type", "doorSys", ...(o.doorSys === "z" ? [] : ["doorPanels", "doorFrame", "doorSection"] as const), "size"];
+    return ["type", "doorSys", ...(o.doorSys === "z" ? [] : ["doorCenters", "doorFrame", "doorSection"] as const), "size"];
   }
   if (type === "partition") {
     const kind: StepId[] = o.partSys === "z"
@@ -437,7 +450,7 @@ const STEP_TITLE: Record<StepId, string> = {
   zSash: "How many shutters open?",
   zProfile: "Which section?",
   doorSys: "Which door?",
-  doorPanels: "Door panels, top to bottom",
+  doorCenters: "How many center rails?",
   doorFrame: "Frame (chaukhat) too?",
   doorSection: "Shutter section?",
   partSys: "Which partition?",
@@ -903,12 +916,27 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "doorPanels" && (
-          <div className="grid grid-cols-4 gap-2">
-            {DOOR_MIX.map(([v, label]) => (
-              <Choice key={v} selected={o.doorMix === v} onClick={() => choose({ doorMix: v })} title={label}
-                picture={<MiniElevation item={sample("door", { ...o, doorMix: v })} size={40} />} />
-            ))}
+        {flow.step === "doorCenters" && (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-4 gap-2">
+              {DOOR_CENTERS.map(([v, label]) => (
+                <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
+                  picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
+              ))}
+              <Choice selected={parseInt(o.doorCenters, 10) > 3} title="Other"
+                onClick={() => { if (!(parseInt(o.doorCenters, 10) > 3)) choose({ doorCenters: "4" }, false); }}
+                picture={<MiniElevation item={sample("door", { ...o, doorCenters: parseInt(o.doorCenters, 10) > 3 ? o.doorCenters : "4" })} size={40} />} />
+            </div>
+            {parseInt(o.doorCenters, 10) > 3 && (
+              <>
+                <div className="card flex items-center justify-between gap-3 px-3 py-2">
+                  <span className="text-sm font-semibold">Center rails</span>
+                  <MiniQty value={parseInt(o.doorCenters, 10)} label="center rails"
+                    onChange={(k) => choose({ doorCenters: String(Math.min(6, Math.max(1, k))) }, false)} />
+                </div>
+                <button onClick={() => go(steps[i + 1])} className="btn-primary w-full py-3.5">Next</button>
+              </>
+            )}
           </div>
         )}
 
