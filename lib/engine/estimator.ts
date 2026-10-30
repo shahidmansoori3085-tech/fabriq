@@ -180,11 +180,15 @@ function zGridLayout(item: JobItem): PartLayout {
   const bayFt = Math.max(1, parseFloat(item.meta.partBayFt ?? "2.5") || 2.5);
   const rowFt = Math.max(1, parseFloat(item.meta.partRowFt ?? "3.5") || 3.5);
   const face = Z_FACE;
-  const fieldW = item.width - 2 * face, innerH = item.height - 2 * face;
+  // An optional door column on the right, as in the SP/DP partition: a Z
+  // center jamb, then the door opening up to the right outer.
+  const hasDoor = item.meta.partDoor === "yes";
+  const doorW = hasDoor ? mm((parseFloat(item.meta.partDoorW ?? "3") || 3) * 304.8) : 0;
+  const fieldW = item.width - 2 * face - (hasDoor ? doorW + face : 0), innerH = item.height - 2 * face;
   const bays = Math.max(1, Math.round(toFeet(fieldW) / bayFt));
   const rows = Math.max(1, Math.round(toFeet(innerH) / rowFt));
   return {
-    hasDoor: false, doorW: 0, fieldW, innerH, face, bays, sheetH: 0, glassRows: rows,
+    hasDoor, doorW, fieldW, innerH, face, bays, sheetH: 0, glassRows: rows,
     cellW: (fieldW - (bays - 1) * 2 * Z_TRANSOM_HALF) / bays,
     glassRowH: (innerH - (rows - 1) * 2 * Z_TRANSOM_HALF) / rows,
   };
@@ -308,6 +312,8 @@ export interface ZFixed {
 export interface ZGeom {
   outer: string; pipe: string; center: string;
   outerW: Um; outerH: Um;
+  /** The outer bottom, when it stops short of the width — a partition's door column has none. */
+  outerBottom?: Um;
   mullions: Um[];   // vertical dividers (z_center), length = openable zone height
   transoms: Um[];   // horizontal dividers (z_center), length = inner width
   sashes: ZSash[];  // openable leaves
@@ -376,6 +382,15 @@ export function zGeometry(item: JobItem): ZGeom {
     for (let b = 0; b < L.bays - 1; b++) g.mullions.push(openH);
     for (let b = 0; b < L.bays; b++) for (let r = 0; r < L.glassRows - 1; r++) g.transoms.push(L.cellW);
     for (let i = 0; i < L.bays * L.glassRows; i++) g.fixed.push(zMakeFixed("glass", L.cellW, L.glassRowH));
+    if (L.hasDoor) {
+      // The jamb: a Z center from the top outer to the floor. The doorway has
+      // no outer across its foot, so the door opening runs from the top outer
+      // down to the floor, and the leaf is cut to it like a Z-section door.
+      const doorOpenH = item.height - Z_FACE;
+      g.mullions.push(doorOpenH);
+      g.sashes.push(zMakeSash("glass", L.doorW, doorOpenH, true));
+      g.outerBottom = item.width - L.doorW - Z_FACE;
+    }
     return g;
   }
 
@@ -819,7 +834,7 @@ function expandZSectionItem(item: JobItem): CutPiece[] {
     };
 
     push(g.outer, item.width, "Outer Top");
-    push(g.outer, item.width, "Outer Bottom");
+    push(g.outer, g.outerBottom ?? item.width, "Outer Bottom");
     push(g.outer, item.height, "Outer Left");
     push(g.outer, item.height, "Outer Right");
 

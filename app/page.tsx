@@ -129,7 +129,9 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     return { palla: o.palla, chokhat: o.chokhat, rails: String(mix.length - 1), zonemix: mix };
   }
   if (type === "partition" && o.partSys === "z") {
-    return { system: "z_section", zSize: o.zSize, partBayFt: o.partBayFt, partRowFt: o.partRowFt };
+    const m: Record<string, string> = { system: "z_section", zSize: o.zSize, partBayFt: o.partBayFt, partRowFt: o.partRowFt, partDoor: o.partDoor };
+    if (o.partDoor === "yes") m.partDoorW = o.partDoorW;
+    return m;
   }
   if (type === "partition") {
     const m: Record<string, string> = {
@@ -185,7 +187,8 @@ function itemLabel(it: JobItem): string {
   }
   if (it.type === "partition" && it.system === "z_section") {
     const L = partitionLayout(it);
-    return `Z-Section partition ${m.zSize === "heavy" ? "40×55" : "40×40"} · ${L.bays} × ${L.glassRows} glass panels`;
+    const door = m.partDoor === "yes" ? ` + ${m.partDoorW ?? "3"} ft door` : "";
+    return `Z-Section partition ${m.zSize === "heavy" ? "40×55" : "40×40"}${door} · ${L.bays} × ${L.glassRows} glass panels`;
   }
   if (it.type === "door") {
     const scope = m.chokhat === "existing" ? " · shutter only" : " + frame";
@@ -426,9 +429,8 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     return ["type", "doorSys", ...(o.doorSys === "z" ? ["zDoorCenters"] as const : ["doorFrame", "doorCenters", "doorSection"] as const), "size"];
   }
   if (type === "partition") {
-    const kind: StepId[] = o.partSys === "z"
-      ? ["zProfile"]
-      : ["partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : [])];
+    const door: StepId[] = ["partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : [])];
+    const kind: StepId[] = o.partSys === "z" ? ["zProfile", ...door] : door;
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
   if (o.sys === "z_section") {
@@ -766,7 +768,7 @@ function JobScreen({
     // chosen yet, so it is named by its door only.
     const liveLabel = type === "partition"
       ? o.partSys === "z"
-        ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}`
+        ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}${o.partDoor === "yes" ? ` · ${o.partDoorW} ft door` : ""}`
         : `Partition · ${o.partDoor === "yes" ? `${o.partDoorW} ft door` : "no door"}`
       : itemLabel(sample(type, o)).replace(/ \([^)]*fixed[^)]*\)| · [\d.]+ ft fixed top/, "");
     /** The partition the divider screens draw: the one being asked about. */
@@ -999,7 +1001,7 @@ function JobScreen({
             {splits.length > 0 && (
               <div className="card flex flex-col gap-2 p-3" style={{ background: "var(--warn-soft)" }}>
                 <div className="text-xs font-semibold" style={{ color: "var(--warn)" }}>
-                  {formatFtIn(feet(wantFt))} does not divide {formatFtIn(vertical ? shape.width : shape.height)} equally — choose:
+                  {formatFtIn(feet(wantFt))} does not divide {vertical && grid?.hasDoor ? `the glass part (${formatFtIn(feet(span))})` : formatFtIn(vertical ? shape.width : shape.height)} equally — choose:
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {splits.map((k) => (

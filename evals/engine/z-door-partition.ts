@@ -13,16 +13,19 @@ const FT = 304800;
 let built = 0;
 const fails: string[] = [];
 for (const w of [3, 4, 6, 8, 10, 12, 15]) for (const h of [3, 6, 7, 8, 10]) {
-  for (const zSize of ["light", "heavy"]) for (const bay of ["2", "3", "4"]) for (const row of ["2.5", "3.5"]) {
-    const it = buildJobItem(1, "partition", w * FT, h * FT, 2, { system: "z_section", zSize, partBayFt: bay, partRowFt: row });
-    const tag = `Z partition ${w}x${h} ${zSize} ${bay}/${row}`;
+  for (const zSize of ["light", "heavy"]) for (const bay of ["2", "3", "4"]) for (const row of ["2.5", "3.5"]) for (const door of ["no", "yes"]) {
+    if (door === "yes" && (w < 6 || h < 7)) continue;
+    const it = buildJobItem(1, "partition", w * FT, h * FT, 2, { system: "z_section", zSize, partBayFt: bay, partRowFt: row, partDoor: door, partDoorW: "3" });
+    const tag = `Z partition ${w}x${h} ${zSize} ${bay}/${row} door:${door}`;
     try {
       const l = estimate([it]);
       built++;
       if (l.pieces.some((p) => !(p.length > 0))) fails.push(`${tag}: non-positive piece`);
       const L = partitionLayout(it);
       const panes = l.glass.reduce((a, g) => a + g.count, 0);
-      if (panes !== L.bays * L.glassRows * 2) fails.push(`${tag}: ${panes} panes, drawing shows ${L.bays * L.glassRows * 2}`);
+      const want = (L.bays * L.glassRows + (door === "yes" ? 1 : 0)) * 2;
+      if (panes !== want) fails.push(`${tag}: ${panes} panes, drawing shows ${want}`);
+      if (door === "yes" && l.pieces.filter((p) => /Shutter/.test(p.role)).length !== 8) fails.push(`${tag}: door leaf not 4 sides × 2`);
       if (l.glass.some((g) => !(g.width > 0 && g.height > 0))) fails.push(`${tag}: bad glass`);
       if (!l.sections.some((s) => s.sectionId.startsWith("z_outer"))) fails.push(`${tag}: no Z outer frame`);
     } catch (e) {

@@ -62,10 +62,14 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
         cells.push(sheetFill(x + 0.5, fr + (glassBandH + L.face) * sy + 0.5, L.cellW * sx - 1, L.sheetH * sy - 1, `s${b}`));
     }
     if (L.hasDoor) {
-      // glass above the middle rail, sheet below — as the cut list orders it
+      // SP/DP door: glass above the middle rail, sheet below — as the cut list
+      // orders it. Z-section door: one glass leaf.
       const dx = fr + (L.fieldW + L.face) * sx, dw = L.doorW * sx;
-      cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih / 2 - 2, "dg"));
-      cells.push(sheetFill(dx + 1, fr + ih / 2 + 1, dw - 2, ih / 2 - 2, "ds"));
+      if (item.system === "z_section") cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih - 2, "dg"));
+      else {
+        cells.push(glassFill(dx + 1, fr + 1, dw - 2, ih / 2 - 2, "dg"));
+        cells.push(sheetFill(dx + 1, fr + ih / 2 + 1, dw - 2, ih / 2 - 2, "ds"));
+      }
       cells.push(<rect key="door" x={dx + 0.5} y={fr} width={dw - 1} height={ih} fill="none" stroke="#0f6e56" strokeWidth={1.5} />);
     }
   } else if (item.type === "door") {

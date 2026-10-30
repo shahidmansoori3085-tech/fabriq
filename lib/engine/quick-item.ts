@@ -67,6 +67,8 @@ export function buildJobItem(
     if (type === "partition") {
       next.partBayFt = next.partBayFt ?? "2.5";
       next.partRowFt = next.partRowFt ?? "3.5";
+      next.partDoor = next.partDoor ?? "no";
+      if (next.partDoor === "yes") next.partDoorW = next.partDoorW ?? "3";
     }
     if (type === "door") next.zDoorCenters = next.zDoorCenters ?? "0";
     // one drawn zone per glass pane, so the door is pictured with its centers
