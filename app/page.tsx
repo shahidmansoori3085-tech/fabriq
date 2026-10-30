@@ -18,7 +18,7 @@ import {
   formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
-import { estimate, ImpossibleLayoutError, partitionGeometry } from "@/lib/engine/estimator";
+import { estimate, ImpossibleLayoutError, partitionLayout } from "@/lib/engine/estimator";
 import { buildJobItem } from "@/lib/engine/quick-item";
 import {
   getSection, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
@@ -59,6 +59,10 @@ interface Opts {
   palla: string;
   chokhat: string;
   doorMix: string;
+  /** Door: the normal palla door, or a Z-section (hinged glass) door. */
+  doorSys: string;
+  /** Partition: SP/DP pipe, or a Z-section fixed-glass grid. */
+  partSys: string;
   partDoor: string;
   partDoorW: string;
   partBayFt: string;
@@ -70,6 +74,7 @@ const DEFAULT_OPTS: Opts = {
   sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "GSS",
+  doorSys: "normal", partSys: "spdp",
   partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
 
@@ -87,7 +92,8 @@ const MIXES: Record<string, Opt[]> = {
   "3": [["GGJ", "2 Glass + 1 Mesh"], ["GGG", "3 Glass"]],
   "4": [["GGGJ", "3 Glass + 1 Mesh"], ["GGJJ", "2 Glass + 2 Mesh"], ["GGGG", "4 Glass"]],
 };
-const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"]];
+// A Z-section door is asked under Door, not here — a fabricator looks for a door under Door.
+const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"]];
 const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"]];
 const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
 const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
@@ -105,7 +111,13 @@ const labelOf = (opts: Opt[], v: string | undefined) => opts.find(([k]) => k ===
 
 /** The form's choices → the meta map the engine reads. */
 function metaFor(type: OpeningType, o: Opts): Record<string, string> {
-  if (type === "door") return { palla: o.palla, chokhat: o.chokhat, rails: "2", zonemix: o.doorMix };
+  if (type === "door") {
+    if (o.doorSys === "z") return { system: "z_section" };
+    return { palla: o.palla, chokhat: o.chokhat, rails: "2", zonemix: o.doorMix };
+  }
+  if (type === "partition" && o.partSys === "z") {
+    return { system: "z_section", zSize: o.zSize, partBayFt: o.partBayFt, partRowFt: o.partRowFt };
+  }
   if (type === "partition") {
     const m: Record<string, string> = {
       partDoor: o.partDoor, partBayFt: o.partBayFt, partRowFt: o.partRowFt, partSheetFt: o.partSheetFt,
@@ -133,8 +145,10 @@ function optsFromItem(it: JobItem): Opts {
   const o: Opts = { ...DEFAULT_OPTS };
   const pick = (k: keyof Opts, v: string | undefined) => { if (v) o[k] = v as never; };
   if (it.type === "door") {
+    if (it.system === "z_section") o.doorSys = "z";
     pick("palla", m.palla); pick("chokhat", m.chokhat); pick("doorMix", m.zonemix);
   } else if (it.type === "partition") {
+    if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
     pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partBayFt", m.partBayFt);
     pick("partRowFt", m.partRowFt); pick("partSheetFt", m.partSheetFt);
   } else if (it.system === "z_section") {
@@ -151,13 +165,18 @@ function optsFromItem(it: JobItem): Opts {
 /** One line a fabricator reads at a glance: "Domal 3 Track · 2 Glass + 1 Mesh". */
 function itemLabel(it: JobItem): string {
   const m = it.meta;
+  if (it.type === "door" && it.system === "z_section") return "Z-Section door · 40×55 · glass";
+  if (it.type === "partition" && it.system === "z_section") {
+    const L = partitionLayout(it);
+    return `Z-Section partition ${m.zSize === "heavy" ? "40×55" : "40×40"} · ${L.bays} × ${L.glassRows} glass panels`;
+  }
   if (it.type === "door") {
     const scope = m.chokhat === "existing" ? " · shutter only" : " + frame";
     return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${labelOf(DOOR_MIX, m.zonemix).toLowerCase()}`;
   }
   if (it.type === "partition") {
     // What gets built — panels across × panels high — not the gap rule behind it.
-    const L = partitionGeometry(it).layout;
+    const L = partitionLayout(it);
     const door = m.partDoor === "yes" ? ` + ${m.partDoorW ?? "3"} ft door` : "";
     const sheet = parseFloat(m.partSheetFt ?? "0") > 0 ? ` · ${m.partSheetFt} ft bottom sheet` : "";
     return `Partition${door}${sheet} · ${L.bays} × ${L.glassRows} glass panels`;
@@ -380,14 +399,19 @@ function layoutError(e: unknown): string {
 type StepId =
   | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
-  | "doorPanels" | "doorFrame" | "doorSection"
-  | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
+  | "doorSys" | "doorPanels" | "doorFrame" | "doorSection"
+  | "partSys" | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
 
 /** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
-  if (type === "door") return ["type", "doorPanels", "doorFrame", "doorSection", "size"];
+  if (type === "door") {
+    return ["type", "doorSys", ...(o.doorSys === "z" ? [] : ["doorPanels", "doorFrame", "doorSection"] as const), "size"];
+  }
   if (type === "partition") {
-    return ["type", "partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : []), "size", "partBays", "partRows"];
+    const kind: StepId[] = o.partSys === "z"
+      ? ["zProfile"]
+      : ["partDoor", ...(o.partDoor === "yes" ? ["partDoorW" as const] : [])];
+    return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
   if (o.sys === "z_section") {
     return [
@@ -412,9 +436,11 @@ const STEP_TITLE: Record<StepId, string> = {
   zDir: "Where is the fixed glass?",
   zSash: "How many shutters open?",
   zProfile: "Which section?",
+  doorSys: "Which door?",
   doorPanels: "Door panels, top to bottom",
   doorFrame: "Frame (chaukhat) too?",
   doorSection: "Shutter section?",
+  partSys: "Which partition?",
   partDoor: "Door in the partition?",
   partDoorW: "Door width?",
   size: "Enter your sizes",
@@ -720,7 +746,9 @@ function JobScreen({
     // What is being added, named in the header. A partition's panels are not
     // chosen yet, so it is named by its door only.
     const liveLabel = type === "partition"
-      ? `Partition · ${o.partDoor === "yes" ? `${o.partDoorW} ft door` : "no door"}`
+      ? o.partSys === "z"
+        ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}`
+        : `Partition · ${o.partDoor === "yes" ? `${o.partDoorW} ft door` : "no door"}`
       : itemLabel(sample(type, o)).replace(/ \([^)]*fixed[^)]*\)| · [\d.]+ ft fixed top/, "");
     /** The partition the divider screens draw: the one being asked about. */
     const shape = readyIdx.length
@@ -731,7 +759,7 @@ function JobScreen({
     const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, "size")}`;
     // the divider screens: which lines, how many panels, and the gap they leave
     const vertical = flow.step === "partBays";
-    const grid = type === "partition" ? partitionGeometry(shape).layout : null;
+    const grid = type === "partition" ? partitionLayout(shape) : null;
     const n = grid ? (vertical ? grid.bays : grid.glassRows) : 0;
     const gap = grid ? (vertical ? grid.cellW : grid.glassRowH) : 0;
     /** The length the panels share equally — what a panel count divides. */
@@ -819,12 +847,8 @@ function JobScreen({
         {flow.step === "zType" && (
           <div className="grid grid-cols-2 gap-2">
             {Z_TYPES.map(([v, label]) => (
-              <Choice key={v} selected={o.zType === v} title={label}
-                // A Z door is built from the heavy series — picked for him.
-                onClick={() => choose({ zType: v, zSize: v === "door" ? "heavy" : o.zSize })}
-                picture={v === "door"
-                  ? <MiniElevation item={buildJobItem(1, "window", feet(3), feet(7), 1, metaFor("window", { ...o, zType: v }))} size={42} />
-                  : <MiniElevation item={sample("window", { ...o, zType: v })} size={100} />} />
+              <Choice key={v} selected={o.zType === v} title={label} onClick={() => choose({ zType: v })}
+                picture={<MiniElevation item={sample("window", { ...o, zType: v })} size={100} />} />
             ))}
           </div>
         )}
@@ -854,6 +878,28 @@ function JobScreen({
                 sub={v === "heavy" ? "For big windows" : "For normal windows"}
                 picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={72} h={56} />} />
             ))}
+          </div>
+        )}
+
+        {flow.step === "doorSys" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Choice selected={o.doorSys === "normal"} onClick={() => choose({ doorSys: "normal" })} title="Normal door"
+              sub="Shutter + panels"
+              picture={<MiniElevation item={sample("door", { ...o, doorSys: "normal" })} size={44} />} />
+            <Choice selected={o.doorSys === "z"} onClick={() => choose({ doorSys: "z" })} title="Z-Section door"
+              sub="Hinged, 40×55"
+              picture={<MiniElevation item={sample("door", { ...o, doorSys: "z" })} size={44} />} />
+          </div>
+        )}
+
+        {flow.step === "partSys" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Choice selected={o.partSys === "spdp"} onClick={() => choose({ partSys: "spdp" })} title="SP / DP partition"
+              sub="Partition pipe"
+              picture={<SectionProfile sectionId="partition_frame" w={72} h={56} />} />
+            <Choice selected={o.partSys === "z"} onClick={() => choose({ partSys: "z" })} title="Z-Section partition"
+              sub="Z outer + center"
+              picture={<SectionProfile sectionId="z_outer_40" w={72} h={56} />} />
           </div>
         )}
 

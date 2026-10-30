@@ -9,7 +9,7 @@
 import { formatFtInSut, toFeet, mm } from "@/lib/engine/units";
 import type { JobItem, MaterialList } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
-import { partitionGeometry, zGeometry, domalFix } from "@/lib/engine/estimator";
+import { partitionLayout, zGeometry, domalFix } from "@/lib/engine/estimator";
 import { SectionDrawing } from "./section-profiles";
 
 const INK = "#1b2330";
@@ -97,7 +97,7 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
   const ix = x0 + fr, iy = y0 + fr, iw = DW - fr * 2, ih = DH - fr * 2;
 
   if (item.type === "partition") {
-    const L = partitionGeometry(item).layout;
+    const L = partitionLayout(item);
     const f = L.face;
     const glassBandH = L.glassRows * L.glassRowH + (L.glassRows - 1) * f;
     for (let b = 0; b < L.bays; b++) {

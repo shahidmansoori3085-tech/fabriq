@@ -55,7 +55,21 @@ export function buildJobItem(
   let sys: SystemId;
   let shutters: JobItem["shutters"];
 
-  if (type === "door") {
+  if ((type === "door" || type === "partition") && next.system === "z_section") {
+    // A Z-section door (one hinged leaf, the big section) or a Z-section
+    // partition (fixed glass grid) — named a door / partition in the job,
+    // built by the Z-section engine.
+    sys = "z_section";
+    next.zSize = type === "door" ? "heavy" : next.zSize ?? "light";
+    next.zDoor = type === "door" ? "yes" : "no";
+    next.zType = type === "door" ? "door" : "grid";
+    next.zLayout = type === "door" ? "openable" : "grid";
+    if (type === "partition") {
+      next.partBayFt = next.partBayFt ?? "2.5";
+      next.partRowFt = next.partRowFt ?? "3.5";
+    }
+    shutters = type === "door" ? [{ kind: "glass" }] : [];
+  } else if (type === "door") {
     sys = "door_single";
     next.chokhat = next.chokhat ?? "needed";
     next.rails = next.rails ?? "2";

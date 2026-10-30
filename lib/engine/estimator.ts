@@ -160,13 +160,39 @@ function zSectionIds(family: "light" | "heavy") {
     : { outer: "z_outer_40", pipe: "z_pipe_40", center: "z_center_55" };
 }
 
-export type ZLayout = "openable" | "fixed" | "combo" | "row";
+export type ZLayout = "openable" | "fixed" | "combo" | "row" | "grid";
 
 /** Which layout this Z item is — door forces a single openable leaf. */
 function zLayout(item: JobItem): ZLayout {
   if (item.meta.zDoor === "yes") return "openable";
   const l = item.meta.zLayout;
-  return l === "fixed" || l === "combo" || l === "row" ? l : "openable";
+  return l === "fixed" || l === "combo" || l === "row" || l === "grid" ? l : "openable";
+}
+
+/**
+ * The fixed-glass grid of a Z-section partition, from the same gap rule as an
+ * SP/DP partition: vertical centers every partBayFt across the inner width,
+ * horizontal ones every partRowFt down the inner height, panels made equal.
+ * Outer frame and center both eat 40 mm of sight line (a center 20 mm from
+ * each panel beside it), so one face figure serves both.
+ */
+function zGridLayout(item: JobItem): PartLayout {
+  const bayFt = Math.max(1, parseFloat(item.meta.partBayFt ?? "2.5") || 2.5);
+  const rowFt = Math.max(1, parseFloat(item.meta.partRowFt ?? "3.5") || 3.5);
+  const face = Z_FACE;
+  const fieldW = item.width - 2 * face, innerH = item.height - 2 * face;
+  const bays = Math.max(1, Math.round(toFeet(fieldW) / bayFt));
+  const rows = Math.max(1, Math.round(toFeet(innerH) / rowFt));
+  return {
+    hasDoor: false, doorW: 0, fieldW, innerH, face, bays, sheetH: 0, glassRows: rows,
+    cellW: (fieldW - (bays - 1) * 2 * Z_TRANSOM_HALF) / bays,
+    glassRowH: (innerH - (rows - 1) * 2 * Z_TRANSOM_HALF) / rows,
+  };
+}
+
+/** The panel grid of any partition — SP/DP or Z-section — for drawings and labels. */
+export function partitionLayout(item: JobItem): PartLayout {
+  return item.system === "z_section" ? zGridLayout(item) : partitionGeometry(item).layout;
 }
 
 /**
@@ -338,6 +364,16 @@ export function zGeometry(item: JobItem): ZGeom {
   if (layout === "fixed") {
     const kind = item.shutters[0]?.kind ?? "glass";
     g.fixed.push(zMakeFixed(kind, openW, openH));
+    return g;
+  }
+
+  if (layout === "grid") {
+    // Verticals run the full inner height; horizontals are cut between them,
+    // one per bay — the same crossing rule as the SP/DP partition.
+    const L = zGridLayout(item);
+    for (let b = 0; b < L.bays - 1; b++) g.mullions.push(openH);
+    for (let b = 0; b < L.bays; b++) for (let r = 0; r < L.glassRows - 1; r++) g.transoms.push(L.cellW);
+    for (let i = 0; i < L.bays * L.glassRows; i++) g.fixed.push(zMakeFixed("glass", L.cellW, L.glassRowH));
     return g;
   }
 

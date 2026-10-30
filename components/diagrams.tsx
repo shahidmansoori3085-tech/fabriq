@@ -6,7 +6,7 @@
 import { Um, formatFtInSut, formatFtIn, toFeet } from "@/lib/engine/units";
 import type { ShutterConfig, PackedBar, JobItem } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
-import { partitionGeometry } from "@/lib/engine/estimator";
+import { partitionLayout } from "@/lib/engine/estimator";
 
 /* ——— fills shared by elevations ——— */
 function glassFill(x: number, y: number, w: number, h: number, key: string) {
@@ -51,7 +51,7 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
     // The same grid the cut list is built from — bays, glass rows, bottom
     // sheet and door — scaled into the picture, so changing a spacing on the
     // option screen visibly changes the drawing.
-    const L = partitionGeometry(item).layout;
+    const L = partitionLayout(item);
     const sx = iw / (item.width - 2 * L.face), sy = ih / L.innerH;
     const glassBandH = L.glassRows * L.glassRowH + (L.glassRows - 1) * L.face;
     for (let b = 0; b < L.bays; b++) {
@@ -273,7 +273,7 @@ function gapArrow(x1: number, y1: number, x2: number, y2: number, label: string,
  * 3'2" panels, the same grid the cut list is built from.
  */
 export function PartitionGapPicture({ item, axis, maxH = 230 }: { item: JobItem; axis: "v" | "h"; maxH?: number }) {
-  const L = partitionGeometry(item).layout;
+  const L = partitionLayout(item);
   const s = Math.min(300 / item.width, maxH / item.height);
   const W = item.width * s, H = item.height * s;
   const P = 6, DB = axis === "v" ? 30 : 6, DR = axis === "h" ? 34 : 6;
