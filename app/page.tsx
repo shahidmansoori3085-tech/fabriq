@@ -104,13 +104,14 @@ const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Center rails across a door shutter; panels = rails + 1. */
-const DOOR_CENTERS: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]];
+const DOOR_CENTERS: Opt[] = [["0", "None"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]];
 
 /** The door's panels, top to bottom. What fills them does not change the
  *  aluminium, so it is not asked: every panel is sheet (founder, 2026-10-30 —
  *  no glass in the door). A job saved with its own mix keeps it. */
 function doorMixOf(o: Opts): string {
-  const n = Math.max(1, parseInt(o.doorCenters, 10) || 2);
+  const c = parseInt(o.doorCenters, 10);
+  const n = Number.isNaN(c) ? 2 : Math.max(0, Math.min(4, c));
   return o.doorMix.length === n + 1 ? o.doorMix : "S".repeat(n + 1);
 }
 const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
@@ -159,7 +160,7 @@ function optsFromItem(it: JobItem): Opts {
   if (it.type === "door") {
     if (it.system === "z_section") { o.doorSys = "z"; pick("zDoorCenters", m.zDoorCenters); }
     pick("palla", m.palla); pick("chokhat", m.chokhat); pick("doorMix", m.zonemix);
-    if (m.zonemix) o.doorCenters = String(Math.min(4, Math.max(1, m.zonemix.length - 1)));
+    if (m.zonemix) o.doorCenters = String(Math.min(4, Math.max(0, m.zonemix.length - 1)));
   } else if (it.type === "partition") {
     if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
     pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partBayFt", m.partBayFt);
@@ -189,7 +190,7 @@ function itemLabel(it: JobItem): string {
   if (it.type === "door") {
     const scope = m.chokhat === "existing" ? " · shutter only" : " + frame";
     const centers = Math.max(0, (m.zonemix?.length ?? 3) - 1);
-    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${centers} center${centers === 1 ? "" : "s"}`;
+    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${centers ? `${centers} center${centers === 1 ? "" : "s"}` : "no center"}`;
   }
   if (it.type === "partition") {
     // What gets built — panels across × panels high — not the gap rule behind it.
@@ -922,7 +923,7 @@ function JobScreen({
         )}
 
         {flow.step === "doorCenters" && (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {DOOR_CENTERS.map(([v, label]) => (
               <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
                 picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
@@ -932,7 +933,7 @@ function JobScreen({
 
         {flow.step === "zDoorCenters" && (
           <div className="grid grid-cols-3 gap-2">
-            {[["0", "None"], ...DOOR_CENTERS].map(([v, label]) => (
+            {DOOR_CENTERS.map(([v, label]) => (
               <Choice key={v} selected={o.zDoorCenters === v} onClick={() => choose({ zDoorCenters: v })} title={label}
                 picture={<MiniElevation item={sample("door", { ...o, zDoorCenters: v })} size={40} />} />
             ))}
