@@ -322,6 +322,36 @@ export function parseOpening(
   };
 }
 
+/**
+ * A size typed on the phone's number keyboard, which has no ' or " key: the
+ * point separates feet from inches the way the workshop writes it — 4.6 is
+ * 4'6", 3.10 is 3'10", 4.6.2 is 4'6"2s. An inch part over 11 is a typo, never
+ * guessed at. Everything else reads as parseOpening does: 54 → 54", 12 → 12 ft,
+ * 1372 → mm, and 4'6" typed in full on a computer.
+ */
+export function parseTradeSize(raw: string, feetBelow?: number): Um | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const m = /^(\d+)\.(\d{1,2})?(?:\.(\d))?$/.exec(t);
+  if (m) {
+    const inch = m[2] ? parseInt(m[2], 10) : 0;
+    const sut = m[3] ? parseInt(m[3], 10) : 0;
+    if (inch > 11 || sut > 7) return null;
+    const um = parseInt(m[1], 10) * UM_PER_FOOT + inch * UM_PER_INCH + sut * UM_PER_SUT;
+    return um > 0 ? um : null;
+  }
+  return parseOpening(t, "auto", feetBelow)?.um ?? null;
+}
+
+/** A size back into the way it is typed: 4'6"2s → "4.6.2", 5' → "5". */
+export function formatTradeSize(um: Um): string {
+  const totalSut = Math.round(um / UM_PER_SUT);
+  const ft = Math.floor(totalSut / 96);
+  const inch = Math.floor((totalSut % 96) / 8);
+  const sut = totalSut % 8;
+  return `${ft}${inch || sut ? `.${inch}` : ""}${sut ? `.${sut}` : ""}`;
+}
+
 /** Human echo of a parsed size: `4'0" (48")` — what the app actually understood. */
 export function describeDim(um: Um): string {
   const totalInch = um / UM_PER_INCH;

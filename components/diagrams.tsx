@@ -272,9 +272,9 @@ function gapArrow(x1: number, y1: number, x2: number, y2: number, label: string,
  * one "vertical" is sees it — and sees that 10 ft at a 3 ft gap gives three
  * 3'2" panels, the same grid the cut list is built from.
  */
-export function PartitionGapPicture({ item, axis }: { item: JobItem; axis: "v" | "h" }) {
+export function PartitionGapPicture({ item, axis, maxH = 230 }: { item: JobItem; axis: "v" | "h"; maxH?: number }) {
   const L = partitionGeometry(item).layout;
-  const s = Math.min(300 / item.width, 230 / item.height);
+  const s = Math.min(300 / item.width, maxH / item.height);
   const W = item.width * s, H = item.height * s;
   const P = 6, DB = axis === "v" ? 30 : 6, DR = axis === "h" ? 34 : 6;
   const X = (um: number) => P + um * s, Y = (um: number) => P + um * s;

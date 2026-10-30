@@ -111,6 +111,9 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.01em
 }
 .dim-input::placeholder, .field::placeholder { color: #a3a9b3; font-weight: 400; }
 .dim-input:focus, .field:focus { outline: none; border-color: var(--accent); }
+/* a size box is a label around its input: the whole box lights up, not a ring inside it */
+.dim-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.dim-input input:focus-visible { outline: none; }
 
 :where(button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 

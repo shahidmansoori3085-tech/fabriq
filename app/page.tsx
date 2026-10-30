@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, formatFtIn, toFeet, feet, inches, sqft, openingWarning, type Um,
+  formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionGeometry } from "@/lib/engine/estimator";
@@ -87,7 +87,6 @@ const MIXES: Record<string, Opt[]> = {
   "3": [["GGJ", "2 Glass + 1 Mesh"], ["GGG", "3 Glass"]],
   "4": [["GGGJ", "3 Glass + 1 Mesh"], ["GGJJ", "2 Glass + 2 Mesh"], ["GGGG", "4 Glass"]],
 };
-const FIX_FT: Opt[] = [["1.5", "1.5 ft"], ["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
 const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"], ["door", "Door"]];
 const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"]];
 const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
@@ -167,12 +166,12 @@ function itemLabel(it: JobItem): string {
     const sashes = m.zType === "openable" || m.zType === "combo" ? ` · ${m.zSashCount ?? it.shutters.length} sash` : "";
     const base = `Z-Section ${m.zSize === "heavy" ? "40×55" : "40×40"} · ${labelOf(Z_TYPES, m.zType)}`;
     return m.zType === "combo"
-      ? `${base} (${m.zFixedFt} ft fixed, ${labelOf(Z_DIRS, m.zComboDir).toLowerCase()})${sashes}`
+      ? `${base} (${formatFtIn(feet(parseFloat(m.zFixedFt ?? "2") || 2))} fixed, ${labelOf(Z_DIRS, m.zComboDir).toLowerCase()})${sashes}`
       : `${base}${sashes}`;
   }
   const name = it.system === "domal" ? "Domal" : "Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
-  const fix = it.system === "domal" && m.domalFix === "yes" ? ` · ${m.domalFixFt} ft fixed top` : "";
+  const fix = it.system === "domal" && m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   return `${name} ${m.tracks} Track · ${mix}${fix}`;
 }
 
@@ -379,8 +378,8 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "system" | "tracks" | "mix" | "domalFix" | "domalFixFt"
-  | "zType" | "zDir" | "zFixed" | "zSash" | "zProfile"
+  | "type" | "system" | "tracks" | "mix" | "domalFix"
+  | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorPanels" | "doorFrame" | "doorSection"
   | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
 
@@ -393,15 +392,14 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   if (o.sys === "z_section") {
     return [
       "type", "system", "zType",
-      ...(o.zType === "combo" ? ["zDir" as const, "zFixed" as const] : []),
+      ...(o.zType === "combo" ? ["zDir" as const] : []),
       ...(o.zType === "openable" || o.zType === "combo" ? ["zSash" as const] : []),
       // a Z door is always the big section — nothing to ask
       ...(o.zType !== "door" ? ["zProfile" as const] : []),
       "size",
     ];
   }
-  const fix: StepId[] = o.sys === "domal" ? ["domalFix", ...(o.domalFix === "yes" ? ["domalFixFt" as const] : [])] : [];
-  return ["type", "system", "tracks", "mix", ...fix, "size"];
+  return ["type", "system", "tracks", "mix", ...(o.sys === "domal" ? ["domalFix" as const] : []), "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -410,10 +408,8 @@ const STEP_TITLE: Record<StepId, string> = {
   tracks: "How many tracks?",
   mix: "Which shutters?",
   domalFix: "Fixed glass on top?",
-  domalFixFt: "Fixed glass height?",
   zType: "Which type?",
   zDir: "Where is the fixed glass?",
-  zFixed: "Fixed glass size?",
   zSash: "How many shutters open?",
   zProfile: "Which section?",
   doorPanels: "Door panels, top to bottom",
@@ -421,31 +417,10 @@ const STEP_TITLE: Record<StepId, string> = {
   doorSection: "Shutter section?",
   partDoor: "Door in the partition?",
   partDoorW: "Door width?",
-  size: "Sizes",
-  partBays: "Vertical lines ( | )",
-  partRows: "Horizontal lines ( — )",
+  size: "Enter your sizes",
+  partBays: "Vertical lines (khadi)",
+  partRows: "Horizontal lines (leti)",
 };
-
-/**
- * A size typed as feet + inches, each in its own box on the phone's own
- * number keyboard — no ' or " to hunt for. Inches alone work too (54 in the
- * inch box is 4'6"), and so does a decimal (6.5 in = 6½"). null = nothing typed.
- */
-function dimOf(ft: string, inch: string): Um | null | "bad" {
-  const read = (t: string) => (!t.trim() ? 0 : /^\d+(\.\d+)?$/.test(t.trim()) ? parseFloat(t) : NaN);
-  if (!ft.trim() && !inch.trim()) return null;
-  const f = read(ft), i = read(inch);
-  if (Number.isNaN(f) || Number.isNaN(i)) return "bad";
-  const um = Math.round(feet(f) + inches(i));
-  return um > 0 ? um : "bad";
-}
-
-/** A size back into its two boxes, to edit it: 10'6"4s → "10" and "6.5". */
-function boxesOf(um: Um): [string, string] {
-  const sut = Math.round(um / 3175);
-  const inch = (sut % 96) / 8;
-  return [String(Math.floor(sut / 96)), inch ? String(inch) : ""];
-}
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
@@ -464,12 +439,19 @@ const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
 /** One line of the size list: width, height and how many of that size —
  *  and, for a partition, its own divider gaps (each partition is drawn and
  *  asked about on its own; two partitions rarely want the same grid). */
-interface SizeRow { wf: string; wi: string; hf: string; hi: string; qty: number; bay?: string; row?: string }
-const emptyRow = (): SizeRow => ({ wf: "", wi: "", hf: "", hi: "", qty: 1 });
-const isEmptyRow = (r: SizeRow) => !(r.wf + r.wi + r.hf + r.hi).trim();
-/** The four boxes of a size line, in the order the keyboard's Next walks them. */
-const BOXES = ["wf", "wi", "hf", "hi"] as const;
-type BoxKey = typeof BOXES[number];
+interface SizeRow { w: string; h: string; fix: string; qty: number; bay?: string; row?: string }
+const emptyRow = (): SizeRow => ({ w: "", h: "", fix: "", qty: 1 });
+const isEmptyRow = (r: SizeRow) => !(r.w + r.h + r.fix).trim();
+type BoxKey = "w" | "h" | "fix";
+
+/** The fixed glass of a Domal "fixed top" or a Z-section "fixed + openable"
+ *  differs window to window, so it is typed with each size, not picked once. */
+function fixedPart(type: OpeningType, o: Opts): string | null {
+  if (type !== "window") return null;
+  if (o.sys === "domal" && o.domalFix === "yes") return "Fixed top";
+  if (o.sys === "z_section" && o.zType === "combo") return o.zComboDir === "top" ? "Fixed top" : o.zComboDir === "both" ? "Each fixed side" : "Fixed side";
+  return null;
+}
 
 function JobScreen({
   items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings,
@@ -552,24 +534,41 @@ function JobScreen({
   };
 
   /* —— sizes —— */
+  // A partition's bare "20" is 20 ft (they run up to 25 ft); a window's is 20".
+  const feetBelow = type === "partition" ? 26 : undefined;
+  const fixLabel = fixedPart(type, o);
+  /** Line i's meta: the shared choices, with its own fixed glass and divider gaps on top. */
+  const metaOf = (row: SizeRow | undefined) => {
+    const m = metaFor(type, o);
+    if (!row) return m;
+    const fx = fixLabel ? parseTradeSize(row.fix) : null;
+    if (fx) m[o.sys === "domal" ? "domalFixFt" : "zFixedFt"] = String(Math.round(toFeet(fx) * 10000) / 10000);
+    if (type === "partition") {
+      if (row.bay) m.partBayFt = row.bay;
+      if (row.row) m.partRowFt = row.row;
+    }
+    return m;
+  };
   /** Why this size cannot be built as chosen — said on its own line, at once. */
-  const problemOf = (wu: Um, hu: Um): string | null => {
+  const problemOf = (wu: Um, hu: Um, row: SizeRow): string | null => {
     const warn = openingWarning(wu, hu);
     if (warn) return warn;
     try {
-      estimate([buildJobItem(1, type, wu, hu, 1, metaFor(type, o))]);
+      estimate([buildJobItem(1, type, wu, hu, 1, metaOf(row))]);
       return null;
     } catch (e) {
       return layoutError(e);
     }
   };
   const parsed = useMemo(() => rows.map((row) => {
-    const w = dimOf(row.wf, row.wi), h = dimOf(row.hf, row.hi);
-    const wu = typeof w === "number" ? w : null, hu = typeof h === "number" ? h : null;
+    const wu = parseTradeSize(row.w, feetBelow), hu = parseTradeSize(row.h, feetBelow);
+    const fu = fixLabel ? parseTradeSize(row.fix) : null;
     const empty = isEmptyRow(row);
-    const warn = w === "bad" || h === "bad" ? "Check this size — numbers only"
-      : wu !== null && hu !== null ? problemOf(wu, hu) : null;
-    return { wu, hu, empty, warn, ready: wu !== null && hu !== null && !warn };
+    const unreadable = (row.w.trim() && wu === null) || (row.h.trim() && hu === null) || (fixLabel && row.fix.trim() && fu === null);
+    const needFix = !!fixLabel && fu === null;
+    const warn = unreadable ? "Not a size — 4.6 means 4 ft 6 in"
+      : wu !== null && hu !== null && !needFix ? problemOf(wu, hu, row) : null;
+    return { wu, hu, fu, empty, warn, ready: wu !== null && hu !== null && !needFix && !warn };
   }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
   const filled = parsed.filter((p) => !p.empty);
   const readyCount = parsed.filter((p) => p.ready).length;
@@ -578,8 +577,8 @@ function JobScreen({
   const sizeOf = (i: number) => {
     const e = editDims, p = parsed[i];
     return {
-      wu: e && i === 0 && `${rows[0].wf}|${rows[0].wi}` === e.w ? e.wu : p.wu!,
-      hu: e && i === 0 && `${rows[0].hf}|${rows[0].hi}` === e.h ? e.hu : p.hu!,
+      wu: e && i === 0 && rows[0].w === e.w ? e.wu : p.wu!,
+      hu: e && i === 0 && rows[0].h === e.h ? e.hu : p.hu!,
     };
   };
   /** The lines that will be added, in order — the divider screens walk them one by one. */
@@ -589,15 +588,6 @@ function JobScreen({
   /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
   const [seenPart, setSeenPart] = useState(0);
   const pr = readyIdx[Math.min(part, readyIdx.length - 1)] ?? 0;
-  /** Line i's meta: the shared choices, with its own divider gaps on top. */
-  const metaOf = (row: SizeRow | undefined) => {
-    const m = metaFor(type, o);
-    if (type === "partition" && row) {
-      if (row.bay) m.partBayFt = row.bay;
-      if (row.row) m.partRowFt = row.row;
-    }
-    return m;
-  };
 
   /** Everything typed joins the job together, only when the flow is finished. */
   const finish = (rs: SizeRow[] = rows) => {
@@ -683,21 +673,23 @@ function JobScreen({
   const startEdit = (it: JobItem) => {
     setType(it.type);
     setO(optsFromItem(it));
-    const [wf, wi] = boxesOf(it.width), [hf, hi] = boxesOf(it.height);
-    setRows([{ wf, wi, hf, hi, qty: it.qty }]);
-    setEditDims({ w: `${wf}|${wi}`, h: `${hf}|${hi}`, wu: it.width, hu: it.height });
+    const w = formatTradeSize(it.width), h = formatTradeSize(it.height);
+    const fx = it.meta.domalFix === "yes" ? it.meta.domalFixFt : it.meta.zType === "combo" ? it.meta.zFixedFt : undefined;
+    setRows([{ w, h, fix: fx ? formatTradeSize(feet(parseFloat(fx) || 0)) : "", qty: it.qty }]);
+    setEditDims({ w, h, wu: it.width, hu: it.height });
     openFlow("size", it.id);
   };
 
   /* —— typing sizes ——
-   * The phone's own number keyboard: feet and inches each have a box, so no
-   * ' or " has to be found. Its Next key walks width ft → in → height ft → in
-   * → the next size. An empty size line always waits below the last one, so
-   * the next size is open the moment one is started — and every size stays
-   * on screen, editable, until the flow is finished. */
+   * One box for the width and one for the height, on the phone's own number
+   * keyboard — the point separates feet from inches (4.6 = 4'6"), so there is
+   * no ' or " to find. Its Next key walks width → height (→ fixed glass) → the
+   * next size. An empty size card always waits below the last one, and every
+   * size stays on screen, editable, until the flow is finished. */
   const boxes = useRef<Record<string, HTMLInputElement | null>>({});
+  const order: BoxKey[] = fixLabel ? ["w", "h", "fix"] : ["w", "h"];
   const setBox = (r: number, k: BoxKey, v: string) => {
-    const clean = v.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 6);
+    const clean = v.replace(/[^\d.'"\- ]/g, "").slice(0, 10);
     setRows((rs) => {
       const next = rs.map((x, i) => (i === r ? { ...x, [k]: clean } : x));
       if (!flow?.editing && !isEmptyRow(next[next.length - 1])) next.push(emptyRow());
@@ -705,8 +697,8 @@ function JobScreen({
     });
   };
   const focusNext = (r: number, k: BoxKey) => {
-    const at = BOXES.indexOf(k);
-    const el = boxes.current[at < 3 ? `${r}-${BOXES[at + 1]}` : `${r + 1}-wf`];
+    const at = order.indexOf(k);
+    const el = boxes.current[at < order.length - 1 ? `${r}-${order[at + 1]}` : `${r + 1}-w`];
     if (el) el.focus(); else (document.activeElement as HTMLElement | null)?.blur();
   };
   const removeLine = (i: number) => setRows((rs) => {
@@ -718,26 +710,25 @@ function JobScreen({
   useEffect(() => {
     if (flow?.step !== "size" || flow.editing) return;
     const r = rows.findIndex(isEmptyRow);
-    if (r >= 0) boxes.current[`${r}-wf`]?.focus();
+    if (r >= 0) boxes.current[`${r}-w`]?.focus();
   }, [flow?.step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ————— the add / edit flow ————— */
   if (flow) {
     const i = steps.indexOf(flow.step);
     const pick = (t: OpeningType) => { setType(t); choose({}, true, t); };
-    // What is being added, drawn. A partition's panels are not chosen yet,
-    // so it is named by its door only.
-    const live = sample(type, o);
+    // What is being added, named in the header. A partition's panels are not
+    // chosen yet, so it is named by its door only.
     const liveLabel = type === "partition"
-      ? `Partition · ${o.partDoor === "yes" ? `with ${o.partDoorW} ft door` : "no door"}`
-      : itemLabel(live);
+      ? `Partition · ${o.partDoor === "yes" ? `${o.partDoorW} ft door` : "no door"}`
+      : itemLabel(sample(type, o)).replace(/ \([^)]*fixed[^)]*\)| · [\d.]+ ft fixed top/, "");
     /** The partition the divider screens draw: the one being asked about. */
     const shape = readyIdx.length
       ? buildJobItem(1, type, sizeOf(pr).wu, sizeOf(pr).hu, 1, metaOf(rows[pr]))
       : sample(type, o);
     const manyParts = readyIdx.length > 1;
     const lastPart = part >= readyIdx.length - 1;
-    const doneLabel = flow.editing ? "Save ✓" : `✓ Add ${plural(readyCount, "size")} to the job`;
+    const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, "size")}`;
     // the divider screens: which lines, how many panels, and the gap they leave
     const vertical = flow.step === "partBays";
     const grid = type === "partition" ? partitionGeometry(shape).layout : null;
@@ -745,6 +736,18 @@ function JobScreen({
     const gap = grid ? (vertical ? grid.cellW : grid.glassRowH) : 0;
     /** The length the panels share equally — what a panel count divides. */
     const span = grid ? toFeet(vertical ? grid.fieldW : grid.innerH - (grid.sheetH > 0 ? grid.sheetH + grid.face : 0)) : 0;
+    /* A gap that does not divide the partition equally (3 ft on 10 ft) is
+     * answered with the two equal splits either side of it, so the fabricator
+     * picks the real one instead of being surprised by it. A gap set from a
+     * panel count is already a split and needs no question. */
+    const wantFt = parseFloat((vertical ? rows[pr]?.bay : rows[pr]?.row) ?? (vertical ? o.partBayFt : o.partRowFt)) || 0;
+    const cellOf = (k: number) => (feet(span) - (k - 1) * (grid?.face ?? 0)) / k;
+    const fromCount = Math.abs(span / Math.max(1, Math.round(span / (wantFt || 1))) - wantFt) < 0.001;
+    let below = 1;
+    while (grid && cellOf(below + 1) >= feet(wantFt) && below < 40) below++;
+    const splits = grid && !fromCount && Math.abs(gap - feet(wantFt)) > 12700 && cellOf(below) >= feet(1)
+      ? [below, below + 1].filter((k) => cellOf(k) >= feet(1))
+      : [];
 
     return (
       <div className="flex flex-col gap-4">
@@ -752,8 +755,9 @@ function JobScreen({
         <div className="flex items-center gap-3 py-1">
           <button onClick={back} aria-label="Back" className="btn-ghost grid h-10 w-10 shrink-0 place-items-center text-lg">←</button>
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
-              {flow.editing ? `Editing ${flow.editing}` : `Add ${type}`} · Step {i + 1} of {steps.length}
+            <div className="truncate text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
+              {/* what is being made is named once its questions are answered — before that it would name defaults */}
+              {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
             </div>
             <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
           </div>
@@ -812,15 +816,6 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "domalFixFt" && (
-          <div className="grid grid-cols-2 gap-2">
-            {FIX_FT.map(([v, label]) => (
-              <Choice key={v} selected={o.domalFixFt === v} onClick={() => choose({ domalFixFt: v })} title={label}
-                picture={<MiniElevation item={sample("window", { ...o, domalFixFt: v })} size={100} />} />
-            ))}
-          </div>
-        )}
-
         {flow.step === "zType" && (
           <div className="grid grid-cols-2 gap-2">
             {Z_TYPES.map(([v, label]) => (
@@ -839,15 +834,6 @@ function JobScreen({
             {Z_DIRS.map(([v, label]) => (
               <Choice key={v} selected={o.zComboDir === v} onClick={() => choose({ zComboDir: v })} title={label}
                 picture={<MiniElevation item={sample("window", { ...o, zComboDir: v })} size={80} />} />
-            ))}
-          </div>
-        )}
-
-        {flow.step === "zFixed" && (
-          <div className="grid grid-cols-2 gap-2">
-            {FIX_FT.map(([v, label]) => (
-              <Choice key={v} selected={o.zFixedFt === v} onClick={() => choose({ zFixedFt: v })} title={label}
-                picture={<MiniElevation item={sample("window", { ...o, zFixedFt: v })} size={100} />} />
             ))}
           </div>
         )}
@@ -919,30 +905,38 @@ function JobScreen({
 
         {(flow.step === "partBays" || flow.step === "partRows") && (
           <div className="flex flex-col gap-3">
-            {manyParts && (
-              <div className="card flex items-center gap-2 px-3 py-2" style={{ background: "var(--accent-soft)", borderColor: "var(--accent)" }}>
-                <span className="text-sm font-bold">Partition {part + 1} of {readyIdx.length}</span>
-                <span className="text-sm font-semibold tabnum" style={{ color: "var(--ink-2)" }}>
-                  · {formatFtIn(shape.width)} × {formatFtIn(shape.height)}{rows[pr].qty > 1 ? ` × ${rows[pr].qty} pcs` : ""}
-                </span>
-              </div>
-            )}
-            <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-              {vertical
-                ? "Standing (khadi) lines — tap the gap between them. The drawing is your partition."
-                : "Lying (leti) lines — tap the gap between them. The drawing is your partition."}
-            </p>
-            <div className="card flex flex-col items-center gap-2 p-3">
-              <PartitionGapPicture item={shape} axis={vertical ? "v" : "h"} />
-              <div className="text-center text-sm font-bold tabnum">
-                {vertical
-                  ? `${plural(n, "panel")} across, each ${formatFtIn(gap)} wide`
-                  : `${plural(n, "panel")} high, each ${formatFtIn(gap)} high`}
-              </div>
-              <div className="text-center text-xs" style={{ color: "var(--ink-3)" }}>
-                Panels are made equal, so the gap may be a little more or less than chosen
+            {/* the drawing stays at the top while the gap is typed or stepped */}
+            <div className="sticky top-0 z-10 -mx-4 px-4 pb-1 pt-1" style={{ background: "var(--bg)" }}>
+              <div className="card flex flex-col items-center gap-1.5 p-3">
+                {manyParts && (
+                  <div className="self-stretch text-sm font-bold tabnum">
+                    Partition {part + 1} of {readyIdx.length}
+                    <span className="font-semibold" style={{ color: "var(--ink-3)" }}>
+                      {" "}· {formatFtIn(shape.width)} × {formatFtIn(shape.height)}{rows[pr].qty > 1 ? ` × ${rows[pr].qty}` : ""}
+                    </span>
+                  </div>
+                )}
+                <PartitionGapPicture item={shape} axis={vertical ? "v" : "h"} maxH={180} />
+                <div className="text-center text-sm font-bold tabnum">
+                  {n} equal panels {vertical ? "across" : "high"} · {formatFtIn(gap)} each
+                </div>
               </div>
             </div>
+            {splits.length > 0 && (
+              <div className="card flex flex-col gap-2 p-3" style={{ background: "var(--warn-soft)" }}>
+                <div className="text-xs font-semibold" style={{ color: "var(--warn)" }}>
+                  {formatFtIn(feet(wantFt))} does not divide {formatFtIn(vertical ? shape.width : shape.height)} equally — choose:
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {splits.map((k) => (
+                    <button key={k} onClick={() => setGap(vertical ? "bay" : "row", String(Math.round((span / k) * 10000) / 10000))}
+                      aria-pressed={n === k} className={`chip px-2 py-2 text-sm tabnum ${n === k ? "selected" : ""}`}>
+                      {k} panels · {formatFtIn(cellOf(k))}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <GapPicker key={`${flow.step}-${part}`}
               options={vertical ? BAY_FT : ROW_FT}
               value={(vertical ? rows[pr]?.bay : rows[pr]?.row) ?? (vertical ? o.partBayFt : o.partRowFt)}
@@ -951,16 +945,16 @@ function JobScreen({
               onChange={(v) => setGap(vertical ? "bay" : "row", v)}
             />
             {vertical ? (
-              <button onClick={() => go("partRows")} className="btn-primary w-full py-3.5">Next — horizontal lines →</button>
+              <button onClick={() => go("partRows")} className="btn-primary w-full py-3.5">Next — horizontal lines</button>
             ) : lastPart ? (
               <button onClick={() => finish()} className="btn-primary w-full py-3.5">{doneLabel}</button>
             ) : (
               <>
                 <button onClick={nextPartition} className="btn-primary w-full py-3.5">
-                  Next — partition {part + 2} of {readyIdx.length} →
+                  Next — partition {part + 2} of {readyIdx.length}
                 </button>
                 <button onClick={sameForRest} className="btn-ghost w-full py-3 text-sm">
-                  Same lines for the remaining {plural(readyIdx.length - part - 1, "partition")} — add all
+                  Same lines for the rest — add all
                 </button>
               </>
             )}
@@ -968,27 +962,19 @@ function JobScreen({
         )}
 
         {flow.step === "size" && (
-          <div className="flex flex-col gap-3">
-            {/* what is being added — one slim line, tap to change it */}
-            <button onClick={() => go(steps[1] ?? "type")} className="card flex items-center gap-3 px-3 py-2 text-left">
-              <span className="grid w-10 shrink-0 place-items-center"><MiniElevation item={live} size={type === "door" ? 20 : 40} /></span>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{liveLabel}</span>
-              <span className="shrink-0 text-xs font-bold" style={{ color: "var(--accent)" }}>Change</span>
-            </button>
-
-            {/* one card per size, each still editable until the flow is finished */}
+          <div className="flex flex-col gap-2.5">
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
+              const keys: [BoxKey, string, string][] = [["w", "Width", "4.6"], ["h", "Height", "4"], ...(fixLabel ? [["fix", fixLabel, "1.6"] as [BoxKey, string, string]] : [])];
               return (
-                <div key={r} className="card p-3"
-                  style={{ scrollMarginBottom: 110, borderColor: p.warn ? "var(--bad)" : undefined }}>
+                <div key={r} className="card px-3 pb-2 pt-2.5" style={{ scrollMarginBottom: 110, scrollMarginTop: 80 }}>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-sm font-bold">
                       {flow.editing ?? `Size ${r + 1}`}
                       {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
                     </span>
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Qty</span>
                       <MiniQty value={row.qty} label={`size ${r + 1}`}
                         onChange={(q) => setRows((rs) => rs.map((x, k) => (k === r ? { ...x, qty: q } : x)))} />
@@ -998,28 +984,19 @@ function JobScreen({
                       )}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([["Width", "wf", "wi"], ["Height", "hf", "hi"]] as const).map(([label, kf, ki]) => (
-                      <div key={label}>
-                        <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>{label}</div>
-                        <div className="flex gap-1.5">
-                          {([[kf, "ft"], [ki, "in"]] as const).map(([k, unit]) => (
-                            <NumBox key={k} label={`${label} ${unit === "ft" ? "feet" : "inches"} ${r + 1}`} unit={unit}
-                              value={row[k]} last={k === "hi" && !!flow.editing}
-                              inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
-                              onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
-                          ))}
-                        </div>
-                      </div>
+                  <div className="flex gap-2">
+                    {keys.map(([k, label, ph]) => (
+                      <SizeInput key={k} label={label} value={row[k]} placeholder={r === 0 ? ph : ""}
+                        bad={!!p.warn} last={!!flow.editing && k === keys[keys.length - 1][0]}
+                        inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
+                        onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
                     ))}
                   </div>
-                  <div className="mt-1.5 min-h-[16px] text-xs font-medium"
+                  <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
                     style={{ color: p.warn ? "var(--bad)" : p.ready ? "var(--good)" : "var(--ink-3)" }}>
                     {p.warn ?? (p.ready
-                      ? `= ${formatFtIn(p.wu!)} × ${formatFtIn(p.hu!)}`
-                      : p.empty
-                        ? (r === 0 ? "For example: Width 4 ft 6 in · Height 4 ft" : "Next size — leave it empty if you are done")
-                        : p.wu === null ? "Type the width" : "Now the height")}
+                      ? `${formatFtIn(p.wu!)} × ${formatFtIn(p.hu!)}${p.fu ? ` · ${fixLabel!.toLowerCase()} ${formatFtIn(p.fu)}` : ""}`
+                      : r === 0 && p.empty ? "4.6 = 4 ft 6 in" : "")}
                   </div>
                 </div>
               );
@@ -1027,30 +1004,17 @@ function JobScreen({
             {flow.editing && (
               <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
                 className="py-2 text-sm font-semibold" style={{ color: "var(--bad)" }}>
-                Remove {flow.editing} from the job
+                Remove {flow.editing}
               </button>
             )}
             {/* room for the button, which sits over the bottom of the screen */}
-            <div aria-hidden style={{ height: 84 }} />
+            <div aria-hidden style={{ height: 76 }} />
 
             <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2.5"
               style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
               <div className="mx-auto max-w-xl">
-                <button onClick={sizesDone} disabled={!allReady}
-                  className="btn-dark flex w-full items-center justify-between gap-3 px-4 py-3 text-left disabled:opacity-40">
-                  <span>
-                    <span className="block text-base font-bold">
-                      {afterSize.length ? "Next — choose the lines →" : doneLabel}
-                    </span>
-                    <span className="block text-xs font-normal opacity-80">
-                      {!filled.length
-                        ? "Type at least one size"
-                        : !allReady
-                          ? "Finish or fix the size marked in red"
-                          : afterSize.length ? `${plural(readyCount, "partition")} · lines shown on a drawing` : flow.editing ? "Back to the list" : "Then get the material list"}
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-xl">→</span>
+                <button onClick={sizesDone} disabled={!allReady} className="btn-dark w-full py-3.5 text-base disabled:opacity-40">
+                  {afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
                 </button>
               </div>
             </div>
@@ -1085,12 +1049,7 @@ function JobScreen({
       {items.length === 0 ? (
         /* first screen: what are you making — tap one to start */
         <div className="card flex flex-col gap-4 p-4">
-          <div>
-            <h1 className="text-xl font-bold">What are you making?</h1>
-            <p className="mt-0.5 text-sm" style={{ color: "var(--ink-2)" }}>
-              Tap one, then type your sizes one below the other.
-            </p>
-          </div>
+          <h1 className="text-xl font-bold">What are you making?</h1>
           <TypeCards onPick={startType} big />
         </div>
       ) : (
@@ -1200,27 +1159,32 @@ function JobScreen({
 }
 
 /**
- * The gap between partition dividers: the usual ones as one tap, any other
- * gap an inch at a time with − / + — no keyboard opens, so the drawing above
- * stays in view while the lines move — or simply the number of panels.
+ * The gap between partition dividers: the usual ones as one tap, or any
+ * other gap — typed (2.9 = 2'9") or stepped an inch at a time — or simply
+ * the number of panels. The drawing above stays in view throughout.
  */
 function GapPicker({ options, value, max, count, span, onChange }: {
   options: Opt[]; value: string; max: number; count: number; span: number; onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  /** The gap in whole inches, as "Other gap" shows and steps it. */
-  const inchesNow = Math.round((parseFloat(value) || 3) * 12);
+  const [txt, setTxt] = useState("");
+  const ftNow = parseFloat(value) || 3;
+  const valid = (f: number) => f >= 1 && f <= max;
+  const put = (f: number) => onChange(String(Math.round(f * 10000) / 10000));
   const stepGap = (d: number) => {
-    const nv = (inchesNow + d) / 12;
-    if (nv < 1 || nv > max) return;
-    onChange(String(Math.round(nv * 1000) / 1000));
+    const f = (Math.round(ftNow * 12) + d) / 12;
+    if (!valid(f)) return;
+    setTxt(formatTradeSize(feet(f)));
+    put(f);
   };
+  const typed = parseTradeSize(txt, 26);
+  const err = !txt.trim() ? null : typed === null ? "4.6 means 4 ft 6 in" : !valid(toFeet(typed)) ? `Between 1 ft and ${formatFtIn(feet(max))}` : null;
   /** Many shops think in panels ("4 khane"), not gaps: the gap that gives exactly k. */
   const setCount = (k: number) => {
-    const v = Math.round((span / k) * 1000) / 1000;
-    if (k < 1 || v < 1) return;
+    const f = span / k;
+    if (k < 1 || f < 1) return;
     setOpen(false);
-    onChange(String(v));
+    put(f);
   };
   return (
     <div className="flex flex-col gap-2">
@@ -1231,23 +1195,37 @@ function GapPicker({ options, value, max, count, span, onChange }: {
             {label}
           </button>
         ))}
-        <button onClick={() => { setOpen(true); stepGap(0); }} aria-pressed={open}
+        <button onClick={() => { setOpen(true); setTxt(formatTradeSize(feet(Math.round(ftNow * 12) / 12))); }} aria-pressed={open}
           className={`chip min-h-[48px] px-2 py-2 text-base ${open ? "selected" : ""}`}>
           Other gap
         </button>
       </div>
       {open && (
-        <div className="card flex items-center justify-between gap-2 p-2">
-          <button onClick={() => stepGap(-1)} aria-label="One inch less" className="btn-ghost h-12 w-16 text-base">− 1&quot;</button>
-          <div className="text-center">
-            <div className="text-2xl font-extrabold tabnum">{formatFtIn(inches(inchesNow))}</div>
-            <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>gap you want</div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-stretch gap-2">
+            <button onClick={() => stepGap(-1)} aria-label="One inch less" className="btn-ghost w-14 shrink-0 text-base">−1&quot;</button>
+            <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
+              style={err ? { borderColor: "var(--bad)" } : undefined}>
+              <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Gap</span>
+              <input value={txt} inputMode="decimal" enterKeyHint="done" aria-label="Gap" autoComplete="off"
+                onChange={(e) => {
+                  const t = e.target.value.replace(/[^\d.'"\- ]/g, "").slice(0, 8);
+                  setTxt(t);
+                  const um = parseTradeSize(t, 26);
+                  if (um !== null && valid(toFeet(um))) put(toFeet(um));
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none" />
+            </label>
+            <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost w-14 shrink-0 text-base">+1&quot;</button>
           </div>
-          <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost h-12 w-16 text-base">+ 1&quot;</button>
+          <div className="min-h-[16px] text-xs font-semibold" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
+            {err ?? (typed !== null ? `= ${formatFtIn(typed)}` : "4.6 = 4 ft 6 in")}
+          </div>
         </div>
       )}
       <div className="card flex items-center justify-between gap-3 px-3 py-2">
-        <span className="text-sm font-semibold">Or the number of panels</span>
+        <span className="text-sm font-semibold">Panels</span>
         <MiniQty value={count} label="panels" onChange={setCount} />
       </div>
     </div>
@@ -1272,19 +1250,20 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
   );
 }
 
-/** One number box — feet or inches — on the phone's own number keyboard. */
-function NumBox({ label, unit, value, last, inputRef, onChange, onNext }: {
-  label: string; unit: string; value: string; last?: boolean;
+/** One size box on the phone's own number keyboard, its name inside the box. */
+function SizeInput({ label, value, placeholder, bad, last, inputRef, onChange, onNext }: {
+  label: string; value: string; placeholder?: string; bad?: boolean; last?: boolean;
   inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void;
 }) {
   return (
-    <label className="dim-input flex min-w-0 flex-1 items-center gap-1 px-2 focus-within:border-[color:var(--accent)]">
-      <input ref={inputRef} value={value} aria-label={label}
+    <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
+      style={bad ? { borderColor: "var(--bad)" } : undefined}>
+      <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>{label}</span>
+      <input ref={inputRef} value={value} placeholder={placeholder} aria-label={label}
         type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
-        className="w-full min-w-0 bg-transparent py-2 text-xl font-semibold tabnum outline-none" />
-      <span className="shrink-0 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{unit}</span>
+        className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:font-normal placeholder:text-[#c2c7cf]" />
     </label>
   );
 }
