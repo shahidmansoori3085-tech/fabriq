@@ -61,6 +61,8 @@ interface Opts {
   doorMix: string;
   /** Center rails across the door shutter — panels = centers + 1. */
   doorCenters: string;
+  /** Center rails across a Z-section door leaf (0 = one full pane). */
+  zDoorCenters: string;
   /** Door: the normal palla door, or a Z-section (hinged glass) door. */
   doorSys: string;
   /** Partition: SP/DP pipe, or a Z-section fixed-glass grid. */
@@ -75,7 +77,7 @@ interface Opts {
 const DEFAULT_OPTS: Opts = {
   sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
-  palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2",
+  palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
   partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
@@ -121,7 +123,7 @@ const labelOf = (opts: Opt[], v: string | undefined) => opts.find(([k]) => k ===
 /** The form's choices → the meta map the engine reads. */
 function metaFor(type: OpeningType, o: Opts): Record<string, string> {
   if (type === "door") {
-    if (o.doorSys === "z") return { system: "z_section" };
+    if (o.doorSys === "z") return { system: "z_section", zDoorCenters: o.zDoorCenters };
     const mix = doorMixOf(o);
     return { palla: o.palla, chokhat: o.chokhat, rails: String(mix.length - 1), zonemix: mix };
   }
@@ -155,7 +157,7 @@ function optsFromItem(it: JobItem): Opts {
   const o: Opts = { ...DEFAULT_OPTS };
   const pick = (k: keyof Opts, v: string | undefined) => { if (v) o[k] = v as never; };
   if (it.type === "door") {
-    if (it.system === "z_section") o.doorSys = "z";
+    if (it.system === "z_section") { o.doorSys = "z"; pick("zDoorCenters", m.zDoorCenters); }
     pick("palla", m.palla); pick("chokhat", m.chokhat); pick("doorMix", m.zonemix);
     if (m.zonemix) o.doorCenters = String(Math.min(4, Math.max(1, m.zonemix.length - 1)));
   } else if (it.type === "partition") {
@@ -176,7 +178,10 @@ function optsFromItem(it: JobItem): Opts {
 /** One line a fabricator reads at a glance: "Domal 3 Track · 2 Glass + 1 Mesh". */
 function itemLabel(it: JobItem): string {
   const m = it.meta;
-  if (it.type === "door" && it.system === "z_section") return "Z-Section door · 40×55 · glass";
+  if (it.type === "door" && it.system === "z_section") {
+    const c = parseInt(m.zDoorCenters ?? "0", 10) || 0;
+    return `Z-Section door · 40×55 · ${c ? `${c} center${c > 1 ? "s" : ""}` : "no center"}`;
+  }
   if (it.type === "partition" && it.system === "z_section") {
     const L = partitionLayout(it);
     return `Z-Section partition ${m.zSize === "heavy" ? "40×55" : "40×40"} · ${L.bays} × ${L.glassRows} glass panels`;
@@ -411,13 +416,13 @@ function layoutError(e: unknown): string {
 type StepId =
   | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
-  | "doorSys" | "doorCenters" | "doorFrame" | "doorSection"
+  | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorW" | "size" | "partBays" | "partRows";
 
 /** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
   if (type === "door") {
-    return ["type", "doorSys", ...(o.doorSys === "z" ? [] : ["doorCenters", "doorFrame", "doorSection"] as const), "size"];
+    return ["type", "doorSys", ...(o.doorSys === "z" ? ["zDoorCenters"] as const : ["doorCenters", "doorFrame", "doorSection"] as const), "size"];
   }
   if (type === "partition") {
     const kind: StepId[] = o.partSys === "z"
@@ -450,6 +455,7 @@ const STEP_TITLE: Record<StepId, string> = {
   zProfile: "Which section?",
   doorSys: "Which door?",
   doorCenters: "How many center rails?",
+  zDoorCenters: "How many center rails?",
   doorFrame: "Frame (chaukhat) too?",
   doorSection: "Shutter section?",
   partSys: "Which partition?",
@@ -920,6 +926,15 @@ function JobScreen({
             {DOOR_CENTERS.map(([v, label]) => (
               <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
                 picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "zDoorCenters" && (
+          <div className="grid grid-cols-3 gap-2">
+            {[["0", "None"], ...DOOR_CENTERS].map(([v, label]) => (
+              <Choice key={v} selected={o.zDoorCenters === v} onClick={() => choose({ zDoorCenters: v })} title={label}
+                picture={<MiniElevation item={sample("door", { ...o, zDoorCenters: v })} size={40} />} />
             ))}
           </div>
         )}

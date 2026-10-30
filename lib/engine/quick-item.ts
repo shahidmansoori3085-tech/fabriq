@@ -68,7 +68,11 @@ export function buildJobItem(
       next.partBayFt = next.partBayFt ?? "2.5";
       next.partRowFt = next.partRowFt ?? "3.5";
     }
-    shutters = type === "door" ? [{ kind: "glass" }] : [];
+    if (type === "door") next.zDoorCenters = next.zDoorCenters ?? "0";
+    // one drawn zone per glass pane, so the door is pictured with its centers
+    shutters = type === "door"
+      ? Array.from({ length: (parseInt(next.zDoorCenters, 10) || 0) + 1 }, () => ({ kind: "glass" as const }))
+      : [];
   } else if (type === "door") {
     sys = "door_single";
     next.chokhat = next.chokhat ?? "needed";

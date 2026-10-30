@@ -297,6 +297,8 @@ export interface ZSash {
   shW: Um; shH: Um;         // shutter (Z-pipe) outer cut sizes
   pocketW: Um; pocketH: Um; // glass pocket (shutter inside-to-inside)
   glassW: Um; glassH: Um;   // actual glass cut
+  /** A door leaf split by center rails: its panes, top to bottom. Absent = one pane. */
+  panes?: { pocketW: Um; pocketH: Um; glassW: Um; glassH: Um }[];
 }
 export interface ZFixed {
   kind: "glass" | "jali" | "sheet";
@@ -404,6 +406,19 @@ export function zGeometry(item: JobItem): ZGeom {
   const sashOpenW = n > 1 ? Math.round((openW - (n - 1) * 2 * Z_TRANSOM_HALF) / n) : openW;
   if (!isDoor) for (let m = 0; m < n - 1; m++) g.mullions.push(openH);
   sashes.forEach((sh) => g.sashes.push(zMakeSash(sh.kind, sashOpenW, openH, isDoor)));
+  // A Z door's center rails: Z center pieces across the leaf, inside its
+  // Z-pipe frame, splitting the glass into equal panes top to bottom. Each
+  // center takes half its face from the pane on either side, like a transom.
+  const centers = isDoor ? Math.max(0, Math.min(4, parseInt(item.meta.zDoorCenters ?? "0", 10) || 0)) : 0;
+  if (centers > 0) {
+    const leaf = g.sashes[0];
+    const paneH = Math.round((leaf.pocketH - centers * 2 * Z_TRANSOM_HALF) / (centers + 1));
+    for (let c = 0; c < centers; c++) g.transoms.push(leaf.pocketW);
+    leaf.panes = Array.from({ length: centers + 1 }, () => ({
+      pocketW: leaf.pocketW, pocketH: paneH,
+      glassW: leaf.pocketW - 2 * Z_GLASS_CLEAR, glassH: paneH - 2 * Z_GLASS_CLEAR,
+    }));
+  }
   return g;
 }
 
@@ -825,7 +840,10 @@ function expandZSectionItem(item: JobItem): CutPiece[] {
       push(g.pipe, s.shW, `${sn} Shutter Bottom${kindTag}`);
       push(g.pipe, s.shH, `${sn} Shutter Left${kindTag}`);
       push(g.pipe, s.shH, `${sn} Shutter Right${kindTag}`);
-      if (s.kind === "glass") pushClip(s.pocketW, s.pocketH, sn);
+      if (s.kind === "glass") {
+        if (s.panes) s.panes.forEach((p, k) => pushClip(p.pocketW, p.pocketH, `${sn} Pane ${k + 1}`));
+        else pushClip(s.pocketW, s.pocketH, sn);
+      }
     });
   }
   return pieces;
@@ -901,7 +919,7 @@ export function estimate(items: JobItem[]): MaterialList {
         if (kind === "sheet") sheetSplineFt += 2 * (toFeet(w) + toFeet(h)) * item.qty;
       };
       g.fixed.forEach((f) => addPanel(f.kind, f.glassW, f.glassH));
-      g.sashes.forEach((s) => addPanel(s.kind, s.glassW, s.glassH));
+      g.sashes.forEach((s) => (s.panes ?? [s]).forEach((p) => addPanel(s.kind, p.glassW, p.glassH)));
       continue;
     }
 
