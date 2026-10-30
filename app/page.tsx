@@ -75,7 +75,7 @@ interface Opts {
 const DEFAULT_OPTS: Opts = {
   sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
-  palla: "60", chokhat: "needed", doorMix: "GSS", doorCenters: "2",
+  palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2",
   doorSys: "normal", partSys: "spdp",
   partDoor: "no", partDoorW: "3", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
 };
@@ -101,16 +101,15 @@ const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
 const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
-/** Door panels, top to bottom (3 panels, 2 center rails). Glass top is the
- *  usual door (founder, 2026-10-28), so it comes first and is the default. */
+/** Center rails across a door shutter; panels = rails + 1. */
 const DOOR_CENTERS: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]];
 
 /** The door's panels, top to bottom. What fills them does not change the
- *  aluminium, so it is not asked: glass on top, sheet below — the usual door
- *  (founder, 2026-10-28). A job saved with its own mix keeps it. */
+ *  aluminium, so it is not asked: every panel is sheet (founder, 2026-10-30 —
+ *  no glass in the door). A job saved with its own mix keeps it. */
 function doorMixOf(o: Opts): string {
   const n = Math.max(1, parseInt(o.doorCenters, 10) || 2);
-  return o.doorMix.length === n + 1 ? o.doorMix : "G" + "S".repeat(n);
+  return o.doorMix.length === n + 1 ? o.doorMix : "S".repeat(n + 1);
 }
 const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
 /** Gap between the partition's dividers. Any other gap can be typed in. */
