@@ -425,8 +425,10 @@ const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
   z_section: { img: "/sections/z_outer_40.png", sub: "Hinged, opens out" },
 };
 
-/** One line of the size list: width, height and how many of that size. */
-interface SizeRow { w: string; h: string; qty: number }
+/** One line of the size list: width, height and how many of that size —
+ *  and, for a partition, its own divider gaps (each partition is drawn and
+ *  asked about on its own; two partitions rarely want the same grid). */
+interface SizeRow { w: string; h: string; qty: number; bay?: string; row?: string }
 const emptyRow = (): SizeRow => ({ w: "", h: "", qty: 1 });
 
 function JobScreen({
@@ -548,15 +550,29 @@ function JobScreen({
       hu: e && i === 0 && rows[0].h === e.h ? e.hu : p.ph!.um,
     };
   };
-  const firstReady = parsed.findIndex((p) => p.ready);
+  /** The lines that will be added, in order — the divider screens walk them one by one. */
+  const readyIdx = parsed.flatMap((p, i) => (p.ready ? [i] : []));
+  /** Which partition the divider screens are on (index into readyIdx). */
+  const [part, setPart] = useState(0);
+  /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
+  const [seenPart, setSeenPart] = useState(0);
+  const pr = readyIdx[Math.min(part, readyIdx.length - 1)] ?? 0;
+  /** Line i's meta: the shared choices, with its own divider gaps on top. */
+  const metaOf = (row: SizeRow | undefined) => {
+    const m = metaFor(type, o);
+    if (type === "partition" && row) {
+      if (row.bay) m.partBayFt = row.bay;
+      if (row.row) m.partRowFt = row.row;
+    }
+    return m;
+  };
 
   /** Everything typed joins the job together, only when the flow is finished. */
-  const finish = () => {
+  const finish = (rs: SizeRow[] = rows) => {
     if (!flow || !allReady) return;
-    const meta = metaFor(type, o);
     if (flow.editing) {
       const { wu, hu } = sizeOf(0);
-      onReplace(flow.editing, type, wu, hu, rows[0].qty, meta);
+      onReplace(flow.editing, type, wu, hu, rs[0].qty, metaOf(rs[0]));
       setJustAdded([flow.editing]);
     } else {
       // Same numbering the list uses: the next free W-numbers, in order.
@@ -565,7 +581,7 @@ function JobScreen({
       parsed.forEach((p, i) => {
         if (!p.ready) return;
         const { wu, hu } = sizeOf(i);
-        onAdd(type, wu, hu, rows[i].qty, meta);
+        onAdd(type, wu, hu, rs[i].qty, metaOf(rs[i]));
         ids.push(`W${++n}`);
       });
       setJustAdded(ids);
@@ -576,7 +592,36 @@ function JobScreen({
   const sizesDone = () => {
     stopAdvance();
     if (!allReady) return;
-    if (afterSize.length) go(afterSize[0]); else finish();
+    if (!afterSize.length) { finish(); return; }
+    // Every partition starts from the last gaps used; each is then shown on its own.
+    setRows((rs) => rs.map((r) => ({ ...r, bay: r.bay ?? o.partBayFt, row: r.row ?? o.partRowFt })));
+    setPart(0); setSeenPart(0);
+    go(afterSize[0]);
+  };
+  /** Set this partition's gap — and remember it as the default for the next one. */
+  const setGap = (key: "bay" | "row", v: string) => {
+    setRows((rs) => rs.map((r, k) => (k === pr ? { ...r, [key]: v } : r)));
+    setO((x) => ({ ...x, [key === "bay" ? "partBayFt" : "partRowFt"]: v }));
+  };
+  /** After a partition's horizontal lines: the next partition, starting from these gaps. */
+  const nextPartition = () => {
+    const nx = readyIdx[part + 1];
+    if (nx === undefined) { finish(); return; }
+    if (part + 1 > seenPart) {
+      const cur = rows[pr];
+      setRows((rs) => rs.map((r, k) => (k === nx ? { ...r, bay: cur.bay, row: cur.row } : r)));
+      setSeenPart(part + 1);
+    }
+    setPart(part + 1);
+    go("partBays");
+  };
+  /** The rest take this partition's lines, and everything is added at once. */
+  const sameForRest = () => {
+    const cur = rows[pr];
+    const later = new Set(readyIdx.slice(part + 1));
+    const rs = rows.map((r, k) => (later.has(k) ? { ...r, bay: cur.bay, row: cur.row } : r));
+    setRows(rs);
+    finish(rs);
   };
 
   const typedAnything = !flow?.editing && rows.some((r) => r.w.trim() || r.h.trim());
@@ -587,6 +632,8 @@ function JobScreen({
   };
   const back = () => {
     if (!flow) return;
+    // Back from a later partition's first screen is the one before's last.
+    if (flow.step === "partBays" && part > 0) { setPart(part - 1); go("partRows"); return; }
     const i = steps.indexOf(flow.step);
     if (i > 0) go(steps[i - 1]); else leave();
   };
@@ -722,11 +769,12 @@ function JobScreen({
     const live = a.ready
       ? buildJobItem(1, type, a.pw!.um, a.ph!.um, 1, metaFor(type, o))
       : sample(type, o);
-    /** The partition the divider screens draw: the first size typed. */
-    const shape = firstReady >= 0
-      ? buildJobItem(1, type, sizeOf(firstReady).wu, sizeOf(firstReady).hu, 1, metaFor(type, o))
+    /** The partition the divider screens draw: the one being asked about. */
+    const shape = readyIdx.length
+      ? buildJobItem(1, type, sizeOf(pr).wu, sizeOf(pr).hu, 1, metaOf(rows[pr]))
       : sample(type, o);
-    const lastStep = i === steps.length - 1;
+    const manyParts = readyIdx.length > 1;
+    const lastPart = part >= readyIdx.length - 1;
     const doneLabel = flow.editing ? "Save ✓" : `✓ Add ${plural(readyCount, "size")} to the job`;
     const curRow = rows[cur.r] ?? rows[0];
     // the divider screens: which lines, how many panels, and the gap they leave
@@ -734,7 +782,6 @@ function JobScreen({
     const grid = type === "partition" ? partitionGeometry(shape).layout : null;
     const n = grid ? (vertical ? grid.bays : grid.glassRows) : 0;
     const gap = grid ? (vertical ? grid.cellW : grid.glassRowH) : 0;
-    const others = readyCount - 1;
     /** The length the panels share equally — what a panel count divides. */
     const span = grid ? toFeet(vertical ? grid.fieldW : grid.innerH - (grid.sheetH > 0 ? grid.sheetH + grid.face : 0)) : 0;
     const touched = !!(curRow.w.trim() || curRow.h.trim());
@@ -923,6 +970,14 @@ function JobScreen({
 
         {(flow.step === "partBays" || flow.step === "partRows") && (
           <div className="flex flex-col gap-3">
+            {manyParts && (
+              <div className="card flex items-center gap-2 px-3 py-2" style={{ background: "var(--accent-soft)", borderColor: "var(--accent)" }}>
+                <span className="text-sm font-bold">Partition {part + 1} of {readyIdx.length}</span>
+                <span className="text-sm font-semibold tabnum" style={{ color: "var(--ink-2)" }}>
+                  · {formatFtIn(shape.width)} × {formatFtIn(shape.height)}{rows[pr].qty > 1 ? ` × ${rows[pr].qty} pcs` : ""}
+                </span>
+              </div>
+            )}
             <p className="text-sm" style={{ color: "var(--ink-2)" }}>
               {vertical
                 ? "Standing (khadi) lines — tap the gap between them. The drawing is your partition."
@@ -936,21 +991,30 @@ function JobScreen({
                   : `${plural(n, "panel")} high, each ${formatFtIn(gap)} high`}
               </div>
               <div className="text-center text-xs" style={{ color: "var(--ink-3)" }}>
-                {formatFtIn(shape.width)} × {formatFtIn(shape.height)}
-                {others > 0 ? ` · same gap for all ${readyCount} sizes` : ""}
-                {" · "}panels are made equal, so the gap may be a little more or less
+                Panels are made equal, so the gap may be a little more or less than chosen
               </div>
             </div>
-            <GapPicker key={flow.step}
+            <GapPicker key={`${flow.step}-${part}`}
               options={vertical ? BAY_FT : ROW_FT}
-              value={vertical ? o.partBayFt : o.partRowFt}
+              value={(vertical ? rows[pr]?.bay : rows[pr]?.row) ?? (vertical ? o.partBayFt : o.partRowFt)}
               max={toFeet(vertical ? shape.width : shape.height)}
               count={n} span={span}
-              onChange={(v) => choose(vertical ? { partBayFt: v } : { partRowFt: v }, false)}
+              onChange={(v) => setGap(vertical ? "bay" : "row", v)}
             />
-            <button onClick={() => (lastStep ? finish() : go(steps[i + 1]))} className="btn-primary w-full py-3.5">
-              {lastStep ? doneLabel : "Next →"}
-            </button>
+            {vertical ? (
+              <button onClick={() => go("partRows")} className="btn-primary w-full py-3.5">Next — horizontal lines →</button>
+            ) : lastPart ? (
+              <button onClick={() => finish()} className="btn-primary w-full py-3.5">{doneLabel}</button>
+            ) : (
+              <>
+                <button onClick={nextPartition} className="btn-primary w-full py-3.5">
+                  Next — partition {part + 2} of {readyIdx.length} →
+                </button>
+                <button onClick={sameForRest} className="btn-ghost w-full py-3 text-sm">
+                  Same lines for the remaining {plural(readyIdx.length - part - 1, "partition")} — add all
+                </button>
+              </>
+            )}
           </div>
         )}
 
