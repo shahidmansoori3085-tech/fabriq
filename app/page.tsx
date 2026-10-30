@@ -15,10 +15,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, toFeet, feet, sqft, parseOpening, describeDim, openingWarning, type Um,
+  formatFtInSut, formatFtIn, toFeet, feet, sqft, parseOpening, describeDim, openingWarning, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
-import { estimate, ImpossibleLayoutError } from "@/lib/engine/estimator";
+import { estimate, ImpossibleLayoutError, partitionGeometry } from "@/lib/engine/estimator";
 import { buildJobItem } from "@/lib/engine/quick-item";
 import {
   getSection, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
@@ -27,7 +27,7 @@ import { reviewEstimate } from "@/lib/engine/review";
 import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
-import { CuttingGuide, MiniElevation } from "@/components/diagrams";
+import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
 import { SectionProfile, SectionDrawing, hasImage } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
@@ -98,9 +98,9 @@ const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter onl
  *  usual door (founder, 2026-10-28), so it comes first and is the default. */
 const DOOR_MIX: Opt[] = [["GSS", "Glass top"], ["SSS", "All sheet"], ["JSS", "Mesh top"], ["SSJ", "Mesh bottom"]];
 const PART_DOOR_W: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"]];
-const BAY_FT: Opt[] = [["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"]];
-const ROW_FT: Opt[] = [["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
-const PART_SHEET: Opt[] = [["0", "None"], ["1.5", "1.5 ft"], ["2", "2 ft"], ["3", "3 ft"]];
+/** Gap between the partition's dividers. Any other gap can be typed in. */
+const BAY_FT: Opt[] = [["2", "2 ft"], ["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
+const ROW_FT: Opt[] = [["2.5", "2.5 ft"], ["3", "3 ft"], ["3.5", "3.5 ft"], ["4", "4 ft"]];
 
 const labelOf = (opts: Opt[], v: string | undefined) => opts.find(([k]) => k === v)?.[1] ?? v ?? "";
 
@@ -157,9 +157,11 @@ function itemLabel(it: JobItem): string {
     return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${labelOf(DOOR_MIX, m.zonemix).toLowerCase()}`;
   }
   if (it.type === "partition") {
-    const door = m.partDoor === "yes" ? ` with ${m.partDoorW ?? "3"} ft door` : "";
+    // What gets built — panels across × panels high — not the gap rule behind it.
+    const L = partitionGeometry(it).layout;
+    const door = m.partDoor === "yes" ? ` + ${m.partDoorW ?? "3"} ft door` : "";
     const sheet = parseFloat(m.partSheetFt ?? "0") > 0 ? ` · ${m.partSheetFt} ft bottom sheet` : "";
-    return `Partition${door}${sheet} · dividers ${m.partBayFt ?? "2.5"} × ${m.partRowFt ?? "3.5"} ft`;
+    return `Partition${door}${sheet} · ${L.bays} × ${L.glassRows} glass panels`;
   }
   if (it.system === "z_section") {
     const sashes = m.zType === "openable" || m.zType === "combo" ? ` · ${m.zSashCount ?? it.shutters.length} sash` : "";
@@ -179,17 +181,8 @@ function sizeText(it: { width: Um; height: Um }): string {
   return `${formatFtInSut(it.width)} × ${formatFtInSut(it.height)}`;
 }
 
-/** Opening size the way the fabricator measured it — feet first: 5' × 4'6". */
-function ftIn(um: Um): string {
-  const totalSut = Math.round(um / 3175);
-  const ft = Math.floor(totalSut / 96);
-  const inch = Math.floor((totalSut % 96) / 8);
-  const sut = totalSut % 8;
-  return `${ft}'${inch || sut ? `${inch}"` : ""}${sut ? `${sut}s` : ""}`;
-}
-
 function openingText(it: { width: Um; height: Um }): string {
-  return `${ftIn(it.width)} × ${ftIn(it.height)}`;
+  return `${formatFtIn(it.width)} × ${formatFtIn(it.height)}`;
 }
 
 /* ————————————————— page ————————————————— */
@@ -367,7 +360,7 @@ const lastForm: { type: OpeningType; opts: Opts } = { type: "window", opts: DEFA
 function layoutError(e: unknown): string {
   if (e instanceof ImpossibleLayoutError) {
     return `This layout does not fit this size — the ${e.part.toLowerCase()} would be ${formatFtInSut(e.size)}. ` +
-      `Check the size, or choose a smaller fixed part, door or sheet panel.`;
+      `Check the size, or choose a smaller fixed part or door.`;
   }
   if (e instanceof PieceTooLongError) {
     return `One piece would be ${toFeet(e.piece.length).toFixed(1)} ft, but the pipe is only ${toFeet(e.barLength).toFixed(0)} ft — enter this opening as two parts.`;
@@ -381,15 +374,18 @@ function layoutError(e: unknown): string {
  * a 3-track window faster than he reads "3 Track · 2 Glass + 1 Mesh". The
  * old single form put 28–36 buttons and 5–7 questions on the first screen
  * and pushed its own "Add" button off-screen as choices opened up.
+ *
+ * A partition asks its sizes BEFORE its dividers: the divider screens draw
+ * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
   | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDetails" | "doorPanels" | "doorDetails"
-  | "partDoor" | "partSheet" | "partSpacing" | "size";
+  | "partDoor" | "size" | "partBays" | "partRows";
 
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
   if (type === "door") return ["type", "doorPanels", "doorDetails", "size"];
-  if (type === "partition") return ["type", "partDoor", "partSheet", "partSpacing", "size"];
+  if (type === "partition") return ["type", "partDoor", "size", "partBays", "partRows"];
   if (o.sys === "z_section") return ["type", "system", "zType", "zDetails", "size"];
   return ["type", "system", "tracks", "mix", ...(o.sys === "domal" ? ["domalFix" as const] : []), "size"];
 }
@@ -405,9 +401,9 @@ const STEP_TITLE: Record<StepId, string> = {
   doorPanels: "Door panels, top to bottom",
   doorDetails: "Frame and shutter",
   partDoor: "Door in the partition?",
-  partSheet: "Sheet panel at the bottom?",
-  partSpacing: "Divider spacing",
-  size: "Size",
+  size: "Sizes",
+  partBays: "Vertical lines ( | )",
+  partRows: "Horizontal lines ( — )",
 };
 
 /** How long a readable size is left alone before the app moves on by itself.
@@ -428,6 +424,10 @@ const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
   domal: { img: "/sections/domal_frame.png", sub: "27 mm · premium" },
   z_section: { img: "/sections/z_outer_40.png", sub: "Hinged, opens out" },
 };
+
+/** One line of the size list: width, height and how many of that size. */
+interface SizeRow { w: string; h: string; qty: number }
+const emptyRow = (): SizeRow => ({ w: "", h: "", qty: 1 });
 
 function JobScreen({
   items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings,
@@ -451,24 +451,36 @@ function JobScreen({
   useEffect(() => { lastForm.type = type; lastForm.opts = o; }, [type, o]);
   /** The add/edit flow, when open: which screen, and which item is being edited. */
   const [flow, setFlow] = useState<{ step: StepId; editing: string | null } | null>(null);
-  const [w, setW] = useState("");
-  const [h, setH] = useState("");
-  const [qty, setQty] = useState(1);
-  const [justAdded, setJustAdded] = useState<string | null>(null);
+  /** The sizes being typed. Every line stays on screen, editable, until the
+   *  flow is finished — nothing joins the job a moment after it is typed. */
+  const [rows, setRows] = useState<SizeRow[]>([emptyRow()]);
+  /** Which box the keypad is typing into: the line, and its width or height. */
+  const [cur, setCur] = useState<{ r: number; f: "w" | "h" }>({ r: 0, f: "w" });
+  const [justAdded, setJustAdded] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
-  /** Which size box the keypad is typing into. */
-  const [field, setField] = useState<"w" | "h">("w");
-  /** Moves to the height box once the width has been left alone a moment. */
+  /** Moves on (height box, next line) once a size has been left alone a moment. */
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopAdvance = () => { if (advanceTimer.current) { clearTimeout(advanceTimer.current); advanceTimer.current = null; } };
   useEffect(() => stopAdvance, []);
   /** The exact size of the item being edited, with the text it was shown as —
    *  the text is rounded to the sut, so an untouched size keeps its real value. */
-  const editDims = useRef<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
+  const [editDims, setEditDims] = useState<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
 
-  // The phone's back button steps out of the add flow instead of the app.
+  /* —— the phone's back button ——
+   * Inside the flow it steps back one screen, like the ← in the header —
+   * leaving outright would throw away sizes typed but not yet added. */
+  const flowOpen = useRef(false);
+  const closing = useRef(false);
+  const stepBack = useRef<() => void>(() => {});
+  useEffect(() => { flowOpen.current = !!flow; }, [flow]);
   useEffect(() => {
-    const onPop = () => { if (window.history.state?.fabriq !== "add") setFlow(null); };
+    const onPop = () => {
+      if (window.history.state?.fabriq === "add") return;
+      if (closing.current) { closing.current = false; return; }
+      if (!flowOpen.current) return;
+      window.history.pushState({ fabriq: "add" }, "");
+      stepBack.current();
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -478,22 +490,23 @@ function JobScreen({
     window.scrollTo({ top: 0 });
   };
   const closeFlow = () => {
+    stopAdvance();
     setFlow(null);
-    if (window.history.state?.fabriq === "add") window.history.back();
+    if (window.history.state?.fabriq === "add") { closing.current = true; window.history.back(); }
     window.scrollTo({ top: 0 });
   };
 
-  // A just-added item is scrolled into view and glows briefly, so the
-  // fabricator SEES it land in the list.
+  // Just-added items are scrolled into view and glow briefly, so the
+  // fabricator SEES them land in the list.
   useEffect(() => {
-    if (!justAdded || flow) return;
-    document.getElementById(`item-${justAdded}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
-    const t = setTimeout(() => setJustAdded(null), 2500);
+    if (!justAdded.length || flow) return;
+    document.getElementById(`item-${justAdded[justAdded.length - 1]}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const t = setTimeout(() => setJustAdded([]), 2500);
     return () => clearTimeout(t);
   }, [justAdded, flow]);
 
   const steps = stepsFor(type, o);
-  const go = (step: StepId) => { setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
+  const go = (step: StepId) => { stopAdvance(); setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
   /** Apply a choice; move on unless the screen has more to ask. */
   const choose = (patch: Partial<Opts>, advance = true, nextType: OpeningType = type) => {
     const next = { ...o, ...patch };
@@ -502,76 +515,85 @@ function JobScreen({
     const st = stepsFor(nextType, next);
     go(st[Math.min(st.indexOf(flow.step) + 1, st.length - 1)]);
   };
-  const back = () => {
-    if (!flow) return;
-    // Once sizes are in, "back" means "I'm done here" — returning to a
-    // shutter question at that point only confused.
-    if (flow.step === "size" && session.length) { finishFlow(); return; }
-    const i = steps.indexOf(flow.step);
-    if (i > 0) go(steps[i - 1]); else closeFlow();
-  };
 
-  /* —— size —— */
+  /* —— sizes —— */
   // A partition's bare "20" is 20 ft (they run up to 25 ft); a window's is 20".
   const feetBelow = type === "partition" ? 26 : undefined;
-  const pw = parseOpening(w, "auto", feetBelow);
-  const ph = parseOpening(h, "auto", feetBelow);
-  const sizeWarn = pw && ph ? openingWarning(pw.um, ph.um) : null;
-  // Build this opening right now, so a layout that cannot exist is stopped
-  // here with a reason — not discovered later, blocking the whole job's list.
-  const buildWarn = useMemo(() => {
-    if (!pw || !ph || sizeWarn) return null;
+  /** Why this size cannot be built as chosen — said on its own line, at once. */
+  const problemOf = (wu: Um, hu: Um): string | null => {
+    const warn = openingWarning(wu, hu);
+    if (warn) return warn;
     try {
-      estimate([buildJobItem(1, type, pw.um, ph.um, 1, metaFor(type, o))]);
+      estimate([buildJobItem(1, type, wu, hu, 1, metaFor(type, o))]);
       return null;
     } catch (e) {
       return layoutError(e);
     }
-  }, [pw?.um, ph?.um, sizeWarn, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
-  const warn = sizeWarn ?? buildWarn;
-  const ready = !!pw && !!ph && !warn;
-  const touched = w.trim() !== "" || h.trim() !== "";
-  const unsure = ready && (pw!.ambiguous || ph!.ambiguous);
-
-  /** Items added during this visit to the size screen, newest last. */
-  const [session, setSession] = useState<string[]>([]);
-  const lastAdded = session.length ? items.find((it) => it.id === session[session.length - 1]) : undefined;
-
-  /** Add one size and stay: the boxes clear and the width box is ready for
-   *  the next line on the sheet — a job is typed straight through, not one
-   *  trip back to the list per window. Returns false if it can't be built. */
-  const addAndContinue = (wStr: string, hStr: string): boolean => {
-    const a = parseOpening(wStr, "auto", feetBelow);
-    const b = parseOpening(hStr, "auto", feetBelow);
-    if (!a || !b || openingWarning(a.um, b.um)) return false;
-    try { estimate([buildJobItem(1, type, a.um, b.um, 1, metaFor(type, o))]); } catch { return false; }
-    // Same numbering the list uses: the next free W-number.
-    const id = `W${[...items.map((it) => it.id), ...session].reduce((m, x) => Math.max(m, parseInt(x.slice(1), 10) || 0), 0) + 1}`;
-    onAdd(type, a.um, b.um, qty, metaFor(type, o));
-    setSession((s) => [...s, id]);
-    setW(""); setH(""); setQty(1); setField("w"); stopAdvance();
-    return true;
   };
+  const parsed = useMemo(() => rows.map((row) => {
+    const pw = parseOpening(row.w, "auto", feetBelow);
+    const ph = parseOpening(row.h, "auto", feetBelow);
+    const empty = !row.w.trim() && !row.h.trim();
+    const warn = pw && ph ? problemOf(pw.um, ph.um) : null;
+    return { pw, ph, empty, warn, ready: !!pw && !!ph && !warn };
+  }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filled = parsed.filter((p) => !p.empty);
+  const readyCount = parsed.filter((p) => p.ready).length;
+  const allReady = filled.length > 0 && filled.every((p) => p.ready);
+  /** The real size of line i — an edited item's untouched size keeps its exact value. */
+  const sizeOf = (i: number) => {
+    const e = editDims, p = parsed[i];
+    return {
+      wu: e && i === 0 && rows[0].w === e.w ? e.wu : p.pw!.um,
+      hu: e && i === 0 && rows[0].h === e.h ? e.hu : p.ph!.um,
+    };
+  };
+  const firstReady = parsed.findIndex((p) => p.ready);
 
-  const commit = () => {
-    if (!pw || !ph || warn || !flow) return;
-    if (!flow.editing) { addAndContinue(w, h); return; }
-    const e = editDims.current;
-    const wu = e && w === e.w ? e.wu : pw.um;
-    const hu = e && h === e.h ? e.hu : ph.um;
-    onReplace(flow.editing, type, wu, hu, qty, metaFor(type, o));
-    setJustAdded(flow.editing);
+  /** Everything typed joins the job together, only when the flow is finished. */
+  const finish = () => {
+    if (!flow || !allReady) return;
+    const meta = metaFor(type, o);
+    if (flow.editing) {
+      const { wu, hu } = sizeOf(0);
+      onReplace(flow.editing, type, wu, hu, rows[0].qty, meta);
+      setJustAdded([flow.editing]);
+    } else {
+      // Same numbering the list uses: the next free W-numbers, in order.
+      let n = items.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0);
+      const ids: string[] = [];
+      parsed.forEach((p, i) => {
+        if (!p.ready) return;
+        const { wu, hu } = sizeOf(i);
+        onAdd(type, wu, hu, rows[i].qty, meta);
+        ids.push(`W${++n}`);
+      });
+      setJustAdded(ids);
+    }
     closeFlow();
   };
+  const afterSize = steps.slice(steps.indexOf("size") + 1);
+  const sizesDone = () => {
+    stopAdvance();
+    if (!allReady) return;
+    if (afterSize.length) go(afterSize[0]); else finish();
+  };
 
-  /** Leave the size screen; the last size added glows in the list. */
-  const finishFlow = () => {
-    if (session.length) setJustAdded(session[session.length - 1]);
+  const typedAnything = !flow?.editing && rows.some((r) => r.w.trim() || r.h.trim());
+  /** Leaving the flow drops sizes not yet added — never without asking. */
+  const leave = () => {
+    if (typedAnything && !window.confirm(`Discard the ${plural(filled.length, "size")} you typed?`)) return;
     closeFlow();
   };
+  const back = () => {
+    if (!flow) return;
+    const i = steps.indexOf(flow.step);
+    if (i > 0) go(steps[i - 1]); else leave();
+  };
+  useEffect(() => { stepBack.current = back; });
 
   const startAdd = (step: StepId) => {
-    setW(""); setH(""); setQty(1); setField("w"); stopAdvance(); setSession([]); editDims.current = null;
+    setRows([emptyRow()]); setCur({ r: 0, f: "w" }); stopAdvance(); setEditDims(null);
     openFlow(step);
   };
   /** Straight from the home screen's Window / Door / Partition — the type is
@@ -583,65 +605,94 @@ function JobScreen({
   const startEdit = (it: JobItem) => {
     setType(it.type);
     setO(optsFromItem(it));
-    setW(ftIn(it.width));
-    setH(ftIn(it.height));
-    editDims.current = { w: ftIn(it.width), h: ftIn(it.height), wu: it.width, hu: it.height };
-    setQty(it.qty);
-    setField("w"); stopAdvance(); setSession([]);
+    const w = formatFtIn(it.width), h = formatFtIn(it.height);
+    setRows([{ w, h, qty: it.qty }]);
+    setEditDims({ w, h, wu: it.width, hu: it.height });
+    setCur({ r: 0, f: "w" }); stopAdvance();
     openFlow("size", it.id);
   };
 
   /* —— the size keypad ——
    * The app's own pad, not the phone keyboard: ft ( ' ) and inch ( " ) sit
    * beside the digits, so "4'6" needs no keyboard switch — which is what
-   * makes moving on by itself safe. With the phone keyboard, hunting for
-   * the ' key took long enough that a pause-based jump would leave mid-size.
-   * The width hands over to the height box the moment it is complete by form
-   * (it ends in ", or is a full 4-6-2), or once a readable width has been
-   * left alone for a moment. */
+   * makes moving on by itself safe. A width hands over to its height the
+   * moment it is complete by form (it ends in ", or is a full 4-6-2), or once
+   * a readable width has been left alone for a moment; a finished height opens
+   * the next line below the same way. Lines already typed stay where they are. */
   /** How many digits the number part being typed may have. */
-  const maxDigits = (cur: string) => (/['.\-]/.test(cur) ? 2 : 4);
+  const maxDigits = (v: string) => (/['.\-]/.test(v) ? 2 : 4);
   /** A size that cannot take another key: it ends in ", is a full 4-6-2, or
    *  its last number part is full (4'11, 1372) — move on at once. */
   const completeByForm = (v: string) =>
     /"$/.test(v) || /^\d+-\d+-\d+$/.test(v) || /'\d{2}$/.test(v) || /^\d{4}$/.test(v);
+  /** Open the next size line below (or step into it), leaving line r as typed. */
+  const nextLine = (r: number) => {
+    stopAdvance();
+    if (flow?.editing) return;
+    setRows((rs) => (r >= rs.length - 1 ? [...rs, emptyRow()] : rs));
+    setCur({ r: r + 1, f: "w" });
+  };
+  /** A finished line moves on only when it can be built — a size that cannot
+   *  stays in front of him with its reason, instead of scrolling away. */
+  const buildable = (wv: string, hv: string) => {
+    const a = parseOpening(wv, "auto", feetBelow), b = parseOpening(hv, "auto", feetBelow);
+    return !!a && !!b && !problemOf(a.um, b.um);
+  };
+  const removeLine = (i: number) => {
+    stopAdvance();
+    const n = Math.max(1, rows.length - 1);
+    setRows((rs) => (rs.length === 1 ? [emptyRow()] : rs.filter((_, k) => k !== i)));
+    setCur((c) => (c.r > i ? { r: c.r - 1, f: c.f } : c.r === i ? { r: Math.min(i, n - 1), f: "w" } : c));
+  };
   const press = (k: string) => {
     stopAdvance();
+    const { r, f } = cur;
+    const row = rows[r];
+    if (!row) return;
     if (k === "next") {
-      if (field === "w") setField("h"); else commit();
+      if (f === "w") setCur({ r, f: "h" });
+      else if (flow?.editing) sizesDone();
+      else if (row.w.trim() || row.h.trim()) nextLine(r);
       return;
     }
-    const cur = field === "w" ? w : h;
+    const v0 = row[f];
+    if (k === "back" && !v0) {
+      // Deleting past the start of a box walks back to the box before it.
+      if (f === "h") setCur({ r, f: "w" });
+      else if (r > 0) {
+        if (r === rows.length - 1 && !row.h) setRows((rs) => rs.slice(0, -1));
+        setCur({ r: r - 1, f: "h" });
+      }
+      return;
+    }
     let v: string;
-    if (k === "back") v = cur.slice(0, -1);
+    if (k === "back") v = v0.slice(0, -1);
     else {
       // Only sizes that can be read: every mark follows a digit, ft and inch
       // once each, one decimal point per number, at most two dashes (4-6-2),
       // and dashes never mixed with ft / inch marks.
-      const endsDigit = /\d$/.test(cur);
+      const endsDigit = /\d$/.test(v0);
       // the inch mark closes a size — nothing may follow it
-      if (cur.includes('"')) return;
+      if (v0.includes('"')) return;
       // and no number part runs on: 2 digits of inches after ' or in a dash
       // part or after a point, 4 for a bare number (up to mm)
-      if (/\d/.test(k) && (/\d*$/.exec(cur)?.[0].length ?? 0) >= maxDigits(cur)) return;
+      if (/\d/.test(k) && (/\d*$/.exec(v0)?.[0].length ?? 0) >= maxDigits(v0)) return;
       const ok = /\d/.test(k)
-        || (k === "'" && endsDigit && !/['"-]/.test(cur))
-        || (k === '"' && endsDigit && !cur.includes('"'))
-        || (k === "." && endsDigit && !/\.\d*$/.test(cur))
-        || (k === "-" && endsDigit && !/['"]/.test(cur) && (cur.match(/-/g)?.length ?? 0) < 2);
+        || (k === "'" && endsDigit && !/['"-]/.test(v0))
+        || (k === '"' && endsDigit && !v0.includes('"'))
+        || (k === "." && endsDigit && !/\.\d*$/.test(v0))
+        || (k === "-" && endsDigit && !/['"]/.test(v0) && (v0.match(/-/g)?.length ?? 0) < 2);
       if (!ok) return;
-      v = (cur + k).slice(0, 12);
+      v = (v0 + k).slice(0, 12);
     }
-    if (field === "w") setW(v); else setH(v);
+    setRows((rs) => rs.map((x, i) => (i === r ? { ...x, [f]: v } : x)));
     if (k === "back") return;
-    if (field === "w") {
-      if (completeByForm(v)) setField("h");
-      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setField("h"), AUTO_NEXT_MS);
-    } else if (!flow?.editing) {
-      // Height done → the size is added and the boxes are ready for the next.
-      const wNow = w;
-      if (completeByForm(v)) addAndContinue(wNow, v);
-      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => addAndContinue(wNow, v), AUTO_NEXT_MS);
+    if (f === "w") {
+      if (completeByForm(v)) setCur({ r, f: "h" });
+      else if (parseOpening(v, "auto", feetBelow)) advanceTimer.current = setTimeout(() => setCur({ r, f: "h" }), AUTO_NEXT_MS);
+    } else if (!flow?.editing && buildable(row.w, v)) {
+      if (completeByForm(v)) nextLine(r);
+      else advanceTimer.current = setTimeout(() => nextLine(r), AUTO_NEXT_MS);
     }
   };
   // A computer's keyboard types into the same boxes.
@@ -649,7 +700,7 @@ function JobScreen({
     if (flow?.step !== "size") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (document.activeElement instanceof HTMLInputElement) return; // the quantity box
+      if (document.activeElement instanceof HTMLInputElement) return;
       const map: Record<string, string> = { "’": "'", "‘": "'", "”": '"', "“": '"', Backspace: "back", Enter: "next", Tab: "next" };
       const k = map[e.key] ?? e.key;
       if (/^[0-9.\-'"]$/.test(k) || k === "back" || k === "next") { e.preventDefault(); press(k); }
@@ -657,14 +708,36 @@ function JobScreen({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  // The line being typed stays in view above the keypad.
+  useEffect(() => {
+    if (flow?.step !== "size") return;
+    document.getElementById(`size-line-${cur.r}`)?.scrollIntoView({ block: "nearest" });
+  }, [cur.r, rows.length, flow?.step]);
 
   /* ————— the add / edit flow ————— */
   if (flow) {
     const i = steps.indexOf(flow.step);
     const pick = (t: OpeningType) => { setType(t); choose({}, true, t); };
-    const live = ready
-      ? buildJobItem(1, type, pw!.um, ph!.um, qty, metaFor(type, o))
+    const a = parsed[cur.r] ?? parsed[0];
+    const live = a.ready
+      ? buildJobItem(1, type, a.pw!.um, a.ph!.um, 1, metaFor(type, o))
       : sample(type, o);
+    /** The partition the divider screens draw: the first size typed. */
+    const shape = firstReady >= 0
+      ? buildJobItem(1, type, sizeOf(firstReady).wu, sizeOf(firstReady).hu, 1, metaFor(type, o))
+      : sample(type, o);
+    const lastStep = i === steps.length - 1;
+    const doneLabel = flow.editing ? "Save ✓" : `✓ Add ${plural(readyCount, "size")} to the job`;
+    const curRow = rows[cur.r] ?? rows[0];
+    // the divider screens: which lines, how many panels, and the gap they leave
+    const vertical = flow.step === "partBays";
+    const grid = type === "partition" ? partitionGeometry(shape).layout : null;
+    const n = grid ? (vertical ? grid.bays : grid.glassRows) : 0;
+    const gap = grid ? (vertical ? grid.cellW : grid.glassRowH) : 0;
+    const others = readyCount - 1;
+    /** The length the panels share equally — what a panel count divides. */
+    const span = grid ? toFeet(vertical ? grid.fieldW : grid.innerH - (grid.sheetH > 0 ? grid.sheetH + grid.face : 0)) : 0;
+    const touched = !!(curRow.w.trim() || curRow.h.trim());
 
     return (
       <div className="flex flex-col gap-4">
@@ -677,9 +750,7 @@ function JobScreen({
             </div>
             <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
           </div>
-          {session.length === 0 && (
-            <button onClick={closeFlow} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
-          )}
+          <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
         <div className="flex gap-1">
           {steps.map((s, k) => (
@@ -758,26 +829,43 @@ function JobScreen({
         )}
 
         {flow.step === "zDetails" && (
-          <div className="card flex flex-col gap-4 p-4">
-            <div className="grid place-items-center"><MiniElevation item={sample("window", o)} size={130} /></div>
+          <div className="flex flex-col gap-4">
             {o.zType === "combo" && (
               <>
-                <Field label="Fixed part position">
-                  <Seg options={Z_DIRS} value={o.zComboDir} onChange={(v) => choose({ zComboDir: v }, false)} />
+                <Field label="Where is the fixed glass?">
+                  <div className="grid grid-cols-3 gap-2">
+                    {Z_DIRS.map(([v, label]) => (
+                      <Choice key={v} selected={o.zComboDir === v} onClick={() => choose({ zComboDir: v }, false)} title={label}
+                        picture={<MiniElevation item={sample("window", { ...o, zComboDir: v })} size={72} />} />
+                    ))}
+                  </div>
                 </Field>
-                <Field label="Fixed part size">
+                <Field label="Fixed glass size">
                   <Seg options={FIX_FT} value={o.zFixedFt} onChange={(v) => choose({ zFixedFt: v }, false)} />
                 </Field>
               </>
             )}
             {(o.zType === "openable" || o.zType === "combo") && (
-              <Field label="Openable sashes">
-                <Seg options={Z_SASH} value={o.zSash} onChange={(v) => choose({ zSash: v }, false)} />
+              <Field label="How many openable shutters?">
+                <div className="grid grid-cols-3 gap-2">
+                  {Z_SASH.map(([v, label]) => (
+                    <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v }, false)} title={label}
+                      picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={72} />} />
+                  ))}
+                </div>
               </Field>
             )}
-            <Field label="Profile">
-              <Seg options={Z_SIZE} value={o.zSize} onChange={(v) => choose({ zSize: v }, false)} />
-            </Field>
+            {o.zType !== "door" && (
+              <Field label="Section">
+                <div className="grid grid-cols-2 gap-2">
+                  {Z_SIZE.map(([v, label]) => (
+                    <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v }, false)} title={label}
+                      sub={v === "heavy" ? "Big windows" : "Normal windows"}
+                      picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={64} h={48} />} />
+                  ))}
+                </div>
+              </Field>
+            )}
             <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
           </div>
         )}
@@ -792,12 +880,23 @@ function JobScreen({
         )}
 
         {flow.step === "doorDetails" && (
-          <div className="card flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-4">
             <Field label="What do you need?">
-              <Seg options={CHOKHAT} value={o.chokhat} onChange={(v) => choose({ chokhat: v }, false)} />
+              <div className="grid grid-cols-2 gap-2">
+                {CHOKHAT.map(([v, label]) => (
+                  <Choice key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v }, false)} title={label}
+                    sub={v === "needed" ? "New frame (chaukhat) and shutter" : "Frame is already fixed"}
+                    picture={<DoorScopePicture item={sample("door", o)} withFrame={v === "needed"} size={40} />} />
+                ))}
+              </div>
             </Field>
             <Field label="Shutter section (mm)">
-              <Seg options={PALLA} value={o.palla} onChange={(v) => choose({ palla: v }, false)} />
+              <div className="grid grid-cols-3 gap-2">
+                {PALLA.map(([v, label]) => (
+                  <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v }, false)} title={label}
+                    picture={<SectionProfile sectionId={`door_palla_${v}`} w={56} h={44} />} />
+                ))}
+              </div>
             </Field>
             <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
           </div>
@@ -816,31 +915,42 @@ function JobScreen({
                 <Field label="Door width">
                   <Seg options={PART_DOOR_W} value={o.partDoorW} onChange={(v) => choose({ partDoorW: v }, false)} />
                 </Field>
-                <button onClick={() => go("partSheet")} className="btn-primary w-full py-3.5">Next</button>
+                <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
               </>
             )}
           </>
         )}
 
-        {flow.step === "partSheet" && (
-          <div className="grid grid-cols-2 gap-2">
-            {PART_SHEET.map(([v, label]) => (
-              <Choice key={v} selected={o.partSheetFt === v} onClick={() => choose({ partSheetFt: v })} title={label}
-                picture={<MiniElevation item={sample("partition", { ...o, partSheetFt: v })} size={120} />} />
-            ))}
-          </div>
-        )}
-
-        {flow.step === "partSpacing" && (
-          <div className="card flex flex-col gap-4 p-4">
-            <div className="grid place-items-center"><MiniElevation item={sample("partition", o)} size={200} /></div>
-            <Field label="Vertical divider every">
-              <Seg options={BAY_FT} value={o.partBayFt} onChange={(v) => choose({ partBayFt: v }, false)} />
-            </Field>
-            <Field label="Horizontal divider every">
-              <Seg options={ROW_FT} value={o.partRowFt} onChange={(v) => choose({ partRowFt: v }, false)} />
-            </Field>
-            <button onClick={() => go("size")} className="btn-primary w-full py-3.5">Next</button>
+        {(flow.step === "partBays" || flow.step === "partRows") && (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm" style={{ color: "var(--ink-2)" }}>
+              {vertical
+                ? "Standing (khadi) lines — tap the gap between them. The drawing is your partition."
+                : "Lying (leti) lines — tap the gap between them. The drawing is your partition."}
+            </p>
+            <div className="card flex flex-col items-center gap-2 p-3">
+              <PartitionGapPicture item={shape} axis={vertical ? "v" : "h"} />
+              <div className="text-center text-sm font-bold tabnum">
+                {vertical
+                  ? `${plural(n, "panel")} across, each ${formatFtIn(gap)} wide`
+                  : `${plural(n, "panel")} high, each ${formatFtIn(gap)} high`}
+              </div>
+              <div className="text-center text-xs" style={{ color: "var(--ink-3)" }}>
+                {formatFtIn(shape.width)} × {formatFtIn(shape.height)}
+                {others > 0 ? ` · same gap for all ${readyCount} sizes` : ""}
+                {" · "}panels are made equal, so the gap may be a little more or less
+              </div>
+            </div>
+            <GapPicker key={flow.step}
+              options={vertical ? BAY_FT : ROW_FT}
+              value={vertical ? o.partBayFt : o.partRowFt}
+              max={toFeet(vertical ? shape.width : shape.height)}
+              count={n} span={span}
+              onChange={(v) => choose(vertical ? { partBayFt: v } : { partRowFt: v }, false)}
+            />
+            <button onClick={() => (lastStep ? finish() : go(steps[i + 1]))} className="btn-primary w-full py-3.5">
+              {lastStep ? doneLabel : "Next →"}
+            </button>
           </div>
         )}
 
@@ -853,66 +963,93 @@ function JobScreen({
               <span className="shrink-0 text-xs font-bold" style={{ color: "var(--accent)" }}>Change</span>
             </button>
 
-            {/* the size just added — proof it landed, and its quantity fixable.
-                One line only: the keypad and the Finish button must stay on
-                screen however many sizes go in. */}
-            {lastAdded && (
-              <div className="card flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--good-soft)" }}>
-                <span className="text-sm font-bold" style={{ color: "var(--good)" }}>✓</span>
-                <span className="mono text-xs" style={{ color: "var(--ink-3)" }}>{lastAdded.id}</span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold tabnum">{openingText(lastAdded)} added</span>
-                <MiniQty value={lastAdded.qty} label={lastAdded.id}
-                  onChange={(n) => onReplace(lastAdded.id, lastAdded.type, lastAdded.width, lastAdded.height, n, lastAdded.meta)} />
-                <button onClick={() => { onRemove(lastAdded.id); setSession((s) => s.filter((x) => x !== lastAdded.id)); }}
-                  aria-label={`Remove ${lastAdded.id}`} className="grid h-8 w-8 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
+            {/* every size typed so far, each still editable: tap a box to fix it */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                <span className="w-5 shrink-0" />
+                <span className="min-w-0 flex-1">Width</span>
+                <span className="min-w-0 flex-1">Height</span>
+                <span className="w-[92px] shrink-0 text-center">Qty</span>
+                {!flow.editing && <span className="w-7 shrink-0" />}
               </div>
-            )}
-
-            <div className="card flex flex-col gap-2.5 p-3">
-              <div className="flex gap-2">
-                <SizeBox label="Width" value={w} placeholder="4'6" active={field === "w"}
-                  onClick={() => { stopAdvance(); setField("w"); }} />
-                <SizeBox label="Height" value={h} placeholder="4" active={field === "h"}
-                  onClick={() => { stopAdvance(); setField("h"); }} />
-                {/* quantity sits on the same line as the size it belongs to */}
-                <div className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-[var(--radius)] px-1"
-                  style={{ border: "1.5px solid var(--line)" }}>
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Qty</span>
-                  <MiniQty value={qty} onChange={setQty} label="this size" />
-                </div>
-              </div>
-              <div className="min-h-[18px] text-xs font-medium"
-                style={{ color: !touched ? "var(--ink-3)" : ready ? (unsure ? "var(--warn)" : "var(--good)") : (pw || ph) && !warn ? "var(--ink-3)" : "var(--bad)" }}>
-                {!touched
-                  ? session.length ? "Next size — it is added by itself when the height is done." : "Type the width, then the height. ft = ' · inch = \""
-                  : !pw || !ph
-                    ? (pw ? `Width = ${describeDim(pw.um)} · now the height` : "Keep typing the size")
-                    : warn
-                      ? warn
-                      : `= ${describeDim(pw.um)} × ${describeDim(ph.um)}${
-                          unsure ? " · read as feet — for inches add \"" : ""}`}
-              </div>
-              <Keypad onKey={press} lastLabel={field === "w" ? "Next →" : flow.editing ? "Save ✓" : "Add ✓"}
-                lastDisabled={field === "h" && !ready} />
+              {rows.map((row, r) => {
+                const p = parsed[r];
+                const here = cur.r === r;
+                const bad = !here && !p.empty && !p.ready;
+                return (
+                  <div key={r} id={`size-line-${r}`} style={{ borderTop: "1px solid var(--line)", scrollMarginBottom: 330, scrollMarginTop: 72 }}>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="w-5 shrink-0 text-center text-xs font-bold"
+                        style={{ color: p.ready ? "var(--good)" : bad ? "var(--bad)" : "var(--ink-3)" }}>
+                        {p.ready ? "✓" : r + 1}
+                      </span>
+                      <SizeBox label={`Width ${r + 1}`} value={row.w} placeholder={r === 0 ? "4'6" : ""} active={here && cur.f === "w"} bad={bad}
+                        onClick={() => { stopAdvance(); setCur({ r, f: "w" }); }} />
+                      <SizeBox label={`Height ${r + 1}`} value={row.h} placeholder={r === 0 ? "4" : ""} active={here && cur.f === "h"} bad={bad}
+                        onClick={() => { stopAdvance(); setCur({ r, f: "h" }); }} />
+                      <MiniQty value={row.qty} label={`size ${r + 1}`}
+                        onChange={(q) => setRows((rs) => rs.map((x, k) => (k === r ? { ...x, qty: q } : x)))} />
+                      {!flow.editing && (
+                        <button onClick={() => removeLine(r)} aria-label={`Remove size ${r + 1}`}
+                          className="grid h-8 w-7 shrink-0 place-items-center text-lg" style={{ color: "var(--ink-3)" }}>×</button>
+                      )}
+                    </div>
+                    {bad && (
+                      <button onClick={() => setCur({ r, f: p.pw ? "h" : "w" })} className="block w-full px-9 pb-1.5 text-left text-[11px] font-medium"
+                        style={{ color: "var(--bad)" }}>
+                        {p.warn ?? (p.pw ? "Height missing — tap to type it" : "Width not readable — tap to fix it")}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
               {flow.editing && (
                 <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
-                  className="text-sm font-semibold" style={{ color: "var(--bad)" }}>
+                  className="w-full px-4 py-2.5 text-sm font-semibold" style={{ borderTop: "1px solid var(--line)", color: "var(--bad)" }}>
                   Remove {flow.editing} from the job
                 </button>
               )}
             </div>
+            {/* room for the keypad, which sits over the bottom of the screen */}
+            <div aria-hidden style={{ height: 300 }} />
 
-            {/* The way out, big and spelled out: what it does and where it
-                goes. A small "Done" in the corner was missed or not understood. */}
-            {session.length > 0 && (
-              <button onClick={finishFlow} className="btn-dark flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left">
-                <span>
-                  <span className="block text-base font-bold">✓ Finish — {plural(session.length, "size")} added</span>
-                  <span className="block text-xs font-normal opacity-80">See the list and get the material list</span>
-                </span>
-                <span aria-hidden className="text-xl">→</span>
-              </button>
-            )}
+            {/* the keypad and the way on stay put at the bottom, however many
+                sizes go in — the list scrolls above them */}
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2"
+              style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
+              <div className="mx-auto flex max-w-xl flex-col gap-2">
+                <div className="min-h-[18px] truncate text-xs font-medium"
+                  style={{ color: !touched ? "var(--ink-3)" : a.ready ? (a.pw!.ambiguous || a.ph!.ambiguous ? "var(--warn)" : "var(--good)") : (a.pw || a.ph) && !a.warn ? "var(--ink-3)" : "var(--bad)" }}>
+                  {!touched
+                    ? readyCount ? "Next size — or tap the button below when all sizes are in." : "Type the width, then the height. ft = ' · inch = \""
+                    : !a.pw || !a.ph
+                      ? (a.pw ? `Width = ${describeDim(a.pw.um)} · now the height` : "Keep typing the size")
+                      : a.warn
+                        ? a.warn
+                        : `= ${describeDim(a.pw.um)} × ${describeDim(a.ph.um)}${
+                            a.pw.ambiguous || a.ph.ambiguous ? " · read as feet — for inches add \"" : ""}`}
+                </div>
+                <Keypad onKey={press}
+                  lastLabel={cur.f === "w" ? "Height →" : flow.editing ? "Done ✓" : <span className="text-sm leading-tight">Next<br />size ↓</span>}
+                  lastAria={cur.f === "w" ? "Go to height" : flow.editing ? "Done" : "Next size"}
+                  lastDisabled={cur.f === "h" && (flow.editing ? !allReady : !touched)} />
+                <button onClick={sizesDone} disabled={!allReady}
+                  className="btn-dark flex w-full items-center justify-between gap-3 px-4 py-3 text-left disabled:opacity-40">
+                  <span>
+                    <span className="block text-base font-bold">
+                      {afterSize.length ? `Next — dividers (${plural(readyCount, "size")}) →` : doneLabel}
+                    </span>
+                    <span className="block text-xs font-normal opacity-80">
+                      {!allReady && filled.length
+                        ? "Fix the size marked in red first"
+                        : afterSize.length ? "Choose the gap between the lines on a drawing" : flow.editing ? "Back to the list" : "Then get the material list"}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-xl">→</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -947,7 +1084,7 @@ function JobScreen({
           <div>
             <h1 className="text-xl font-bold">What are you making?</h1>
             <p className="mt-0.5 text-sm" style={{ color: "var(--ink-2)" }}>
-              Tap one, then type your sizes one after another.
+              Tap one, then type your sizes one below the other.
             </p>
           </div>
           <TypeCards onPick={startType} big />
@@ -966,28 +1103,31 @@ function JobScreen({
                 aria-label="Job or customer name" placeholder="Job / customer name (optional)"
                 className="dim-input mt-2 w-full px-3 py-2 text-sm" />
             </div>
-            {items.map((it) => (
-              <div key={it.id} id={`item-${it.id}`} className="flex items-center gap-2 pl-2 pr-2 transition-colors"
-                style={{ borderTop: "1px solid var(--line)", background: justAdded === it.id ? "var(--good-soft)" : undefined }}>
-                <button onClick={() => startEdit(it)} aria-label={`Edit ${it.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left">
-                  <span className="grid w-12 shrink-0 place-items-center">
-                    <MiniElevation item={it} size={it.type === "door" ? 22 : 44} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold tabnum">
-                      <span className="mono mr-1.5 text-xs" style={{ color: "var(--ink-3)" }}>{it.id}</span>
-                      {openingText(it)}{it.qty > 1 && <span style={{ color: "var(--accent)" }}> × {it.qty}</span>}
-                      {justAdded === it.id && <span className="ml-2 text-xs font-bold" style={{ color: "var(--good)" }}>✓ Added</span>}
+            {items.map((it) => {
+              const fresh = justAdded.includes(it.id);
+              return (
+                <div key={it.id} id={`item-${it.id}`} className="flex items-center gap-2 pl-2 pr-2 transition-colors"
+                  style={{ borderTop: "1px solid var(--line)", background: fresh ? "var(--good-soft)" : undefined }}>
+                  <button onClick={() => startEdit(it)} aria-label={`Edit ${it.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left">
+                    <span className="grid w-12 shrink-0 place-items-center">
+                      <MiniElevation item={it} size={it.type === "door" ? 22 : 44} />
                     </span>
-                    <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
-                  </span>
-                </button>
-                <button onClick={() => onRemove(it.id)} aria-label={`Remove ${it.id}`}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
-                  style={{ color: "var(--ink-3)" }}>×</button>
-              </div>
-            ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-semibold tabnum">
+                        <span className="mono mr-1.5 text-xs" style={{ color: "var(--ink-3)" }}>{it.id}</span>
+                        {openingText(it)}{it.qty > 1 && <span style={{ color: "var(--accent)" }}> × {it.qty}</span>}
+                        {fresh && <span className="ml-2 text-xs font-bold" style={{ color: "var(--good)" }}>✓ Added</span>}
+                      </span>
+                      <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
+                    </span>
+                  </button>
+                  <button onClick={() => onRemove(it.id)} aria-label={`Remove ${it.id}`}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
+                    style={{ color: "var(--ink-3)" }}>×</button>
+                </div>
+              );
+            })}
             <div className="px-4 py-2 text-[11px]" style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
               Tap an item to change it.
             </div>
@@ -1055,6 +1195,69 @@ function JobScreen({
   );
 }
 
+/**
+ * The gap between partition dividers: the usual ones as one tap, and any
+ * other gap typed in — "2.75", "2'9" — for the shop that works to its own.
+ */
+function GapPicker({ options, value, max, count, span, onChange }: {
+  options: Opt[]; value: string; max: number; count: number; span: number; onChange: (v: string) => void;
+}) {
+  // The box opens only when "Other gap" is tapped: a gap set by panel count is
+  // a dividing rule, not a size to read — the drawing says the real gap.
+  const [custom, setCustom] = useState("");
+  const [open, setOpen] = useState(false);
+  const read = parseOpening(custom, "feet");
+  const ft = read ? Math.round(toFeet(read.um) * 1000) / 1000 : null;
+  const err = !custom.trim() ? null : ft === null ? "Type it like 2.75 or 2'9\"" : ft < 1 ? "The gap must be at least 1 ft" : ft > max ? `The gap cannot be more than ${max.toFixed(1)} ft` : null;
+  /** Many shops think in panels ("4 khane"), not gaps: the gap that gives exactly k. */
+  const setCount = (k: number) => {
+    const v = Math.round((span / k) * 1000) / 1000;
+    if (k < 1 || v < 1) return;
+    setOpen(false);
+    setCustom("");
+    onChange(String(v));
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="card flex items-center justify-between gap-3 px-3 py-2">
+        <span className="text-sm font-semibold">Or set the number of panels</span>
+        <MiniQty value={count} label="panels" onChange={setCount} />
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {options.map(([v, label]) => (
+          <button key={v} onClick={() => { setOpen(false); onChange(v); }} aria-pressed={!open && value === v}
+            className={`chip min-h-[48px] px-2 py-2 text-base ${!open && value === v ? "selected" : ""}`}>
+            {label}
+          </button>
+        ))}
+        <button onClick={() => setOpen(true)} aria-pressed={open}
+          className={`chip min-h-[48px] px-2 py-2 text-base ${open ? "selected" : ""}`}>
+          Other gap
+        </button>
+      </div>
+      {open && (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <input value={custom} autoFocus inputMode="decimal" aria-label="Gap in feet" placeholder="e.g. 2.75 or 2'9"
+              onChange={(e) => {
+                const t = e.target.value;
+                setCustom(t);
+                const r = parseOpening(t, "feet");
+                const f = r ? Math.round(toFeet(r.um) * 1000) / 1000 : 0;
+                if (f >= 1 && f <= max) onChange(String(f));
+              }}
+              className="dim-input min-w-0 flex-1 px-3 py-2.5 text-lg font-semibold" />
+            <span className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>ft</span>
+          </div>
+          <div className="min-h-[16px] text-xs" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
+            {err ?? (ft ? `Gap ${formatFtIn(feet(ft))}` : "Feet, or feet and inches with ' and \"")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Window / Door / Partition as pictures — the first thing on the home screen. */
 function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: boolean }) {
   return (
@@ -1074,17 +1277,16 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
 }
 
 /** A size box the keypad types into — tap it to make it the active one. */
-function SizeBox({ label, value, placeholder, active, onClick }: {
-  label: string; value: string; placeholder: string; active: boolean; onClick: () => void;
+function SizeBox({ label, value, placeholder, active, bad, onClick }: {
+  label: string; value: string; placeholder: string; active: boolean; bad?: boolean; onClick: () => void;
 }) {
   return (
     <button onClick={onClick} aria-label={label} aria-pressed={active}
-      className="dim-input min-w-0 flex-1 px-3 py-2 text-left"
-      style={active ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" } : undefined}>
-      <span className="block text-[11px] font-semibold" style={{ color: active ? "var(--accent)" : "var(--ink-3)" }}>{label}</span>
-      <span className="flex min-h-[34px] items-center text-2xl font-semibold tabnum" data-value={value}>
+      className="dim-input min-w-0 flex-1 px-2 py-1 text-left"
+      style={active ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" } : bad ? { borderColor: "var(--bad)" } : undefined}>
+      <span className="flex min-h-[34px] items-center overflow-hidden whitespace-nowrap text-lg font-semibold tabnum" data-value={value}>
         {value || <span style={{ color: "#c2c7cf" }}>{placeholder}</span>}
-        {active && <span className="caret ml-0.5 inline-block h-7 w-[2px]" style={{ background: "var(--accent)" }} />}
+        {active && <span className="caret ml-0.5 inline-block h-6 w-[2px] shrink-0" style={{ background: "var(--accent)" }} />}
       </span>
     </button>
   );
@@ -1095,19 +1297,21 @@ function SizeBox({ label, value, placeholder, active, onClick }: {
  * inch ( " ), dash and point on the same pad — no keyboard switching, no
  * iPhone "smart" quotes, nothing sliding up over the screen.
  */
-function Keypad({ onKey, lastLabel, lastDisabled }: { onKey: (k: string) => void; lastLabel: string; lastDisabled: boolean }) {
+function Keypad({ onKey, lastLabel, lastAria, lastDisabled }: {
+  onKey: (k: string) => void; lastLabel: React.ReactNode; lastAria: string; lastDisabled: boolean;
+}) {
   const keys: [string, React.ReactNode, string][] = [
     ["1", "1", "1"], ["2", "2", "2"], ["3", "3", "3"], ["back", "⌫", "Delete"],
     ["4", "4", "4"], ["5", "5", "5"], ["6", "6", "6"], ["'", <><span className="text-xl">&apos;</span><span className="ml-1 text-xs">ft</span></>, "Feet"],
     ["7", "7", "7"], ["8", "8", "8"], ["9", "9", "9"], ['"', <><span className="text-xl">&quot;</span><span className="ml-1 text-xs">inch</span></>, "Inch"],
-    [".", ".", "Point"], ["0", "0", "0"], ["-", "–", "Dash"], ["next", lastLabel, lastLabel],
+    [".", ".", "Point"], ["0", "0", "0"], ["-", "–", "Dash"], ["next", lastLabel, lastAria],
   ];
   return (
     <div className="grid grid-cols-4 gap-1.5" style={{ touchAction: "manipulation" }}>
       {keys.map(([k, label, aria]) => (
         <button key={k} onClick={() => onKey(k)} aria-label={aria}
           disabled={k === "next" && lastDisabled}
-          className={`h-14 rounded-[var(--radius)] font-semibold disabled:opacity-40 ${k === "next" ? "btn-primary text-base" : "text-xl"}`}
+          className={`h-12 rounded-[var(--radius)] font-semibold disabled:opacity-40 ${k === "next" ? "btn-primary text-base" : "text-xl"}`}
           style={k === "next" ? undefined : { background: /\d/.test(k) ? "var(--surface)" : "var(--surface-2)", border: "1px solid var(--line)" }}>
           {label}
         </button>
@@ -1260,7 +1464,18 @@ function groupsText(groups: BarGroup[]): string {
   return groups.map((g) => barsText(g.ft, g.full, g.half)).join(" + ");
 }
 
-const barCount = (groups: BarGroup[]) => groups.reduce((a, g) => a + g.full + g.half, 0);
+/** Pipes as the dealer counts them: a half pipe is ½, not one more pipe —
+ *  1 × 16' + 1 × 8' is "1½", where adding bars up said "2". */
+function pipeCount(full: number, half: number): string {
+  const whole = full + Math.floor(half / 2);
+  if (half % 2 === 0) return String(whole);
+  return whole ? `${whole}½` : "½";
+}
+const pipeWord = (full: number, half: number) => (full * 2 + half > 2 ? "pipes" : "pipe");
+const groupsCount = (groups: BarGroup[]) =>
+  pipeCount(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.half, 0));
+const groupsWord = (groups: BarGroup[]) =>
+  pipeWord(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.half, 0));
 
 /* —— material list —— */
 
@@ -1274,7 +1489,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
   const today = useMemo(() => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }), []);
 
   const groups = barGroups(list.sections);
-  const total = barCount(groups);
+  const total = groupsCount(groups);
   const hasGlass = list.glass.length > 0 || list.mesh.panels.length > 0 || list.sheet.panels.length > 0;
 
   return (
@@ -1294,7 +1509,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
                 qty: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
               };
             })}
-            totalLabel="Total pipes" totalValue={groupsText(groups)} />
+            totalLabel="Total pipes" totalValue={`${groupsText(groups)} (${total} ${groupsWord(groups)})`} />
         </div>
         {hasGlass && (
           <div ref={glassDocRef} style={{ marginTop: 16 }}>
@@ -1326,7 +1541,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
         </div>
         <div className="shrink-0 text-right">
           <div className="text-4xl font-extrabold tabnum">{total}</div>
-          <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{total === 1 ? "pipe" : "pipes"}</div>
+          <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{groupsWord(groups)}</div>
         </div>
       </div>
 
@@ -1355,7 +1570,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
                   {barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}{sec.size ? ` · ${sec.size}mm` : ""}
                 </div>
               </div>
-              <div className="w-14 shrink-0 text-right text-2xl font-extrabold tabnum">{s.bars16 + s.bars8}</div>
+              <div className="w-14 shrink-0 text-right text-2xl font-extrabold tabnum">{pipeCount(s.bars16, s.bars8)}</div>
             </div>
           );
         })}
@@ -1366,7 +1581,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
       {/* aluminium dealer and glass shop are different people — two sends */}
       <SendOrder
         label="Send to aluminium supplier"
-        sub={`${plural(list.sections.length, "section")} · ${plural(total, "pipe")}`}
+        sub={`${plural(list.sections.length, "section")} · ${total} ${groupsWord(groups)}`}
         filename={pdfName(jobName, "aluminium-order")}
         text={aluminiumWaText(list, shop.name, jobName)}
         build={() => elementToPdfBlob(aluDocRef.current!)}
@@ -1581,7 +1796,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <MiniStat label="Pipes" value={String(barCount(groups))} />
+          <MiniStat label="Pipes" value={groupsCount(groups)} />
           <MiniStat label="Pieces" value={String(totalPieces)} />
           <MiniStat label="Scrap" value={`${list.totals.wastePct}%`} />
         </div>
@@ -1605,7 +1820,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
             <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--surface-2)" }}>
               <div className="font-bold">{sec.label}</div>
               <div className="text-right">
-                <div className="text-sm font-bold tabnum">{plural(bars.length, "pipe")}</div>
+                <div className="text-sm font-bold tabnum">{pipeCount(full, half)} {pipeWord(full, half)}</div>
                 <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(fullFt, full, half)}</div>
               </div>
             </div>
@@ -1782,7 +1997,8 @@ function aluminiumWaText(list: MaterialList, shopName?: string, jobName?: string
     const sec = getSection(s.sectionId);
     L.push(`• ${sec.label} — ${barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}`);
   }
-  L.push("", `*Total: ${groupsText(barGroups(list.sections))}*`);
+  const groups = barGroups(list.sections);
+  L.push("", `*Total: ${groupsText(groups)}* (${groupsCount(groups)} ${groupsWord(groups)})`);
   return L.join("\n");
 }
 

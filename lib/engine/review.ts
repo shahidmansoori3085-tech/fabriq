@@ -189,5 +189,24 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
         ? "The estimate is fine. Please review the suggestions below."
         : "Some items need checking first — please read the warnings below.";
 
-  return { confidence: Math.max(confidence, 60), findings, summary };
+  return { confidence: Math.max(confidence, 60), findings: mergeRepeats(findings), summary };
+}
+
+/** "W1: X" and "W2: X" are one finding, "W1, W2: X" — five partitions saying
+ *  the same sentence five times is noise a fabricator learns to scroll past. */
+function mergeRepeats(findings: ReviewFinding[]): ReviewFinding[] {
+  const out: ReviewFinding[] = [];
+  const byText = new Map<string, { f: ReviewFinding; ids: string[] }>();
+  for (const f of findings) {
+    const m = /^(W\d+): ([\s\S]*)$/.exec(f.message);
+    if (!m) { out.push(f); continue; }
+    const key = `${f.severity}|${m[2]}`;
+    const seen = byText.get(key);
+    if (seen) { seen.ids.push(m[1]); continue; }
+    const entry = { f: { ...f }, ids: [m[1]] };
+    byText.set(key, entry);
+    out.push(entry.f);
+  }
+  for (const [key, { f, ids }] of byText) f.message = `${ids.join(", ")}: ${key.slice(key.indexOf("|") + 1)}`;
+  return out;
 }

@@ -3,7 +3,7 @@
  * FabriQ visual language (D12): the fabricator SEES what is being asked.
  * Deterministic SVG renderers — dimensions always come from engine data.
  */
-import { Um, formatFtInSut, toFeet } from "@/lib/engine/units";
+import { Um, formatFtInSut, formatFtIn, toFeet } from "@/lib/engine/units";
 import type { ShutterConfig, PackedBar, JobItem } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
 import { partitionGeometry } from "@/lib/engine/estimator";
@@ -239,137 +239,137 @@ export function TrackDiagram({ tracks }: { tracks: number }) {
   );
 }
 
+/* ——— partition divider spacing ——— */
+const DP = "#e8590c";
+const SP = "#5a5f6a";
+
+/** A dimension arrow ↔ (or ↕) between two points, with its size written beside it. */
+function gapArrow(x1: number, y1: number, x2: number, y2: number, label: string, room: number, key: string) {
+  const vertical = x1 === x2;
+  const a = 3.5;
+  const head = vertical
+    ? `M${x1 - a} ${y1 + a} L${x1} ${y1} L${x1 + a} ${y1 + a} M${x2 - a} ${y2 - a} L${x2} ${y2} L${x2 + a} ${y2 - a}`
+    : `M${x1 + a} ${y1 - a} L${x1} ${y1} L${x1 + a} ${y1 + a} M${x2 - a} ${y2 - a} L${x2} ${y2} L${x2 - a} ${y2 + a}`;
+  // the label must fit the panel it names — shrink it, never let it spill over a divider
+  const fs = Math.max(7, Math.min(13, room / (label.length * 0.62)));
+  const tw = label.length * fs * 0.6 + 6;
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  return (
+    <g key={key}>
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#1e3a8a" strokeWidth={0.9} />
+      <path d={head} stroke="#1e3a8a" strokeWidth={0.9} fill="none" />
+      <rect x={cx - tw / 2} y={cy - fs * 0.75} width={tw} height={fs * 1.5} rx={3} fill="#fff" stroke="#bfdbfe" strokeWidth={0.6} />
+      <text x={cx} y={cy + fs * 0.36} textAnchor="middle" fontSize={fs} fontWeight={800} fill="#111827"
+        style={{ fontVariantNumeric: "tabular-nums" }}>{label}</text>
+    </g>
+  );
+}
+
 /**
- * Partition elevation preview — one zone per character in `zonemix`
- * (S=sheet, G=glass), stacked bottom-to-top with a DP divider between
- * zones. Used both as a small per-option preview (question chooser) and
- * larger in the live preview.
+ * The divider question, answered on a drawing of THIS partition: only the
+ * lines being asked about (vertical or horizontal) are drawn, and the gap each
+ * choice really leaves is written inside every panel. A fabricator unsure which
+ * one "vertical" is sees it — and sees that 10 ft at a 3 ft gap gives three
+ * 3'2" panels, the same grid the cut list is built from.
  */
-export function PartitionDiagram({ zonemix, size = 96 }: { zonemix: string; size?: number }) {
-  const w = size, h = size;
-  const frame = Math.max(3, size * 0.04);
-  const innerW = w - frame * 2;
-  const innerH = h - frame * 2;
-  const zones = zonemix.split("");
-  const n = zones.length;
-  const dividerH = Math.max(2, size * 0.03);
-  const zoneH = (innerH - dividerH * (n - 1)) / n;
+export function PartitionGapPicture({ item, axis }: { item: JobItem; axis: "v" | "h" }) {
+  const L = partitionGeometry(item).layout;
+  const s = Math.min(300 / item.width, 230 / item.height);
+  const W = item.width * s, H = item.height * s;
+  const P = 6, DB = axis === "v" ? 30 : 6, DR = axis === "h" ? 34 : 6;
+  const X = (um: number) => P + um * s, Y = (um: number) => P + um * s;
+  const f = L.face;
+  const bandH = L.glassRows * L.glassRowH + (L.glassRows - 1) * f;
+  const parts: React.ReactNode[] = [];
+
+  // the field: glass, plus the old bottom-sheet band on jobs saved with one
+  parts.push(<rect key="field" x={X(f)} y={Y(f)} width={L.fieldW * s} height={L.innerH * s} fill="#dbeafe" />);
+  if (L.sheetH > 0) parts.push(<rect key="sheet" x={X(f)} y={Y(f + bandH + f)} width={L.fieldW * s} height={L.sheetH * s} fill="#eef1f4" />);
+
+  if (L.hasDoor) {
+    const dx = f + L.fieldW + f;
+    parts.push(<rect key="jamb" x={X(f + L.fieldW)} y={Y(f)} width={f * s} height={L.innerH * s} fill={SP} />);
+    parts.push(<rect key="door" x={X(dx)} y={Y(f)} width={L.doorW * s} height={L.innerH * s} fill="#e7efe9" stroke="#0f6e56" strokeWidth={1.2} />);
+    parts.push(<text key="door-t" x={X(dx + L.doorW / 2)} y={Y(f + L.innerH / 2)} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0f6e56">Door</text>);
+  }
+
+  if (axis === "v") {
+    for (let i = 0; i < L.bays - 1; i++) {
+      parts.push(<rect key={`v${i}`} x={X(f + (i + 1) * L.cellW + i * f)} y={Y(f)} width={Math.max(f * s, 3)} height={L.innerH * s} fill={DP} />);
+    }
+    for (let b = 0; b < L.bays; b++) {
+      const x = f + b * (L.cellW + f);
+      parts.push(gapArrow(X(x) + 2, Y(f + L.innerH / 2), X(x + L.cellW) - 2, Y(f + L.innerH / 2), formatFtIn(L.cellW), L.cellW * s - 4, `a${b}`));
+    }
+    // overall width under the drawing
+    const y = P + H + 12;
+    parts.push(
+      <g key="dim" stroke={SP} strokeWidth={0.8}>
+        <line x1={P} y1={y} x2={P + W} y2={y} />
+        <line x1={P} y1={y - 4} x2={P} y2={y + 4} />
+        <line x1={P + W} y1={y - 4} x2={P + W} y2={y + 4} />
+      </g>,
+      <text key="dim-t" x={P + W / 2} y={y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill={SP}>
+        Width {formatFtIn(item.width)}
+      </text>,
+    );
+  } else {
+    for (let r = 0; r < L.glassRows - 1; r++) {
+      parts.push(<rect key={`h${r}`} x={X(f)} y={Y(f + (r + 1) * L.glassRowH + r * f)} width={L.fieldW * s} height={Math.max(f * s, 3)} fill={DP} />);
+    }
+    if (L.sheetH > 0) parts.push(<rect key="hs" x={X(f)} y={Y(f + bandH)} width={L.fieldW * s} height={Math.max(f * s, 3)} fill={DP} />);
+    const cx = f + L.fieldW / 2;
+    for (let r = 0; r < L.glassRows; r++) {
+      const y = f + r * (L.glassRowH + f);
+      parts.push(gapArrow(X(cx), Y(y) + 2, X(cx), Y(y + L.glassRowH) - 2, formatFtIn(L.glassRowH), Math.min(L.fieldW * s - 8, 90), `a${r}`));
+    }
+    // overall height beside the drawing
+    const x = P + W + 12;
+    parts.push(
+      <g key="dim" stroke={SP} strokeWidth={0.8}>
+        <line x1={x} y1={P} x2={x} y2={P + H} />
+        <line x1={x - 4} y1={P} x2={x + 4} y2={P} />
+        <line x1={x - 4} y1={P + H} x2={x + 4} y2={P + H} />
+      </g>,
+      <text key="dim-t" x={x + 14} y={P + H / 2} textAnchor="middle" fontSize={11} fontWeight={700} fill={SP}
+        transform={`rotate(90 ${x + 14} ${P + H / 2})`}>
+        Height {formatFtIn(item.height)}
+      </text>,
+    );
+  }
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxWidth: w }} role="img"
-      aria-label={`Partition ${zonemix}`}>
-      <rect x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} rx={2}
-        fill="#dde1e7" stroke="#5a5f6a" strokeWidth={1.5} />
-      {/* zones stacked bottom-up so index 0 (first char) renders at bottom */}
-      {zones.map((z, i) => {
-        const yFromBottom = i * (zoneH + dividerH);
-        const y = h - frame - yFromBottom - zoneH;
-        return (
-          <g key={i}>
-            <rect x={frame} y={y} width={innerW} height={zoneH}
-              fill={z === "G" ? "#dbeafe" : "#f1f3f5"}
-              stroke={z === "G" ? "#3b82f6" : "#9aa0ab"} strokeWidth={1} />
-            {z === "G" && (
-              <line x1={frame + innerW * 0.12} y1={y + zoneH * 0.85} x2={frame + innerW * 0.55} y2={y + zoneH * 0.15}
-                stroke="#93c5fd" strokeWidth={1} />
-            )}
-            {i < n - 1 && (
-              <rect x={frame} y={y - dividerH} width={innerW} height={dividerH} fill="#5a5f6a" />
-            )}
-          </g>
-        );
-      })}
+    <svg viewBox={`0 0 ${W + P + DR} ${H + P + DB}`} width="100%" style={{ maxWidth: W + P + DR, display: "block" }}
+      role="img" aria-label={axis === "v" ? `${L.bays} panels across` : `${L.glassRows} panels high`}>
+      <rect x={P} y={P} width={W} height={H} fill={SP} rx={1.5} />
+      {parts}
     </svg>
   );
 }
 
 /**
- * Partition bay preview — splits the actual partition width into N vertical
- * bays for a chosen bay-width, so the fabricator SEES how many dividers a
- * choice produces before picking. (Drawing-driven divider spacing.)
+ * Frame + shutter, or shutter only, drawn: the frame (chaukhat) is the thick
+ * dark border; without it the leaf sits in a dashed wall opening.
  */
-export function PartitionBayDiagram({
-  widthUm, bayFt, size = 104,
-}: { widthUm: Um; bayFt: number; size?: number }) {
-  const w = size, h = size * 0.72;
-  const frame = 4;
-  const innerW = w - frame * 2;
-  const innerH = h - frame * 2;
-  const widthFt = toFeet(widthUm);
-  const bays = Math.max(1, Math.round(widthFt / bayFt));
-  const bw = innerW / bays;
+export function DoorScopePicture({ item, withFrame, size = 44 }: { item: JobItem; withFrame: boolean; size?: number }) {
+  const W = size, H = size * 2.1;
+  const fr = withFrame ? Math.max(4, size * 0.11) : 2.5;
+  const lw = W - 2 * fr, lh = H - 2 * fr;
+  const zones = item.shutters.length || 1;
+  const zh = (lh - 4) / zones;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxWidth: w }} role="img"
-      aria-label={`Partition ${bays} bays`}>
-      <rect x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} rx={2}
-        fill="#dde1e7" stroke="#5a5f6a" strokeWidth={1.5} />
-      {Array.from({ length: bays }).map((_, i) => {
-        const x = frame + i * bw;
-        return (
-          <g key={i}>
-            {/* glass upper ~65%, sheet lower ~35% */}
-            <rect x={x + 1} y={frame} width={bw - 2} height={innerH * 0.62}
-              fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.75} />
-            <rect x={x + 1} y={frame + innerH * 0.64} width={bw - 2} height={innerH * 0.36}
-              fill="#f1f3f5" stroke="#9aa0ab" strokeWidth={0.75} />
-            {i < bays - 1 && (
-              <rect x={x + bw - 1.5} y={frame} width={3} height={innerH} fill="#e8590c" />
-            )}
-          </g>
-        );
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, display: "block" }} role="img"
+      aria-label={withFrame ? "Door with frame" : "Door shutter only"}>
+      {withFrame
+        ? <rect x={0.5} y={0.5} width={W - 1} height={H - 1} rx={1.5} fill={SP} />
+        : <rect x={0.75} y={0.75} width={W - 1.5} height={H - 1.5} fill="none" stroke="#9aa0ab" strokeWidth={1} strokeDasharray="3 2" />}
+      <rect x={fr} y={fr} width={lw} height={lh} fill="#dde1e7" stroke={SP} strokeWidth={1} />
+      {item.shutters.map((z, i) => {
+        const y = fr + 2 + i * zh;
+        return z.kind === "jali" ? jaliFill(fr + 2, y + 0.5, lw - 4, zh - 1, `z${i}`)
+          : z.kind === "glass" ? glassFill(fr + 2, y + 0.5, lw - 4, zh - 1, `z${i}`)
+            : sheetFill(fr + 2, y + 0.5, lw - 4, zh - 1, `z${i}`);
       })}
-      <text x={w / 2} y={h - 1} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#5a5f6a">
-        {bays} panel
-      </text>
-    </svg>
-  );
-}
-
-/**
- * Partition ROW preview — splits the glass band (total height minus the bottom
- * sheet) into N horizontal rows for a chosen row-height, so the fabricator sees
- * how many horizontal (leta) dividers a choice produces.
- */
-export function PartitionRowDiagram({
-  heightUm, sheetFt, rowFt, size = 104,
-}: { heightUm: Um; sheetFt: number; rowFt: number; size?: number }) {
-  const w = size * 0.7, h = size;
-  const frame = 4;
-  const innerW = w - frame * 2;
-  const innerH = h - frame * 2;
-  const heightFt = toFeet(heightUm);
-  const glassFt = Math.max(1, heightFt - sheetFt);
-  const rows = Math.max(1, Math.round(glassFt / rowFt));
-  const sheetFrac = sheetFt > 0 ? Math.min(0.5, sheetFt / heightFt) : 0;
-  const sheetPx = innerH * sheetFrac;
-  const glassPx = innerH - sheetPx;
-  const rowPx = glassPx / rows;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxWidth: w }} role="img"
-      aria-label={`Partition ${rows} rows`}>
-      <rect x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} rx={2}
-        fill="#dde1e7" stroke="#5a5f6a" strokeWidth={1.5} />
-      {/* glass rows (top) */}
-      {Array.from({ length: rows }).map((_, i) => {
-        const y = frame + i * rowPx;
-        return (
-          <g key={i}>
-            <rect x={frame} y={y} width={innerW} height={rowPx - 0.5}
-              fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.6} />
-            {i < rows - 1 && (
-              <rect x={frame} y={y + rowPx - 1.5} width={innerW} height={3} fill="#e8590c" />
-            )}
-          </g>
-        );
-      })}
-      {/* sheet band (bottom) */}
-      {sheetPx > 0 && (
-        <rect x={frame} y={frame + glassPx} width={innerW} height={sheetPx}
-          fill="#f1f3f5" stroke="#9aa0ab" strokeWidth={0.75} />
-      )}
-      <text x={w / 2} y={h - 1} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#5a5f6a">
-        {rows} row
-      </text>
     </svg>
   );
 }

@@ -177,6 +177,15 @@ export function formatFtInSut(um: Um): string {
   return (negative ? "-" : "") + out;
 }
 
+/** Opening-scale size the way it is measured on site — feet first: 5', 4'6", 3'2"4s. */
+export function formatFtIn(um: Um): string {
+  const totalSut = Math.round(um / UM_PER_SUT);
+  const ft = Math.floor(totalSut / 96);
+  const inch = Math.floor((totalSut % 96) / 8);
+  const sut = totalSut % 8;
+  return `${ft}'${inch || sut ? `${inch}"` : ""}${sut ? `${sut}s` : ""}`;
+}
+
 /** Format µm as mm (rounded) */
 export function formatMm(um: Um): string {
   return `${Math.round(um / UM_PER_MM)}mm`;
