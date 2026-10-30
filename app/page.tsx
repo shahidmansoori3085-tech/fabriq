@@ -837,7 +837,7 @@ function JobScreen({
               <Choice key={v} wide selected={o.sys === v} onClick={() => choose({ sys: v as WinSys })}
                 title={label} sub={SYSTEM_INFO[v as WinSys].sub}
                 // eslint-disable-next-line @next/next/no-img-element
-                picture={<img src={SYSTEM_INFO[v as WinSys].img} alt="" style={{ maxHeight: 64, maxWidth: 96, objectFit: "contain" }} />} />
+                picture={<img src={SYSTEM_INFO[v as WinSys].img} alt="" style={{ maxHeight: 64, maxWidth: 96, objectFit: "contain", mixBlendMode: "multiply" }} />} />
             ))}
           </div>
         )}
@@ -1615,7 +1615,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
       <div className="card overflow-hidden">
         <div className="flex items-center gap-3 px-3 py-2 text-[11px] font-semibold"
           style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-          <span className="shrink-0" style={{ width: 84 }}>Section</span>
+          <span className="shrink-0" style={{ width: 100 }}>Section</span>
           <span className="min-w-0 flex-1" />
           <span className="w-14 shrink-0 text-right">Pipes</span>
         </div>
@@ -1624,8 +1624,8 @@ function MaterialPanel({ list, shop, items, jobName }: {
           const code = sectionCode(s.sectionId, brand);
           return (
             <div key={s.sectionId} className="flex items-center gap-3 px-3 py-2.5" style={{ borderTop: "1px solid var(--line)" }}>
-              <span className="shrink-0" style={{ width: 84 }}>
-                <SectionProfile sectionId={s.sectionId} w={84} h={56} />
+              <span className="shrink-0" style={{ width: 100 }}>
+                <SectionProfile sectionId={s.sectionId} w={92} h={62} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold leading-tight">

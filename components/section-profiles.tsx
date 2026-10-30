@@ -68,8 +68,9 @@ export function specFor(sectionId: string): Spec {
 
 /* ————————————————— cross-section faces ————————————————— */
 // Colours are theme tokens so the profile reads on light + dark cards.
-const METAL = "var(--steel)";
-const EDGE = "var(--ink-2)";
+// Black line on white, the same as the catalogue drawings beside them.
+const METAL = "#ffffff";
+const EDGE = "#000000";
 const BORE = "var(--surface)";
 
 /** Draw the detailed cross-section in a local [0,0]-[W,H] px box. */
@@ -324,7 +325,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
   const long = 96;
   const dw = wmm >= hmm ? long : long * (wmm / hmm);
   const dh = wmm >= hmm ? long * (hmm / wmm) : long;
-  const A = "var(--accent)";
+  const A = "#000000";
   const dim = { stroke: A, strokeWidth: 1 };
   const M = 30;
   // Same named card as the catalogue crops — a bare outline left the workshop
