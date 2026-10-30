@@ -262,8 +262,18 @@ const SECTION_IMAGES = new Set<string>([
   "door_palla_75", "door_palla_60", "door_palla_50", "door_center_75", "door_frame_pattam",
 ]);
 
+/** Sections drawn by another one's catalogue picture: every door center rail
+ *  is the same profile — a tube with the moulding on BOTH sides (the shutter
+ *  has it on one) — so the 63 and 50 show the 75's drawing, not a plain box. */
+const IMAGE_OF: Record<string, string> = { door_center_60: "door_center_75", door_center_50: "door_center_75" };
+
 export function hasImage(sectionId: string): boolean {
-  return SECTION_IMAGES.has(sectionId);
+  return SECTION_IMAGES.has(IMAGE_OF[sectionId] ?? sectionId);
+}
+
+/** The picture file for a section. */
+export function imageSrc(sectionId: string): string {
+  return `/sections/${IMAGE_OF[sectionId] ?? sectionId}.png`;
 }
 
 /* ————————————————— compact profile (table cells) ————————————————— */
@@ -275,7 +285,7 @@ export function SectionProfile({ sectionId, w = 46, h = 30 }: { sectionId: strin
       <span className="grid place-items-center overflow-hidden rounded-md"
         style={{ width: w + 8, height: h + 6, background: "#fff", border: "1px solid var(--line)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/sections/${sectionId}.png`} alt={`${sec.label} cross-section`}
+        <img src={imageSrc(sectionId)} alt={`${sec.label} cross-section`}
           style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", padding: 2 }} />
       </span>
     );
@@ -305,7 +315,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
       <figure className="overflow-hidden rounded-xl" style={{ background: "#fff", border: "1px solid var(--line)" }}>
         <div className="grid place-items-center px-3 py-3" style={{ background: "#fff" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/sections/${sectionId}.png`} alt={`${sec.label} — engineering cross-section (mm)`}
+          <img src={imageSrc(sectionId)} alt={`${sec.label} — engineering cross-section (mm)`}
             style={{ maxWidth: "100%", maxHeight: 190, objectFit: "contain" }} />
         </div>
         {/* Wraps instead of squeezing: in a narrow drawing-sheet column the

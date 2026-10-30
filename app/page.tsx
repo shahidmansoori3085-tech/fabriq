@@ -28,7 +28,7 @@ import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
 import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
-import { SectionProfile, SectionDrawing, hasImage } from "@/components/section-profiles";
+import { SectionProfile, SectionDrawing, hasImage, imageSrc } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
 import { sharePdfToWhatsApp, elementToPdfBlob, whatsAppLink, type ShareResult } from "@/lib/pdf";
@@ -1569,7 +1569,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
               const sec = getSection(s.sectionId);
               const code = sectionCode(s.sectionId, brand);
               return {
-                image: hasImage(s.sectionId) ? `/sections/${s.sectionId}.png` : undefined,
+                image: hasImage(s.sectionId) ? imageSrc(s.sectionId) : undefined,
                 label: sec.label,
                 sub: code ? `#${code}` : (sec.size ? `${sec.size}mm` : undefined),
                 qty: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
