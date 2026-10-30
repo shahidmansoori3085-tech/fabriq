@@ -103,7 +103,7 @@ const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Door panels, top to bottom (3 panels, 2 center rails). Glass top is the
  *  usual door (founder, 2026-10-28), so it comes first and is the default. */
-const DOOR_CENTERS: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
+const DOOR_CENTERS: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]];
 
 /** The door's panels, top to bottom. What fills them does not change the
  *  aluminium, so it is not asked: glass on top, sheet below — the usual door
@@ -158,7 +158,7 @@ function optsFromItem(it: JobItem): Opts {
   if (it.type === "door") {
     if (it.system === "z_section") o.doorSys = "z";
     pick("palla", m.palla); pick("chokhat", m.chokhat); pick("doorMix", m.zonemix);
-    if (m.zonemix) o.doorCenters = String(Math.max(1, m.zonemix.length - 1));
+    if (m.zonemix) o.doorCenters = String(Math.min(4, Math.max(1, m.zonemix.length - 1)));
   } else if (it.type === "partition") {
     if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
     pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partBayFt", m.partBayFt);
@@ -917,26 +917,11 @@ function JobScreen({
         )}
 
         {flow.step === "doorCenters" && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-4 gap-2">
-              {DOOR_CENTERS.map(([v, label]) => (
-                <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
-                  picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
-              ))}
-              <Choice selected={parseInt(o.doorCenters, 10) > 3} title="Other"
-                onClick={() => { if (!(parseInt(o.doorCenters, 10) > 3)) choose({ doorCenters: "4" }, false); }}
-                picture={<MiniElevation item={sample("door", { ...o, doorCenters: parseInt(o.doorCenters, 10) > 3 ? o.doorCenters : "4" })} size={40} />} />
-            </div>
-            {parseInt(o.doorCenters, 10) > 3 && (
-              <>
-                <div className="card flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="text-sm font-semibold">Center rails</span>
-                  <MiniQty value={parseInt(o.doorCenters, 10)} label="center rails"
-                    onChange={(k) => choose({ doorCenters: String(Math.min(6, Math.max(1, k))) }, false)} />
-                </div>
-                <button onClick={() => go(steps[i + 1])} className="btn-primary w-full py-3.5">Next</button>
-              </>
-            )}
+          <div className="grid grid-cols-4 gap-2">
+            {DOOR_CENTERS.map(([v, label]) => (
+              <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
+                picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
+            ))}
           </div>
         )}
 
