@@ -423,7 +423,7 @@ type StepId =
 /** One question per screen — only the ones this choice actually needs. */
 function stepsFor(type: OpeningType, o: Opts): StepId[] {
   if (type === "door") {
-    return ["type", "doorSys", ...(o.doorSys === "z" ? ["zDoorCenters"] as const : ["doorCenters", "doorFrame", "doorSection"] as const), "size"];
+    return ["type", "doorSys", ...(o.doorSys === "z" ? ["zDoorCenters"] as const : ["doorFrame", "doorCenters", "doorSection"] as const), "size"];
   }
   if (type === "partition") {
     const kind: StepId[] = o.partSys === "z"
