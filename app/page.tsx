@@ -1165,7 +1165,7 @@ function JobScreen({
           <button onClick={onDemo} className="flex items-center justify-center gap-2 py-1 text-sm font-semibold"
             style={{ color: "var(--accent)" }}>
             <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full text-[10px] text-white" style={{ background: "var(--accent)" }}>▶</span>
-            Watch the demo · 45 sec
+            Watch the demo · 50 sec
           </button>
         </div>
       ) : (
@@ -2040,8 +2040,9 @@ function markDemoSeen() {
 }
 
 /**
- * The app in 45 seconds — a real recording of a window going from sizes to
- * a WhatsApp order, captioned in Hinglish. Muted, so it may play by itself;
+ * The app in 50 seconds — a branded 9:16 film of the real app taking a
+ * window from its first question to a WhatsApp order and the cutting sheet,
+ * a Hinglish heading on every step. Muted, so it may play by itself;
  * one big button to start, and Skip always in reach: a demo that blocks a
  * fabricator who already knows what to do is worse than none.
  */
@@ -2052,9 +2053,9 @@ function DemoModal({ onClose }: { onClose: () => void }) {
       style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))", paddingTop: 16 }}>
       <button onClick={onClose} className="absolute right-4 top-4 rounded-full px-3 py-1.5 text-sm font-semibold text-white"
         style={{ background: "rgba(255,255,255,.15)" }}>Skip ✕</button>
-      <video src="/demo.mp4" poster="/demo-poster.jpg" autoPlay muted playsInline controls
+      <video src="/demo.mp4?v=2" poster="/demo-poster.jpg?v=2" autoPlay muted playsInline controls
         onEnded={() => setEnded(true)}
-        className="w-auto rounded-xl" style={{ maxHeight: "74vh", maxWidth: "100%", background: "#000" }} />
+        className="w-auto rounded-2xl" style={{ maxHeight: "76vh", maxWidth: "100%", aspectRatio: "9 / 16", background: "#0b0f17" }} />
       <button onClick={onClose} className="btn-primary w-full max-w-sm py-3.5 text-base">
         {ended ? "Start — add your first job →" : "Start using FabriQ →"}
       </button>
