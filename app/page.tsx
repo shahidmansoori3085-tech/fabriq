@@ -18,7 +18,7 @@ import {
   formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
-import { estimate, ImpossibleLayoutError, partitionLayout } from "@/lib/engine/estimator";
+import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem } from "@/lib/engine/quick-item";
 import {
   getSection,
@@ -1586,7 +1586,12 @@ function MaterialPanel({ list, shop, items, jobName }: {
 
   const groups = barGroups(list.sections);
   const total = groupsCount(groups);
-  const hasGlass = list.glass.length > 0 || list.mesh.panels.length > 0 || list.sheet.panels.length > 0;
+  const panels = panelRows(list);
+  const panelSqft = list.glassSqft + list.mesh.sqft + list.sheet.sqft;
+  const panelCount = panels.reduce((a, r) => a + r.panels.reduce((b, p) => b + p.count, 0), 0);
+  /** "Glass Order", or "Glass & Sheet Order" when the shop cuts more than glass. */
+  const panelTitle = `${panels.map((r) => r.title).join(" & ")} Order`;
+  const t = list.totals;
 
   return (
     <div className="flex flex-col gap-3">
@@ -1595,58 +1600,89 @@ function MaterialPanel({ list, shop, items, jobName }: {
       <div aria-hidden style={{ position: "fixed", left: -9999, top: 0, width: 620 }}>
         <div ref={aluDocRef}>
           <SupplierOrderDoc shop={shop} title="Aluminium Order" date={today} job={jobName || undefined}
+            columns={["Section", "Pipes"]}
             lines={list.sections.map((s) => {
               const sec = getSection(s.sectionId);
               return {
                 image: hasImage(s.sectionId) ? imageSrc(s.sectionId) : undefined,
                 label: sec.label,
-                sub: sec.size ? `${sec.size}mm` : undefined,
-                qty: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
+                sub: sec.size ? `${sec.size} mm` : undefined,
+                qty: pipeCount(s.bars16, s.bars8),
+                qtySub: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
               };
             })}
-            totalLabel="Total pipes" totalValue={`${groupsText(groups)} (${total} ${groupsWord(groups)})`} />
+            totalLabel="Total" totalValue={`${total} ${groupsWord(groups)}`} totalSub={groupsText(groups)} />
         </div>
-        {hasGlass && (
+        {panels.length > 0 && (
           <div ref={glassDocRef} style={{ marginTop: 16 }}>
-            <SupplierOrderDoc shop={shop} title="Glass / Mesh Order" date={today} job={jobName || undefined}
-              lines={[
-                ...mergeBySize(list.glass).map((p) => ({ label: `Glass — ${sizeText(p)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sq ft each`, qty: plural(p.count, "pc") })),
-                ...mergeBySize(list.mesh.panels).map((p) => ({ label: `Mesh — ${sizeText(p)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sq ft each`, qty: plural(p.count, "pc") })),
-                ...mergeBySize(list.sheet.panels).map((p) => ({ label: `Sheet — ${sizeText(p)}`, sub: `${sqft(p.width, p.height).toFixed(2)} sq ft each`, qty: plural(p.count, "pc") })),
-              ]}
-              totalLabel="Total area"
-              totalValue={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sq ft`}
-              note="All sizes are finished panel sizes." />
+            <SupplierOrderDoc shop={shop} title={panelTitle} date={today} job={jobName || undefined}
+              columns={["Size (width × height)", "Qty"]}
+              lines={panels.flatMap((r) => r.panels.map((p) => ({
+                label: sizeText(p),
+                sub: `${r.title} · ${sqft(p.width, p.height).toFixed(2)} sq ft each`,
+                qty: plural(p.count, "pc"),
+              })))}
+              totalLabel="Total" totalValue={`${panelSqft.toFixed(1)} sq ft`} totalSub={plural(panelCount, "piece")}
+              note="All sizes are finished panel sizes, in inches and sut." />
           </div>
         )}
       </div>
 
-      {/* the answer first: how many pipes to buy, by stock length */}
-      <div className="card flex items-center justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Pipes to buy</div>
-          {groups.map((g) => (
-            <div key={g.ft} className="mt-0.5 text-sm font-semibold tabnum" style={{ color: "var(--ink-2)" }}>
-              {barsText(g.ft, g.full, g.half)}
-            </div>
-          ))}
-          <div className="text-xs tabnum" style={{ color: list.totals.wastePct > 20 ? "var(--warn)" : "var(--ink-3)" }}>
-            Scrap {list.totals.wastePct}%
+      {/* the answer first: how many pipes to buy — and what is really lost */}
+      <div className="card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Pipes to buy</div>
+            {groups.map((g) => (
+              <div key={g.ft} className="mt-1 text-base font-semibold tabnum">{barsText(g.ft, g.full, g.half)}</div>
+            ))}
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-4xl font-extrabold leading-none tabnum">{total}</div>
+            <div className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>{groupsWord(groups)}</div>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-4xl font-extrabold tabnum">{total}</div>
-          <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{groupsWord(groups)}</div>
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+          <div>
+            <div className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Keep for next job</div>
+            <div className="text-sm font-bold tabnum" style={{ color: "var(--good)" }}>
+              {t.keepPieces ? `${plural(t.keepPieces, "piece")} · ${t.keepFt} ft` : "—"}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Real scrap</div>
+            <div className="text-sm font-bold tabnum" style={{ color: t.scrapPct > 8 ? "var(--warn)" : "var(--ink)" }}>
+              {t.scrapPct}% · {t.scrapFt} ft
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* one row per section — drawing first, because that is what he recognises */}
+      {/* the two jobs this screen is for: send the orders */}
+      <div className="flex flex-col gap-2">
+        <SendOrder
+          label="Send aluminium order"
+          sub={`${total} ${groupsWord(groups)} · ${plural(list.sections.length, "section")}`}
+          filename={pdfName(jobName, "aluminium-order")}
+          text={aluminiumWaText(list, shop.name, jobName)}
+          build={() => elementToPdfBlob(aluDocRef.current!)}
+        />
+        {panels.length > 0 && (
+          <SendOrder
+            label={`Send ${panelTitle.toLowerCase()}`}
+            sub={`${plural(panelCount, "piece")} · ${panelSqft.toFixed(1)} sq ft`}
+            filename={pdfName(jobName, "glass-order")}
+            text={glassWaText(list, shop.name, jobName)}
+            build={() => elementToPdfBlob(glassDocRef.current!)}
+          />
+        )}
+      </div>
+
+      {/* aluminium: one row per section — drawing first, that is what he recognises */}
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-3 px-3 py-2 text-[11px] font-semibold"
-          style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
-          <span className="shrink-0" style={{ width: 100 }}>Section</span>
-          <span className="min-w-0 flex-1" />
-          <span className="w-14 shrink-0 text-right">Pipes</span>
+        <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
+          <span className="text-sm font-bold">Aluminium</span>
+          <span className="text-xs tabnum" style={{ color: "var(--ink-3)" }}>{plural(list.sections.length, "section")}</span>
         </div>
         {list.sections.map((s) => {
           const sec = getSection(s.sectionId);
@@ -1656,38 +1692,38 @@ function MaterialPanel({ list, shop, items, jobName }: {
                 <SectionProfile sectionId={s.sectionId} w={92} h={62} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold leading-tight">
-                  {sec.label}
-                </div>
+                <div className="text-sm font-semibold leading-tight">{sec.label}</div>
                 <div className="mt-0.5 text-xs tabnum" style={{ color: "var(--ink-3)" }}>
-                  {barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}{sec.size ? ` · ${sec.size}mm` : ""}
+                  {barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}
                 </div>
               </div>
-              <div className="w-14 shrink-0 text-right text-2xl font-extrabold tabnum">{pipeCount(s.bars16, s.bars8)}</div>
+              <div className="shrink-0 text-right">
+                <div className="text-2xl font-extrabold leading-none tabnum">{pipeCount(s.bars16, s.bars8)}</div>
+                <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{pipeWord(s.bars16, s.bars8)}</div>
+              </div>
             </div>
           );
         })}
       </div>
 
-      <GlassBlock list={list} />
-
-      {/* aluminium dealer and glass shop are different people — two sends */}
-      <SendOrder
-        label="Send to aluminium supplier"
-        sub={`${plural(list.sections.length, "section")} · ${total} ${groupsWord(groups)}`}
-        filename={pdfName(jobName, "aluminium-order")}
-        text={aluminiumWaText(list, shop.name, jobName)}
-        build={() => elementToPdfBlob(aluDocRef.current!)}
-      />
-      {hasGlass && (
-        <SendOrder
-          label="Send to glass supplier"
-          sub={`${(list.glassSqft + list.mesh.sqft + list.sheet.sqft).toFixed(1)} sq ft`}
-          filename={pdfName(jobName, "glass-order")}
-          text={glassWaText(list, shop.name, jobName)}
-          build={() => elementToPdfBlob(glassDocRef.current!)}
-        />
-      )}
+      {panels.map((r) => (
+        <div key={r.title} className="card overflow-hidden">
+          <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
+            <span className="text-sm font-bold">{r.title}</span>
+            <span className="text-xs tabnum" style={{ color: "var(--ink-3)" }}>{r.sub}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-1.5 text-[11px] font-semibold"
+            style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
+            <span>Width × Height</span><span>Qty</span>
+          </div>
+          {r.panels.map((g, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: "1px solid var(--line)" }}>
+              <span className="mono text-[15px] font-semibold">{sizeText(g)}</span>
+              <span className="text-base font-bold tabnum">{plural(g.count, "pc")}</span>
+            </div>
+          ))}
+        </div>
+      ))}
 
       <BeforeYouCut items={items} list={list} />
     </div>
@@ -1753,30 +1789,13 @@ function SendOrder({ label, sub, filename, text, build }: {
   );
 }
 
-function GlassBlock({ list }: { list: MaterialList }) {
+/** Glass, mesh and sheet panels, each kind merged by size — what the glass shop cuts. */
+function panelRows(list: MaterialList) {
   const rows: { title: string; sub: string; panels: { width: Um; height: Um; count: number }[] }[] = [];
   if (list.glass.length) rows.push({ title: "Glass", sub: `${list.glassSqft.toFixed(1)} sq ft`, panels: mergeBySize(list.glass) });
   if (list.mesh.panels.length) rows.push({ title: "Mesh", sub: `${list.mesh.sqft.toFixed(1)} sq ft · spline ${list.mesh.splineFt} rft`, panels: mergeBySize(list.mesh.panels) });
   if (list.sheet.panels.length) rows.push({ title: "Sheet", sub: `${list.sheet.sqft.toFixed(1)} sq ft`, panels: mergeBySize(list.sheet.panels) });
-  if (!rows.length) return null;
-  return (
-    <>
-      {rows.map((r) => (
-        <div key={r.title} className="card overflow-hidden">
-          <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
-            <span className="text-sm font-bold">{r.title}</span>
-            <span className="text-xs tabnum" style={{ color: "var(--ink-3)" }}>{r.sub}</span>
-          </div>
-          {r.panels.map((g, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm" style={{ borderTop: "1px solid var(--line)" }}>
-              <span className="mono font-semibold">{sizeText(g)}</span>
-              <span className="font-bold tabnum">{plural(g.count, "pc")}</span>
-            </div>
-          ))}
-        </div>
-      ))}
-    </>
-  );
+  return rows;
 }
 
 /** Deterministic checks worth reading before anyone cuts. */
@@ -1790,7 +1809,10 @@ const SEVERITY_ICON: Record<ReviewFinding["severity"], { icon: string; tint: str
 function BeforeYouCut({ items, list }: { items: JobItem[]; list: MaterialList }) {
   const review = useMemo(() => reviewEstimate(items, list), [items, list]);
   const order: ReviewFinding["severity"][] = ["blocker", "warning", "suggestion", "ok"];
+  // Notes for the founder (catalogue codes not yet verified) are not the
+  // fabricator's to act on — only what changes what he cuts or buys.
   const worth = review.findings
+    .filter((f) => f.category !== "section-verify")
     .filter((f) => f.severity !== "ok")
     .sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
   if (worth.length === 0) return null;
@@ -1891,7 +1913,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <MiniStat label="Pipes" value={groupsCount(groups)} />
           <MiniStat label="Pieces" value={String(totalPieces)} />
-          <MiniStat label="Scrap" value={`${list.totals.wastePct}%`} />
+          <MiniStat label="Real scrap" value={`${list.totals.scrapPct}%`} />
         </div>
       </div>
 
@@ -1899,7 +1921,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
         label="Send to workshop"
         sub={`${plural(totalPieces, "piece")} · ${plural(sectionGroups.length, "section")}`}
         filename={pdfName(jobName, "cutting-sheet")}
-        text={`Cutting sheet${jobName ? ` — ${jobName}` : ""}: ${plural(totalPieces, "piece")} across ${plural(sectionGroups.length, "section")}. PDF attached.`}
+        text={withBrand([`Cutting sheet${jobName ? ` — ${jobName}` : ""}: ${plural(totalPieces, "piece")} across ${plural(sectionGroups.length, "section")}. PDF attached.`]).join("\n")}
         build={() => elementToPdfBlob(sheetRef.current!)}
       />
 
@@ -1948,7 +1970,9 @@ function CuttingPanel({ list, shop, items, jobName }: {
                     </span>
                     <span className="mono">{packLine(bar.pieces)}</span>
                     {bar.waste > 0 && (
-                      <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(bar.waste)} left over</span>
+                      bar.waste >= KEEP_OFFCUT
+                        ? <span className="mono font-semibold" style={{ color: "var(--good)" }}>· keep {formatFtInSut(bar.waste)}</span>
+                        : <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(bar.waste)} scrap</span>
                     )}
                   </div>
                 ))}
@@ -2057,6 +2081,12 @@ function plural(n: number, word: string): string {
 
 /* ————————————————— WhatsApp text ————————————————— */
 
+/** The message under every order: where it was made, with a link to the app. */
+function withBrand(lines: string[]): string[] {
+  const url = typeof window !== "undefined" ? window.location.origin : "";
+  return url ? [...lines, "", `_Made with FabriQ — ${url}_`] : lines;
+}
+
 function aluminiumWaText(list: MaterialList, shopName?: string, jobName?: string): string {
   const L: string[] = [`*Aluminium order${shopName ? ` — ${shopName}` : ""}*`];
   if (jobName) L.push(`Job: ${jobName}`);
@@ -2066,8 +2096,8 @@ function aluminiumWaText(list: MaterialList, shopName?: string, jobName?: string
     L.push(`• ${sec.label} — ${barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}`);
   }
   const groups = barGroups(list.sections);
-  L.push("", `*Total: ${groupsText(groups)}* (${groupsCount(groups)} ${groupsWord(groups)})`);
-  return L.join("\n");
+  L.push("", `*Total: ${groupsCount(groups)} ${groupsWord(groups)}* (${groupsText(groups)})`);
+  return withBrand(L).join("\n");
 }
 
 /** The glass shop cuts by size, not by window — same pane, one line. */
@@ -2092,5 +2122,5 @@ function glassWaText(list: MaterialList, shopName?: string, jobName?: string): s
   block("Glass", `${list.glassSqft.toFixed(1)} sq ft`, mergeBySize(list.glass));
   block("Mesh", `${list.mesh.sqft.toFixed(1)} sq ft + spline ${list.mesh.splineFt} rft`, mergeBySize(list.mesh.panels));
   block("Sheet", `${list.sheet.sqft.toFixed(1)} sq ft`, mergeBySize(list.sheet.panels));
-  return L.join("\n");
+  return withBrand(L).join("\n");
 }

@@ -80,6 +80,13 @@ export interface MaterialList {
     totalPipeFt: number;
     wasteFt: number;
     wastePct: number;
+    /** Leftover pieces long enough to use on the next job (≥ KEEP_OFFCUT) —
+     *  part of wasteFt, but not lost: the shop keeps them. */
+    keepPieces: number;
+    keepFt: number;
+    /** What is really thrown away: leftovers shorter than KEEP_OFFCUT. */
+    scrapFt: number;
+    scrapPct: number;
   };
 }
 

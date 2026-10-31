@@ -1,7 +1,7 @@
 /**
  * FabriQ Cutting Brain — global 1D bin-packing across the whole job.
- * FFD (First-Fit Decreasing) over each section's own stock bar length, then
- * half-bar downgrade where it reduces waste (if the section sells halves).
+ * Many packings tried per section (first/best fit, longest first and
+ * shuffled); the one buying the least stock wins (half bars where sold).
  * Rules (founder-verified):
  *  - Most sections sell as 16-foot bars; dealer also cuts 8-foot halves.
  *  - Glazing Clip sells as 12-foot bars only, no half option.
@@ -38,46 +38,107 @@ export class PieceTooLongError extends Error {
   }
 }
 
-/** Pack one section's pieces onto bars. FFD + half-bar downgrade. */
+interface OpenBar { pieces: CutPiece[]; used: Um }
+
+/** Pieces onto bars in the given order: first fit, or best fit (the fullest bar that still takes it). */
+function fill(order: CutPiece[], cap: Um, best: boolean): OpenBar[] {
+  const bars: OpenBar[] = [];
+  for (const p of order) {
+    let at = -1;
+    let room = Infinity;
+    for (let i = 0; i < bars.length; i++) {
+      const left = cap - bars[i].used - p.length - (bars[i].pieces.length ? KERF : 0);
+      if (left < 0) continue;
+      if (!best) { at = i; break; }
+      if (left < room) { room = left; at = i; }
+    }
+    if (at < 0) bars.push({ pieces: [p], used: p.length });
+    else { bars[at].pieces.push(p); bars[at].used += p.length + KERF; }
+  }
+  return bars;
+}
+
+/** What a packing costs: the stock bought, each bar that fits a half counted as a half. */
+function stockOf(bars: OpenBar[], full: Um, half: Um, hasHalf: boolean): Um {
+  return bars.reduce((a, b) => a + (hasHalf && b.used <= half ? half : full), 0);
+}
+
+/** Of two packings with the same stock, the one whose leftover sits in fewer,
+ *  longer pieces — a long offcut is used on the next job, crumbs are scrap. */
+function offcutScore(bars: OpenBar[], full: Um, half: Um, hasHalf: boolean): number {
+  return bars.reduce((a, b) => {
+    const left = (hasHalf && b.used <= half ? half : full) - b.used;
+    return a + (left / full) ** 2;
+  }, 0);
+}
+
+/** A fixed pseudo-random sequence per section, so the same job always cuts the same way. */
+function seeded(key: string): () => number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  let x = h >>> 0 || 1;
+  return () => ((x = Math.imul(x ^ (x >>> 15), 2246822507) ^ Math.imul(x ^ (x >>> 13), 3266489909)) >>> 0) / 4294967296;
+}
+
+/**
+ * Pack one section's pieces onto bars, buying as little stock as possible.
+ *
+ * First-fit on the longest pieces first is the classic quick answer, but it
+ * leaves a few percent on the table: a job's pieces often fit one bar fewer,
+ * or end on a half bar, when taken in another order. So many orders are
+ * tried — longest-first with first fit and best fit, then the same with the
+ * sizes nudged at random — and the packing that buys the least stock wins;
+ * a tie goes to the one leaving its offcut in longer, reusable pieces. The
+ * randomness is seeded by the pieces, so a job always cuts the same way.
+ * A bar whose pieces fit half a bar is bought as a half (if the section sells halves).
+ */
 export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] {
   const sec = getSection(sectionId);
   const barFull = feet(sec.barLengthFt ?? 16);
   const barHalf = feet((sec.barLengthFt ?? 16) / 2);
   const hasHalfBar = sec.hasHalfBar ?? true;
+  const cap = barFull + BAR_ALLOWANCE;
 
   const sorted = [...pieces].sort((a, b) => b.length - a.length);
   for (const p of sorted) if (p.length > barFull) throw new PieceTooLongError(p, barFull);
 
-  interface OpenBar { pieces: CutPiece[]; used: Um }
-  const bars: OpenBar[] = [];
+  let best: OpenBar[] = fill(sorted, cap, false);
+  let bestStock = stockOf(best, barFull, barHalf, hasHalfBar);
+  let bestScore = offcutScore(best, barFull, barHalf, hasHalfBar);
+  const consider = (bars: OpenBar[]) => {
+    const st = stockOf(bars, barFull, barHalf, hasHalfBar);
+    if (st > bestStock) return;
+    const sc = offcutScore(bars, barFull, barHalf, hasHalfBar);
+    if (st < bestStock || sc > bestScore + 1e-9) { best = bars; bestStock = st; bestScore = sc; }
+  };
+  consider(fill(sorted, cap, true));
 
-  for (const p of sorted) {
-    let placed = false;
-    for (const b of bars) {
-      const need = p.length + (b.pieces.length > 0 ? KERF : 0);
-      if (b.used + need <= barFull + BAR_ALLOWANCE) {
-        b.pieces.push(p);
-        b.used += need;
-        placed = true;
-        break;
-      }
+  // Nothing to gain once the stock equals the plain floor of the lengths.
+  const total = sorted.reduce((a, p) => a + p.length, 0);
+  const unit = hasHalfBar ? barHalf : barFull;
+  const floor = Math.ceil(total / unit) * unit;
+  if (bestStock > floor && sorted.length > 1) {
+    const rnd = seeded(`${sectionId}:${sorted.map((p) => p.length).join(",")}`);
+    const tries = sorted.length <= 60 ? 400 : sorted.length <= 200 ? 150 : 50;
+    for (let t = 0; t < tries && bestStock > floor; t++) {
+      const jitter = 0.08 + 0.3 * rnd();
+      const order = sorted
+        .map((p) => ({ p, k: p.length * (1 + (rnd() - 0.5) * jitter) }))
+        .sort((a, b) => b.k - a.k)
+        .map((x) => x.p);
+      consider(fill(order, cap, t % 2 === 1));
     }
-    if (!placed) bars.push({ pieces: [p], used: p.length });
   }
 
-  // Downgrade: any bar whose contents fit a half bar becomes a half bar
-  // (only for sections that actually sell a half-length option). No
-  // allowance here: a half is the dealer cutting a full bar in two, so it
-  // comes out a little UNDER nominal — the over-length margin of a full mill
-  // bar does not carry over to it.
-  return bars.map((b, i) => {
+  // Longest pieces first on every bar, as the cutter takes them.
+  return best.map((b, i) => {
     const fitsHalf = hasHalfBar && b.used <= barHalf;
     const barLength = fitsHalf ? barHalf : barFull;
     return {
       barNo: i + 1,
       sectionId,
       barLength,
-      pieces: b.pieces,
+      pieces: [...b.pieces].sort((x, y) => y.length - x.length),
       waste: Math.max(0, barLength - b.used),
     };
   });

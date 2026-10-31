@@ -159,28 +159,15 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     });
   }
 
-  // Scrap analysis
-  if (list.totals.wastePct > 20) {
-    findings.push({
-      severity: "warning",
-      category: "scrap",
-      message: `Total scrap is ${list.totals.wastePct}% (${list.totals.wasteFt} ft). Keep the long leftover pieces — they can be used on the next job.`,
-    });
-    confidence -= 4;
-  } else if (list.totals.wastePct > 12) {
+  // Scrap: the result screen shows it in full (kept leftover vs real scrap);
+  // say something here only when the real scrap is high enough to act on.
+  if (list.totals.scrapPct > 8) {
     findings.push({
       severity: "suggestion",
       category: "scrap",
-      message: `Scrap is ${list.totals.wastePct}% — acceptable. Keep the usable leftover pieces.`,
-    });
-  } else if (list.totals.wastePct > 0) {
-    findings.push({
-      severity: "ok",
-      category: "scrap",
-      message: `Scrap is only ${list.totals.wastePct}% — efficient cutting.`,
+      message: `Real scrap is ${list.totals.scrapPct}% (${list.totals.scrapFt} ft). Entering the whole site as one job usually lowers it — more pieces share each pipe.`,
     });
   }
-
 
   const summary =
     confidence >= 95

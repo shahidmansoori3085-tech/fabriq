@@ -19,6 +19,10 @@ const MAX_CANVAS_SIDE = 15_000;
  * itself) is left out of the capture.
  */
 export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
+  // Every page carries a small "Made with FabriQ" in its bottom corner — a
+  // real link, drawn by the PDF itself (the page body is a picture), so a
+  // dealer or karigar who opens the PDF can tap straight into the app.
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
   // Wait for fonts and catalogue images to paint, each capped so a
   // backgrounded tab (rAF suspended) can never hang the share forever.
   const withTimeout = <T,>(p: Promise<T>, ms: number) =>
@@ -78,6 +82,12 @@ export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
         if (blankRow(sliced + sliceH - back)) { sliceH -= back; break; }
       }
     }
+    // A last sliver of white (the document's bottom padding) is not a page.
+    if (!firstPage) {
+      let blank = true;
+      for (let y = sliced; y < sliced + sliceH; y += 4) if (!blankRow(y)) { blank = false; break; }
+      if (blank) break;
+    }
     const page = document.createElement("canvas");
     page.width = canvas.width;
     page.height = sliceH;
@@ -87,6 +97,16 @@ export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
 
     if (!firstPage) doc.addPage();
     doc.addImage(page.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, imgW, (sliceH * imgW) / canvas.width);
+    if (appUrl) {
+      const label = "Made with FabriQ";
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(232, 89, 12);
+      const tw = doc.getTextWidth(label);
+      const x = pageW - margin - tw, y = pageH - 3;
+      doc.text(label, x, y);
+      doc.link(x - 1, y - 3.5, tw + 2, 5, { url: appUrl });
+    }
     sliced += sliceH;
     firstPage = false;
   }

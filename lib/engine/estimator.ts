@@ -912,6 +912,9 @@ export class ImpossibleLayoutError extends Error {
   }
 }
 
+/** A leftover at least this long is kept for the next job, not scrapped. */
+export const KEEP_OFFCUT: Um = feet(2);
+
 export function estimate(items: JobItem[]): MaterialList {
   const pieces = items.flatMap((it) => expandItem(it));
   for (const p of pieces) if (!(p.length > 0)) throw new ImpossibleLayoutError(p.itemId.replace(/\.\d+$/, ""), p.role, p.length);
@@ -1094,6 +1097,12 @@ export function estimate(items: JobItem[]): MaterialList {
     return a + s.bars16 * full + s.bars8 * (full / 2);
   }, 0);
   const wasteFt = sections.reduce((a, s) => a + toFeet(s.waste), 0);
+  // A leftover of 2 ft or more is cut from on the next job; only the shorter
+  // ends are truly lost. Telling the two apart is the difference between
+  // "11% scrap" and "3% scrap, keep these six pieces".
+  const keep = bars.filter((b) => b.waste >= KEEP_OFFCUT);
+  const keepFt = keep.reduce((a, b) => a + toFeet(b.waste), 0);
+  const scrapFt = wasteFt - keepFt;
 
   for (const [part, list] of [["glass", glass], ["mesh", mesh], ["sheet", sheet]] as const) {
     for (const p of list) {
@@ -1110,6 +1119,10 @@ export function estimate(items: JobItem[]): MaterialList {
       bars16, bars8, totalPipeFt,
       wasteFt: Math.round(wasteFt * 10) / 10,
       wastePct: totalPipeFt > 0 ? Math.round((wasteFt / totalPipeFt) * 1000) / 10 : 0,
+      keepPieces: keep.length,
+      keepFt: Math.round(keepFt * 10) / 10,
+      scrapFt: Math.round(scrapFt * 10) / 10,
+      scrapPct: totalPipeFt > 0 ? Math.round((scrapFt / totalPipeFt) * 1000) / 10 : 0,
     },
   };
 }
