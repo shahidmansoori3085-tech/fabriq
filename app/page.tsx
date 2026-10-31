@@ -530,6 +530,10 @@ function JobScreen({
   /** `start` is the screen the flow opened on — Back from it leaves the flow,
    *  never steps into a question that was answered before it opened. */
   const [flow, setFlow] = useState<{ step: StepId; editing: string | null; start: StepId } | null>(null);
+  /** Which partition the divider screens are on (index into readyIdx). */
+  const [part, setPart] = useState(0);
+  /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
+  const [seenPart, setSeenPart] = useState(0);
   /** The sizes being typed. Every line stays on screen, editable, until the
    *  flow is finished — nothing joins the job a moment after it is typed. */
   const [rows, setRows] = useState<SizeRow[]>([emptyRow()]);
@@ -540,31 +544,42 @@ function JobScreen({
   const [editDims, setEditDims] = useState<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
 
   /* —— the phone's back button ——
-   * Inside the flow it steps back one screen, like the ← in the header —
-   * leaving outright would throw away sizes typed but not yet added. */
+   * Every screen of the flow is its own history entry, pushed by the tap
+   * that moves forward. Back — the phone's or the ← in the header — is
+   * always history.back(), and the entry it lands on names the screen.
+   * Nothing is ever pushed from inside a Back: Chrome on Android marks an
+   * entry that pushes without a tap as skippable, and the next Back then
+   * jumped straight out of the app. */
   const flowOpen = useRef(false);
   const closing = useRef(false);
-  const stepBack = useRef<() => void>(() => {});
   useEffect(() => { flowOpen.current = !!flow; }, [flow]);
   useEffect(() => {
     const onPop = () => {
-      if (window.history.state?.fabriq === "add") return;
+      const st = window.history.state;
+      if (st?.fabriq === "add") {
+        setFlow((f) => (f ? { ...f, step: st.step } : f));
+        setPart(st.part ?? 0);
+        window.scrollTo({ top: 0 });
+        return;
+      }
       if (closing.current) { closing.current = false; return; }
-      if (!flowOpen.current) return;
-      window.history.pushState({ fabriq: "add" }, "");
-      stepBack.current();
+      // Back from the flow's first screen: out of the flow, one page.
+      if (flowOpen.current) { setFlow(null); window.scrollTo({ top: 0 }); }
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   const openFlow = (step: StepId, editing: string | null = null) => {
-    if (window.history.state?.fabriq !== "add") window.history.pushState({ fabriq: "add" }, "");
+    window.history.pushState({ fabriq: "add", step, part: 0, depth: 1 }, "");
     setFlow({ step, editing, start: step });
     window.scrollTo({ top: 0 });
   };
+  /** Out of the flow after Add / Save / Cancel: every screen it pushed is
+   *  stepped back over at once, so Back on the list does not reopen it. */
   const closeFlow = () => {
     setFlow(null);
-    if (window.history.state?.fabriq === "add") { closing.current = true; window.history.back(); }
+    const st = window.history.state;
+    if (st?.fabriq === "add") { closing.current = true; window.history.go(-(st.depth ?? 1)); }
     window.scrollTo({ top: 0 });
   };
 
@@ -578,7 +593,13 @@ function JobScreen({
   }, [justAdded, flow]);
 
   const steps = stepsFor(type, o);
-  const go = (step: StepId) => { setFlow((f) => (f ? { ...f, step } : f)); window.scrollTo({ top: 0 }); };
+  /** Forward to a screen — a new history entry, pushed by the tap that asked for it. */
+  const go = (step: StepId, toPart: number = part) => {
+    const depth = (window.history.state?.fabriq === "add" ? window.history.state.depth ?? 1 : 0) + 1;
+    window.history.pushState({ fabriq: "add", step, part: toPart, depth }, "");
+    setFlow((f) => (f ? { ...f, step } : f));
+    window.scrollTo({ top: 0 });
+  };
   /** Apply a choice; move on unless the screen has more to ask. */
   const choose = (patch: Partial<Opts>, advance = true, nextType: OpeningType = type) => {
     const next = { ...o, ...patch };
@@ -638,10 +659,6 @@ function JobScreen({
   };
   /** The lines that will be added, in order — the divider screens walk them one by one. */
   const readyIdx = parsed.flatMap((p, i) => (p.ready ? [i] : []));
-  /** Which partition the divider screens are on (index into readyIdx). */
-  const [part, setPart] = useState(0);
-  /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
-  const [seenPart, setSeenPart] = useState(0);
   const pr = readyIdx[Math.min(part, readyIdx.length - 1)] ?? 0;
 
   /** Everything typed joins the job together, only when the flow is finished. */
@@ -672,7 +689,7 @@ function JobScreen({
     // Every partition starts from the last gaps used; each is then shown on its own.
     setRows((rs) => rs.map((r) => ({ ...r, bay: r.bay ?? o.partBayFt, row: r.row ?? o.partRowFt })));
     setPart(0); setSeenPart(0);
-    go(afterSize[0]);
+    go(afterSize[0], 0);
   };
   /** Set this partition's gap — and remember it as the default for the next one. */
   const setGap = (key: "bay" | "row", v: string) => {
@@ -689,7 +706,7 @@ function JobScreen({
       setSeenPart(part + 1);
     }
     setPart(part + 1);
-    go("partBays");
+    go("partBays", part + 1);
   };
   /** The rest take this partition's lines, and everything is added at once. */
   const sameForRest = () => {
@@ -706,14 +723,11 @@ function JobScreen({
     if (typedAnything && !window.confirm(`Discard the ${plural(filled.length, "size")} you typed?`)) return;
     closeFlow();
   };
+  /** The ← in the header: exactly what the phone's Back does. */
   const back = () => {
     if (!flow) return;
-    // Back from a later partition's first screen is the one before's last.
-    if (flow.step === "partBays" && part > 0) { setPart(part - 1); go("partRows"); return; }
-    const i = steps.indexOf(flow.step);
-    if (i > 0 && flow.step !== flow.start) go(steps[i - 1]); else leave();
+    if (window.history.state?.fabriq === "add") window.history.back(); else closeFlow();
   };
-  useEffect(() => { stepBack.current = back; });
 
   const startAdd = (step: StepId) => {
     setRows([emptyRow()]); setEditDims(null);
