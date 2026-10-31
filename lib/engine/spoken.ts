@@ -25,38 +25,11 @@ const NUMBER_WORDS: Record<string, number> = {
   das: 10, dus: 10, gyarah: 11, gyara: 11, barah: 12, bara: 12, terah: 13, tera: 13,
   chaudah: 14, chauda: 14, pandrah: 15, pandra: 15, solah: 16, sola: 16, satrah: 17, satra: 17,
   atharah: 18, athara: 18, unnis: 19, bees: 20, bis: 20, shunya: 0,
-  ikkis: 21, bais: 22, teis: 23, tais: 23, chaubis: 24, chobis: 24, pachchis: 25, pachis: 25,
-  chhabbis: 26, chabbis: 26, sattais: 27, satais: 27, atthais: 28, athais: 28, untis: 29,
-  tees: 30, tis: 30, iktis: 31, ikattis: 31, battis: 32, taintis: 33, tetis: 33, chautis: 34, chontis: 34,
-  paintis: 35, pentis: 35, chhattis: 36, chattis: 36, saintis: 37, adtis: 38, artis: 38, untalis: 39,
-  chalis: 40, chaalis: 40, iktalis: 41, bayalis: 42, byalis: 42, taintalis: 43, chavalis: 44, chauvalis: 44,
-  paintalis: 45, chhiyalis: 46, saintalis: 47, adtalis: 48, artalis: 48, unchas: 49,
-  pachas: 50, pachaas: 50, ikyavan: 51, bavan: 52, tirepan: 53, chauvan: 54, chauwan: 54, pachpan: 55,
-  chhappan: 56, chappan: 56, sattavan: 57, atthavan: 58, unsath: 59, saath: 60, iksath: 61, basath: 62,
-  tirsath: 63, chausath: 64, painsath: 65, chhiyasath: 66, sadsath: 67, adsath: 68, unhattar: 69,
-  sattar: 70, ikhattar: 71, bahattar: 72, tihattar: 73, chauhattar: 74, pachhattar: 75, chhihattar: 76,
-  sathattar: 77, athattar: 78, unyasi: 79, assi: 80, ikyasi: 81, bayasi: 82, tirasi: 83, chaurasi: 84,
-  pachasi: 85, chhiyasi: 86, sattasi: 87, atthasi: 88, navasi: 89, nabbe: 90,
-  // what en-IN hears when a number is said quickly
-  for: 4, fore: 4, to: 2, too: 2, ate: 8,
   // Devanagari
   "शून्य": 0, "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "पाँच": 5, "छह": 6, "छः": 6, "छे": 6, "छ": 6,
   "सात": 7, "आठ": 8, "नौ": 9, "दस": 10, "ग्यारह": 11, "बारह": 12, "तेरह": 13, "चौदह": 14,
   "पंद्रह": 15, "पन्द्रह": 15, "सोलह": 16, "सत्रह": 17, "अठारह": 18, "उन्नीस": 19, "बीस": 20,
-  "इक्कीस": 21, "बाईस": 22, "तेईस": 23, "चौबीस": 24, "पच्चीस": 25, "छब्बीस": 26, "सत्ताईस": 27,
-  "अट्ठाईस": 28, "उनतीस": 29, "तीस": 30, "इकतीस": 31, "बत्तीस": 32, "तैंतीस": 33, "चौंतीस": 34,
-  "पैंतीस": 35, "छत्तीस": 36, "सैंतीस": 37, "अड़तीस": 38, "उनतालीस": 39, "चालीस": 40, "इकतालीस": 41,
-  "बयालीस": 42, "तैंतालीस": 43, "चवालीस": 44, "पैंतालीस": 45, "छियालीस": 46, "सैंतालीस": 47,
-  "अड़तालीस": 48, "उनचास": 49, "पचास": 50, "इक्यावन": 51, "बावन": 52, "तिरेपन": 53, "चौवन": 54,
-  "पचपन": 55, "छप्पन": 56, "सत्तावन": 57, "अट्ठावन": 58, "उनसठ": 59, "साठ": 60, "इकसठ": 61,
-  "बासठ": 62, "तिरसठ": 63, "चौंसठ": 64, "पैंसठ": 65, "छियासठ": 66, "सड़सठ": 67, "अड़सठ": 68,
-  "उनहत्तर": 69, "सत्तर": 70, "इकहत्तर": 71, "बहत्तर": 72, "तिहत्तर": 73, "चौहत्तर": 74,
-  "पचहत्तर": 75, "छिहत्तर": 76, "सतहत्तर": 77, "अठहत्तर": 78, "उन्यासी": 79, "अस्सी": 80,
-  "इक्यासी": 81, "बयासी": 82, "तिरासी": 83, "चौरासी": 84, "पचासी": 85, "छियासी": 86, "सत्तासी": 87,
-  "अट्ठासी": 88, "नवासी": 89, "नब्बे": 90,
 };
-/** "ek sau bees" = 120, "fifteen hundred mm" = 1500. */
-const HUNDRED = new Set(["sau", "hundred", "सौ"]);
 const TENS = new Set([20, 30, 40, 50, 60, 70, 80, 90]);
 
 /** Words that change the number after them: saadhe 4 = 4.5, sava 4 = 4.25, paune 4 = 3.75. */
@@ -135,12 +108,6 @@ function tokenize(text: string): Tok[] | null {
       if (last && "n" in last) { last.n += 0.5; last.digits = undefined; } else out.push({ n: 0.5 });
       continue;
     }
-    if (HUNDRED.has(w)) {
-      const last = out[out.length - 1];
-      if (last && "n" in last && !last.digits && Number.isInteger(last.n) && last.n < 100) last.n *= 100;
-      else out.push({ n: 100 });
-      continue;
-    }
     let n: number | null = null;
     if (/^\d+(?:\.\d+)?$/.test(w)) { out.push({ n: parseFloat(w), digits: w }); continue; }
     else if (w in NUMBER_WORDS) n = NUMBER_WORDS[w];
@@ -149,8 +116,7 @@ function tokenize(text: string): Tok[] | null {
       if (frac) { n += frac; frac = 0; }
       // "fifty four" → 54
       const last = out[out.length - 1];
-      if (last && "n" in last && !last.digits && Number.isInteger(n) && n > 0
-        && ((TENS.has(last.n) && n < 10) || (last.n >= 100 && last.n % 100 === 0 && n < 100))) { last.n += n; continue; }
+      if (last && "n" in last && !last.digits && TENS.has(last.n) && n > 0 && n < 10 && Number.isInteger(n)) { last.n += n; continue; }
       out.push({ n });
       continue;
     }
@@ -230,71 +196,6 @@ export function bestSpokenSizes(alternatives: string[]): { heard: string; sizes:
   for (const heard of alternatives) {
     const sizes = parseSpokenSizes(heard);
     if (sizes) return { heard, sizes };
-  }
-  return null;
-}
-
-/** One opening said out loud: its sizes, and how many — if a count was said. */
-export type SpokenLine = { sizes: Um[]; qty: number | null };
-
-/** "teen nag", "2 piece", "qty 3" — the count of one size. */
-const QTY_AFTER = new Set(["nag", "naag", "nug", "piece", "pieces", "peace", "pcs", "pc", "nos", "number",
-  "window", "windows", "khidki", "door", "doors", "darwaza", "नग", "पीस", "नंबर", "खिड़की", "दरवाजा"]);
-const QTY_BEFORE = new Set(["qty", "quantity", "kwantiti", "क्वांटिटी", "क्वांटिटी"]);
-/** Said between two openings: "4.6 by 5 agla 3 by 4". */
-const LINE_WORDS = /\s+(?:agla|agli|agle|next|phir|fir|then|aur ek|अगला|अगली|अगले|फिर)\s+|;|\n/;
-/** A comma usually splits openings too — but an engine may also write "4 feet, 6 inch". */
-const LINE_COMMA = /\s+(?:agla|agli|agle|next|phir|fir|then|aur ek|अगला|अगली|अगले|फिर)\s+|,\s+|;|\n/;
-
-function countWord(w: string): number | null {
-  const n = /^\d+$/.test(w) ? parseInt(w, 10) : NUMBER_WORDS[w];
-  return n !== undefined && n >= 1 && n <= 999 && Number.isInteger(n) ? n : null;
-}
-
-/** One opening: sizes plus an optional count, the count taken out before the sizes are read. */
-export function parseSpokenLine(raw: string): SpokenLine | null {
-  const words = normalize(raw).split(" ").filter(Boolean);
-  let qty: number | null = null;
-  for (let i = 0; i < words.length; i++) {
-    if (QTY_AFTER.has(words[i]) && i > 0) {
-      const n = countWord(words[i - 1]);
-      if (n !== null && qty === null) { qty = n; words.splice(i - 1, 2); break; }
-    }
-    if (QTY_BEFORE.has(words[i]) && i < words.length - 1) {
-      const n = countWord(words[i + 1]);
-      if (n !== null && qty === null) { qty = n; words.splice(i, 2); break; }
-    }
-  }
-  const sizes = parseSpokenSizes(words.join(" "));
-  return sizes ? { sizes, qty } : null;
-}
-
-/** A whole list said in one go — "4.6 by 5 teen nag, agla 3 by 4 do nag". */
-export function parseSpokenList(raw: string): SpokenLine[] | null {
-  return splitLines(raw, LINE_COMMA) ?? splitLines(raw, LINE_WORDS);
-}
-
-function splitLines(raw: string, by: RegExp): SpokenLine[] | null {
-  const parts = raw.toLowerCase().split(by).map((p) => p.trim()).filter(Boolean);
-  if (!parts.length) return null;
-  const out: SpokenLine[] = [];
-  for (const p of parts) {
-    const line = parseSpokenLine(p);
-    if (!line) return null;
-    out.push(line);
-  }
-  return out;
-}
-
-/** The first of the speech engine's guesses that reads as a list, and passes `fits`. */
-export function bestSpokenList(
-  alternatives: string[], fits: (lines: SpokenLine[]) => boolean,
-): { heard: string; lines: SpokenLine[] } | null {
-  for (const heard of alternatives) {
-    for (const by of [LINE_COMMA, LINE_WORDS]) {
-      const lines = splitLines(heard, by);
-      if (lines && fits(lines)) return { heard, lines };
-    }
   }
   return null;
 }

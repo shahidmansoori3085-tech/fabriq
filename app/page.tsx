@@ -28,7 +28,7 @@ import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
 import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
-import { useVoice, MicButton, SayAllButton, VoiceSheet, type HeardLine } from "@/components/voice";
+import { useVoice, MicButton, VoiceSheet } from "@/components/voice";
 import { SectionProfile, SectionDrawing, hasImage, imageSrc } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
@@ -779,49 +779,21 @@ function JobScreen({
 
   /* —— saying sizes ——
    * The mic on a size card: one size said fills the first empty box of that
-   * card, "4.6 by 5" fills width and height (and the fixed glass, if said),
-   * "teen nag" sets its qty. "Say all sizes" takes a whole list in one go —
-   * "4.6 by 5 teen nag, agla 3 by 4" — each opening on its own card.
+   * card, "4.6 by 5" fills width and height (and the fixed glass, if said).
    * Nothing is filled until the fabricator confirms what was heard. */
   const voice = useVoice();
-  const voiceRow = useRef<{ r: number; keys: BoxKey[] } | null>(null);
+  const voiceTo = useRef<{ r: number; keys: BoxKey[] }>({ r: 0, keys: [] });
   const boxName = (k: BoxKey) => (k === "w" ? "Width" : k === "h" ? "Height" : fixLabel ?? "Fixed");
-  const sayRow = (r: number) => voice.start({
-    many: false,
-    labels: (line) => {
-      const n = line.sizes.length;
-      if (n > order.length) return null;
-      const row = rows[r];
-      const keys = n === 1 ? [order.find((k) => !row?.[k].trim()) ?? "w"] : order.slice(0, n);
-      voiceRow.current = { r, keys };
-      return keys.map(boxName);
-    },
+  const sayRow = (r: number) => voice.start((n) => {
+    if (n > order.length) return null;
+    const row = rows[r];
+    const keys = n === 1 ? [order.find((k) => !row?.[k].trim()) ?? "w"] : order.slice(0, n);
+    voiceTo.current = { r, keys };
+    return keys.map(boxName);
   });
-  const sayAll = () => {
-    voiceRow.current = null;
-    voice.start({
-      many: true,
-      labels: (line) => (line.sizes.length >= 2 && line.sizes.length <= order.length ? order.slice(0, line.sizes.length).map(boxName) : null),
-    });
-  };
-  const fillSaid = (lines: HeardLine[]) => {
-    const one = voiceRow.current;
-    if (one && lines[0]) {
-      const { r, keys } = one;
-      keys.forEach((k, i) => setBox(r, k, formatTradeSize(lines[0].sizes[i])));
-      const q = lines[0].qty;
-      if (q) setRows((rs) => rs.map((x, k) => (k === r ? { ...x, qty: q } : x)));
-      return;
-    }
-    if (!lines.length) return;
-    setRows((rs) => {
-      const typed = rs.filter((x) => !isEmptyRow(x));
-      const said = lines.map((l): SizeRow => ({
-        w: formatTradeSize(l.sizes[0]), h: formatTradeSize(l.sizes[1]),
-        fix: l.sizes[2] ? formatTradeSize(l.sizes[2]) : "", qty: l.qty ?? 1,
-      }));
-      return [...typed, ...said, emptyRow()];
-    });
+  const fillSaid = (sizes: Um[]) => {
+    const { r, keys } = voiceTo.current;
+    keys.forEach((k, i) => setBox(r, k, formatTradeSize(sizes[i])));
   };
   const setBox = (r: number, k: BoxKey, v: string) => {
     const clean = v.replace(/[^\d.'"\- ]/g, "").slice(0, 10);
@@ -1122,7 +1094,6 @@ function JobScreen({
 
         {flow.step === "size" && (
           <div className="flex flex-col gap-2.5">
-            {voice.supported && !flow.editing && <SayAllButton onClick={sayAll} />}
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
@@ -1447,14 +1418,10 @@ function DoorSizeStep({ o, onChange, onNext }: {
       <div className="card p-3">
         {voice.supported && (
           <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-            <MicButton label="Say the door size" onClick={() => voice.start({
-              many: false,
-              labels: (line) => {
-                const n = line.sizes.length;
-                if (n > 2 || line.qty) return null;
-                voiceKeys.current = n === 2 ? ["w", "h"] : [!w.trim() ? "w" : !h.trim() ? "h" : "w"];
-                return voiceKeys.current.map((k) => (k === "w" ? "Door width" : "Door height"));
-              },
+            <MicButton label="Say the door size" onClick={() => voice.start((n) => {
+              if (n > 2) return null;
+              voiceKeys.current = n === 2 ? ["w", "h"] : [!w.trim() ? "w" : !h.trim() ? "h" : "w"];
+              return voiceKeys.current.map((k) => (k === "w" ? "Door width" : "Door height"));
             })} />
             <span>Say the door size</span>
           </div>
@@ -1474,8 +1441,7 @@ function DoorSizeStep({ o, onChange, onNext }: {
         </div>
       </div>
       <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
-      <VoiceSheet voice={voice} onUse={(lines) => {
-        const sizes = lines[0]?.sizes ?? [];
+      <VoiceSheet voice={voice} onUse={(sizes) => {
         let nw = w, nh = h;
         voiceKeys.current.forEach((k, i) => { if (k === "w") nw = formatTradeSize(sizes[i]); else nh = formatTradeSize(sizes[i]); });
         setW(nw); setH(nh); put(nw, nh);
