@@ -262,7 +262,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
           <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, marginBottom: 8 }}>Section Details (cut-through)</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
             {sectionIds.map((id) => (
-              <div key={id} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: 6, background: "#fcfdfe" }}>
+              <div key={id} style={{ padding: 6, background: "#fff" }}>
                 <SectionDrawing sectionId={id} />
               </div>
             ))}

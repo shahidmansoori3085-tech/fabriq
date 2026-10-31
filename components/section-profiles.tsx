@@ -282,13 +282,13 @@ export function SectionProfile({ sectionId, w = 46, h = 30 }: { sectionId: strin
   const sec = getSection(sectionId);
   if (hasImage(sectionId)) {
     return (
-      <span className="grid place-items-center overflow-hidden rounded-md"
-        style={{ width: w + 8, height: h + 6, background: "#fff", border: "1px solid var(--line)" }}>
+      <span className="grid place-items-center overflow-hidden"
+        style={{ width: w + 8, height: h + 6, background: "#fff" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageSrc(sectionId)} alt={`${sec.label} cross-section`}
           // the whole drawing, always: fill the box and fit inside it — a
           // max-size plus padding let tall sections spill out of the bottom
-          style={{ width: w + 6, height: h + 4, objectFit: "contain", padding: 3, boxSizing: "border-box" }} />
+          style={{ width: w + 8, height: h + 6, objectFit: "contain", padding: 3, boxSizing: "border-box" }} />
       </span>
     );
   }
@@ -314,7 +314,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
 
   if (hasImage(sectionId)) {
     return (
-      <figure className="overflow-hidden rounded-xl" style={{ background: "#fff", border: "1px solid var(--line)" }}>
+      <figure className="overflow-hidden" style={{ background: "#fff" }}>
         <div className="grid place-items-center px-3 py-3" style={{ background: "#fff" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageSrc(sectionId)} alt={`${sec.label} — engineering cross-section (mm)`}
@@ -323,7 +323,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
         {/* Wraps instead of squeezing: in a narrow drawing-sheet column the
             name and the size used to crush into one broken-up column. */}
         <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2"
-          style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
+          style={{ background: "#fff" }}>
           <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
           <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
         </figcaption>
@@ -343,7 +343,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
   // Same named card as the catalogue crops — a bare outline left the workshop
   // guessing which section it was.
   return (
-    <figure className="overflow-hidden rounded-xl" style={{ background: "#fff", border: "1px solid var(--line)" }}>
+    <figure className="overflow-hidden" style={{ background: "#fff" }}>
     <div className="grid place-items-center px-3 py-3">
     <svg viewBox={`0 0 ${dw + M} ${dh + M}`} width={dw + M} height={dh + M}
       role="img" aria-label={`${sec.label} dimensioned cross-section`} style={{ overflow: "visible", maxWidth: "100%" }}>
@@ -360,7 +360,7 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
     </svg>
     </div>
     <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2"
-      style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
+      style={{ background: "#fff" }}>
       <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
       <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
     </figcaption>

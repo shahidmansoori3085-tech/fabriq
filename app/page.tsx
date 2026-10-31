@@ -21,7 +21,7 @@ import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout } from "@/lib/engine/estimator";
 import { buildJobItem } from "@/lib/engine/quick-item";
 import {
-  getSection, BRANDS, sectionCode, loadBrand, saveBrand, type BrandId,
+  getSection,
 } from "@/lib/engine/sections";
 import { reviewEstimate } from "@/lib/engine/review";
 import type {
@@ -1548,8 +1548,6 @@ const groupsWord = (groups: BarGroup[]) =>
 function MaterialPanel({ list, shop, items, jobName }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;
 }) {
-  // Only ever rendered after a tap, never on the server — safe to read storage now.
-  const [brand] = useState<BrandId | undefined>(() => loadBrand());
   const aluDocRef = useRef<HTMLDivElement>(null);
   const glassDocRef = useRef<HTMLDivElement>(null);
   const today = useMemo(() => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }), []);
@@ -1567,11 +1565,10 @@ function MaterialPanel({ list, shop, items, jobName }: {
           <SupplierOrderDoc shop={shop} title="Aluminium Order" date={today} job={jobName || undefined}
             lines={list.sections.map((s) => {
               const sec = getSection(s.sectionId);
-              const code = sectionCode(s.sectionId, brand);
               return {
                 image: hasImage(s.sectionId) ? imageSrc(s.sectionId) : undefined,
                 label: sec.label,
-                sub: code ? `#${code}` : (sec.size ? `${sec.size}mm` : undefined),
+                sub: sec.size ? `${sec.size}mm` : undefined,
                 qty: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
               };
             })}
@@ -1621,7 +1618,6 @@ function MaterialPanel({ list, shop, items, jobName }: {
         </div>
         {list.sections.map((s) => {
           const sec = getSection(s.sectionId);
-          const code = sectionCode(s.sectionId, brand);
           return (
             <div key={s.sectionId} className="flex items-center gap-3 px-3 py-2.5" style={{ borderTop: "1px solid var(--line)" }}>
               <span className="shrink-0" style={{ width: 100 }}>
@@ -1630,7 +1626,6 @@ function MaterialPanel({ list, shop, items, jobName }: {
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold leading-tight">
                   {sec.label}
-                  {code && <span className="mono ml-1.5 text-[11px]" style={{ color: "var(--ink-3)" }}>#{code}</span>}
                 </div>
                 <div className="mt-0.5 text-xs tabnum" style={{ color: "var(--ink-3)" }}>
                   {barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}{sec.size ? ` · ${sec.size}mm` : ""}
@@ -1963,7 +1958,6 @@ function SettingsModal({ shop, onSave, onClose }: {
   onClose: () => void;
 }) {
   const [s, setS] = useState<ShopProfile>({ ...shop });
-  const [brand, setBrand] = useState<BrandId | undefined>(() => loadBrand());
 
   const field = (k: keyof ShopProfile, label: string, ph: string, mode?: "tel") => (
     <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: "var(--ink-2)" }}>
@@ -1992,22 +1986,7 @@ function SettingsModal({ shop, onSave, onClose }: {
           {field("address", "Address", "Optional")}
         </div>
 
-        <div className="mt-5">
-          <div className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>Section brand</div>
-          <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>
-            Select the brand you buy from to show its section numbers on orders.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {BRANDS.map((b) => (
-              <button key={b.id} onClick={() => setBrand(brand === b.id ? undefined : b.id)}
-                className={`chip px-3 py-2 text-sm ${brand === b.id ? "selected" : ""}`}>
-                {b.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={() => { saveBrand(brand); onSave({ ...s, name: s.name.trim() }); }} className="btn-primary mt-6 w-full py-3.5">
+        <button onClick={() => onSave({ ...s, name: s.name.trim() })} className="btn-primary mt-6 w-full py-3.5">
           Save
         </button>
       </div>

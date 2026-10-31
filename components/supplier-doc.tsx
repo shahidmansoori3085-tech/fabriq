@@ -88,7 +88,7 @@ export function SupplierOrderDoc({
               {String(i + 1).padStart(2, "0")}
             </div>
             <div style={{ flex: "0 0 76px", width: 76, height: 58, borderRadius: 10,
-              border: `1px solid ${LINE}`, background: "linear-gradient(180deg,#fff,#f7f8f9)",
+              background: "#fff",
               display: "grid", placeItems: "center", overflow: "hidden", padding: 5 }}>
               {l.image
                 // eslint-disable-next-line @next/next/no-img-element

@@ -538,9 +538,6 @@ export function BarDiagram({ bar }: { bar: PackedBar }) {
         <text x={0} y={9} fontSize={11} fontWeight={800} fill="#16181d">
           BAR {bar.barNo} — {section.label} ({section.size}mm) — {barFt}&apos;
         </text>
-        <text x={W} y={9} fontSize={10} textAnchor="end" fill="#5a5f6a">
-          {section.omeo ? `OMEO ${section.omeo}` : section.alpro ? `Alpro ${section.alpro}` : ""}
-        </text>
         <defs>
           <pattern id="wasteHatch" patternUnits="userSpaceOnUse" width="6" height="6"
             patternTransform="rotate(45)">
