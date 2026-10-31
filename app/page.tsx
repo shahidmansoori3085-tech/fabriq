@@ -486,11 +486,32 @@ const STEP_TITLE: Record<StepId, string> = {
   doorSection: "Shutter section?",
   partSys: "Which partition?",
   partDoor: "Door in the partition?",
-  partDoorSize: "Door size?",
+  partDoorSize: "Door size (only the door)",
   size: "Enter your sizes",
   partBays: "Vertical lines (khadi)",
   partRows: "Horizontal lines (leti)",
 };
+
+/** The size screen names what is being measured — after a door size, a
+ *  partition's "Enter your sizes" read like the door again. */
+function sizeTitle(type: OpeningType): string {
+  if (type === "partition") return "Full partition size";
+  if (type === "door") return "Door size";
+  return "Window size";
+}
+
+/** One line under the title saying exactly which size to type. */
+function stepHint(step: StepId, type: OpeningType, o: Opts): string | null {
+  if (step === "partDoorSize") return "Just the door opening. The full partition size comes next.";
+  if (step !== "size") return null;
+  if (type === "partition") return o.partDoor === "yes"
+    ? `Wall to wall, floor to ceiling, the ${doorSizeText(o)} door included.`
+    : "Wall to wall, floor to ceiling.";
+  if (type === "door") return o.doorSys === "normal" && o.chokhat !== "needed"
+    ? "The opening inside the fitted frame."
+    : "The full opening. The frame is cut to this size.";
+  return "The full window opening.";
+}
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
@@ -817,7 +838,7 @@ function JobScreen({
       : sample(type, o);
     const manyParts = readyIdx.length > 1;
     const lastPart = part >= readyIdx.length - 1;
-    const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, "size")}`;
+    const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, type === "partition" ? "partition" : type === "door" ? "door" : "window")}`;
     // the divider screens: which lines, how many panels, and the gap they leave
     const vertical = flow.step === "partBays";
     const grid = type === "partition" ? partitionLayout(shape) : null;
@@ -848,7 +869,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
             </div>
-            <h1 className="truncate text-lg font-bold">{STEP_TITLE[flow.step]}</h1>
+            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type) : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
@@ -857,6 +878,9 @@ function JobScreen({
             <span key={s} className="h-1 flex-1 rounded-full" style={{ background: k <= i ? "var(--accent)" : "var(--line)" }} />
           ))}
         </div>
+        {stepHint(flow.step, type, o) && (
+          <div className="-mt-2 text-sm font-semibold" style={{ color: "var(--ink-2)" }}>{stepHint(flow.step, type, o)}</div>
+        )}
 
         {flow.step === "type" && (
           <div className="grid grid-cols-3 gap-2">
@@ -936,7 +960,7 @@ function JobScreen({
           <div className="grid grid-cols-2 gap-2">
             {Z_SIZE.map(([v, label]) => (
               <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v })} title={label}
-                sub={v === "heavy" ? "For big windows" : "For normal windows"}
+                sub={v === "heavy" ? (type === "partition" ? "For big partitions" : "For big windows") : (type === "partition" ? "For normal partitions" : "For normal windows")}
                 picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={72} h={56} />} />
             ))}
           </div>
@@ -1077,12 +1101,13 @@ function JobScreen({
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
-              const keys: [BoxKey, string, string][] = [["w", "Width", "4.6"], ["h", "Height", "4"], ...(fixLabel ? [["fix", fixLabel, "1.6"] as [BoxKey, string, string]] : [])];
+              const [phW, phH] = type === "partition" ? ["10", "8"] : type === "door" ? ["3", "7"] : ["4.6", "4"];
+              const keys: [BoxKey, string, string][] = [["w", "Width", phW], ["h", "Height", phH], ...(fixLabel ? [["fix", fixLabel, "1.6"] as [BoxKey, string, string]] : [])];
               return (
                 <div key={r} className="card px-3 pb-2 pt-2.5" style={{ scrollMarginBottom: 110, scrollMarginTop: 80 }}>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-sm font-bold">
-                      {flow.editing ?? `Size ${r + 1}`}
+                      {flow.editing ?? `${type === "partition" ? "Partition" : type === "door" ? "Door" : "Window"} ${r + 1}`}
                       {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
                     </span>
                     <span className="flex items-center gap-1.5">
@@ -1125,7 +1150,7 @@ function JobScreen({
               style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
               <div className="mx-auto max-w-xl">
                 <button onClick={sizesDone} disabled={!allReady} className="btn-dark w-full py-3.5 text-base disabled:opacity-40">
-                  {afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
+                  {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
                 </button>
               </div>
             </div>
@@ -1404,7 +1429,7 @@ function DoorSizeStep({ o, onChange, onNext }: {
             : !okW ? "Width 1.6 to 8 ft — 3.6 means 3 ft 6 in" : "Height 5 to 10 ft — 6.9 means 6 ft 9 in"}
         </div>
       </div>
-      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
+      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next — full partition size</button>
     </div>
   );
 }
