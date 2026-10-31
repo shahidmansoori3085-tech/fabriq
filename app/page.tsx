@@ -237,6 +237,8 @@ export default function FabriQ() {
   const [shop, setShop] = useState<ShopProfile>({ name: "" });
   const [recent, setRecent] = useState<ProjectRec[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  /** The 45-second demo: shown once to a first-time user, and on request after. */
+  const [demo, setDemo] = useState(false);
   /** The saved job this screen is editing. A ref: it must be readable the
    *  moment an item is added, before any re-render. */
   const projectId = useRef<string | null>(null);
@@ -248,7 +250,10 @@ export default function FabriQ() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShop(loadShop());
-    setRecent(loadProjects());
+    const saved = loadProjects();
+    setRecent(saved);
+    // A shop that has never saved a job has never seen the app: show the demo once.
+    if (!saved.length && !demoSeen()) setDemo(true);
     // Works offline once it has loaded one time — a workshop's signal is poor.
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => { /* still works online */ });
@@ -261,6 +266,7 @@ export default function FabriQ() {
   useEffect(() => {
     const onPop = () => {
       setShowSettings(false);
+      setDemo(false);
       setView(window.history.state?.fabriq === "result" ? "result" : "job");
     };
     window.addEventListener("popstate", onPop);
@@ -269,6 +275,15 @@ export default function FabriQ() {
   const openSettings = () => {
     window.history.pushState({ fabriq: "settings" }, "");
     setShowSettings(true);
+  };
+  const openDemo = () => {
+    window.history.pushState({ fabriq: "demo" }, "");
+    setDemo(true);
+  };
+  const closeDemo = () => {
+    markDemoSeen();
+    if (window.history.state?.fabriq === "demo") window.history.back();
+    else setDemo(false);
   };
   const closeSettings = () => {
     if (window.history.state?.fabriq === "settings") window.history.back();
@@ -367,6 +382,7 @@ export default function FabriQ() {
           onRemove={removeItem}
           onDone={showResult}
           onSettings={openSettings}
+          onDemo={openDemo}
           recent={recent}
           onOpenRecent={openProject}
           onRemoveRecent={(p) => {
@@ -383,6 +399,7 @@ export default function FabriQ() {
           onScrap={(pct) => { if (projectId.current) patchProject(projectId.current, { scrapPct: pct }); }}
         />
       )}
+      {demo && <DemoModal onClose={closeDemo} />}
       {showSettings && (
         <SettingsModal
           shop={shop}
@@ -507,7 +524,7 @@ function fixedPart(type: OpeningType, o: Opts): string | null {
 }
 
 function JobScreen({
-  items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings,
+  items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings, onDemo,
   recent, onOpenRecent, onRemoveRecent,
 }: {
   items: JobItem[];
@@ -519,6 +536,7 @@ function JobScreen({
   onRemove: (id: string) => void;
   onDone: () => void;
   onSettings: () => void;
+  onDemo: () => void;
   recent: ProjectRec[];
   onOpenRecent: (p: ProjectRec) => void;
   onRemoveRecent: (p: ProjectRec) => void;
@@ -1144,6 +1162,11 @@ function JobScreen({
         <div className="card flex flex-col gap-4 p-4">
           <h1 className="text-xl font-bold">What are you making?</h1>
           <TypeCards onPick={startType} big />
+          <button onClick={onDemo} className="flex items-center justify-center gap-2 py-1 text-sm font-semibold"
+            style={{ color: "var(--accent)" }}>
+            <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full text-[10px] text-white" style={{ background: "var(--accent)" }}>▶</span>
+            Watch the demo · 45 sec
+          </button>
         </div>
       ) : (
         <>
@@ -2002,6 +2025,39 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg py-2" style={{ background: "var(--surface-2)" }}>
       <div className="text-lg font-extrabold tabnum">{value}</div>
       <div className="text-[11px]" style={{ color: "var(--ink-3)" }}>{label}</div>
+    </div>
+  );
+}
+
+/* ————————————————— demo ————————————————— */
+
+const DEMO_KEY = "fabriq_demo_seen";
+function demoSeen(): boolean {
+  try { return localStorage.getItem(DEMO_KEY) === "1"; } catch { return true; }
+}
+function markDemoSeen() {
+  try { localStorage.setItem(DEMO_KEY, "1"); } catch { /* shown again next time — harmless */ }
+}
+
+/**
+ * The app in 45 seconds — a real recording of a window going from sizes to
+ * a WhatsApp order, captioned in Hinglish. Muted, so it may play by itself;
+ * one big button to start, and Skip always in reach: a demo that blocks a
+ * fabricator who already knows what to do is worse than none.
+ */
+function DemoModal({ onClose }: { onClose: () => void }) {
+  const [ended, setEnded] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/90 px-4"
+      style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))", paddingTop: 16 }}>
+      <button onClick={onClose} className="absolute right-4 top-4 rounded-full px-3 py-1.5 text-sm font-semibold text-white"
+        style={{ background: "rgba(255,255,255,.15)" }}>Skip ✕</button>
+      <video src="/demo.mp4" poster="/demo-poster.jpg" autoPlay muted playsInline controls
+        onEnded={() => setEnded(true)}
+        className="w-auto rounded-xl" style={{ maxHeight: "74vh", maxWidth: "100%", background: "#000" }} />
+      <button onClick={onClose} className="btn-primary w-full max-w-sm py-3.5 text-base">
+        {ended ? "Start — add your first job →" : "Start using FabriQ →"}
+      </button>
     </div>
   );
 }
