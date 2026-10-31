@@ -286,7 +286,9 @@ export function SectionProfile({ sectionId, w = 46, h = 30 }: { sectionId: strin
         style={{ width: w + 8, height: h + 6, background: "#fff", border: "1px solid var(--line)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageSrc(sectionId)} alt={`${sec.label} cross-section`}
-          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", padding: 2 }} />
+          // the whole drawing, always: fill the box and fit inside it — a
+          // max-size plus padding let tall sections spill out of the bottom
+          style={{ width: w + 6, height: h + 4, objectFit: "contain", padding: 3, boxSizing: "border-box" }} />
       </span>
     );
   }
