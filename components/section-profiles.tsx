@@ -273,7 +273,7 @@ export function hasImage(sectionId: string): boolean {
 
 /** Raise whenever a drawing in /public/sections changes — phones keep the
  *  pictures offline, and a new version is a new URL they have not cached. */
-const DRAWINGS_VERSION = 4;
+const DRAWINGS_VERSION = 5;
 
 /** The picture file for a section. */
 export function imageSrc(sectionId: string): string {
