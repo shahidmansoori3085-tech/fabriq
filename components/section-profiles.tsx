@@ -271,9 +271,13 @@ export function hasImage(sectionId: string): boolean {
   return SECTION_IMAGES.has(IMAGE_OF[sectionId] ?? sectionId);
 }
 
+/** Raise whenever a drawing in /public/sections changes — phones keep the
+ *  pictures offline, and a new version is a new URL they have not cached. */
+const DRAWINGS_VERSION = 4;
+
 /** The picture file for a section. */
 export function imageSrc(sectionId: string): string {
-  return `/sections/${IMAGE_OF[sectionId] ?? sectionId}.png`;
+  return `/sections/${IMAGE_OF[sectionId] ?? sectionId}.png?v=${DRAWINGS_VERSION}`;
 }
 
 /* ————————————————— compact profile (table cells) ————————————————— */

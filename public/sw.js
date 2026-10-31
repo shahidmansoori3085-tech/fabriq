@@ -4,7 +4,10 @@
  *  - pages: network first (always the latest deploy), cached copy when offline
  *  - hashed build files and section images: cache first (they never change)
  */
-const CACHE = "fabriq-v1";
+// Bump on every change to /sections/: the old cache (and its stale
+// drawings) is deleted on activate. Drawing URLs also carry ?v=, so a new
+// drawing is a new URL and can never be answered from an old copy.
+const CACHE = "fabriq-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 

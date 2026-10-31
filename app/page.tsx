@@ -482,9 +482,9 @@ function sample(type: OpeningType, o: Opts): JobItem {
 }
 
 const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
-  normal: { img: "/sections/2t_top.png", sub: "18 mm · most common" },
-  domal: { img: "/sections/domal_frame.png", sub: "27 mm · premium" },
-  z_section: { img: "/sections/z_outer_40.png", sub: "Hinged, opens out" },
+  normal: { img: imageSrc("2t_top"), sub: "18 mm · most common" },
+  domal: { img: imageSrc("domal_frame"), sub: "27 mm · premium" },
+  z_section: { img: imageSrc("z_outer_40"), sub: "Hinged, opens out" },
 };
 
 /** One line of the size list: width, height and how many of that size —
