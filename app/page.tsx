@@ -466,7 +466,9 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
       "size",
     ];
   }
-  return ["type", "system", "tracks", "mix", ...(o.sys === "domal" ? ["domalFix" as const] : []), "size"];
+  // Normal sliding: glass or mesh uses the same aluminium, so it is not
+  // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
+  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const, "domalFix" as const] : []), "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
