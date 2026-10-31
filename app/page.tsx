@@ -28,7 +28,6 @@ import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
 import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
-import { useVoice, MicButton, VoiceSheet } from "@/components/voice";
 import { SectionProfile, SectionDrawing, hasImage, imageSrc } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
@@ -776,25 +775,6 @@ function JobScreen({
    * size stays on screen, editable, until the flow is finished. */
   const boxes = useRef<Record<string, HTMLInputElement | null>>({});
   const order: BoxKey[] = fixLabel ? ["w", "h", "fix"] : ["w", "h"];
-
-  /* —— saying sizes ——
-   * The mic on a size card: one size said fills the first empty box of that
-   * card, "4.6 by 5" fills width and height (and the fixed glass, if said).
-   * Nothing is filled until the fabricator confirms what was heard. */
-  const voice = useVoice();
-  const voiceTo = useRef<{ r: number; keys: BoxKey[] }>({ r: 0, keys: [] });
-  const boxName = (k: BoxKey) => (k === "w" ? "Width" : k === "h" ? "Height" : fixLabel ?? "Fixed");
-  const sayRow = (r: number) => voice.start((n) => {
-    if (n > order.length) return null;
-    const row = rows[r];
-    const keys = n === 1 ? [order.find((k) => !row?.[k].trim()) ?? "w"] : order.slice(0, n);
-    voiceTo.current = { r, keys };
-    return keys.map(boxName);
-  });
-  const fillSaid = (sizes: Um[]) => {
-    const { r, keys } = voiceTo.current;
-    keys.forEach((k, i) => setBox(r, k, formatTradeSize(sizes[i])));
-  };
   const setBox = (r: number, k: BoxKey, v: string) => {
     const clean = v.replace(/[^\d.'"\- ]/g, "").slice(0, 10);
     setRows((rs) => {
@@ -1101,12 +1081,9 @@ function JobScreen({
               return (
                 <div key={r} className="card px-3 pb-2 pt-2.5" style={{ scrollMarginBottom: 110, scrollMarginTop: 80 }}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2 text-sm font-bold">
-                      {voice.supported && <MicButton onClick={() => sayRow(r)} label={`Say size ${r + 1}`} />}
-                      <span>
-                        {flow.editing ?? `Size ${r + 1}`}
-                        {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
-                      </span>
+                    <span className="text-sm font-bold">
+                      {flow.editing ?? `Size ${r + 1}`}
+                      {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Qty</span>
@@ -1143,7 +1120,6 @@ function JobScreen({
             )}
             {/* room for the button, which sits over the bottom of the screen */}
             <div aria-hidden style={{ height: 76 }} />
-            <VoiceSheet voice={voice} onUse={fillSaid} />
 
             <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2.5"
               style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
@@ -1401,8 +1377,6 @@ function DoorSizeStep({ o, onChange, onNext }: {
   const [w, setW] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorW) || 3)));
   const [h, setH] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorH) || 7)));
   const hBox = useRef<HTMLInputElement | null>(null);
-  const voice = useVoice();
-  const voiceKeys = useRef<("w" | "h")[]>([]);
   const wu = parseTradeSize(w), hu = parseTradeSize(h);
   const okW = wu !== null && wu >= feet(1.5) && wu <= feet(8);
   const okH = hu !== null && hu >= feet(5) && hu <= feet(10);
@@ -1416,16 +1390,6 @@ function DoorSizeStep({ o, onChange, onNext }: {
         <MiniElevation item={buildJobItem(1, "partition", feet(10), feet(10), 1, metaFor("partition", o))} size={150} />
       </div>
       <div className="card p-3">
-        {voice.supported && (
-          <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-            <MicButton label="Say the door size" onClick={() => voice.start((n) => {
-              if (n > 2) return null;
-              voiceKeys.current = n === 2 ? ["w", "h"] : [!w.trim() ? "w" : !h.trim() ? "h" : "w"];
-              return voiceKeys.current.map((k) => (k === "w" ? "Door width" : "Door height"));
-            })} />
-            <span>Say the door size</span>
-          </div>
-        )}
         <div className="flex gap-2">
           <SizeInput label="Door width" value={w} placeholder="3" bad={!!w.trim() && !okW}
             inputRef={() => {}} onNext={() => hBox.current?.focus()}
@@ -1441,11 +1405,6 @@ function DoorSizeStep({ o, onChange, onNext }: {
         </div>
       </div>
       <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
-      <VoiceSheet voice={voice} onUse={(sizes) => {
-        let nw = w, nh = h;
-        voiceKeys.current.forEach((k, i) => { if (k === "w") nw = formatTradeSize(sizes[i]); else nh = formatTradeSize(sizes[i]); });
-        setW(nw); setH(nh); put(nw, nh);
-      }} />
     </div>
   );
 }

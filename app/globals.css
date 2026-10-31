@@ -140,8 +140,3 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.01em
   body.printing-doc .print-target * { visibility: visible; }
   body.printing-doc .print-target { position: absolute; left: 0; top: 0; width: 100%; }
 }
-
-/* The mic while it listens. */
-@keyframes voice-pulse { 0% { box-shadow: 0 0 0 0 rgba(232, 89, 12, 0.45); } 100% { box-shadow: 0 0 0 18px rgba(232, 89, 12, 0); } }
-.voice-pulse { animation: voice-pulse 1.2s ease-out infinite; }
-@media (prefers-reduced-motion: reduce) { .voice-pulse { animation: none; } }
