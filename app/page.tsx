@@ -486,31 +486,18 @@ const STEP_TITLE: Record<StepId, string> = {
   doorSection: "Shutter section?",
   partSys: "Which partition?",
   partDoor: "Door in the partition?",
-  partDoorSize: "Door size (only the door)",
+  partDoorSize: "Door size",
   size: "Enter your sizes",
   partBays: "Vertical lines (khadi)",
   partRows: "Horizontal lines (leti)",
 };
 
-/** The size screen names what is being measured — after a door size, a
- *  partition's "Enter your sizes" read like the door again. */
-function sizeTitle(type: OpeningType): string {
-  if (type === "partition") return "Full partition size";
-  if (type === "door") return "Door size";
+/** The size screen names what is measured, so a partition's size never
+ *  reads like the door size asked just before it. */
+function sizeTitle(type: OpeningType, o: Opts): string {
+  if (type === "partition") return "Overall partition size";
+  if (type === "door") return o.doorSys === "normal" && o.chokhat !== "needed" ? "Frame opening size" : "Door size";
   return "Window size";
-}
-
-/** One line under the title saying exactly which size to type. */
-function stepHint(step: StepId, type: OpeningType, o: Opts): string | null {
-  if (step === "partDoorSize") return "Just the door opening. The full partition size comes next.";
-  if (step !== "size") return null;
-  if (type === "partition") return o.partDoor === "yes"
-    ? `Wall to wall, floor to ceiling, the ${doorSizeText(o)} door included.`
-    : "Wall to wall, floor to ceiling.";
-  if (type === "door") return o.doorSys === "normal" && o.chokhat !== "needed"
-    ? "The opening inside the fitted frame."
-    : "The full opening. The frame is cut to this size.";
-  return "The full window opening.";
 }
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
@@ -681,7 +668,7 @@ function JobScreen({
     const empty = isEmptyRow(row);
     const unreadable = (row.w.trim() && wu === null) || (row.h.trim() && hu === null) || (fixLabel && row.fix.trim() && fu === null);
     const needFix = !!fixLabel && fu === null;
-    const warn = unreadable ? "Not a size — 4.6 means 4 ft 6 in"
+    const warn = unreadable ? "Invalid size · 4.6 = 4' 6\""
       : wu !== null && hu !== null && !needFix ? problemOf(wu, hu, row) : null;
     return { wu, hu, fu, empty, warn, ready: wu !== null && hu !== null && !needFix && !warn };
   }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -869,7 +856,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
             </div>
-            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type) : STEP_TITLE[flow.step]}</h1>
+            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
@@ -878,9 +865,6 @@ function JobScreen({
             <span key={s} className="h-1 flex-1 rounded-full" style={{ background: k <= i ? "var(--accent)" : "var(--line)" }} />
           ))}
         </div>
-        {stepHint(flow.step, type, o) && (
-          <div className="-mt-2 text-sm font-semibold" style={{ color: "var(--ink-2)" }}>{stepHint(flow.step, type, o)}</div>
-        )}
 
         {flow.step === "type" && (
           <div className="grid grid-cols-3 gap-2">
@@ -1132,7 +1116,7 @@ function JobScreen({
                     style={{ color: p.warn ? "var(--bad)" : p.ready ? "var(--good)" : "var(--ink-3)" }}>
                     {p.warn ?? (p.ready
                       ? `${formatFtIn(p.wu!)} × ${formatFtIn(p.hu!)}${p.fu ? ` · ${fixLabel!.toLowerCase()} ${formatFtIn(p.fu)}` : ""}`
-                      : r === 0 && p.empty ? "4.6 = 4 ft 6 in" : "")}
+                      : r === 0 && p.empty ? "4.6 = 4' 6\"" : "")}
                   </div>
                 </div>
               );
@@ -1233,7 +1217,7 @@ function JobScreen({
               );
             })}
             <div className="px-4 py-2 text-[11px]" style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
-              Tap an item to change it.
+              Tap an item to edit
             </div>
           </div>
 
@@ -1243,12 +1227,12 @@ function JobScreen({
             className="card flex items-center gap-3 p-3 text-left">
             <span className="grid w-12 shrink-0 place-items-center"><MiniElevation item={last} size={last.type === "door" ? 22 : 44} /></span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ More sizes of the same</span>
+              <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ Add more of this type</span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(last)}</span>
             </span>
           </button>
           <div>
-            <div className="mb-1.5 px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Or add something else</div>
+            <div className="mb-1.5 px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Add another item</div>
             <TypeCards onPick={startType} />
           </div>
         </>
@@ -1361,7 +1345,7 @@ function GapPicker({ options, value, max, count, span, onChange }: {
             <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost w-14 shrink-0 text-base">+1&quot;</button>
           </div>
           <div className="min-h-[16px] text-xs font-semibold" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
-            {err ?? (typed !== null ? `= ${formatFtIn(typed)}` : "4.6 = 4 ft 6 in")}
+            {err ?? (typed !== null ? `= ${formatFtIn(typed)}` : "4.6 = 4' 6\"")}
           </div>
         </div>
       )}
@@ -1426,10 +1410,10 @@ function DoorSizeStep({ o, onChange, onNext }: {
         <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
           style={{ color: okW && okH ? "var(--good)" : "var(--bad)" }}>
           {okW && okH ? `${formatFtIn(wu!)} × ${formatFtIn(hu!)}`
-            : !okW ? "Width 1.6 to 8 ft — 3.6 means 3 ft 6 in" : "Height 5 to 10 ft — 6.9 means 6 ft 9 in"}
+            : !okW ? "Door width: 1' 6\" to 8'" : "Door height: 5' to 10'"}
         </div>
       </div>
-      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next — full partition size</button>
+      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
     </div>
   );
 }
