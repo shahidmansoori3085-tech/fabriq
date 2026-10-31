@@ -117,7 +117,7 @@ export const SECTIONS: Record<string, Section> = {
   // Door frame (chokhat) — Pattam profile, dedicated OMEO family.
   door_frame_pattam: {
     id: "door_frame_pattam", name: "Door Frame (Pattam)", label: "Door Frame (Pattam)",
-    omeo: "7342", size: "63×39", tier: "VERIFIED",
+    omeo: "7342", size: "63×40", tier: "VERIFIED",
   },
   // Center rail — same nominal size as palla but a DIFFERENT die (grooved
   // both sides to hold panels above and below, vs handle's one-side groove).
