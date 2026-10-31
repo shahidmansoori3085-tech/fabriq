@@ -122,7 +122,7 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
       // Sliding (normal / Domal): an optional fixed glass band on top, then
       // the shutters side by side, each marked with a slide arrow.
       let top = fr;
-      if (item.system === "domal" && item.meta.domalFix === "yes") {
+      if (item.meta.domalFix === "yes") {
         const fh = ih * Math.min(0.5, (parseFloat(item.meta.domalFixFt ?? "2") || 2) / toFeet(item.height));
         cells.push(glassFill(fr + 1, fr + 1, iw - 2, fh - 2, "fix"));
         top = fr + fh;

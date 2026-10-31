@@ -154,7 +154,7 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
     // Sliding (normal / Domal): every shutter is HALF the window wide — they
     // overlap in the tracks — so the panes are drawn side by side but the
     // label states the real shutter width rather than W ÷ shutters.
-    const fx = item.system === "domal" ? domalFix(item) : null;
+    const fx = domalFix(item);
     let top = 0;
     if (fx?.hasFix) {
       cells.push(at(mm(38.1), mm(38.1), item.width - 2 * mm(38.1), fx.fixRaw - mm(38.1), "glass", "fix"));

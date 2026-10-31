@@ -118,10 +118,9 @@ export function buildJobItem(
     const tracks = next.tracks ?? (wide ? "3" : "2");
     next.tracks = tracks;
     sys = next.system === "domal" ? "domal" : tracks === "3" ? "normal_3t" : "normal_2t";
-    if (next.system === "domal") {
-      next.domalFix = next.domalFix ?? "no";
-      if (next.domalFix === "yes") next.domalFixFt = next.domalFixFt ?? "2";
-    }
+    // Normal sliding takes the same optional fixed top as Domal.
+    next.domalFix = next.domalFix ?? "no";
+    if (next.domalFix === "yes") next.domalFixFt = next.domalFixFt ?? "2";
     next.handle = next.handle ?? "std";
     const mix = next.mix ?? (tracks === "4" ? "GGGJ" : tracks === "3" ? "GGJ" : "GG");
     next.mix = mix;

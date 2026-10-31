@@ -474,7 +474,8 @@ function frameSections(item: JobItem): { top: string; bottom: string } {
  */
 export function shutterSize(item: JobItem, d: { shutterHeightDeduction: Um }) {
   const shutterW = Math.round(item.width / 2);
-  const shutterH = item.height - d.shutterHeightDeduction;
+  // a fixed top (Domal or normal sliding) leaves the shutters the zone below it
+  const shutterH = domalFix(item).slidingH - d.shutterHeightDeduction;
   return { shutterW, shutterH };
 }
 
@@ -502,11 +503,25 @@ function expandNormalItem(item: JobItem): CutPiece[] {
         label: `${wId} ${sizeLabel} — ${role}`,
       });
 
-    // Frame: top + 2 sides from top-section, bottom separate
+    // Frame: top + 2 sides from top-section, bottom separate. With a fixed
+    // top (built like Domal, founder-confirmed): the sliding frame runs the
+    // sliding zone only, and the band above is SP pipe (top + 2 sides) on
+    // the frame top, its glass held by a glazing clip on all four sides.
+    const fx = domalFix(item);
+    const sideH = fx.hasFix ? fx.slidingH : item.height;
     push(top, item.width, "Top");
-    push(top, item.height, "Left Side");
-    push(top, item.height, "Right Side");
+    push(top, sideH, "Left Side");
+    push(top, sideH, "Right Side");
     push(bottom, item.width, "Bottom");
+    if (fx.hasFix) {
+      push(DOMAL_SP, item.width, "Fix Top (SP)");
+      push(DOMAL_SP, fx.fixRaw, "Fix Left (SP)");
+      push(DOMAL_SP, fx.fixRaw, "Fix Right (SP)");
+      push("glazing_clip", fx.fixedGlassW, "Fix Clip Top");
+      push("glazing_clip", fx.fixedGlassW, "Fix Clip Bottom");
+      push("glazing_clip", fx.fixedGlassH, "Fix Clip Left");
+      push("glazing_clip", fx.fixedGlassH, "Fix Clip Right");
+    }
 
     // Shutters — Normal Sliding: glass aur jali dono mein same sections
     item.shutters.forEach((sh, i) => {
@@ -1055,6 +1070,9 @@ export function estimate(items: JobItem[]): MaterialList {
       sheet.push({ itemId: item.id, width: gW, height: gH, count: sheetShutters * item.qty });
       sheetSplineFt += 2 * (toFeet(gW) + toFeet(gH)) * sheetShutters * item.qty;
     }
+    const fx = domalFix(item);
+    if (fx.hasFix)
+      glass.push({ itemId: item.id, width: fx.fixedGlassW, height: fx.fixedGlassH, count: item.qty });
 
     rollers += 2 * n * item.qty;
     locks += 1 * item.qty;

@@ -151,10 +151,8 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
-  if (o.sys === "domal") {
-    m.domalFix = o.domalFix;
-    if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
-  }
+  m.domalFix = o.domalFix;
+  if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
   return m;
 }
 
@@ -215,7 +213,7 @@ function itemLabel(it: JobItem): string {
   }
   const name = it.system === "domal" ? "Domal" : "Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
-  const fix = it.system === "domal" && m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
+  const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   return `${name} ${m.tracks} Track · ${mix}${fix}`;
 }
 
@@ -468,7 +466,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   }
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
-  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const, "domalFix" as const] : []), "size"];
+  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -528,7 +526,7 @@ type BoxKey = "w" | "h" | "fix";
  *  differs window to window, so it is typed with each size, not picked once. */
 function fixedPart(type: OpeningType, o: Opts): string | null {
   if (type !== "window") return null;
-  if (o.sys === "domal" && o.domalFix === "yes") return "Fixed top";
+  if ((o.sys === "domal" || o.sys === "normal") && o.domalFix === "yes") return "Fixed top";
   if (o.sys === "z_section" && o.zType === "combo") return o.zComboDir === "top" ? "Fixed top" : o.zComboDir === "both" ? "Each fixed side" : "Fixed side";
   return null;
 }
@@ -646,7 +644,7 @@ function JobScreen({
     const m = metaFor(type, o);
     if (!row) return m;
     const fx = fixLabel ? parseTradeSize(row.fix) : null;
-    if (fx) m[o.sys === "domal" ? "domalFixFt" : "zFixedFt"] = String(Math.round(toFeet(fx) * 10000) / 10000);
+    if (fx) m[o.sys === "z_section" ? "zFixedFt" : "domalFixFt"] = String(Math.round(toFeet(fx) * 10000) / 10000);
     if (type === "partition") {
       if (row.bay) m.partBayFt = row.bay;
       if (row.row) m.partRowFt = row.row;

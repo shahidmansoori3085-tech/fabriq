@@ -89,7 +89,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
 
     // The sheet drew a fixed band on top, the fabricator chose plain sliding.
     // Deliberate, but the band still has to be made — say so where he orders.
-    if (item.meta.sheetFixFt && item.system !== "domal") {
+    if (item.meta.sheetFixFt && item.meta.domalFix !== "yes") {
       findings.push({
         severity: "warning",
         category: "fixed-band",
@@ -115,7 +115,7 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
     // A Domal with a fixed top only slides in the zone below it — the same
     // height the cut list uses, or this check talks about a shutter 2 ft taller
     // than the one being made.
-    const shutterH = (item.system === "domal" ? domalFix(item).slidingH : item.height) - d.shutterHeightDeduction;
+    const shutterH = domalFix(item).slidingH - d.shutterHeightDeduction;
 
     // Sanity: shutter too wide
     if (shutterW > mm(1400)) {
