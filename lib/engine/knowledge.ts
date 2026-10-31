@@ -167,8 +167,9 @@ PIECES AND HOW EACH LENGTH IS FOUND
 THE OPTIONAL FIXED BAND ON TOP ("upar fix")
 A Domal window often has a fixed glass band above the sliding portion. When it
 does, the build changes in ways that are easy to get wrong:
-• The fixed band is NOT framed in Domal track — it is framed in SP partition
-  pipe, with an SP coupler dividing it from the sliding zone below.
+• The fixed band is NOT framed in Domal track — it is a full SP partition
+  pipe frame (top, bottom and both sides). Its SP bottom sits on the Domal
+  frame top: a glazing clip cannot hold on the Domal frame itself.
 • The outer left/right verticals therefore SPLIT: the lower part runs Domal
   track for the sliding zone height, the upper part runs SP pipe for the band.
 • The sliding shutters get shorter, because their height is measured from the

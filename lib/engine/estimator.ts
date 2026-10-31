@@ -57,7 +57,6 @@ export const DOMAL_DEFAULTS = {
  */
 const DOMAL_SP = "partition_frame";     // SP pipe (17003) — fixed-top frame + coupler
 const DOMAL_SP_FACE = mm(38.1);         // 1.5" SP sight-line face
-const DOMAL_COUPLER_FACE = mm(45);      // the coupler/track face the fixed glass sits below
 const DOMAL_FIX_CLEAR = mm(12.7);       // 4 sut (½") glass clearance in the fixed pocket
 
 interface DomalFix {
@@ -77,7 +76,8 @@ export function domalFix(item: JobItem): DomalFix {
     hasFix, fixRaw, slidingH,
     // fixed glass = fixed pocket − 4 sut (partition-style clip retention)
     fixedGlassW: item.width - 2 * DOMAL_SP_FACE - DOMAL_FIX_CLEAR,
-    fixedGlassH: fixRaw - DOMAL_SP_FACE - DOMAL_COUPLER_FACE - DOMAL_FIX_CLEAR,
+    // the band is a full SP frame: SP top and SP bottom (on the frame top)
+    fixedGlassH: fixRaw - 2 * DOMAL_SP_FACE - DOMAL_FIX_CLEAR,
   };
 }
 
@@ -505,8 +505,8 @@ function expandNormalItem(item: JobItem): CutPiece[] {
 
     // Frame: top + 2 sides from top-section, bottom separate. With a fixed
     // top (built like Domal, founder-confirmed): the sliding frame runs the
-    // sliding zone only, and the band above is SP pipe (top + 2 sides) on
-    // the frame top, its glass held by a glazing clip on all four sides.
+    // sliding zone only, and the band above is a full SP frame (top, bottom,
+    // 2 sides) on the frame top, its glass held by a glazing clip all round.
     const fx = domalFix(item);
     const sideH = fx.hasFix ? fx.slidingH : item.height;
     push(top, item.width, "Top");
@@ -515,6 +515,7 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     push(bottom, item.width, "Bottom");
     if (fx.hasFix) {
       push(DOMAL_SP, item.width, "Fix Top (SP)");
+      push(DOMAL_SP, item.width, "Fix Bottom (SP)");
       push(DOMAL_SP, fx.fixRaw, "Fix Left (SP)");
       push(DOMAL_SP, fx.fixRaw, "Fix Right (SP)");
       push("glazing_clip", fx.fixedGlassW, "Fix Clip Top");
@@ -565,15 +566,17 @@ function expandDomalItem(item: JobItem): CutPiece[] {
     // Outer frame (Domal track). With a fixed top, the left/right verticals
     // only run the sliding-zone height; the fixed band above uses SP pipe.
     const sideH = fx.hasFix ? fx.slidingH : item.height;
-    push("domal_frame", item.width, fx.hasFix ? "Frame Coupler Top" : "Frame Top");
+    push("domal_frame", item.width, "Frame Top");
     push("domal_frame", sideH, "Frame Left");
     push("domal_frame", sideH, "Frame Right");
     push("domal_frame", item.width, "Frame Bottom");
 
-    // Fixed top band (optional): SP frame (top + 2 sides) sitting on the Domal
-    // coupler-top, fixed glass held by a glazing clip on all 4 sides.
+    // Fixed top band (optional): a full SP frame (top, bottom, 2 sides) sitting
+    // on the Domal frame top — the clip cannot hold on the Domal frame, so the
+    // band has its own SP bottom (founder-confirmed). Glazing clip on all 4 sides.
     if (fx.hasFix) {
       push(DOMAL_SP, item.width, "Fix Top (SP)");
+      push(DOMAL_SP, item.width, "Fix Bottom (SP)");
       push(DOMAL_SP, fx.fixRaw, "Fix Left (SP)");
       push(DOMAL_SP, fx.fixRaw, "Fix Right (SP)");
       push("glazing_clip", fx.fixedGlassW, "Fix Clip Top");

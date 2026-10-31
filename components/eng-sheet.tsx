@@ -157,7 +157,7 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
     const fx = domalFix(item);
     let top = 0;
     if (fx?.hasFix) {
-      cells.push(at(mm(38.1), mm(38.1), item.width - 2 * mm(38.1), fx.fixRaw - mm(38.1), "glass", "fix"));
+      cells.push(at(mm(38.1), mm(38.1), item.width - 2 * mm(38.1), fx.fixRaw - 2 * mm(38.1), "glass", "fix"));
       top = fx.fixRaw;
       note = `Fixed top ${mmOf(fx.fixRaw)} mm · `;
     }
