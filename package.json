@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts",
+    "test": "tsx evals/units/parse.ts && tsx evals/units/spoken.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts",
     "eval:sheets": "tsx evals/sheets/run.ts"
   },
   "dependencies": {
