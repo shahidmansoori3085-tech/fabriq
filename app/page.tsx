@@ -280,7 +280,9 @@ export default function FabriQ() {
     window.scrollTo({ top: 0 });
   };
   const backToJob = () => {
-    if (window.history.state?.fabriq === "result") window.history.back();
+    // from the Cutting Sheet that is two pages back: past the Material List too
+    if (window.history.state?.tab === "cutting") window.history.go(-2);
+    else if (window.history.state?.fabriq === "result") window.history.back();
     else setView("job");
     window.scrollTo({ top: 0 });
   };
@@ -525,7 +527,9 @@ function JobScreen({
   const [o, setO] = useState<Opts>(() => lastForm.opts);
   useEffect(() => { lastForm.type = type; lastForm.opts = o; }, [type, o]);
   /** The add/edit flow, when open: which screen, and which item is being edited. */
-  const [flow, setFlow] = useState<{ step: StepId; editing: string | null } | null>(null);
+  /** `start` is the screen the flow opened on — Back from it leaves the flow,
+   *  never steps into a question that was answered before it opened. */
+  const [flow, setFlow] = useState<{ step: StepId; editing: string | null; start: StepId } | null>(null);
   /** The sizes being typed. Every line stays on screen, editable, until the
    *  flow is finished — nothing joins the job a moment after it is typed. */
   const [rows, setRows] = useState<SizeRow[]>([emptyRow()]);
@@ -555,7 +559,7 @@ function JobScreen({
   }, []);
   const openFlow = (step: StepId, editing: string | null = null) => {
     if (window.history.state?.fabriq !== "add") window.history.pushState({ fabriq: "add" }, "");
-    setFlow({ step, editing });
+    setFlow({ step, editing, start: step });
     window.scrollTo({ top: 0 });
   };
   const closeFlow = () => {
@@ -707,7 +711,7 @@ function JobScreen({
     // Back from a later partition's first screen is the one before's last.
     if (flow.step === "partBays" && part > 0) { setPart(part - 1); go("partRows"); return; }
     const i = steps.indexOf(flow.step);
-    if (i > 0) go(steps[i - 1]); else leave();
+    if (i > 0 && flow.step !== flow.start) go(steps[i - 1]); else leave();
   };
   useEffect(() => { stepBack.current = back; });
 
@@ -1435,6 +1439,20 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
   onScrap: (pct: number) => void;
 }) {
   const [tab, setTab] = useState<Tab>("material");
+  // The Cutting Sheet is one more page: the phone's Back returns to the
+  // Material List, not past it to the sizes.
+  useEffect(() => {
+    const onPop = () => setTab(window.history.state?.tab === "cutting" ? "cutting" : "material");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const showTab = (t: Tab) => {
+    if (t === tab) return;
+    if (t === "cutting") window.history.pushState({ fabriq: "result", tab: "cutting" }, "");
+    else if (window.history.state?.tab === "cutting") { window.history.back(); return; }
+    setTab(t);
+    window.scrollTo({ top: 0 });
+  };
 
   const { list, error } = useMemo(() => {
     try {
@@ -1491,7 +1509,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
 
       <div className="no-print">
         <Seg options={[["material", "Material List"], ["cutting", "Cutting Sheet"]]} value={tab}
-          onChange={(v) => { setTab(v as Tab); window.scrollTo({ top: 0 }); }} />
+          onChange={(v) => showTab(v as Tab)} />
       </div>
 
       {tab === "material"
