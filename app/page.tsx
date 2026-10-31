@@ -2042,20 +2042,52 @@ function markDemoSeen() {
 /**
  * The app in 50 seconds — a branded 9:16 film of the real app taking a
  * window from its first question to a WhatsApp order and the cutting sheet,
- * a Hinglish heading on every step. Muted, so it may play by itself;
- * one big button to start, and Skip always in reach: a demo that blocks a
- * fabricator who already knows what to do is worse than none.
+ * a Hinglish heading on every step and a Hindi voice-over. It tries to play
+ * with sound; a phone that only lets video play by itself when muted gets it
+ * muted, with one big "turn the sound on" button over it. One big button to
+ * start, and Skip always in reach: a demo that blocks a fabricator who
+ * already knows what to do is worse than none.
  */
 function DemoModal({ onClose }: { onClose: () => void }) {
   const [ended, setEnded] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const video = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    v.muted = false;
+    v.play().catch(() => {
+      // sound needs a tap first on this phone — play silent, offer the sound
+      v.muted = true;
+      setMuted(true);
+      v.play().catch(() => { /* the poster and controls are still there */ });
+    });
+  }, []);
+  const soundOn = () => {
+    const v = video.current;
+    if (!v) return;
+    v.muted = false;
+    setMuted(false);
+    if (v.ended || v.currentTime > 2) v.currentTime = 0;
+    v.play().catch(() => { /* controls still work */ });
+  };
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/90 px-4"
       style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))", paddingTop: 16 }}>
       <button onClick={onClose} className="absolute right-4 top-4 rounded-full px-3 py-1.5 text-sm font-semibold text-white"
         style={{ background: "rgba(255,255,255,.15)" }}>Skip ✕</button>
-      <video src="/demo.mp4?v=2" poster="/demo-poster.jpg?v=2" autoPlay muted playsInline controls
-        onEnded={() => setEnded(true)}
-        className="w-auto rounded-2xl" style={{ maxHeight: "76vh", maxWidth: "100%", aspectRatio: "9 / 16", background: "#0b0f17" }} />
+      <div className="relative">
+        <video ref={video} src="/demo.mp4?v=3" poster="/demo-poster.jpg?v=2" playsInline controls preload="auto"
+          onEnded={() => setEnded(true)} onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
+          className="w-auto rounded-2xl" style={{ maxHeight: "76vh", maxWidth: "100%", aspectRatio: "9 / 16", background: "#0b0f17" }} />
+        {muted && (
+          <button onClick={soundOn}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-3 text-base font-bold text-white shadow-lg"
+            style={{ background: "var(--accent)" }}>
+            🔊 Awaaz chalu karo
+          </button>
+        )}
+      </div>
       <button onClick={onClose} className="btn-primary w-full max-w-sm py-3.5 text-base">
         {ended ? "Start — add your first job →" : "Start using FabriQ →"}
       </button>
