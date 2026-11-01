@@ -412,6 +412,7 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
   const innerH = slideH - fr * 2;
   const kinds = (panes || "GGJ").split("");
   const sw = innerW / kinds.length;
+  const tracks = kinds.length;
   const pw = 7;
   const bh = 7;
   const domal = system === "domal";
@@ -419,6 +420,7 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
   const sp = 9, clip = 5;                // SP frame and glazing clip widths
 
   const frameColor = { fill: "#dbeafe", stroke: "#3b82f6" };
+  const bottomColor = { fill: "#e2e8f0", stroke: "#475569" };  // Normal: the bottom is its own section
   const spColor = { fill: "#fef3c7", stroke: "#d97706" };
   const clipColor = { fill: "#ccfbf1", stroke: "#0d9488" };
 
@@ -427,12 +429,13 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
         ["#dbeafe", "#3b82f6", "Frame", fixTop ? "Domal track, four sides of the sliding part" : "One profile, all four sides"],
         ...(kinds.includes("G") ? [["#fafbfc", "#9aa0ab", "Glass Shutter", "All four sides — rounded nose profile"] as [string, string, string, string]] : []),
         ...(kinds.includes("J") ? [["#f0fdf4", "#9aa0ab", "Mesh Shutter", "All four sides — plain profile"] as [string, string, string, string]] : []),
-        ["#e9d5ff", "#a855f7", "Interlock", "Full shutter height, where they meet"],
+        ["#e9d5ff", "#a855f7", "Interlock", "Glass shutters only, where they meet"],
       ]
     : [
-        ["#dbeafe", "#3b82f6", "Frame (Track)", fixTop ? "Top + 2 sides + bottom of the sliding part" : "Top + 2 sides + bottom"],
-        ["#fed7aa", "#f97316", "Handle", "One side of the shutter"],
-        ["#e9d5ff", "#a855f7", "Interlock", "The other side"],
+        ["#dbeafe", "#3b82f6", `${tracks}-Track Top`, fixTop ? "Top + both sides of the sliding part" : "Top + both sides"],
+        ["#e2e8f0", "#475569", `${tracks}-Track Bottom`, "Bottom only"],
+        ["#fed7aa", "#f97316", "Handle", "Outer side of each shutter"],
+        ["#e9d5ff", "#a855f7", "Interlock", "Where shutters meet"],
         ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
       ];
   if (fixTop) {
@@ -445,7 +448,7 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
   return (
     <div className="card p-4">
       <div className="display text-sm font-bold mb-3">
-        📐 Parts of a {domal ? "Domal " : ""}window{fixTop ? " with fixed top" : ""}
+        📐 Parts of a {domal ? "Domal" : "Sliding"} window{fixTop ? " with fixed top" : ""}
       </div>
       <div className="flex justify-center">
         <svg viewBox={`0 0 ${fw} ${fh}`} width="100%" style={{ maxWidth: fw }}
@@ -469,13 +472,16 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
           <rect x={0.5} y={y0 + 0.5} width={fw - 1} height={slideH - 1} rx={3}
             fill="#f1f3f5" stroke="#5a5f6a" strokeWidth={1.5} />
           <rect x={0.5} y={y0 + 0.5} width={fw - 1} height={fr} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
-          <rect x={0.5} y={y0 + slideH - fr - 0.5} width={fw - 1} height={fr} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
+          <rect x={0.5} y={y0 + slideH - fr - 0.5} width={fw - 1} height={fr} rx={2}
+            fill={domal ? frameColor.fill : bottomColor.fill} stroke={domal ? frameColor.stroke : bottomColor.stroke} strokeWidth={0.75} />
           <rect x={0.5} y={y0 + 0.5} width={fr} height={slideH - 1} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
           <rect x={fw - fr - 0.5} y={y0 + 0.5} width={fr} height={slideH - 1} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
           {kinds.map((k, i) => {
             const x = fr + i * sw;
             const isJali = k === "J";
             const top = y0 + fr;
+            /** the first shutter meets the next on its right; the rest on their left */
+            const meetRight = i === 0;
             return (
               <g key={i}>
                 <rect x={x + 2} y={top + 2} width={sw - 4} height={innerH - 4} rx={1}
@@ -484,14 +490,18 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
                   <>
                     <rect x={x + 2} y={top + 2} width={sw - 4} height={innerH - 4} rx={1}
                       fill="none" stroke="#e9d5ff" strokeWidth={5} />
-                    <rect x={x + 2} y={top + 2} width={pw} height={innerH - 4}
-                      fill="#e9d5ff" stroke="#a855f7" strokeWidth={0.5} rx={1} />
+                    {/* interlock: glass shutters only, on the edge where shutters meet */}
+                    {!isJali && (
+                      <rect x={meetRight ? x + sw - 2 - pw : x + 2} y={top + 2} width={pw} height={innerH - 4}
+                        fill="#e9d5ff" stroke="#a855f7" strokeWidth={0.5} rx={1} />
+                    )}
                   </>
                 ) : (
                   <>
-                    <rect x={x + 2} y={top + 2} width={pw} height={innerH - 4}
+                    {/* handle on the outer edge, interlock where shutters meet */}
+                    <rect x={meetRight ? x + 2 : x + sw - 2 - pw} y={top + 2} width={pw} height={innerH - 4}
                       fill="#fed7aa" stroke="#f97316" strokeWidth={0.5} rx={1} />
-                    <rect x={x + sw - 4 - pw} y={top + 2} width={pw} height={innerH - 4}
+                    <rect x={meetRight ? x + sw - 2 - pw : x + 2} y={top + 2} width={pw} height={innerH - 4}
                       fill="#e9d5ff" stroke="#a855f7" strokeWidth={0.5} rx={1} />
                     <rect x={x + 2} y={top + 2} width={sw - 4} height={bh}
                       fill="#d1fae5" stroke="#10b981" strokeWidth={0.5} rx={1} />
