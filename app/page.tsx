@@ -503,6 +503,11 @@ function sizeTitle(type: OpeningType, o: Opts): string {
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
 
 /** The item these choices build, at a typical size — drawn on the option cards. */
+/** Picture choices before the fixed-glass question are drawn without a fixed
+ *  part — a remembered "fixed top" from the last window would otherwise show
+ *  on every 2 Track / 3 Track tile and read as part of that choice. */
+const noFix = (o: Opts): Opts => ({ ...o, domalFix: "no", zType: o.zType === "combo" ? "openable" : o.zType });
+
 function sample(type: OpeningType, o: Opts): JobItem {
   const [w, h] = SAMPLE_SIZE[type];
   return buildJobItem(1, type, feet(w), feet(h), 1, metaFor(type, o));
@@ -872,7 +877,7 @@ function JobScreen({
           <div className="grid grid-cols-3 gap-2">
             {TYPES.map(([v, label]) => (
               <Choice key={v} selected={type === v} onClick={() => pick(v as OpeningType)} title={label}
-                picture={<MiniElevation item={sample(v as OpeningType, o)} size={v === "door" ? 40 : 76} />} />
+                picture={<MiniElevation item={sample(v as OpeningType, noFix(o))} size={v === "door" ? 40 : 76} />} />
             ))}
           </div>
         )}
@@ -892,7 +897,7 @@ function JobScreen({
           <div className="grid grid-cols-2 gap-2">
             {TRACKS.map(([v, label]) => (
               <Choice key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
-                picture={<MiniElevation item={sample("window", { ...o, tracks: v, mix: MIXES[v][0][0] })} size={110} />} />
+                picture={<MiniElevation item={sample("window", { ...noFix(o), tracks: v, mix: MIXES[v][0][0] })} size={110} />} />
             ))}
           </div>
         )}
@@ -901,7 +906,7 @@ function JobScreen({
           <div className="grid grid-cols-2 gap-2">
             {(MIXES[o.tracks] ?? MIXES["2"]).map(([v, label]) => (
               <Choice key={v} selected={o.mix === v} onClick={() => choose({ mix: v })} title={label}
-                picture={<MiniElevation item={sample("window", { ...o, mix: v })} size={110} />} />
+                picture={<MiniElevation item={sample("window", { ...noFix(o), mix: v })} size={110} />} />
             ))}
           </div>
         )}
