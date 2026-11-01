@@ -109,12 +109,23 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
         cells.push(glassFill(fr + 1, fr + 1, fw - 2, ih - 2, "zf1"));
         cells.push(glassFill(fr + iw - fw + 1, fr + 1, fw - 2, ih - 2, "zf2"));
         ox = fr + fw; ow = iw - 2 * fw;
+      } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "center") {
+        // openable | fixed | openable — half the shutters each side
+        const fw = iw * Math.min(0.4, fixedFrac);
+        const side = (iw - fw) / 2, each = Math.max(1, Math.round(sashes / 2));
+        cells.push(glassFill(fr + side + 1, fr + 1, fw - 2, ih - 2, "zf"));
+        for (let i = 0; i < 2 * each; i++) {
+          const x = fr + (i < each ? i * (side / each) : side + fw + (i - each) * (side / each));
+          cells.push(fill(item.shutters[i]?.kind, x + 1, fr + 1, side / each - 2, ih - 2, `zs${i}`));
+          cells.push(hinge(x + 1, fr + 1, side / each - 2, ih - 2, `zh${i}`));
+        }
+        ow = 0;
       } else if (item.meta.zLayout === "combo") {
         cells.push(glassFill(fr + 1, fr + 1, iw * fixedFrac - 2, ih - 2, "zf"));
         ox = fr + iw * fixedFrac; ow = iw * (1 - fixedFrac);
       }
       const sw = ow / Math.max(1, sashes);
-      for (let i = 0; i < sashes; i++) {
+      for (let i = 0; ow > 0 && i < sashes; i++) {
         cells.push(fill(item.shutters[i]?.kind, ox + i * sw + 1, oy + 1, sw - 2, oh - 2, `zs${i}`));
         cells.push(hinge(ox + i * sw + 1, oy + 1, sw - 2, oh - 2, `zh${i}`));
       }

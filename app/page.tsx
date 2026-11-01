@@ -100,7 +100,7 @@ const MIXES: Record<string, Opt[]> = {
 };
 // A Z-section door is asked under Door, not here — a fabricator looks for a door under Door.
 const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"]];
-const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"]];
+const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"], ["center", "Middle"]];
 const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
 const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
@@ -527,7 +527,7 @@ type BoxKey = "w" | "h" | "fix";
 function fixedPart(type: OpeningType, o: Opts): string | null {
   if (type !== "window") return null;
   if ((o.sys === "domal" || o.sys === "normal") && o.domalFix === "yes") return "Fixed top";
-  if (o.sys === "z_section" && o.zType === "combo") return o.zComboDir === "top" ? "Fixed top" : o.zComboDir === "both" ? "Each fixed side" : "Fixed side";
+  if (o.sys === "z_section" && o.zType === "combo") return o.zComboDir === "top" ? "Fixed top" : o.zComboDir === "both" ? "Each fixed side" : o.zComboDir === "center" ? "Fixed middle" : "Fixed side";
   return null;
 }
 
@@ -824,6 +824,8 @@ function JobScreen({
       ? buildJobItem(1, type, sizeOf(pr).wu, sizeOf(pr).hu, 1, metaOf(rows[pr]))
       : sample(type, o);
     const manyParts = readyIdx.length > 1;
+    /** Z fixed in the middle: the shutter count is per side. */
+    const zMiddle = o.zType === "combo" && o.zComboDir === "center";
     const lastPart = part >= readyIdx.length - 1;
     const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, type === "partition" ? "partition" : type === "door" ? "door" : "window")}`;
     // the divider screens: which lines, how many panels, and the gap they leave
@@ -856,7 +858,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
             </div>
-            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : STEP_TITLE[flow.step]}</h1>
+            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
@@ -923,17 +925,19 @@ function JobScreen({
         )}
 
         {flow.step === "zDir" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {Z_DIRS.map(([v, label]) => (
-              <Choice key={v} selected={o.zComboDir === v} onClick={() => choose({ zComboDir: v })} title={label}
-                picture={<MiniElevation item={sample("window", { ...o, zComboDir: v })} size={80} />} />
+              <Choice key={v} selected={o.zComboDir === v} title={label}
+                // fixed in the middle usually has one shutter each side
+                onClick={() => choose(v === "center" ? { zComboDir: v, zSash: "1" } : { zComboDir: v })}
+                picture={<MiniElevation item={sample("window", { ...o, zComboDir: v, ...(v === "center" ? { zSash: "1" } : {}) })} size={80} />} />
             ))}
           </div>
         )}
 
         {flow.step === "zSash" && (
           <div className="grid grid-cols-3 gap-2">
-            {Z_SASH.map(([v, label]) => (
+            {(zMiddle ? Z_SASH.slice(0, 2) : Z_SASH).map(([v, label]) => (
               <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })} title={label}
                 picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={80} />} />
             ))}

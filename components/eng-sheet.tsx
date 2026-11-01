@@ -142,6 +142,16 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
     } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "side") {
       cells.push(at(face, face, fixedFt - face, openH, g.fixed[0]?.kind ?? "glass", "zf"));
       row(fixedFt, face, item.width - fixedFt - face, openH, "zs");
+    } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "center") {
+      const side = (item.width - fixedFt) / 2;
+      const half = Math.max(1, Math.round(sashKinds.length / 2));
+      const rowOf = (x: number, w: number, from: number, tag: string) => {
+        const each = w / half;
+        for (let i = 0; i < half; i++) cells.push(at(x + i * each, face, each, openH, sashKinds[from + i] ?? "glass", `${tag}${i}`));
+      };
+      rowOf(face, side - face, 0, "zsl");
+      cells.push(at(side, face, fixedFt, openH, g.fixed[0]?.kind ?? "glass", "zf"));
+      rowOf(side + fixedFt, side - face, half, "zsr");
     } else if (item.meta.zLayout === "combo" && item.meta.zComboDir === "both") {
       cells.push(at(face, face, fixedFt - face, openH, "glass", "zf1"));
       cells.push(at(item.width - fixedFt, face, fixedFt - face, openH, "glass", "zf2"));

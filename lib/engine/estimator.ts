@@ -250,10 +250,10 @@ function legacyComboPanels(item: JobItem): { axis: "cols" | "rows"; panels: ZPan
     return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }, { kind: "fixed", ft }] };
   }
   if (item.meta.zComboDir === "center") {
-    // openable | fixed | openable — one sash either side of a centre-fixed
-    // pane. Sash COUNT here means "each side", not the window total, since
-    // the guided question only ever asks for one number.
-    return { axis: "cols", panels: [{ kind: "open", sashes }, { kind: "fixed", ft }, { kind: "open", sashes }] };
+    // openable | fixed | openable — the item carries every shutter, half
+    // on each side of the centre-fixed pane.
+    const each = Math.max(1, Math.round(sashes / 2));
+    return { axis: "cols", panels: [{ kind: "open", sashes: each }, { kind: "fixed", ft }, { kind: "open", sashes: each }] };
   }
   if (item.meta.zComboDir === "side") {
     return { axis: "cols", panels: [{ kind: "fixed", ft }, { kind: "open", sashes }] };

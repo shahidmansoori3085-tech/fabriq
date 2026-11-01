@@ -110,7 +110,9 @@ export function buildJobItem(
       ? 1
       : zType === "row"
       ? countZPanelSashes(next.zPanels)
-      : Math.max(1, parseInt(next.zSashCount ?? "2", 10));
+      : Math.max(1, parseInt(next.zSashCount ?? "2", 10))
+        // fixed in the middle: that many shutters on EACH side
+        * (zType === "combo" && next.zComboDir === "center" ? 2 : 1);
     shutters = Array.from({ length: n }, () => ({ kind: "glass" as const }));
   } else {
     // Normal Sliding or Domal — track/mix default (track is width-aware).
