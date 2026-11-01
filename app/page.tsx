@@ -1946,6 +1946,14 @@ function CuttingPanel({ list, shop, items, jobName }: {
   // partition or Z-section sheet described parts that job does not have.
   const hasNormal = list.sections.some((s) => SLIDING_PARTS.has(s.sectionId));
   const hasDomal = list.sections.some((s) => s.sectionId.startsWith("domal_"));
+  /** The parts guide draws a window of this job: its shutters, and its fixed
+   *  top when one has it (a window with a fixed top is preferred, so the SP
+   *  frame and glazing clip in the list are explained too). */
+  const guideOf = (sys: "normal" | "domal") => {
+    const ws = items.filter((it) => it.type === "window" && (sys === "domal" ? it.system === "domal" : it.system !== "domal" && it.system !== "z_section"));
+    const it = ws.find((w) => w.meta.domalFix === "yes") ?? ws[0];
+    return it ? { panes: it.meta.mix || undefined, fixTop: it.meta.domalFix === "yes" } : {};
+  };
   const totalPieces = list.bars.reduce((a, b) => a + b.pieces.length, 0);
   const groups = barGroups(list.sections);
   const date = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -2033,8 +2041,8 @@ function CuttingPanel({ list, shop, items, jobName }: {
 
       {(hasNormal || hasDomal) && (
         <div className="flex flex-col gap-3">
-          {hasNormal && <CuttingGuide system="normal" />}
-          {hasDomal && <CuttingGuide system="domal" />}
+          {hasNormal && <CuttingGuide system="normal" {...guideOf("normal")} />}
+          {hasDomal && <CuttingGuide system="domal" {...guideOf("domal")} />}
         </div>
       )}
 

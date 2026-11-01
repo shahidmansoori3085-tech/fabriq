@@ -396,61 +396,110 @@ export function DoorScopePicture({ item, withFrame, size = 44 }: { item: JobItem
 }
 
 /** Annotated window reference — shows where each section type goes */
-export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal" }) {
-  const fw = 300, fh = 200;
+export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false }: {
+  system?: "normal" | "domal";
+  /** the job's shutters left to right — G glass, J mesh — e.g. "GGJ" */
+  panes?: string;
+  /** the job's window has a fixed glass band on top */
+  fixTop?: boolean;
+}) {
+  const fw = 300;
   const fr = 12;
+  const bandH = fixTop ? 64 : 0;       // fixed band, drawn above the sliding frame
+  const slideH = 176;
+  const fh = bandH + slideH;
   const innerW = fw - fr * 2;
-  const innerH = fh - fr * 2;
-  const sw = innerW / 3;
+  const innerH = slideH - fr * 2;
+  const kinds = (panes || "GGJ").split("");
+  const sw = innerW / kinds.length;
   const pw = 7;
   const bh = 7;
   const domal = system === "domal";
+  const y0 = bandH;                      // top of the sliding frame
+  const sp = 9, clip = 5;                // SP frame and glazing clip widths
+
+  const frameColor = { fill: "#dbeafe", stroke: "#3b82f6" };
+  const spColor = { fill: "#fef3c7", stroke: "#d97706" };
+  const clipColor = { fill: "#ccfbf1", stroke: "#0d9488" };
+
+  const legend: [string, string, string, string][] = domal
+    ? [
+        ["#dbeafe", "#3b82f6", "Frame", fixTop ? "Domal track, four sides of the sliding part" : "One profile, all four sides"],
+        ...(kinds.includes("G") ? [["#fafbfc", "#9aa0ab", "Glass Shutter", "All four sides — rounded nose profile"] as [string, string, string, string]] : []),
+        ...(kinds.includes("J") ? [["#f0fdf4", "#9aa0ab", "Mesh Shutter", "All four sides — plain profile"] as [string, string, string, string]] : []),
+        ["#e9d5ff", "#a855f7", "Interlock", "Full shutter height, where they meet"],
+      ]
+    : [
+        ["#dbeafe", "#3b82f6", "Frame (Track)", fixTop ? "Top + 2 sides + bottom of the sliding part" : "Top + 2 sides + bottom"],
+        ["#fed7aa", "#f97316", "Handle", "One side of the shutter"],
+        ["#e9d5ff", "#a855f7", "Interlock", "The other side"],
+        ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
+      ];
+  if (fixTop) {
+    legend.push(
+      [spColor.fill, spColor.stroke, "SP Frame", "Fixed glass frame, all four sides"],
+      [clipColor.fill, clipColor.stroke, "Glazing Clip", "Holds the fixed glass, all four sides"],
+    );
+  }
 
   return (
     <div className="card p-4">
       <div className="display text-sm font-bold mb-3">
-        📐 Parts of a {domal ? "Domal " : ""}window
+        📐 Parts of a {domal ? "Domal " : ""}window{fixTop ? " with fixed top" : ""}
       </div>
       <div className="flex justify-center">
         <svg viewBox={`0 0 ${fw} ${fh}`} width="100%" style={{ maxWidth: fw }}
           role="img" aria-label="Window parts reference">
-          <rect x={0.5} y={0.5} width={fw - 1} height={fh - 1} rx={3}
+          {fixTop && (
+            <g>
+              {/* SP frame: top, bottom, both sides */}
+              <rect x={0.5} y={0.5} width={fw - 1} height={bandH - 1} rx={3} fill="#eef6ff" stroke="#5a5f6a" strokeWidth={1.5} />
+              <rect x={0.5} y={0.5} width={fw - 1} height={sp} fill={spColor.fill} stroke={spColor.stroke} strokeWidth={0.75} />
+              <rect x={0.5} y={bandH - sp - 0.5} width={fw - 1} height={sp} fill={spColor.fill} stroke={spColor.stroke} strokeWidth={0.75} />
+              <rect x={0.5} y={0.5} width={sp} height={bandH - 1} fill={spColor.fill} stroke={spColor.stroke} strokeWidth={0.75} />
+              <rect x={fw - sp - 0.5} y={0.5} width={sp} height={bandH - 1} fill={spColor.fill} stroke={spColor.stroke} strokeWidth={0.75} />
+              {/* glazing clip all round the fixed glass */}
+              <rect x={sp + clip / 2} y={sp + clip / 2} width={fw - 2 * sp - clip} height={bandH - 2 * sp - clip}
+                fill="none" stroke={clipColor.stroke} strokeWidth={clip} strokeOpacity={0.45} />
+              <text x={fw / 2} y={bandH / 2 + 4} textAnchor="middle" fontSize={11} fill="#5a5f6a" fontWeight={600}>
+                FIXED GLASS
+              </text>
+            </g>
+          )}
+          <rect x={0.5} y={y0 + 0.5} width={fw - 1} height={slideH - 1} rx={3}
             fill="#f1f3f5" stroke="#5a5f6a" strokeWidth={1.5} />
-          <rect x={0.5} y={0.5} width={fw - 1} height={fr} rx={2}
-            fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.75} />
-          <rect x={0.5} y={fh - fr - 0.5} width={fw - 1} height={fr} rx={2}
-            fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.75} />
-          <rect x={0.5} y={0.5} width={fr} height={fh - 1} rx={2}
-            fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.75} />
-          <rect x={fw - fr - 0.5} y={0.5} width={fr} height={fh - 1} rx={2}
-            fill="#dbeafe" stroke="#3b82f6" strokeWidth={0.75} />
-          {[0, 1, 2].map((i) => {
+          <rect x={0.5} y={y0 + 0.5} width={fw - 1} height={fr} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
+          <rect x={0.5} y={y0 + slideH - fr - 0.5} width={fw - 1} height={fr} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
+          <rect x={0.5} y={y0 + 0.5} width={fr} height={slideH - 1} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
+          <rect x={fw - fr - 0.5} y={y0 + 0.5} width={fr} height={slideH - 1} rx={2} fill={frameColor.fill} stroke={frameColor.stroke} strokeWidth={0.75} />
+          {kinds.map((k, i) => {
             const x = fr + i * sw;
-            const isJali = i === 2;
+            const isJali = k === "J";
+            const top = y0 + fr;
             return (
               <g key={i}>
-                <rect x={x + 2} y={fr + 2} width={sw - 4} height={innerH - 4} rx={1}
+                <rect x={x + 2} y={top + 2} width={sw - 4} height={innerH - 4} rx={1}
                   fill={isJali ? "#f0fdf4" : "#fafbfc"} stroke="#9aa0ab" strokeWidth={0.75} />
                 {domal ? (
                   <>
-                    <rect x={x + 2} y={fr + 2} width={sw - 4} height={innerH - 4} rx={1}
+                    <rect x={x + 2} y={top + 2} width={sw - 4} height={innerH - 4} rx={1}
                       fill="none" stroke="#e9d5ff" strokeWidth={5} />
-                    <rect x={x + 2} y={fr + 2} width={pw} height={innerH - 4}
+                    <rect x={x + 2} y={top + 2} width={pw} height={innerH - 4}
                       fill="#e9d5ff" stroke="#a855f7" strokeWidth={0.5} rx={1} />
                   </>
                 ) : (
                   <>
-                    <rect x={x + 2} y={fr + 2} width={pw} height={innerH - 4}
+                    <rect x={x + 2} y={top + 2} width={pw} height={innerH - 4}
                       fill="#fed7aa" stroke="#f97316" strokeWidth={0.5} rx={1} />
-                    <rect x={x + sw - 4 - pw} y={fr + 2} width={pw} height={innerH - 4}
+                    <rect x={x + sw - 4 - pw} y={top + 2} width={pw} height={innerH - 4}
                       fill="#e9d5ff" stroke="#a855f7" strokeWidth={0.5} rx={1} />
-                    <rect x={x + 2} y={fr + 2} width={sw - 4} height={bh}
+                    <rect x={x + 2} y={top + 2} width={sw - 4} height={bh}
                       fill="#d1fae5" stroke="#10b981" strokeWidth={0.5} rx={1} />
-                    <rect x={x + 2} y={fr + innerH - 2 - bh} width={sw - 4} height={bh}
+                    <rect x={x + 2} y={top + innerH - 2 - bh} width={sw - 4} height={bh}
                       fill="#d1fae5" stroke="#10b981" strokeWidth={0.5} rx={1} />
                   </>
                 )}
-                <text x={x + sw / 2} y={fr + innerH / 2 + 4} textAnchor="middle"
+                <text x={x + sw / 2} y={top + innerH / 2 + 4} textAnchor="middle"
                   fontSize={11} fill="#5a5f6a" fontWeight={600}>
                   {isJali ? "MESH" : "GLASS"}
                 </text>
@@ -460,20 +509,7 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
         </svg>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
-        {(domal
-          ? [
-              ["#dbeafe", "#3b82f6", "Frame", "One profile, all four sides"],
-              ["#fafbfc", "#9aa0ab", "Glass Shutter", "All four sides — rounded nose profile"],
-              ["#f0fdf4", "#9aa0ab", "Mesh Shutter", "All four sides — plain profile"],
-              ["#e9d5ff", "#a855f7", "Interlock", "Full shutter height, where they meet"],
-            ]
-          : [
-              ["#dbeafe", "#3b82f6", "Frame (Track)", "Top + 2 sides + bottom"],
-              ["#fed7aa", "#f97316", "Handle", "One side of the shutter"],
-              ["#e9d5ff", "#a855f7", "Interlock", "The other side"],
-              ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
-            ]
-        ).map(([bg, border, label, desc], i) => (
+        {legend.map(([bg, border, label, desc], i) => (
           <div key={i} className="flex items-center gap-2">
             <span className="h-3 w-3 shrink-0 rounded"
               style={{ background: bg, border: `1.5px solid ${border}` }} />
@@ -486,8 +522,9 @@ export function CuttingGuide({ system = "normal" }: { system?: "normal" | "domal
       </div>
       <p className="mt-2.5 text-center text-[10px]" style={{ color: "var(--ink-3)" }}>
         {domal
-          ? "Domal has no separate handle, interlock or bearing — the whole shutter is built from one profile"
+          ? "Domal has no separate handle or bearing — each shutter is one profile all round, with an interlock where shutters meet"
           : "Glass or mesh, the aluminium sections are the same (Normal Sliding)"}
+        {fixTop ? ". The fixed top has its own SP frame — its SP bottom sits on the frame top." : ""}
       </p>
     </div>
   );
