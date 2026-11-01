@@ -217,6 +217,12 @@ function itemLabel(it: JobItem): string {
   return `${name} ${m.tracks} Track · ${mix}${fix}`;
 }
 
+/** The kind of window without its fixed-glass height — for "add more of this
+ *  type" and the add header, where that height is typed again per window. */
+function typeLabel(it: JobItem): string {
+  return itemLabel(it).replace(/ · [^·]* fixed top$/, " · fixed top").replace(/\([^,()]* fixed, ([^)]*)\)/, "(fixed $1)");
+}
+
 /** Panel / glass size the way the workshop writes it — inches + sut. */
 function sizeText(it: { width: Um; height: Um }): string {
   return `${formatFtInSut(it.width)} × ${formatFtInSut(it.height)}`;
@@ -823,7 +829,9 @@ function JobScreen({
       ? o.partSys === "z"
         ? `Z-Section partition · ${o.zSize === "heavy" ? "40×55" : "40×40"}${o.partDoor === "yes" ? ` · ${doorSizeText(o)} door` : ""}`
         : `Partition · ${o.partDoor === "yes" ? `${doorSizeText(o)} door` : "no door"}`
-      : itemLabel(sample(type, o)).replace(/ \([^)]*fixed[^)]*\)| · [\d.]+ ft fixed top/, "");
+      // The fixed glass height is typed per window, so the header names the
+      // fixed part without the sample's made-up height.
+      : typeLabel(sample(type, o));
     /** The partition the divider screens draw: the one being asked about. */
     const shape = readyIdx.length
       ? buildJobItem(1, type, sizeOf(pr).wu, sizeOf(pr).hu, 1, metaOf(rows[pr]))
@@ -1237,7 +1245,7 @@ function JobScreen({
             <span className="grid w-12 shrink-0 place-items-center"><MiniElevation item={last} size={last.type === "door" ? 22 : 44} /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ Add more of this type</span>
-              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(last)}</span>
+              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{typeLabel(last)}</span>
             </span>
           </button>
           <div>
