@@ -1207,13 +1207,17 @@ function JobScreen({
         <>
           {/* the next step, first on the page — never scrolled away by a long list */}
           <button onClick={onDone}
-            className="btn-primary flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
-            style={{ boxShadow: "0 6px 18px rgba(232, 89, 12, 0.35)" }}>
-            <span>
-              <span className="block text-lg font-bold leading-tight">Get Material List</span>
-              <span className="block text-xs font-semibold opacity-90">{plural(openings, "pc")} · pipes, cutting, order</span>
+            className="btn-primary flex w-full items-center gap-3 px-4 py-3.5 text-left">
+            <svg aria-hidden width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" />
+            </svg>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[17px] font-bold leading-tight">Get Material List</span>
+              <span className="block text-xs font-medium opacity-90">{plural(openings, "pc")} · pipes, cutting sheet, order</span>
             </span>
-            <span aria-hidden className="text-2xl leading-none">→</span>
+            <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </button>
 
           <div className="card overflow-hidden">
@@ -1248,11 +1252,17 @@ function JobScreen({
                     </span>
                   </button>
                   <button onClick={() => startEdit(it)} aria-label={`Change ${it.id}`}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base"
-                    style={{ color: "var(--ink-3)" }}>✎</button>
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--ink-3)" }}>
+                    <svg aria-hidden width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 20h4L19 9l-4-4L4 16v4z" /><path d="M14 6l4 4" />
+                    </svg>
+                  </button>
                   <button onClick={() => onRemove(it.id)} aria-label={`Remove ${it.id}`}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
-                    style={{ color: "var(--ink-3)" }}>×</button>
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--ink-3)" }}>
+                    <svg aria-hidden width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
                 </div>
               );
             })}

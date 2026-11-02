@@ -64,11 +64,11 @@ export function InstallButton() {
 
   return (
     <>
-      <button onClick={install}
-        className="flex items-center gap-1.5 rounded-full py-2 pl-2.5 pr-3.5 text-sm font-bold text-white"
-        style={{ background: "var(--accent)", boxShadow: "0 1px 2px rgba(232, 89, 12, 0.35)" }}>
-        <PhoneDownIcon />
-        Install app
+      {/* quiet, like Settings — the page's one orange button is its next step */}
+      <button onClick={install} aria-label="Install app"
+        className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm">
+        <PhoneDownIcon dark />
+        Install
       </button>
       {help && <InstallHelp kind={help} onClose={() => setHelp(null)} />}
     </>
