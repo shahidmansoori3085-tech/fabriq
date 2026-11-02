@@ -28,7 +28,7 @@ import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
 import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
-import { SectionProfile, SectionDrawing, hasImage, imageSrc } from "@/components/section-profiles";
+import { SectionProfile, hasImage, imageSrc } from "@/components/section-profiles";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
 import { sharePdfToWhatsApp, elementToPdfBlob, whatsAppLink, type ShareResult } from "@/lib/pdf";
@@ -1159,7 +1159,7 @@ function JobScreen({
             <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2.5"
               style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
               <div className="mx-auto max-w-xl">
-                <button onClick={sizesDone} disabled={!allReady} className="btn-dark w-full py-3.5 text-base disabled:opacity-40">
+                <button onClick={sizesDone} disabled={!allReady} className="btn-primary w-full py-3.5 text-base">
                   {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
                 </button>
               </div>
@@ -1450,7 +1450,7 @@ function DoorSizeStep({ o, onChange, onNext }: {
             : !okW ? "Door width: 1' 6\" to 8'" : "Door height: 5' to 10'"}
         </div>
       </div>
-      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5 disabled:opacity-40">Next</button>
+      <button onClick={onNext} disabled={!(okW && okH)} className="btn-primary w-full py-3.5">Next</button>
     </div>
   );
 }
@@ -2045,15 +2045,20 @@ function CuttingPanel({ list, shop, items, jobName }: {
         const half = bars.length - full;
         return (
           <div key={sectionId} className="card overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--surface-2)" }}>
-              <div className="font-bold">{sec.label}</div>
-              <div className="text-right">
+            {/* one header: the section as he knows it (profile, name, size) and
+                the pipes it takes — the dimensioned drawing is in the sheets below */}
+            <div className="flex items-center gap-3 px-3 py-2.5" style={{ background: "var(--surface-2)" }}>
+              <span className="shrink-0 rounded-md bg-white" style={{ width: 84 }}>
+                <SectionProfile sectionId={sectionId} w={84} h={56} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold leading-tight">{sec.label}</div>
+                {sec.size && <div className="mono mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</div>}
+              </div>
+              <div className="shrink-0 text-right">
                 <div className="text-sm font-bold tabnum">{pipeCount(full, half)} {pipeWord(full, half)}</div>
                 <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(fullFt, full, half)}</div>
               </div>
-            </div>
-            <div className="px-4 py-3" style={{ borderTop: "1px solid var(--line)" }}>
-              <SectionDrawing sectionId={sectionId} />
             </div>
             <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
               <thead>

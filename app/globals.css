@@ -76,7 +76,7 @@ h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.01em
 }
 .btn-primary { background: var(--accent); color: #fff; border: 0; }
 .btn-primary:hover { background: #d9500a; }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary:disabled { background: var(--surface-3); color: var(--ink-3); opacity: 1; cursor: not-allowed; }
 
 .btn-dark { background: var(--ink); color: #fff; border: 0; }
 .btn-dark:hover { background: #1f2937; }
