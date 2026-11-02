@@ -87,7 +87,7 @@ const DEFAULT_OPTS: Opts = {
 type Opt = [value: string, label: string];
 
 const TYPES: Opt[] = [["window", "Window"], ["door", "Door"], ["partition", "Partition"]];
-const SYSTEMS: Opt[] = [["normal", "Sliding"], ["domal", "Domal"], ["z_section", "Z-Section"]];
+const SYSTEMS: Opt[] = [["normal", "Normal Sliding"], ["domal", "Domal"], ["z_section", "Z-Section"]];
 // No 4 Track: the catalogue has no 4-track frame, and building one on a
 // 2-track frame orders a frame its four shutters cannot fit in.
 const TRACKS: Opt[] = [["2", "2 Track"], ["3", "3 Track"]];
@@ -214,7 +214,7 @@ function itemLabel(it: JobItem): string {
       ? `${base} (${formatFtIn(feet(parseFloat(m.zFixedFt ?? "2") || 2))} fixed, ${labelOf(Z_DIRS, m.zComboDir).toLowerCase()})${sashes}`
       : `${base}${sashes}`;
   }
-  const name = it.system === "domal" ? "Domal" : "Sliding";
+  const name = it.system === "domal" ? "Domal" : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   return `${name} ${m.tracks} Track · ${mix}${fix}`;
@@ -1233,11 +1233,6 @@ function JobScreen({
         <div className="card flex flex-col gap-4 p-4">
           <h1 className="text-xl font-bold">What are you making?</h1>
           <TypeCards onPick={startType} big />
-          <button onClick={onDemo} className="flex items-center justify-center gap-2 py-1 text-sm font-semibold"
-            style={{ color: "var(--accent)" }}>
-            <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full text-[10px] text-white" style={{ background: "var(--accent)" }}>▶</span>
-            Watch the demo · 50 sec
-          </button>
         </div>
       ) : (
         <>
@@ -1350,6 +1345,19 @@ function JobScreen({
         </div>
       )}
 
+      {/* the how-to video: its own quiet row on the first screen, after the work */}
+      {items.length === 0 && (
+        <button onClick={onDemo} className="card flex items-center gap-3 px-4 py-3 text-left">
+          <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">How FabriQ works</span>
+            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Size to WhatsApp order · 50-second video</span>
+          </span>
+          <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+      )}
     </div>
   );
 }

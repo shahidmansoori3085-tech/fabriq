@@ -448,7 +448,7 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
   return (
     <div className="card p-4">
       <div className="display text-sm font-bold mb-3">
-        Parts of a {domal ? "Domal" : "Sliding"} window{fixTop ? " with fixed top" : ""}
+        Parts of a {domal ? "Domal" : "Normal Sliding"} window{fixTop ? " with fixed top" : ""}
       </div>
       <div className="flex justify-center">
         <svg viewBox={`0 0 ${fw} ${fh}`} width="100%" style={{ maxWidth: fw }}
