@@ -1024,7 +1024,7 @@ function JobScreen({
         {flow.step === "doorSection" && (
           <div className="grid grid-cols-3 gap-2">
             {PALLA.map(([v, label]) => (
-              <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v })} title={label} sub="mm"
+              <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v })} title={`${label} mm`}
                 picture={<SectionProfile sectionId={`door_palla_${v}`} w={60} h={48} />} />
             ))}
           </div>
@@ -1385,11 +1385,11 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
       {TYPES.map(([v, label]) => (
         <button key={v} onClick={() => onPick(v as OpeningType)} aria-label={`Add ${label}`}
           className={`chip flex flex-col items-center gap-2 px-2 text-center ${big ? "py-4" : "py-2.5"}`}>
+          <span className={`${big ? "text-base" : "text-sm"} font-bold`} style={{ color: "var(--ink)" }}>{label}</span>
           <span className={`grid w-full place-items-center ${big ? "min-h-[84px]" : "min-h-[48px]"}`}>
             <MiniElevation item={sample(v as OpeningType, DEFAULT_OPTS)}
               size={v === "door" ? (big ? 42 : 24) : big ? 84 : 52} />
           </span>
-          <span className={`${big ? "text-base" : "text-sm"} font-bold`} style={{ color: "var(--ink)" }}>{label}</span>
         </button>
       ))}
     </div>
@@ -1471,17 +1471,21 @@ function MiniQty({ value, onChange, label }: { value: number; onChange: (n: numb
 /** One answer, as a picture with its name — tap to choose. */
 function Choice({ picture, title, sub, label, selected, onClick, wide }: {
   picture: React.ReactNode; title?: string; sub?: string; selected: boolean; onClick: () => void; wide?: boolean;
-  /** a name over the picture, for when the drawing needs one to be read */
+  /** a second name over the picture (then the title goes under it) */
   label?: string;
 }) {
+  // A tile (not a wide row) is named above its drawing — the name is read
+  // first, then the picture. With a label too, the title sits underneath.
+  const above = wide ? label : label ?? title;
+  const below = wide || label ? title : undefined;
   return (
     <button onClick={onClick} aria-pressed={selected}
       className={`chip flex ${wide ? "flex-row items-center gap-4 px-4 py-3 text-left" : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
-      {label && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{label}</span>}
+      {above && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{above}</span>}
       <span className={`grid shrink-0 place-items-center ${wide ? "w-24" : "min-h-[72px] w-full"}`}>{picture}</span>
-      {(title || sub) && (
+      {(below || sub) && (
         <span className="min-w-0">
-          {title && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{title}</span>}
+          {below && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{below}</span>}
           {sub && <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>}
         </span>
       )}
