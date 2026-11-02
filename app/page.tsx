@@ -1114,8 +1114,10 @@ function JobScreen({
               return (
                 <div key={r} className="card px-3 pb-2 pt-2.5" style={{ scrollMarginBottom: 110, scrollMarginTop: 80 }}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold">
+                    <span className="text-sm font-bold" style={waiting ? { color: "var(--ink-3)" } : undefined}>
                       {flow.editing ?? `${type === "partition" ? "Partition" : type === "door" ? "Door" : "Window"} ${r + 1}`}
+                      {/* the blank line waiting for the next size is optional — say so */}
+                      {waiting && <span className="ml-1.5 text-xs font-semibold">(optional)</span>}
                       {p.ready && <span className="ml-1.5" style={{ color: "var(--good)" }}>✓</span>}
                     </span>
                     <span className="flex items-center gap-1.5">
@@ -1208,7 +1210,7 @@ function JobScreen({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold">This job</span>
                 <span className="text-xs" style={{ color: "var(--ink-3)" }}>
-                  {plural(items.length, "size")} · {plural(openings, "pc")}
+                  {plural(openings, "pc")}
                 </span>
               </div>
               <input value={jobName} onChange={(e) => onJobName(e.target.value)} maxLength={60}
@@ -1234,15 +1236,15 @@ function JobScreen({
                       <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
                     </span>
                   </button>
+                  <button onClick={() => startEdit(it)} aria-label={`Change ${it.id}`}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base"
+                    style={{ color: "var(--ink-3)" }}>✎</button>
                   <button onClick={() => onRemove(it.id)} aria-label={`Remove ${it.id}`}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
                     style={{ color: "var(--ink-3)" }}>×</button>
                 </div>
               );
             })}
-            <div className="px-4 py-2 text-[11px]" style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
-              Tap an item to edit
-            </div>
           </div>
 
           {/* the two ways to add more: the same again (straight to the size)
@@ -1251,12 +1253,12 @@ function JobScreen({
             className="card flex items-center gap-3 p-3 text-left">
             <span className="grid w-12 shrink-0 place-items-center"><MiniElevation item={last} size={last.type === "door" ? 22 : 44} /></span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ Add more of this type</span>
+              <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ Same {last.type}, new size</span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{typeLabel(last)}</span>
             </span>
           </button>
           <div>
-            <div className="mb-1.5 px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Add another item</div>
+            <div className="mb-1.5 px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Or add something different</div>
             <TypeCards onPick={startType} />
           </div>
         </>
