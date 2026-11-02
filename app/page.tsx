@@ -20,6 +20,7 @@ import {
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
+import { markStep } from "@/lib/track";
 import {
   getSection,
 } from "@/lib/engine/sections";
@@ -329,6 +330,7 @@ export default function FabriQ() {
     else setShowSettings(false);
   };
   const showResult = () => {
+    markStep("material-list");
     window.history.pushState({ fabriq: "result" }, "");
     setView("result");
     window.scrollTo({ top: 0 });
@@ -1586,7 +1588,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
   }, []);
   const showTab = (t: Tab) => {
     if (t === tab) return;
-    if (t === "cutting") window.history.pushState({ fabriq: "result", tab: "cutting" }, "");
+    if (t === "cutting") { markStep("cutting-sheet"); window.history.pushState({ fabriq: "result", tab: "cutting" }, ""); }
     else if (window.history.state?.tab === "cutting") { window.history.back(); return; }
     setTab(t);
     window.scrollTo({ top: 0 });
@@ -1892,9 +1894,16 @@ function SendOrder({ label, sub, filename, text, build }: {
   /** Kept after a "needs-tap" so the second tap shares at once, inside the tap. */
   const built = useRef<Blob | null>(null);
 
+  /** an order that left the phone (shared, or saved to attach) is counted once per tap */
+  const counted = (r: ShareResult) => {
+    if (r !== "shared" && r !== "downloaded") return;
+    const kind = /cutting-sheet/.test(filename) ? "sent/cutting-sheet" : /glass-order/.test(filename) ? "sent/glass-order" : "sent/aluminium-order";
+    markStep(kind);
+  };
   const go = async () => {
     if (state === "needs-tap" && built.current) {
       const r = await sharePdfToWhatsApp(built.current, filename, text);
+      counted(r);
       setState(r === "cancelled" ? "idle" : r);
       return;
     }
@@ -1902,6 +1911,7 @@ function SendOrder({ label, sub, filename, text, build }: {
     try {
       built.current = await build();
       const r = await sharePdfToWhatsApp(built.current, filename, text);
+      counted(r);
       setState(r === "cancelled" ? "idle" : r);
     } catch {
       setState("error");
