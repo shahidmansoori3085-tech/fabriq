@@ -1591,22 +1591,38 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
   return (
     <div className="result-view flex flex-col gap-3">
       <div className="no-print flex items-center justify-between gap-2 py-1">
-        <button onClick={onBack} className="btn-ghost px-3 py-2 text-sm">← Sizes</button>
-        <div className="min-w-0 text-center">
+        <button onClick={onBack} className="btn-ghost flex items-center gap-1 px-3 py-2 text-sm">
+          <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+          Sizes
+        </button>
+        <div className="min-w-0 flex-1 text-center">
           <div className="truncate text-base font-bold">{jobName || (tab === "material" ? "Material List" : "Cutting Sheet")}</div>
-          <div className="text-xs" style={{ color: "var(--ink-3)" }}>{plural(items.length, "size")} · {plural(openings, "pc")}</div>
+          <div className="text-xs" style={{ color: "var(--ink-3)" }}>{plural(openings, "pc")}</div>
         </div>
-        <button onClick={onNew} className="btn-ghost px-3 py-2 text-sm">New job</button>
+        {/* balances the back button so the title sits in the middle */}
+        <span aria-hidden className="w-[76px] shrink-0" />
       </div>
 
       <div className="no-print">
-        <Seg options={[["material", "Material List"], ["cutting", "Cutting Sheet"]]} value={tab}
-          onChange={(v) => showTab(v as Tab)} />
+        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-[var(--radius)] p-1" style={{ background: "var(--surface-3)" }}>
+          {([["material", "Material List"], ["cutting", "Cutting Sheet"]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={tab === v} onClick={() => showTab(v)}
+              className="rounded-[8px] py-2 text-sm font-bold"
+              style={tab === v
+                ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" }
+                : { color: "var(--ink-3)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
+
+      {/* starting over is the last thing on the page, never one slip away at the top */}
+      <button onClick={onNew} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
     </div>
   );
 }
@@ -1728,7 +1744,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Real scrap</div>
+            <div className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Scrap</div>
             <div className="text-sm font-bold tabnum" style={{ color: t.scrapPct > 8 ? "var(--warn)" : "var(--ink)" }}>
               {t.scrapPct}% · {t.scrapFt} ft
             </div>
@@ -1737,9 +1753,10 @@ function MaterialPanel({ list, shop, items, jobName }: {
       </div>
 
       {/* the two jobs this screen is for: send the orders */}
-      <div className="flex flex-col gap-2">
+      <div className="no-print flex flex-col gap-2">
+        <div className="px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Send to dealer on WhatsApp</div>
         <SendOrder
-          label="Send aluminium order"
+          label="Aluminium order"
           sub={`${total} ${groupsWord(groups)} · ${plural(list.sections.length, "section")}`}
           filename={pdfName(jobName, "aluminium-order")}
           text={aluminiumWaText(list, shop.name, jobName)}
@@ -1747,7 +1764,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
         />
         {panels.length > 0 && (
           <SendOrder
-            label={`Send ${panelTitle.toLowerCase()}`}
+            label={panelTitle.replace(/ Order$/, " order")}
             sub={`${plural(panelCount, "piece")} · ${panelSqft.toFixed(1)} sq ft`}
             filename={pdfName(jobName, "glass-order")}
             text={glassWaText(list, shop.name, jobName)}
@@ -1808,6 +1825,15 @@ function MaterialPanel({ list, shop, items, jobName }: {
   );
 }
 
+/** WhatsApp's speech-bubble mark, white on the green button. */
+function WhatsAppMark() {
+  return (
+    <svg aria-hidden width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
+    </svg>
+  );
+}
+
 /**
  * Builds the PDF and hands that same file to WhatsApp. Every outcome is told
  * truthfully: sent, cancelled (nothing said), "tap again" when the phone
@@ -1839,15 +1865,16 @@ function SendOrder({ label, sub, filename, text, build }: {
   return (
     <div className="no-print">
       <button onClick={go} disabled={state === "working"}
-        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius)] px-4 py-3.5 text-left text-white disabled:opacity-60"
+        className="flex w-full items-center gap-3 rounded-[var(--radius)] px-4 py-3 text-left text-white disabled:opacity-60"
         style={{ background: "var(--wa)" }}>
-        <span>
-          <span className="block text-sm font-bold">
+        <WhatsAppMark />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-bold leading-tight">
             {state === "working" ? "Preparing PDF…" : state === "needs-tap" ? "PDF ready — tap to send" : label}
           </span>
-          <span className="block text-xs opacity-90">{sub} · PDF via WhatsApp</span>
+          <span className="block text-xs opacity-90">{sub} · PDF</span>
         </span>
-        <span aria-hidden className="text-lg">↗</span>
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 6l6 6-6 6" /></svg>
       </button>
       {state === "downloaded" && (
         <p className="mt-1.5 text-center text-xs" style={{ color: "var(--ink-3)" }}>
@@ -1993,13 +2020,13 @@ function CuttingPanel({ list, shop, items, jobName }: {
         <div className="min-w-0">
           <div className="truncate text-base font-bold">{shop.name || "Cutting Sheet"}</div>
           <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-            {jobName ? `${jobName} · ` : ""}Cutting Sheet · {date}
+            {jobName ? `${jobName} · ` : ""}{date}
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <MiniStat label="Pipes" value={groupsCount(groups)} />
           <MiniStat label="Pieces" value={String(totalPieces)} />
-          <MiniStat label="Real scrap" value={`${list.totals.scrapPct}%`} />
+          <MiniStat label="Scrap" value={`${list.totals.scrapPct}%`} />
         </div>
       </div>
 
@@ -2205,19 +2232,6 @@ function SettingsModal({ shop, onSave, onClose }: {
 /* ————————————————— small parts ————————————————— */
 
 /** Single-choice row of equal buttons — one tap, no dropdowns. */
-function Seg({ options, value, onChange }: { options: Opt[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(options.length, 4)}, minmax(0, 1fr))` }}>
-      {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)} aria-pressed={value === v}
-          className={`chip min-h-[44px] px-2 py-2 text-sm leading-tight ${value === v ? "selected" : ""}`}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /** "sharma-ji-2nd-floor-aluminium-order-28oct.pdf" — every job's PDF gets its
  *  own name, so a second order no longer lands on top of the first. */
 function pdfName(jobName: string, kind: string): string {
