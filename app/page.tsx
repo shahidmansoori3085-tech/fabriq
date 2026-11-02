@@ -19,7 +19,7 @@ import {
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
-import { buildJobItem } from "@/lib/engine/quick-item";
+import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
 import {
   getSection,
 } from "@/lib/engine/sections";
@@ -259,6 +259,20 @@ export default function FabriQ() {
     setShop(loadShop());
     const saved = loadProjects();
     setRecent(saved);
+    // The job that was open comes back open: a phone often reloads the page
+    // after the fabricator shares a PDF to WhatsApp and returns.
+    const open = saved.find((p) => p.id === readOpenJob());
+    if (open) {
+      projectId.current = open.id;
+      lastSaved.current = JSON.stringify([open.items, open.customer ?? ""]);
+      setItems(open.items);
+      setJobName(open.customer ?? "");
+      // reloaded on the results: stay there, so Back still leads to the sizes
+      if (window.history.state?.fabriq === "result") setView("result");
+      return;
+    }
+    // nothing open, so a results page left in the history means nothing
+    if (window.history.state?.fabriq) window.history.replaceState(null, "");
     // A shop that has never saved a job has never seen the app: show the demo once.
     if (!saved.length && !demoSeen()) setDemo(true);
     // Works offline once it has loaded one time — a workshop's signal is poor.
@@ -328,6 +342,7 @@ export default function FabriQ() {
       amount: 0,
       customer: jobName.trim() || undefined,
     });
+    writeOpenJob(id);
   }, [items, jobName]);
 
   const addItem = (type: OpeningType, w: Um, h: Um, qty: number, meta: Record<string, string>) => {
@@ -345,6 +360,7 @@ export default function FabriQ() {
   };
 
   const forgetJob = () => {
+    writeOpenJob(null);
     projectId.current = null;
     lastSaved.current = "";
     setRecent(loadProjects());
@@ -369,6 +385,7 @@ export default function FabriQ() {
   };
 
   const openProject = (p: ProjectRec) => {
+    writeOpenJob(p.id);
     projectId.current = p.id;
     lastSaved.current = JSON.stringify([p.items, p.customer ?? ""]);
     setItems(p.items);
@@ -709,14 +726,14 @@ function JobScreen({
       onReplace(flow.editing, type, wu, hu, rs[0].qty, metaOf(rs[0]));
       setJustAdded([flow.editing]);
     } else {
-      // Same numbering the list uses: the next free W-numbers, in order.
+      // Same numbering the list uses: the next free numbers, in order.
       let n = items.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0);
       const ids: string[] = [];
       parsed.forEach((p, i) => {
         if (!p.ready) return;
         const { wu, hu } = sizeOf(i);
         onAdd(type, wu, hu, rs[i].qty, metaOf(rs[i]));
-        ids.push(`W${++n}`);
+        ids.push(`${idPrefix(type)}${++n}`);
       });
       setJustAdded(ids);
     }
@@ -1523,7 +1540,9 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
   onNew: () => void;
   onScrap: (pct: number) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("material");
+  // a reload on the Cutting Sheet comes back to the Cutting Sheet
+  const [tab, setTab] = useState<Tab>(() =>
+    typeof window !== "undefined" && window.history.state?.tab === "cutting" ? "cutting" : "material");
   // The Cutting Sheet is one more page: the phone's Back returns to the
   // Material List, not past it to the sizes.
   useEffect(() => {
@@ -2129,6 +2148,15 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 /* ————————————————— demo ————————————————— */
 
 const DEMO_KEY = "fabriq_demo_seen";
+/** Which saved job is open now — so a reload reopens it, not the home screen. */
+const OPEN_KEY = "fabriq.openJob";
+function readOpenJob(): string | null {
+  try { return localStorage.getItem(OPEN_KEY); } catch { return null; }
+}
+function writeOpenJob(id: string | null) {
+  try { if (id) localStorage.setItem(OPEN_KEY, id); else localStorage.removeItem(OPEN_KEY); } catch { /* storage blocked — a reload shows Recent jobs instead */ }
+}
+
 function demoSeen(): boolean {
   try { return localStorage.getItem(DEMO_KEY) === "1"; } catch { return true; }
 }

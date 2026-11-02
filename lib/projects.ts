@@ -90,7 +90,7 @@ export function autoTitle(items: JobItem[]): string {
   const LABEL: Record<string, string> = { window: "Window", door: "Door", partition: "Partition" };
   const count = new Map<string, number>();
   for (const it of items) count.set(it.type, (count.get(it.type) ?? 0) + it.qty);
-  const parts = [...count.entries()].map(([t, n]) => `${n} ${LABEL[t] ?? t}`);
+  const parts = [...count.entries()].map(([t, n]) => `${n} ${LABEL[t] ?? t}${n === 1 ? "" : "s"}`);
   return parts.join(" · ") || "Untitled job";
 }
 

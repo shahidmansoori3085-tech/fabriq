@@ -129,7 +129,7 @@ export function buildJobItem(
     shutters = mixToShutters(mix);
   }
 
-  return { id: `W${idNum}`, type, width, height, qty, system: sys, shutters, meta: next };
+  return { id: `${idPrefix(type)}${idNum}`, type, width, height, qty, system: sys, shutters, meta: next };
 }
 
 export interface QuickItemInput {
@@ -175,4 +175,10 @@ export function summarizeMaterial(list: MaterialList): string {
   for (const h of list.hardware) lines.push(`- ${h.name}: ${h.qty} ${h.unit}`);
   lines.push(`- Bars: ${list.totals.bars16} × 16ft, ${list.totals.bars8} × 8ft`);
   return lines.join("\n");
+}
+
+/** W1 window, D2 door, P3 partition — the cutting sheet's "Door Top — D2"
+ *  says what it is for. One running number across the job, so ids stay unique. */
+export function idPrefix(type: OpeningType): string {
+  return type === "door" ? "D" : type === "partition" ? "P" : "W";
 }
