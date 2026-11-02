@@ -109,7 +109,7 @@ const Z_DIR_NAME: Record<string, string> = {
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Center rails across a door shutter; panels = rails + 1. */
-const DOOR_CENTERS: Opt[] = [["0", "None"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]];
+const DOOR_CENTERS: Opt[] = [["0", "No Center"], ["1", "1 Center"], ["2", "2 Center"], ["3", "3 Center"], ["4", "4 Center"]];
 
 /** The door's panels, top to bottom. What fills them does not change the
  *  aluminium, so it is not asked: every panel is sheet (founder, 2026-10-30 —
