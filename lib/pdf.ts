@@ -18,7 +18,12 @@ const MAX_CANVAS_SIDE = 15_000;
  * Anything carrying the `no-print` class (buttons, the WhatsApp control
  * itself) is left out of the capture.
  */
-export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
+export async function elementToPdfBlob(el: HTMLElement, opts: {
+  /** lay the document out this wide (px) for the PDF — the on-screen phone
+   *  column is too narrow for A4: blown up, its text is huge and runs to
+   *  many pages */
+  width?: number;
+} = {}): Promise<Blob> {
   // Every page carries a small "Made with FabriQ" in its bottom corner — a
   // real link, drawn by the PDF itself (the page body is a picture), so a
   // dealer or karigar who opens the PDF can tap straight into the app.
@@ -41,12 +46,33 @@ export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
   const h = el.scrollHeight || el.offsetHeight || 1;
   const scale = Math.max(0.6, Math.min(2, Math.sqrt(MAX_CANVAS_AREA / (w * h)), MAX_CANVAS_SIDE / h));
 
+  /** Where a page may break, in CSS px from the top of the document: the top
+   *  of a card (best — nothing is split), else of a table row or figure. */
+  const cardTops: number[] = [];
+  const rowTops: number[] = [];
+
   const canvas = await html2canvas(el, {
     scale,
     useCORS: true,
     imageTimeout: 8000,
     backgroundColor: "#ffffff",
     ignoreElements: (node) => node instanceof HTMLElement && node.classList.contains("no-print"),
+    ...(opts.width ? { windowWidth: opts.width + 200 } : {}),
+    onclone: (doc, clone) => {
+      // html2canvas mis-spaces tabular figures ("16 '") and clips one-line
+      // truncated text at the top; neither matters on paper, so drop both.
+      const st = doc.createElement("style");
+      st.textContent = "*{font-variant-numeric:normal!important;font-feature-settings:normal!important}" +
+        ".truncate{overflow:visible!important;text-overflow:clip!important;white-space:normal!important}";
+      doc.head.appendChild(st);
+      if (opts.width) {
+        clone.style.width = `${opts.width}px`;
+        clone.style.maxWidth = "none";
+      }
+      const top0 = clone.getBoundingClientRect().top;
+      clone.querySelectorAll(".card").forEach((n) => cardTops.push(n.getBoundingClientRect().top - top0));
+      clone.querySelectorAll("tr, figure").forEach((n) => rowTops.push(n.getBoundingClientRect().top - top0));
+    },
   });
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -78,8 +104,17 @@ export async function elementToPdfBlob(el: HTMLElement): Promise<Blob> {
     // Break in the white gap between rows / cards rather than through one:
     // look back up to a third of a page for a blank line.
     if (sliced + sliceH < canvas.height) {
-      for (let back = 0; back < pagePx / 3; back++) {
-        if (blankRow(sliced + sliceH - back)) { sliceH -= back; break; }
+      // Break above a card if one starts in the lower half of the page, else
+      // above a table row / figure, else in the nearest blank line.
+      const px = (css: number) => Math.round(css * scale) - 4;
+      const lastIn = (tops: number[], from: number) =>
+        tops.map(px).filter((y) => y > sliced + from && y <= sliced + sliceH).sort((a, b) => b - a)[0];
+      const at = lastIn(cardTops, pagePx * 0.45) ?? lastIn(rowTops, pagePx * 0.3);
+      if (at !== undefined) sliceH = at - sliced;
+      else {
+        for (let back = 0; back < pagePx / 3; back++) {
+          if (blankRow(sliced + sliceH - back)) { sliceH -= back; break; }
+        }
       }
     }
     // A last sliver of white (the document's bottom padding) is not a page.

@@ -2017,11 +2017,20 @@ function CuttingPanel({ list, shop, items, jobName }: {
   return (
     <div ref={sheetRef} className="print-sheet flex flex-col gap-3">
       <div className="card p-4">
-        <div className="min-w-0">
-          <div className="truncate text-base font-bold">{shop.name || "Cutting Sheet"}</div>
-          <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-            {jobName ? `${jobName} · ` : ""}{date}
+        {/* letterhead, like the order PDFs: the shop on the left, what this
+            paper is on the right */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-bold">{shop.name || "Cutting Sheet"}</div>
+            <div className="text-xs" style={{ color: "var(--ink-3)" }}>
+              {jobName ? `${jobName} · ` : ""}{date}
+            </div>
           </div>
+          {shop.name && (
+            <div className="shrink-0 pt-0.5 text-[11px] font-extrabold tracking-[0.12em]" style={{ color: "var(--accent)" }}>
+              CUTTING SHEET
+            </div>
+          )}
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <MiniStat label="Pipes" value={groupsCount(groups)} />
@@ -2035,7 +2044,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
         sub={`${plural(totalPieces, "piece")} · ${plural(sectionGroups.length, "section")}`}
         filename={pdfName(jobName, "cutting-sheet")}
         text={withBrand([`Cutting sheet${jobName ? ` — ${jobName}` : ""}: ${plural(totalPieces, "piece")} across ${plural(sectionGroups.length, "section")}. PDF attached.`]).join("\n")}
-        build={() => elementToPdfBlob(sheetRef.current!)}
+        build={() => elementToPdfBlob(sheetRef.current!, { width: 760 })}
       />
 
       {sectionGroups.map(([sectionId, bars]) => {
