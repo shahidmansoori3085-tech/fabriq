@@ -1147,23 +1147,16 @@ function JobScreen({
                 </div>
               );
             })}
+            {/* the next step sits right under the sizes, where the eye already is */}
+            <button onClick={sizesDone} disabled={!allReady} className="btn-primary mt-1 w-full py-3 text-[15px]">
+              {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
+            </button>
             {flow.editing && (
               <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
                 className="py-2 text-sm font-semibold" style={{ color: "var(--bad)" }}>
                 Remove {flow.editing}
               </button>
             )}
-            {/* room for the button, which sits over the bottom of the screen */}
-            <div aria-hidden style={{ height: 76 }} />
-
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-2.5"
-              style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}>
-              <div className="mx-auto max-w-xl">
-                <button onClick={sizesDone} disabled={!allReady} className="btn-primary w-full py-3.5 text-base">
-                  {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -1207,15 +1200,15 @@ function JobScreen({
         <>
           {/* the next step, first on the page — never scrolled away by a long list */}
           <button onClick={onDone}
-            className="btn-primary flex w-full items-center gap-3 px-4 py-3.5 text-left">
-            <svg aria-hidden width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            className="btn-primary flex w-full items-center gap-3 px-4 py-2.5 text-left">
+            <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
               <rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" />
             </svg>
             <span className="min-w-0 flex-1">
-              <span className="block text-[17px] font-bold leading-tight">Get Material List</span>
+              <span className="block text-[15px] font-bold leading-tight">Get Material List</span>
               <span className="block text-xs font-medium opacity-90">{plural(openings, "pc")} · pipes, cutting sheet, order</span>
             </span>
-            <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </button>
@@ -1828,7 +1821,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
 /** WhatsApp's speech-bubble mark, white on the green button. */
 function WhatsAppMark() {
   return (
-    <svg aria-hidden width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+    <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
       <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
     </svg>
   );
@@ -1865,11 +1858,11 @@ function SendOrder({ label, sub, filename, text, build }: {
   return (
     <div className="no-print">
       <button onClick={go} disabled={state === "working"}
-        className="flex w-full items-center gap-3 rounded-[var(--radius)] px-4 py-3 text-left text-white disabled:opacity-60"
+        className="flex w-full items-center gap-3 rounded-[var(--radius)] px-4 py-2.5 text-left text-white disabled:opacity-60"
         style={{ background: "var(--wa)" }}>
         <WhatsAppMark />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-bold leading-tight">
+          <span className="block text-sm font-bold leading-tight">
             {state === "working" ? "Preparing PDF…" : state === "needs-tap" ? "PDF ready — tap to send" : label}
           </span>
           <span className="block text-xs opacity-90">{sub} · PDF</span>

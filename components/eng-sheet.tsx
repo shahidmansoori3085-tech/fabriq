@@ -268,7 +268,7 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
 
       {/* sections */}
       {sectionIds.length > 0 && (
-        <div style={{ padding: "6px 16px 12px" }}>
+        <div data-pdf-break style={{ padding: "6px 16px 12px" }}>
           <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, marginBottom: 8 }}>Section Details (cut-through)</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
             {sectionIds.map((id) => (
@@ -281,7 +281,8 @@ export function EngineeringSheet({ item, others, list, shop }: { item: JobItem; 
       )}
 
       {/* parts schedule */}
-      <div style={{ padding: "0 16px 14px" }}>
+      {/* a PDF page may start here, so the heading travels with its table */}
+      <div data-pdf-break style={{ padding: "0 16px 14px" }}>
         <div style={{ fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: DIM, margin: "6px 0 8px" }}>Parts Schedule (per unit)</div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>

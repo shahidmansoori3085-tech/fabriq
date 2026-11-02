@@ -70,8 +70,9 @@ export async function elementToPdfBlob(el: HTMLElement, opts: {
         clone.style.maxWidth = "none";
       }
       const top0 = clone.getBoundingClientRect().top;
-      clone.querySelectorAll(".card").forEach((n) => cardTops.push(n.getBoundingClientRect().top - top0));
-      clone.querySelectorAll("tr, figure").forEach((n) => rowTops.push(n.getBoundingClientRect().top - top0));
+      clone.querySelectorAll(".card, [data-pdf-break]").forEach((n) => cardTops.push(n.getBoundingClientRect().top - top0));
+      // never between a table's heading and its first row
+      clone.querySelectorAll("tbody tr:not(:first-child), figure").forEach((n) => rowTops.push(n.getBoundingClientRect().top - top0));
     },
   });
 
