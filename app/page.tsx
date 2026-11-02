@@ -921,9 +921,9 @@ function JobScreen({
 
         {flow.step === "domalFix" && (
           <div className="grid grid-cols-2 gap-2">
-            <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="No"
+            <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="No" label="Full Sliding"
               picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={100} />} />
-            <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" })} title="Yes"
+            <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" })} title="Yes" label="Fixed + Sliding"
               picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={100} />} />
           </div>
         )}
@@ -1465,12 +1465,15 @@ function MiniQty({ value, onChange, label }: { value: number; onChange: (n: numb
 }
 
 /** One answer, as a picture with its name — tap to choose. */
-function Choice({ picture, title, sub, selected, onClick, wide }: {
+function Choice({ picture, title, sub, label, selected, onClick, wide }: {
   picture: React.ReactNode; title: string; sub?: string; selected: boolean; onClick: () => void; wide?: boolean;
+  /** a name over the picture, for when the drawing needs one to be read */
+  label?: string;
 }) {
   return (
     <button onClick={onClick} aria-pressed={selected}
       className={`chip flex ${wide ? "flex-row items-center gap-4 px-4 py-3 text-left" : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
+      {label && <span className="block text-xs font-bold" style={{ color: "var(--accent)" }}>{label}</span>}
       <span className={`grid shrink-0 place-items-center ${wide ? "w-24" : "min-h-[72px] w-full"}`}>{picture}</span>
       <span className="min-w-0">
         <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{title}</span>
