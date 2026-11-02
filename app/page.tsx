@@ -275,10 +275,10 @@ export default function FabriQ() {
       setJobName(open.customer ?? "");
       // reloaded on the results: stay there, so Back still leads to the sizes
       if (window.history.state?.fabriq === "result") setView("result");
-    } else {
-      // A shop that has never saved a job has never seen the app: show the demo once.
-      if (!saved.length && !demoSeen()) setDemo(true);
     }
+    // The demo never opens by itself: the fabricator came to work (often from
+    // a WhatsApp link with the video already watched) — it is one tap away
+    // under "How FabriQ works".
     // The first screen's entry is left as the browser made it (Next.js keeps
     // its own state there — rewriting it reloaded the page on Back). A spare
     // "guard" entry goes over it on the next tap (Chrome on Android skips
@@ -2191,9 +2191,6 @@ function writeOpenJob(id: string | null) {
   try { if (id) localStorage.setItem(OPEN_KEY, id); else localStorage.removeItem(OPEN_KEY); } catch { /* storage blocked — a reload shows Recent jobs instead */ }
 }
 
-function demoSeen(): boolean {
-  try { return localStorage.getItem(DEMO_KEY) === "1"; } catch { return true; }
-}
 function markDemoSeen() {
   try { localStorage.setItem(DEMO_KEY, "1"); } catch { /* shown again next time — harmless */ }
 }
