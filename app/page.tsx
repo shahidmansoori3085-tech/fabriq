@@ -1082,6 +1082,9 @@ function JobScreen({
               value={(vertical ? rows[pr]?.bay : rows[pr]?.row) ?? (vertical ? o.partBayFt : o.partRowFt)}
               max={toFeet(vertical ? shape.width : shape.height)}
               count={n} span={span}
+              // a gap that does not divide is not what gets built — the
+              // split chosen above is, so only that one shows as picked
+              exact={splits.length === 0}
               onChange={(v) => setGap(vertical ? "bay" : "row", v)}
             />
             {vertical ? (
@@ -1309,8 +1312,10 @@ function JobScreen({
  * other gap — typed (2.9 = 2'9") or stepped an inch at a time — or simply
  * the number of panels. The drawing above stays in view throughout.
  */
-function GapPicker({ options, value, max, count, span, onChange }: {
+function GapPicker({ options, value, max, count, span, exact = true, onChange }: {
   options: Opt[]; value: string; max: number; count: number; span: number; onChange: (v: string) => void;
+  /** false when the gap does not divide equally: no gap button shows as picked */
+  exact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [txt, setTxt] = useState("");
@@ -1336,8 +1341,8 @@ function GapPicker({ options, value, max, count, span, onChange }: {
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-1.5">
         {options.map(([v, label]) => (
-          <button key={v} onClick={() => { setOpen(false); onChange(v); }} aria-pressed={!open && value === v}
-            className={`chip min-h-[48px] px-2 py-2 text-base ${!open && value === v ? "selected" : ""}`}>
+          <button key={v} onClick={() => { setOpen(false); onChange(v); }} aria-pressed={exact && !open && value === v}
+            className={`chip min-h-[48px] px-2 py-2 text-base ${exact && !open && value === v ? "selected" : ""}`}>
             {label}
           </button>
         ))}
