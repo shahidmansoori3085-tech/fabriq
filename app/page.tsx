@@ -1152,8 +1152,8 @@ function JobScreen({
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
-              const [phW, phH] = type === "partition" ? ["10", "8"] : type === "door" ? ["3", "7"] : ["4.6", "4"];
-              const keys: [BoxKey, string, string][] = [["w", "Width", phW], ["h", "Height", phH], ...(fixLabel ? [["fix", fixLabel, "1.6"] as [BoxKey, string, string]] : [])];
+              // empty boxes, no sample numbers: a grey "4.6" was read as a size already there
+              const keys: [BoxKey, string][] = [["w", "Width"], ["h", "Height"], ...(fixLabel ? [["fix", fixLabel] as [BoxKey, string]] : [])];
               return (
                 <div key={r} className="card px-3 pb-2 pt-2.5" style={{ scrollMarginBottom: 110, scrollMarginTop: 80 }}>
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -1174,8 +1174,8 @@ function JobScreen({
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    {keys.map(([k, label, ph]) => (
-                      <SizeInput key={k} label={label} value={row[k]} placeholder={r === 0 ? ph : ""}
+                    {keys.map(([k, label]) => (
+                      <SizeInput key={k} label={label} value={row[k]}
                         bad={!!p.warn} last={!!flow.editing && k === keys[keys.length - 1][0]}
                         inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
                         onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
@@ -1473,10 +1473,10 @@ function DoorSizeStep({ o, onChange, onNext }: {
       </div>
       <div className="card p-3">
         <div className="flex gap-2">
-          <SizeInput label="Door width" value={w} placeholder="3" bad={!!w.trim() && !okW}
+          <SizeInput label="Door width" value={w} bad={!!w.trim() && !okW}
             inputRef={() => {}} onNext={() => hBox.current?.focus()}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setW(t); put(t, h); }} />
-          <SizeInput label="Door height" value={h} placeholder="7" bad={!!h.trim() && !okH} last
+          <SizeInput label="Door height" value={h} bad={!!h.trim() && !okH} last
             inputRef={(el) => { hBox.current = el; }} onNext={() => { if (okW && okH) onNext(); }}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setH(t); put(w, t); }} />
         </div>
