@@ -1205,6 +1205,17 @@ function JobScreen({
         </div>
       ) : (
         <>
+          {/* the next step, first on the page — never scrolled away by a long list */}
+          <button onClick={onDone}
+            className="btn-primary flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+            style={{ boxShadow: "0 6px 18px rgba(232, 89, 12, 0.35)" }}>
+            <span>
+              <span className="block text-lg font-bold leading-tight">Get Material List</span>
+              <span className="block text-xs font-semibold opacity-90">{plural(openings, "pc")} · pipes, cutting, order</span>
+            </span>
+            <span aria-hidden className="text-2xl leading-none">→</span>
+          </button>
+
           <div className="card overflow-hidden">
             <div className="px-4 pb-3 pt-3" style={{ background: "var(--surface-2)" }}>
               <div className="flex items-center justify-between">
@@ -1293,18 +1304,6 @@ function JobScreen({
         </div>
       )}
 
-      {/* the one next step, always in reach — this screen has no keyboard,
-          so nothing ever covers it */}
-      {items.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3"
-          style={{ background: "var(--surface)", borderColor: "var(--line)", paddingBottom: "calc(12px + env(safe-area-inset-bottom))" }}>
-          <div className="mx-auto max-w-xl">
-            <button onClick={onDone} className="btn-dark w-full py-4 text-base">
-              Get Material List ({plural(openings, "pc")}) →
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
