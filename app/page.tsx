@@ -99,10 +99,18 @@ const MIXES: Record<string, Opt[]> = {
   "4": [["GGGJ", "3 Glass + 1 Mesh"], ["GGJJ", "2 Glass + 2 Mesh"], ["GGGG", "4 Glass"]],
 };
 // A Z-section door is asked under Door, not here — a fabricator looks for a door under Door.
-const Z_TYPES: Opt[] = [["openable", "Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"]];
+const Z_TYPES: Opt[] = [["openable", "Full Openable"], ["combo", "Fixed + Openable"], ["fixed", "Fully Fixed"]];
 const Z_DIRS: Opt[] = [["top", "Top"], ["side", "One side"], ["both", "Both sides"], ["center", "Middle"]];
 const Z_SASH: Opt[] = [["1", "1"], ["2", "2"], ["3", "3"]];
 const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
+/** Plain words under each Z-section drawing — what that choice means on site. */
+const Z_TYPE_NOTE: Record<string, string> = { openable: "All shutters open", combo: "Part fixed, part opens", fixed: "No shutter opens" };
+const Z_DIR_NAME: Record<string, [name: string, note: string]> = {
+  top: ["Fixed on Top", "Opens below"],
+  side: ["Fixed on One Side", "Opens on the other side"],
+  both: ["Fixed on Both Sides", "Opens in the middle"],
+  center: ["Fixed in Middle", "Opens on both sides"],
+};
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Center rails across a door shutter; panels = rails + 1. */
@@ -931,7 +939,7 @@ function JobScreen({
         {flow.step === "zType" && (
           <div className="grid grid-cols-2 gap-2">
             {Z_TYPES.map(([v, label]) => (
-              <Choice key={v} selected={o.zType === v} title={label} onClick={() => choose({ zType: v })}
+              <Choice key={v} selected={o.zType === v} label={label} title={Z_TYPE_NOTE[v]} onClick={() => choose({ zType: v })}
                 picture={<MiniElevation item={sample("window", { ...o, zType: v })} size={100} />} />
             ))}
           </div>
@@ -939,8 +947,8 @@ function JobScreen({
 
         {flow.step === "zDir" && (
           <div className="grid grid-cols-2 gap-2">
-            {Z_DIRS.map(([v, label]) => (
-              <Choice key={v} selected={o.zComboDir === v} title={label}
+            {Z_DIRS.map(([v]) => (
+              <Choice key={v} selected={o.zComboDir === v} label={Z_DIR_NAME[v][0]} title={Z_DIR_NAME[v][1]}
                 // fixed in the middle usually has one shutter each side
                 onClick={() => choose(v === "center" ? { zComboDir: v, zSash: "1" } : { zComboDir: v })}
                 picture={<MiniElevation item={sample("window", { ...o, zComboDir: v, ...(v === "center" ? { zSash: "1" } : {}) })} size={80} />} />
@@ -950,8 +958,10 @@ function JobScreen({
 
         {flow.step === "zSash" && (
           <div className="grid grid-cols-3 gap-2">
-            {(zMiddle ? Z_SASH.slice(0, 2) : Z_SASH).map(([v, label]) => (
-              <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })} title={label}
+            {(zMiddle ? Z_SASH.slice(0, 2) : Z_SASH).map(([v]) => (
+              <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })}
+                label={zMiddle ? `${v} Each Side` : `${v} Shutter${v === "1" ? " Opens" : "s Open"}`}
+                title={zMiddle ? `${Number(v) * 2} open in all` : v}
                 picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={80} />} />
             ))}
           </div>
@@ -961,7 +971,7 @@ function JobScreen({
           <div className="grid grid-cols-2 gap-2">
             {Z_SIZE.map(([v, label]) => (
               <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v })} title={label}
-                sub={v === "heavy" ? (type === "partition" ? "For big partitions" : "For big windows") : (type === "partition" ? "For normal partitions" : "For normal windows")}
+                label={v === "heavy" ? (type === "partition" ? "For Big Partitions" : "For Big Windows") : (type === "partition" ? "For Normal Partitions" : "For Normal Windows")}
                 picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={72} h={56} />} />
             ))}
           </div>
