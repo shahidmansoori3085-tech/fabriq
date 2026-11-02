@@ -244,6 +244,8 @@ export default function FabriQ() {
   const [shop, setShop] = useState<ShopProfile>({ name: "" });
   const [recent, setRecent] = useState<ProjectRec[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [exitHint, setExitHint] = useState(false);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The 45-second demo: shown once to a first-time user, and on request after. */
   const [demo, setDemo] = useState(false);
   /** The saved job this screen is editing. A ref: it must be readable the
@@ -259,6 +261,10 @@ export default function FabriQ() {
     setShop(loadShop());
     const saved = loadProjects();
     setRecent(saved);
+    // Works offline once it has loaded one time — a workshop's signal is poor.
+    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      navigator.serviceWorker.register("/sw.js").catch(() => { /* still works online */ });
+    }
     // The job that was open comes back open: a phone often reloads the page
     // after the fabricator shares a PDF to WhatsApp and returns.
     const open = saved.find((p) => p.id === readOpenJob());
@@ -269,16 +275,20 @@ export default function FabriQ() {
       setJobName(open.customer ?? "");
       // reloaded on the results: stay there, so Back still leads to the sizes
       if (window.history.state?.fabriq === "result") setView("result");
-      return;
+    } else {
+      // A shop that has never saved a job has never seen the app: show the demo once.
+      if (!saved.length && !demoSeen()) setDemo(true);
     }
-    // nothing open, so a results page left in the history means nothing
-    if (window.history.state?.fabriq) window.history.replaceState(null, "");
-    // A shop that has never saved a job has never seen the app: show the demo once.
-    if (!saved.length && !demoSeen()) setDemo(true);
-    // Works offline once it has loaded one time — a workshop's signal is poor.
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      navigator.serviceWorker.register("/sw.js").catch(() => { /* still works online */ });
-    }
+    // The first screen's entry is left as the browser made it (Next.js keeps
+    // its own state there — rewriting it reloaded the page on Back). A spare
+    // "guard" entry goes over it on the next tap (Chrome on Android skips
+    // entries pushed without a tap), so Back there asks "press again to
+    // exit" instead of closing the app mid-job.
+    const guard = () => {
+      if (!window.history.state?.fabriq) window.history.pushState({ fabriq: "guard" }, "");
+    };
+    document.addEventListener("click", guard, true);
+    return () => document.removeEventListener("click", guard, true);
   }, []);
 
   // The phone's back button returns from the results to the sizes instead of
@@ -286,6 +296,14 @@ export default function FabriQ() {
   // Settings gets its own entry too, so back closes it instead of the app.
   useEffect(() => {
     const onPop = () => {
+      if (!window.history.state?.fabriq) {
+        // Back on the first screen: warn; the next Back leaves the app,
+        // unless a tap first puts the guard back in place.
+        setExitHint(true);
+        if (exitTimer.current) clearTimeout(exitTimer.current);
+        exitTimer.current = setTimeout(() => setExitHint(false), 2500);
+        return;
+      }
       setShowSettings(false);
       setDemo(false);
       setView(window.history.state?.fabriq === "result" ? "result" : "job");
@@ -430,6 +448,14 @@ export default function FabriQ() {
           onSave={(s) => { setShop(s); saveShop(s); closeSettings(); }}
           onClose={closeSettings}
         />
+      )}
+      {exitHint && (
+        <div role="status" className="no-print fixed inset-x-0 z-50 flex justify-center px-4"
+          style={{ bottom: "calc(24px + env(safe-area-inset-bottom))" }}>
+          <div className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: "var(--ink)" }}>
+            Press back again to exit
+          </div>
+        </div>
       )}
     </main>
   );
