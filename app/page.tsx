@@ -763,6 +763,8 @@ function JobScreen({
   }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
   const filled = parsed.filter((p) => !p.empty);
   const readyCount = parsed.filter((p) => p.ready).length;
+  /** pieces, not lines: one 5' × 5' line with Qty 10 adds 10 windows */
+  const readyPieces = parsed.reduce((a, p, i) => a + (p.ready ? rows[i].qty : 0), 0);
   const allReady = filled.length > 0 && filled.every((p) => p.ready);
   /** The real size of line i — an edited item's untouched size keeps its exact value. */
   const sizeOf = (i: number) => {
@@ -918,7 +920,7 @@ function JobScreen({
     /** Z fixed in the middle: the shutter count is per side. */
     const zMiddle = o.zType === "combo" && o.zComboDir === "center";
     const lastPart = part >= readyIdx.length - 1;
-    const doneLabel = flow.editing ? "Save" : `Add ${plural(readyCount, type === "partition" ? "partition" : type === "door" ? "door" : "window")}`;
+    const doneLabel = flow.editing ? "Save" : `Add ${plural(readyPieces, type === "partition" ? "partition" : type === "door" ? "door" : "window")}`;
     // the divider screens: which lines, how many panels, and the gap they leave
     const vertical = flow.step === "partBays";
     const grid = type === "partition" ? partitionLayout(shape) : null;
@@ -1224,7 +1226,7 @@ function JobScreen({
             })}
             {/* the next step sits right under the sizes, where the eye already is */}
             <button onClick={sizesDone} disabled={!allReady} className="btn-primary mt-1 w-full py-3 text-[15px]">
-              {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyCount, "partition")} →` : `${doneLabel} →`}
+              {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyPieces, "partition")} →` : `${doneLabel} →`}
             </button>
             {flow.editing && (
               <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}
