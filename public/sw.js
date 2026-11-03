@@ -7,7 +7,7 @@
 // Bump on every change to /sections/: the old cache (and its stale
 // drawings) is deleted on activate. Drawing URLs also carry ?v=, so a new
 // drawing is a new URL and can never be answered from an old copy.
-const CACHE = "fabriq-v4";
+const CACHE = "fabriq-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
 
