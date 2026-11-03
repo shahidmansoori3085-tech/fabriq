@@ -264,7 +264,9 @@ export default function FabriQ() {
     setShop(loadShop());
     // A job carried over from Instagram's browser to Chrome opens here.
     const carried = takeCarriedJob();
-    if (carried) {
+    const same = carried && loadProjects().find((p) => JSON.stringify(p.items) === JSON.stringify(carried.items));
+    if (same) writeOpenJob(same.id);
+    else if (carried) {
       const id = newProjectId();
       saveProject({
         id, title: autoTitle(carried.items), created: Date.now(), updated: Date.now(),

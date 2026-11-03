@@ -28,7 +28,7 @@ export function useInApp(): InApp {
 }
 
 /** The bottom sheet: one button on Android, the menu steps on iPhone. */
-export function OpenInChromeSheet({ app, what, onClose }: { app: Exclude<InApp, null>; what: string; onClose: () => void }) {
+export function OpenInChromeSheet({ app, what, onClose }: { app: string; what: string; onClose: () => void }) {
   const android = isAndroid();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
@@ -51,10 +51,10 @@ export function OpenInChromeSheet({ app, what, onClose }: { app: Exclude<InApp, 
         ) : (
           <ol className="mt-4 flex flex-col gap-2 text-sm">
             <li className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)" }}>
-              1. Tap <b>•••</b> at the top right.
+              1. Tap <b>•••</b> (the menu) at the top or bottom right.
             </li>
             <li className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)" }}>
-              2. Tap <b>Open in external browser</b>.
+              2. Tap <b>Open in external browser</b> or <b>Open in Safari</b>.
             </li>
           </ol>
         )}

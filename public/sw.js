@@ -7,7 +7,7 @@
 // Bump on every change to /sections/: the old cache (and its stale
 // drawings) is deleted on activate. Drawing URLs also carry ?v=, so a new
 // drawing is a new URL and can never be answered from an old copy.
-const CACHE = "fabriq-v2";
+const CACHE = "fabriq-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -29,8 +29,12 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put("/", copy));
+          // Only the app's own page is kept for offline. A redirect (the /i
+          // short link) or an error page stored as "/" broke the offline app.
+          if (url.pathname === "/" && res.ok && res.type === "basic" && !res.redirected) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put("/", copy));
+          }
           return res;
         })
         .catch(() => caches.match("/").then((r) => r || Response.error())),

@@ -39,7 +39,7 @@ const isIOS = () =>
 export function InstallButton() {
   /** null until mounted — the server can't know, so nothing renders there. */
   const [show, setShow] = useState<boolean | null>(null);
-  const [help, setHelp] = useState<"ios" | "other" | "inapp" | null>(null);
+  const [help, setHelp] = useState<"ios" | "samsung" | "other" | "inapp" | null>(null);
   const inApp = useInApp();
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export function InstallButton() {
       return;
     }
     // Instagram's browser cannot install anything: go to Chrome first
-    setHelp(inApp ? "inapp" : isIOS() ? "ios" : "other");
+    setHelp(inApp ? "inapp" : isIOS() ? "ios" : /SamsungBrowser/.test(navigator.userAgent) ? "samsung" : "other");
   };
 
   return (
@@ -81,7 +81,7 @@ export function InstallButton() {
 }
 
 /** Step-by-step, with the same icons the browser shows. */
-function InstallHelp({ kind, onClose }: { kind: "ios" | "other"; onClose: () => void }) {
+function InstallHelp({ kind, onClose }: { kind: "ios" | "samsung" | "other"; onClose: () => void }) {
   const steps: [React.ReactNode, React.ReactNode][] = kind === "ios"
     ? [
         [<ShareIcon key="s" />, /CriOS/.test(navigator.userAgent)
@@ -90,8 +90,14 @@ function InstallHelp({ kind, onClose }: { kind: "ios" | "other"; onClose: () => 
         [<PlusSquareIcon key="p" />, <>Scroll down and tap <b>Add to Home Screen</b>.</>],
         [<span key="a" className="text-sm font-bold" style={{ color: "var(--glass)" }}>Add</span>, <>Tap <b>Add</b> at the top right.</>],
       ]
+    : kind === "samsung"
+    ? [
+        [<span key="m" className="text-xl font-bold leading-none">≡</span>, <>Tap the <b>menu</b> (≡) at the bottom right.</>],
+        [<PlusSquareIcon key="p" />, <>Tap <b>Add page to</b>, then <b>Home screen</b>.</>],
+        [<span key="c" className="text-sm font-bold" style={{ color: "var(--glass)" }}>Add</span>, <>Confirm with <b>Add</b>.</>],
+      ]
     : [
-        [<span key="m" className="text-xl font-bold leading-none">⋮</span>, <>Tap the browser <b>menu</b> (⋮) at the top right.</>],
+        [<span key="m" className="text-xl font-bold leading-none">⋮</span>, <>Tap the <b>menu</b> (⋮) at the top right. Opened from WhatsApp? Tap <b>Open in Chrome</b> first.</>],
         [<PhoneDownIcon key="i" dark />, <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</>],
         [<span key="c" className="text-sm font-bold" style={{ color: "var(--glass)" }}>Install</span>, <>Confirm with <b>Install</b>.</>],
       ];

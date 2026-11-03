@@ -6,13 +6,23 @@
  */
 import type { JobItem } from "@/lib/engine/types";
 
-export type InApp = "Instagram" | "Facebook" | null;
+/** The app whose built-in browser this is ("this app" when it can't be named). */
+export type InApp = string | null;
 
 export function inAppBrowser(): InApp {
   if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent;
   if (/Instagram/i.test(ua)) return "Instagram";
   if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return "Facebook";
+  if (/Snapchat/i.test(ua)) return "Snapchat";
+  if (/LinkedInApp/i.test(ua)) return "LinkedIn";
+  if (/Telegram/i.test(ua)) return "Telegram";
+  // Android: an app's own WebView says "; wv)" (Chrome and WhatsApp's
+  // Chrome tabs do not)
+  if (/Android/i.test(ua) && /; wv\)/.test(ua)) return "this app";
+  // iPhone: an app's own browser has no "Safari/" (Safari, Chrome and
+  // Firefox on iPhone all do)
+  if (/iPhone|iPad|iPod/i.test(ua) && !/Safari\//.test(ua)) return "this app";
   return null;
 }
 
