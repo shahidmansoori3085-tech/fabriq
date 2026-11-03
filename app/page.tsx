@@ -20,7 +20,7 @@ import {
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
-import { markSource, markStep } from "@/lib/track";
+import { markInstalls, markSource, markStep } from "@/lib/track";
 import {
   getSection,
 } from "@/lib/engine/sections";
@@ -264,6 +264,8 @@ export default function FabriQ() {
     setRecent(saved);
     // Count where this visit came from (WhatsApp link, Diwali box QR…).
     markSource();
+    // …and installs / openings from the phone's home screen.
+    markInstalls();
     // Works offline once it has loaded one time — a workshop's signal is poor.
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => { /* still works online */ });

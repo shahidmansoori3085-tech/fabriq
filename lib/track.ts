@@ -51,3 +51,35 @@ export function markSource(): void {
     /* storage or analytics blocked — the app works the same */
   }
 }
+
+/** Sends a view of `path` once <Analytics> is ready (it sets up window.va a
+ *  moment after the page mounts); gives up quietly after ~5 s. */
+function sendWhenReady(path: string, onSent?: () => void): void {
+  let tries = 0;
+  const send = () => {
+    try {
+      const w = window as unknown as { va?: unknown };
+      if (typeof w.va === "function") { pageview({ route: path, path }); onSent?.(); }
+      else if (++tries < 25) setTimeout(send, 200);
+    } catch { /* analytics blocked — nothing to count */ }
+  };
+  send();
+}
+
+/**
+ * The installed app: an install is counted as /done/installed when the phone
+ * adds FabriQ to its home screen, and an opening from the home screen
+ * (standalone display, or iOS's navigator.standalone) as /from/home-screen,
+ * once per session — the shops that keep FabriQ on their phone and use it.
+ */
+export function markInstalls(): void {
+  try {
+    window.addEventListener("appinstalled", () => sendWhenReady("/done/installed"), { once: true });
+    const standalone = window.matchMedia?.("(display-mode: standalone)").matches
+      || (navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (!standalone || sessionStorage.getItem("fabriq.home") === "1") return;
+    sendWhenReady("/from/home-screen", () => sessionStorage.setItem("fabriq.home", "1"));
+  } catch {
+    /* storage or analytics blocked — the app works the same */
+  }
+}
