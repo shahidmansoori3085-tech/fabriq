@@ -21,6 +21,8 @@ import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
 import { markInstalls, markSource, markStep } from "@/lib/track";
+import { takeCarriedJob } from "@/lib/inapp";
+import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
 import {
   getSection,
 } from "@/lib/engine/sections";
@@ -260,6 +262,16 @@ export default function FabriQ() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShop(loadShop());
+    // A job carried over from Instagram's browser to Chrome opens here.
+    const carried = takeCarriedJob();
+    if (carried) {
+      const id = newProjectId();
+      saveProject({
+        id, title: autoTitle(carried.items), created: Date.now(), updated: Date.now(),
+        items: carried.items, sqft: totalSqft(carried.items), scrapPct: 0, amount: 0, customer: carried.customer,
+      });
+      writeOpenJob(id);
+    }
     const saved = loadProjects();
     setRecent(saved);
     // Count where this visit came from (WhatsApp link, Diwali box QR…).
@@ -1234,6 +1246,8 @@ function JobScreen({
         </div>
       </div>
 
+      <InAppNotice />
+
       {items.length === 0 ? (
         /* first screen: what are you making — tap one to start */
         <div className="card flex flex-col gap-4 p-4">
@@ -1895,6 +1909,9 @@ function SendOrder({ label, sub, filename, text, build }: {
   label: string; sub: string; filename: string; text: string; build: () => Blob | Promise<Blob>;
 }) {
   const [state, setState] = useState<ShareResult | "idle" | "working" | "error">("idle");
+  /** Instagram's browser cannot hand a PDF on: that tap goes to Chrome first. */
+  const inApp = useInApp();
+  const [toChrome, setToChrome] = useState(false);
   /** Kept after a "needs-tap" so the second tap shares at once, inside the tap. */
   const built = useRef<Blob | null>(null);
 
@@ -1905,6 +1922,7 @@ function SendOrder({ label, sub, filename, text, build }: {
     markStep(kind);
   };
   const go = async () => {
+    if (inApp) { setToChrome(true); return; }
     if (state === "needs-tap" && built.current) {
       const r = await sharePdfToWhatsApp(built.current, filename, text);
       counted(r);
@@ -1936,6 +1954,7 @@ function SendOrder({ label, sub, filename, text, build }: {
         </span>
         <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 6l6 6-6 6" /></svg>
       </button>
+      {toChrome && inApp && <OpenInChromeSheet app={inApp} what="Sending a PDF" onClose={() => setToChrome(false)} />}
       {state === "downloaded" && (
         <p className="mt-1.5 text-center text-xs" style={{ color: "var(--ink-3)" }}>
           PDF saved.{" "}

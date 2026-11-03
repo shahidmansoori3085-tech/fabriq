@@ -10,6 +10,7 @@
  * is gone.
  */
 import { useEffect, useState } from "react";
+import { OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -38,7 +39,8 @@ const isIOS = () =>
 export function InstallButton() {
   /** null until mounted — the server can't know, so nothing renders there. */
   const [show, setShow] = useState<boolean | null>(null);
-  const [help, setHelp] = useState<"ios" | "other" | null>(null);
+  const [help, setHelp] = useState<"ios" | "other" | "inapp" | null>(null);
+  const inApp = useInApp();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -59,7 +61,8 @@ export function InstallButton() {
       if (outcome === "accepted") setShow(false);
       return;
     }
-    setHelp(isIOS() ? "ios" : "other");
+    // Instagram's browser cannot install anything: go to Chrome first
+    setHelp(inApp ? "inapp" : isIOS() ? "ios" : "other");
   };
 
   return (
@@ -70,7 +73,9 @@ export function InstallButton() {
         <PhoneDownIcon dark />
         Install
       </button>
-      {help && <InstallHelp kind={help} onClose={() => setHelp(null)} />}
+      {help === "inapp" && inApp
+        ? <OpenInChromeSheet app={inApp} what="Installing the app" onClose={() => setHelp(null)} />
+        : help && help !== "inapp" && <InstallHelp kind={help} onClose={() => setHelp(null)} />}
     </>
   );
 }
