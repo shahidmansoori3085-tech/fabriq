@@ -278,6 +278,18 @@ export default function FabriQ() {
     setRecent(saved);
     // Count where this visit came from (WhatsApp link, Diwali box QR…).
     markSource();
+    // Arrived from a link (QR, Instagram, WhatsApp, the jump to Chrome):
+    // start on the first screen, not on whatever job this browser had open
+    // last time (that job stays under Recent jobs). The link's tags are then
+    // taken out of the address, so a reload later is a reload, not a new
+    // arrival.
+    const url = new URL(window.location.href);
+    const fromLink = [...url.searchParams.keys()].some((k) => k.startsWith("utm_"));
+    if (fromLink) {
+      if (!carried) writeOpenJob(null);
+      [...url.searchParams.keys()].filter((k) => k.startsWith("utm_")).forEach((k) => url.searchParams.delete(k));
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    }
     // …and installs / openings from the phone's home screen.
     markInstalls();
     // Works offline once it has loaded one time — a workshop's signal is poor.
