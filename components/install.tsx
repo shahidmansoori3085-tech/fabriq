@@ -84,7 +84,9 @@ export function InstallButton() {
 function InstallHelp({ kind, onClose }: { kind: "ios" | "other"; onClose: () => void }) {
   const steps: [React.ReactNode, React.ReactNode][] = kind === "ios"
     ? [
-        [<ShareIcon key="s" />, <>Tap the <b>Share</b> button in Safari&apos;s bottom bar.</>],
+        [<ShareIcon key="s" />, /CriOS/.test(navigator.userAgent)
+          ? <>Tap the <b>Share</b> button at the top right, next to the address.</>
+          : <>Tap the <b>Share</b> button in Safari&apos;s bottom bar.</>],
         [<PlusSquareIcon key="p" />, <>Scroll down and tap <b>Add to Home Screen</b>.</>],
         [<span key="a" className="text-sm font-bold" style={{ color: "var(--glass)" }}>Add</span>, <>Tap <b>Add</b> at the top right.</>],
       ]
