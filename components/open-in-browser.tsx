@@ -68,6 +68,18 @@ export function OpenInChromeSheet({ app, what, onClose }: { app: Exclude<InApp, 
 export function InAppNotice() {
   const app = useInApp();
   const [open, setOpen] = useState(false);
+  // Android: go straight on to Chrome, once per visit (if Chrome does not
+  // open, the page stays here with this notice and the menu steps).
+  useEffect(() => {
+    if (!app || !isAndroid()) return;
+    try {
+      if (sessionStorage.getItem("fabriq.toChrome")) return;
+      sessionStorage.setItem("fabriq.toChrome", "1");
+    } catch {
+      return; // without the mark it could try again on every reload
+    }
+    window.location.href = chromeLink(openJob());
+  }, [app]);
   if (!app) return null;
   return (
     <>
