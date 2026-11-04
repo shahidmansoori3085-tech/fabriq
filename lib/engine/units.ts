@@ -404,3 +404,40 @@ export function mm(n: number): Um {
 export function inches(n: number): Um {
   return Math.round(n * UM_PER_INCH);
 }
+
+/* ————————————————— the unit the fabricator types in ————————————————— */
+
+/** How the size boxes read what is typed. */
+export type SizeUnit = "ft" | "in" | "mm";
+
+/**
+ * A size typed in the chosen unit, on the number keyboard:
+ *  - ft: 4.6 = 4'6", 4.6.2 = 4'6" 2 sut (and the old auto reading of 54 / 1372)
+ *  - in: 54 = 54", 54.2 = 54" 2 sut
+ *  - mm: 1372 = 1372 mm
+ */
+export function parseSizeIn(raw: string, unit: SizeUnit, feetBelow?: number): Um | null {
+  if (unit === "ft") return parseTradeSize(raw, feetBelow);
+  const t = raw.trim();
+  if (!t) return null;
+  if (unit === "in") {
+    const m = /^(\d+)(?:\.(\d)?)?$/.exec(t);
+    if (!m) return null;
+    const sut = m[2] ? parseInt(m[2], 10) : 0;
+    if (sut > 7) return null;
+    const um = parseInt(m[1], 10) * UM_PER_INCH + sut * UM_PER_SUT;
+    return um > 0 ? um : null;
+  }
+  if (!/^\d+(?:\.\d*)?$/.test(t)) return null;
+  const v = parseFloat(t);
+  return v > 0 ? Math.round(v * UM_PER_MM) : null;
+}
+
+/** A size back into how it is typed in that unit: "4.6.2", "54.2", "1378". */
+export function formatSizeIn(um: Um, unit: SizeUnit): string {
+  if (unit === "ft") return formatTradeSize(um);
+  if (unit === "mm") return String(Math.round(um / UM_PER_MM));
+  const totalSut = Math.round(um / UM_PER_SUT);
+  const inch = Math.floor(totalSut / 8), sut = totalSut % 8;
+  return `${inch}${sut ? `.${sut}` : ""}`;
+}

@@ -2,7 +2,7 @@
  * Every size format seen on real and eval sheets must parse — and keep
  * parsing. `npx tsx evals/units/parse.ts` exits non-zero on any regression.
  */
-import { parseDimension, formatFtInSut, parseTradeSize, formatTradeSize } from "../../lib/engine/units";
+import { parseDimension, formatFtInSut, parseTradeSize, formatTradeSize, parseSizeIn, formatSizeIn } from "../../lib/engine/units";
 
 const CASES: [string, string | null][] = [
   // the app's own display format, copied back by a fabricator
@@ -43,4 +43,21 @@ for (const [raw, want] of TRADE) {
 }
 const total = CASES.length + TRADE.length;
 console.log(fail ? `${fail}/${total} failed` : `all ${total} parse cases ok`);
-process.exit(fail ? 1 : 0);
+if (fail) process.exit(1);
+
+// sizes typed in inches (point = sut) and in mm
+{
+  const cases: [string, "in" | "mm", string | null][] = [
+    ["54", "in", '54"'], ["54.2", "in", '54"2s'], ["54.", "in", '54"'], ["54.8", "in", null], ["4.6", "in", '4"6s'],
+    ["1372", "mm", '54"'], ["1219.2", "mm", '48"'], ["12a", "mm", null], ["", "mm", null],
+  ];
+  let bad = 0;
+  for (const [raw, unit, want] of cases) {
+    const v = parseSizeIn(raw, unit);
+    const got = v == null ? null : formatFtInSut(v);
+    if (got !== want) { bad++; console.log(`FAIL ${unit} ${JSON.stringify(raw)} → ${got}, want ${want}`); }
+    if (v != null && unit === "in" && parseSizeIn(formatSizeIn(v, unit), unit) !== v) { bad++; console.log(`FAIL in round-trip ${raw}`); }
+  }
+  if (bad) process.exit(1);
+  console.log(`all ${cases.length} unit cases ok`);
+}

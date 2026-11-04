@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, type Um,
+  formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, parseSizeIn, formatSizeIn, type SizeUnit, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
@@ -657,6 +657,8 @@ function JobScreen({
   /** The sizes being typed. Every line stays on screen, editable, until the
    *  flow is finished — nothing joins the job a moment after it is typed. */
   const [rows, setRows] = useState<SizeRow[]>([emptyRow()]);
+  /** feet / inch / mm — what the size boxes read, remembered on this phone */
+  const [unit, setUnit] = useState<SizeUnit>(readUnit);
   const [justAdded, setJustAdded] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
   /** The exact size of the item being edited, with the boxes it was shown as —
@@ -737,7 +739,7 @@ function JobScreen({
   const metaOf = (row: SizeRow | undefined) => {
     const m = metaFor(type, o);
     if (!row) return m;
-    const fx = fixLabel ? parseTradeSize(row.fix) : null;
+    const fx = fixLabel ? parseSizeIn(row.fix, unit) : null;
     if (fx) m[o.sys === "z_section" ? "zFixedFt" : "domalFixFt"] = String(Math.round(toFeet(fx) * 10000) / 10000);
     if (type === "partition") {
       if (row.bay) m.partBayFt = row.bay;
@@ -757,15 +759,15 @@ function JobScreen({
     }
   };
   const parsed = useMemo(() => rows.map((row) => {
-    const wu = parseTradeSize(row.w, feetBelow), hu = parseTradeSize(row.h, feetBelow);
-    const fu = fixLabel ? parseTradeSize(row.fix) : null;
+    const wu = parseSizeIn(row.w, unit, feetBelow), hu = parseSizeIn(row.h, unit, feetBelow);
+    const fu = fixLabel ? parseSizeIn(row.fix, unit) : null;
     const empty = isEmptyRow(row);
     const unreadable = (row.w.trim() && wu === null) || (row.h.trim() && hu === null) || (fixLabel && row.fix.trim() && fu === null);
     const needFix = !!fixLabel && fu === null;
-    const warn = unreadable ? "Invalid size · 4.6 = 4' 6\" · 4.6.2 = 4' 6\" 2 sut"
+    const warn = unreadable ? `Invalid size · ${UNIT_HELP[unit]}`
       : wu !== null && hu !== null && !needFix ? problemOf(wu, hu, row) : null;
     return { wu, hu, fu, empty, warn, ready: wu !== null && hu !== null && !needFix && !warn };
-  }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [rows, type, o, unit]); // eslint-disable-line react-hooks/exhaustive-deps
   const filled = parsed.filter((p) => !p.empty);
   const readyCount = parsed.filter((p) => p.ready).length;
   /** pieces, not lines: one 5' × 5' line with Qty 10 adds 10 windows */
@@ -861,12 +863,24 @@ function JobScreen({
     setType(t);
     startAdd(stepsFor(t, o)[1]);
   };
+  /** Switching the unit rewrites what is already typed, so nothing is lost or misread. */
+  const changeUnit = (u: SizeUnit) => {
+    if (u === unit) return;
+    const conv = (v: string, below?: number) => {
+      const um = parseSizeIn(v, unit, below);
+      return um == null ? v : formatSizeIn(um, u);
+    };
+    setRows((rs) => rs.map((r) => ({ ...r, w: conv(r.w, feetBelow), h: conv(r.h, feetBelow), fix: conv(r.fix) })));
+    setEditDims((d) => d && { ...d, w: conv(d.w, feetBelow), h: conv(d.h, feetBelow) });
+    setUnit(u);
+    writeUnit(u);
+  };
   const startEdit = (it: JobItem) => {
     setType(it.type);
     setO(optsFromItem(it));
-    const w = formatTradeSize(it.width), h = formatTradeSize(it.height);
+    const w = formatSizeIn(it.width, unit), h = formatSizeIn(it.height, unit);
     const fx = it.meta.domalFix === "yes" ? it.meta.domalFixFt : it.meta.zType === "combo" ? it.meta.zFixedFt : undefined;
-    setRows([{ w, h, fix: fx ? formatTradeSize(feet(parseFloat(fx) || 0)) : "", qty: it.qty }]);
+    setRows([{ w, h, fix: fx ? formatSizeIn(feet(parseFloat(fx) || 0), unit) : "", qty: it.qty }]);
     setEditDims({ w, h, wu: it.width, hu: it.height });
     openFlow("size", it.id);
   };
@@ -1188,6 +1202,7 @@ function JobScreen({
 
         {flow.step === "size" && (
           <div className="flex flex-col gap-2.5">
+            <UnitPicker unit={unit} onChange={changeUnit} />
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
@@ -1214,7 +1229,7 @@ function JobScreen({
                   </div>
                   <div className="flex gap-2">
                     {keys.map(([k, label]) => (
-                      <SizeInput key={k} label={label} value={row[k]}
+                      <SizeInput key={k} label={label} unit={UNIT_TAG[unit]} value={row[k]}
                         bad={!!p.warn} last={!!flow.editing && k === keys[keys.length - 1][0]}
                         inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
                         onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
@@ -1224,7 +1239,7 @@ function JobScreen({
                     style={{ color: p.warn ? "var(--bad)" : p.ready ? "var(--good)" : "var(--ink-3)" }}>
                     {p.warn ?? (p.ready
                       ? `${sutEcho(p.wu!)} × ${sutEcho(p.hu!)}${p.fu ? ` · ${fixLabel!.toLowerCase()} ${sutEcho(p.fu)}` : ""}`
-                      : r === 0 && p.empty ? "4.6 = 4' 6\" · 4.6.2 = 4' 6\" 2 sut" : "")}
+                      : "")}
                   </div>
                 </div>
               );
@@ -1541,20 +1556,54 @@ function DoorSizeStep({ o, onChange, onNext }: {
 }
 
 /** One size box on the phone's own number keyboard, its name inside the box. */
-function SizeInput({ label, value, placeholder, bad, last, inputRef, onChange, onNext }: {
-  label: string; value: string; placeholder?: string; bad?: boolean; last?: boolean;
+function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onChange, onNext }: {
+  label: string; unit?: string; value: string; placeholder?: string; bad?: boolean; last?: boolean;
   inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void;
 }) {
   return (
     <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
       style={bad ? { borderColor: "var(--bad)" } : undefined}>
-      <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>{label}</span>
+      <span className="flex items-baseline justify-between gap-1 text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>
+        <span className="truncate">{label}</span>
+        {unit && <span className="shrink-0 rounded px-1 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{unit}</span>}
+      </span>
       <input ref={inputRef} value={value} placeholder={placeholder} aria-label={label}
         type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
         className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:font-normal placeholder:text-[#c2c7cf]" />
     </label>
+  );
+}
+
+const UNIT_TAG: Record<SizeUnit, string> = { ft: "ft", in: "inch", mm: "mm" };
+/** How to type a size in each unit — said once, above the boxes. */
+const UNIT_HELP: Record<SizeUnit, string> = {
+  ft: "4.6 = 4 ft 6 in · 4.6.2 = 4 ft 6 in 2 sut",
+  in: "54 = 54 in · 54.2 = 54 in 2 sut",
+  mm: "1372 = 1372 mm",
+};
+
+/** Feet · Inch · MM — the unit the sizes are typed in. */
+function UnitPicker({ unit, onChange }: { unit: SizeUnit; onChange: (u: SizeUnit) => void }) {
+  const opts: [SizeUnit, string][] = [["ft", "Feet"], ["in", "Inch"], ["mm", "MM"]];
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-xs font-bold" style={{ color: "var(--ink-3)" }}>Size in</span>
+        <div role="radiogroup" aria-label="Size unit" className="grid flex-1 grid-cols-3 gap-1 rounded-[var(--radius)] p-1"
+          style={{ background: "var(--surface-3)" }}>
+          {opts.map(([u, label]) => (
+            <button key={u} role="radio" aria-checked={unit === u} onClick={() => onChange(u)}
+              className="rounded-[8px] py-1.5 text-sm font-bold"
+              style={unit === u ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(0,0,0,.08)" } : { color: "var(--ink-3)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="text-xs font-semibold tabnum" style={{ color: "var(--ink-2)" }}>{UNIT_HELP[unit]}</div>
+    </div>
   );
 }
 
@@ -2237,6 +2286,14 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 const DEMO_KEY = "fabriq_demo_seen";
 /** Which saved job is open now — so a reload reopens it, not the home screen. */
+const UNIT_KEY = "fabriq.unit";
+function readUnit(): SizeUnit {
+  try { const u = localStorage.getItem(UNIT_KEY); return u === "in" || u === "mm" ? u : "ft"; } catch { return "ft"; }
+}
+function writeUnit(u: SizeUnit) {
+  try { localStorage.setItem(UNIT_KEY, u); } catch { /* storage blocked — feet again next time */ }
+}
+
 const OPEN_KEY = "fabriq.openJob";
 function readOpenJob(): string | null {
   try { return localStorage.getItem(OPEN_KEY); } catch { return null; }
