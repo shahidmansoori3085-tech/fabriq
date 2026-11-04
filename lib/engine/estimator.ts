@@ -29,6 +29,29 @@ export const DEFAULTS = {
 };
 
 /**
+ * Normal Sliding with the heavy 2.5"×3/4" shutter (founder, 2026-11-04):
+ * handle, interlock and both bearings are 2.5" wide instead of 1.5", so
+ * every side of the shutter is 1" wider into the glass — glass 2" less on
+ * width and height, bearing 2" shorter. Track and shutter size are the same.
+ */
+export const HEAVY_SHUTTER_EXTRA = mm(25.4);
+
+/** The Normal Sliding shutter's sections and deductions for its handle type. */
+export function normalShutter(item: JobItem) {
+  const heavy = item.meta.handle === "25";
+  const x = heavy ? 2 * HEAVY_SHUTTER_EXTRA : 0;
+  return {
+    heavy,
+    handle: heavy ? "handle_25" : "handle_std",
+    interlock: heavy ? "interlock_25" : "interlock",
+    bearing: heavy ? "bearing_25" : "bearing",
+    glassDeductionW: DEFAULTS.glassDeductionW + x,
+    glassDeductionH: DEFAULTS.glassDeductionH + x,
+    bearingDeduction: DEFAULTS.bearingDeduction + x,
+  };
+}
+
+/**
  * Domal 27/29mm deductions — same starting numbers as Normal Sliding
  * (section identity is founder-confirmed, exact deduction values are NOT
  * yet calibrated against a real Domal job). Adjust here once verified.
@@ -492,7 +515,8 @@ function expandNormalItem(item: JobItem): CutPiece[] {
   const pieces: CutPiece[] = [];
   const { top, bottom } = frameSections(item);
   const { shutterW, shutterH } = shutterSize(item, DEFAULTS);
-  const bearingLen = shutterW - DEFAULTS.bearingDeduction;
+  const ns = normalShutter(item);
+  const bearingLen = shutterW - ns.bearingDeduction;
 
   for (let q = 0; q < item.qty; q++) {
     const wId = `${item.id}${item.qty > 1 ? `.${q + 1}` : ""}`;
@@ -528,10 +552,10 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     item.shutters.forEach((sh, i) => {
       const sn = `S${i + 1}`;
       const tag = sh.kind === "jali" ? " (Mesh)" : "";
-      push("handle_std", shutterH, `${sn} Handle${tag}`);
-      push("interlock", shutterH, `${sn} Interlock${tag}`);
-      push("bearing", bearingLen, `${sn} Bearing Top${tag}`);
-      push("bearing", bearingLen, `${sn} Bearing Bottom${tag}`);
+      push(ns.handle, shutterH, `${sn} Handle${tag}`);
+      push(ns.interlock, shutterH, `${sn} Interlock${tag}`);
+      push(ns.bearing, bearingLen, `${sn} Bearing Top${tag}`);
+      push(ns.bearing, bearingLen, `${sn} Bearing Bottom${tag}`);
     });
   }
   return pieces;
@@ -1056,8 +1080,9 @@ export function estimate(items: JobItem[]): MaterialList {
     const d = DEFAULTS;
     const n = item.shutters.length;
     const { shutterW, shutterH } = shutterSize(item, d);
-    const gW = shutterW - d.glassDeductionW;
-    const gH = shutterH - d.glassDeductionH;
+    const ns = normalShutter(item);
+    const gW = shutterW - ns.glassDeductionW;
+    const gH = shutterH - ns.glassDeductionH;
 
     const glassShutters = item.shutters.filter((s) => s.kind === "glass").length;
     const jaliShutters = item.shutters.filter((s) => s.kind === "jali").length;

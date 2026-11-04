@@ -5,7 +5,7 @@
  */
 import { mm, formatFtInSut } from "./units";
 import type { JobItem, MaterialList, ReviewFinding, ReviewResult } from "./types";
-import { DEFAULTS, DOMAL_DEFAULTS, shutterSize, zGeometry, domalFix } from "./estimator";
+import { DEFAULTS, DOMAL_DEFAULTS, shutterSize, zGeometry, domalFix, normalShutter } from "./estimator";
 
 /** Below this a hinged Z-section leaf is not something a shop actually builds —
  *  the hinge, the handle and the lock have nowhere to go. */
@@ -127,12 +127,14 @@ export function reviewEstimate(items: JobItem[], list: MaterialList): ReviewResu
       confidence -= 6;
     }
 
+    const ns = item.system === "domal" ? null : normalShutter(item);
+    const gd = { w: ns ? ns.glassDeductionW : d.glassDeductionW, h: ns ? ns.glassDeductionH : d.glassDeductionH };
     // Sanity: glass panel too big for 4mm
     if (shutterW > mm(650) && shutterH > mm(1700)) {
       findings.push({
         severity: "suggestion",
         category: "glass-thickness",
-        message: `${item.id}: this glass panel is large (${formatFtInSut(shutterW - d.glassDeductionW)}×${formatFtInSut(shutterH - d.glassDeductionH)}). 5 mm glass is safer here than 4 mm.`,
+        message: `${item.id}: this glass panel is large (${formatFtInSut(shutterW - gd.w)}×${formatFtInSut(shutterH - gd.h)}). 5 mm glass is safer here than 4 mm.`,
       });
       confidence -= 2;
     }
