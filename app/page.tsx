@@ -77,8 +77,6 @@ interface Opts {
   partBayFt: string;
   partRowFt: string;
   partSheetFt: string;
-  /** Normal Sliding shutter section: "std" 3/4"×1.5" or "25" 2.5"×3/4" */
-  handle: string;
 }
 
 const DEFAULT_OPTS: Opts = {
@@ -87,7 +85,6 @@ const DEFAULT_OPTS: Opts = {
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
   partDoor: "no", partDoorW: "3", partDoorH: "7", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
-  handle: "std",
 };
 
 type Opt = [value: string, label: string];
@@ -112,11 +109,6 @@ const Z_SIZE: Opt[] = [["light", "Small 40×40"], ["heavy", "Big 40×55"]];
 const Z_DIR_NAME: Record<string, string> = {
   top: "Fixed on Top", side: "Fixed on One Side", both: "Fixed on Both Sides", center: "Fixed in Middle",
 };
-/** Normal Sliding shutter: the standard 3/4"×1.5" or the heavy 2.5"×3/4". */
-const HANDLES: [value: string, title: string, sub: string, section: string][] = [
-  ["std", '3/4" × 1.5"', "Standard", "handle_std"],
-  ["25", '2.5" × 3/4"', "Heavy", "handle_25"],
-];
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Center rails across a door shutter; panels = rails + 1. */
@@ -165,7 +157,6 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
-  if (o.sys === "normal") m.handle = o.handle;
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
   return m;
@@ -191,7 +182,6 @@ function optsFromItem(it: JobItem): Opts {
   } else {
     o.sys = it.system === "domal" ? "domal" : "normal";
     pick("tracks", m.tracks); pick("mix", m.mix); pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
-    pick("handle", m.handle);
   }
   return o;
 }
@@ -230,8 +220,7 @@ function itemLabel(it: JobItem): string {
   const name = it.system === "domal" ? "Domal" : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
-  const heavy = it.system !== "domal" && m.handle === "25" ? ` · 2.5×¾ shutter` : "";
-  return `${name} ${m.tracks} Track · ${mix}${heavy}${fix}`;
+  return `${name} ${m.tracks} Track · ${mix}${fix}`;
 }
 
 /** The kind of window without its fixed-glass height — for "add more of this
@@ -539,7 +528,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "system" | "tracks" | "handle" | "mix" | "domalFix"
+  | "type" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -566,14 +555,13 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   }
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
-  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const] : ["handle" as const]), "domalFix", "size"];
+  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
   system: "Which window system?",
   tracks: "How many tracks?",
-  handle: "Shutter section?",
   mix: "Which shutters?",
   domalFix: "Fixed glass on top?",
   zType: "Which type?",
@@ -1125,15 +1113,6 @@ function JobScreen({
               <Choice key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v })} title={label}
                 sub={v === "needed" ? "New frame (chaukhat) and shutter" : "Frame is already fixed"}
                 picture={<DoorScopePicture item={sample("door", o)} withFrame={v === "needed"} size={44} />} />
-            ))}
-          </div>
-        )}
-
-        {flow.step === "handle" && (
-          <div className="grid grid-cols-2 gap-2">
-            {HANDLES.map(([v, title, sub, sec]) => (
-              <Choice key={v} selected={o.handle === v} onClick={() => choose({ handle: v })} title={title} sub={sub}
-                picture={<SectionProfile sectionId={sec} w={v === "25" ? 84 : 56} h={v === "25" ? 34 : 40} />} />
             ))}
           </div>
         )}
@@ -2160,7 +2139,7 @@ function packLine(pieces: CutPiece[]) {
 }
 
 /** Sliding-window sections — the only ones the parts guide describes. */
-const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing", "handle_25", "interlock_25", "bearing_25"]);
+const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing"]);
 
 function CuttingPanel({ list, shop, items, jobName }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;

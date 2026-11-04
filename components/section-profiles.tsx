@@ -48,8 +48,8 @@ export function specFor(sectionId: string): Spec {
   if (/^3t_(top|bottom)/.test(id)) return { kind: "track", wmm, hmm, tracks: 3, side: id.includes("top") ? "top" : "bottom" };
   if (/^2t_(top|bottom)/.test(id)) return { kind: "track", wmm, hmm, tracks: 2, side: id.includes("top") ? "top" : "bottom" };
   if (/^handle/.test(id)) return { kind: "tube", wmm, hmm, grooves: ["r"], handle: true };
-  if (/^interlock(_25)?$/.test(id)) return { kind: "interlock", wmm, hmm };
-  if (/^bearing(_25)?$/.test(id)) return { kind: "hbeam", wmm, hmm };
+  if (/^interlock$/.test(id)) return { kind: "interlock", wmm, hmm };
+  if (/^bearing$/.test(id)) return { kind: "hbeam", wmm, hmm };
   if (/^domal_frame/.test(id)) return { kind: "domal_frame", wmm, hmm };
   if (/^domal_glass_shutter/.test(id)) return { kind: "domal_shutter", wmm, hmm, nose: true, grooves: ["r"] };
   if (/^domal_jali_shutter/.test(id)) return { kind: "domal_shutter", wmm, hmm, nose: false, mesh: true, grooves: ["r"] };

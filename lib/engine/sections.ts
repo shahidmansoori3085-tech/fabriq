@@ -67,21 +67,6 @@ export const SECTIONS: Record<string, Section> = {
     id: "interlock", name: "Interlock", label: "Interlock",
     omeo: "1081", alpro: "1861", size: "40×18", tier: "VERIFIED",
   },
-  // ---- Normal Sliding, heavy shutter 2.5"×3/4" (founder, 2026-11-04) ----
-  // The whole shutter — handle, interlock and both bearings — is the 2.5"
-  // face instead of 1.5"; same tracks. Catalogue numbers not yet given.
-  handle_25: {
-    id: "handle_25", name: 'Handle 2.5"×3/4" (heavy)', label: "Handle 2.5×¾",
-    size: "63.5×19", tier: "PROBABLE",
-  },
-  interlock_25: {
-    id: "interlock_25", name: 'Interlock 2.5"×3/4" (heavy)', label: "Interlock 2.5×¾",
-    size: "63.5×19", tier: "PROBABLE",
-  },
-  bearing_25: {
-    id: "bearing_25", name: 'Bearing 2.5"×3/4" (heavy)', label: "Bearing 2.5×¾",
-    size: "63.5×19", tier: "PROBABLE",
-  },
   bearing: {
     id: "bearing", name: "Bearing / H-Section", label: "Bearing",
     omeo: "1051", alpro: "1851", size: "40×18", tier: "VERIFIED",
