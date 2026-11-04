@@ -107,8 +107,8 @@ function InstallHelp({ kind, onClose }: { kind: "ios" | "samsung" | "other"; onC
         style={{ background: "var(--surface)", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-lg font-extrabold text-white"
-            style={{ background: "var(--accent)" }}>FQ</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a 48px icon in a sheet */}
+          <img src="/icons/icon-192.png" alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl" />
           <div className="min-w-0">
             <h2 className="text-lg font-bold">Install FabriQ on your phone</h2>
             <p className="text-sm" style={{ color: "var(--ink-2)" }}>
