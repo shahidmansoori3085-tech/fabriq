@@ -234,6 +234,11 @@ function sizeText(it: { width: Um; height: Um }): string {
   return `${formatFtInSut(it.width)} × ${formatFtInSut(it.height)}`;
 }
 
+/** The size read back under the boxes, sut spelled out: 4'6" 2 sut. */
+function sutEcho(um: Um): string {
+  return formatFtIn(um).replace(/"(\d)s$/, '" $1 sut');
+}
+
 function openingText(it: { width: Um; height: Um }): string {
   return `${formatFtIn(it.width)} × ${formatFtIn(it.height)}`;
 }
@@ -757,7 +762,7 @@ function JobScreen({
     const empty = isEmptyRow(row);
     const unreadable = (row.w.trim() && wu === null) || (row.h.trim() && hu === null) || (fixLabel && row.fix.trim() && fu === null);
     const needFix = !!fixLabel && fu === null;
-    const warn = unreadable ? "Invalid size · 4.6 = 4' 6\""
+    const warn = unreadable ? "Invalid size · 4.6 = 4' 6\" · 4.6.2 = 4' 6\" 2 sut"
       : wu !== null && hu !== null && !needFix ? problemOf(wu, hu, row) : null;
     return { wu, hu, fu, empty, warn, ready: wu !== null && hu !== null && !needFix && !warn };
   }), [rows, type, o]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1218,8 +1223,8 @@ function JobScreen({
                   <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
                     style={{ color: p.warn ? "var(--bad)" : p.ready ? "var(--good)" : "var(--ink-3)" }}>
                     {p.warn ?? (p.ready
-                      ? `${formatFtIn(p.wu!)} × ${formatFtIn(p.hu!)}${p.fu ? ` · ${fixLabel!.toLowerCase()} ${formatFtIn(p.fu)}` : ""}`
-                      : r === 0 && p.empty ? "4.6 = 4' 6\"" : "")}
+                      ? `${sutEcho(p.wu!)} × ${sutEcho(p.hu!)}${p.fu ? ` · ${fixLabel!.toLowerCase()} ${sutEcho(p.fu)}` : ""}`
+                      : r === 0 && p.empty ? "4.6 = 4' 6\" · 4.6.2 = 4' 6\" 2 sut" : "")}
                   </div>
                 </div>
               );

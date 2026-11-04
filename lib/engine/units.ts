@@ -332,7 +332,8 @@ export function parseOpening(
 export function parseTradeSize(raw: string, feetBelow?: number): Um | null {
   const t = raw.trim();
   if (!t) return null;
-  const m = /^(\d+)\.(\d{1,2})?(?:\.(\d))?$/.exec(t);
+  // a trailing point ("4.6.") is the sut about to be typed, not a mistake
+  const m = /^(\d+)\.(\d{1,2})?(?:\.(\d)?)?$/.exec(t);
   if (m) {
     const inch = m[2] ? parseInt(m[2], 10) : 0;
     const sut = m[3] ? parseInt(m[3], 10) : 0;
