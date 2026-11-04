@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseTradeSize, formatTradeSize, parseSizeIn, formatSizeIn, type SizeUnit, type Um,
+  formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseSizeIn, formatSizeIn, type SizeUnit, type Um,
 } from "@/lib/engine/units";
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
@@ -1136,7 +1136,7 @@ function JobScreen({
         )}
 
         {flow.step === "partDoorSize" && (
-          <DoorSizeStep o={o} onChange={(w, h) => setO((x) => ({ ...x, partDoorW: w, partDoorH: h }))} onNext={() => go(steps[i + 1])} />
+          <DoorSizeStep o={o} unit={unit} onUnit={changeUnit} onChange={(w, h) => setO((x) => ({ ...x, partDoorW: w, partDoorH: h }))} onNext={() => go(steps[i + 1])} />
         )}
 
         {(flow.step === "partBays" || flow.step === "partRows") && (
@@ -1173,7 +1173,7 @@ function JobScreen({
                 </div>
               </div>
             )}
-            <GapPicker key={`${flow.step}-${part}`}
+            <GapPicker key={`${flow.step}-${part}`} unit={unit} onUnit={changeUnit}
               options={vertical ? BAY_FT : ROW_FT}
               value={(vertical ? rows[pr]?.bay : rows[pr]?.row) ?? (vertical ? o.partBayFt : o.partRowFt)}
               max={toFeet(vertical ? shape.width : shape.height)}
@@ -1423,8 +1423,9 @@ function JobScreen({
  * other gap — typed (2.9 = 2'9") or stepped an inch at a time — or simply
  * the number of panels. The drawing above stays in view throughout.
  */
-function GapPicker({ options, value, max, count, span, exact = true, onChange }: {
+function GapPicker({ options, value, max, count, span, exact = true, unit, onUnit, onChange }: {
   options: Opt[]; value: string; max: number; count: number; span: number; onChange: (v: string) => void;
+  unit: SizeUnit; onUnit: (u: SizeUnit) => void;
   /** false when the gap does not divide equally: no gap button shows as picked */
   exact?: boolean;
 }) {
@@ -1436,11 +1437,15 @@ function GapPicker({ options, value, max, count, span, exact = true, onChange }:
   const stepGap = (d: number) => {
     const f = (Math.round(ftNow * 12) + d) / 12;
     if (!valid(f)) return;
-    setTxt(formatTradeSize(feet(f)));
+    setTxt(formatSizeIn(feet(f), unit));
     put(f);
   };
-  const typed = parseTradeSize(txt, 26);
-  const err = !txt.trim() ? null : typed === null ? "4.6 means 4 ft 6 in" : !valid(toFeet(typed)) ? `Between 1 ft and ${formatFtIn(feet(max))}` : null;
+  const typed = parseSizeIn(txt, unit, 26);
+  const err = !txt.trim() ? null : typed === null ? UNIT_HELP[unit] : !valid(toFeet(typed)) ? `Between 1 ft and ${formatFtIn(feet(max))}` : null;
+  const switchUnit = (u: SizeUnit) => {
+    if (typed !== null) setTxt(formatSizeIn(typed, u));
+    onUnit(u);
+  };
   /** Many shops think in panels ("4 khane"), not gaps: the gap that gives exactly k. */
   const setCount = (k: number) => {
     const f = span / k;
@@ -1457,23 +1462,26 @@ function GapPicker({ options, value, max, count, span, exact = true, onChange }:
             {label}
           </button>
         ))}
-        <button onClick={() => { setOpen(true); setTxt(formatTradeSize(feet(Math.round(ftNow * 12) / 12))); }} aria-pressed={open}
+        <button onClick={() => { setOpen(true); setTxt(formatSizeIn(feet(Math.round(ftNow * 12) / 12), unit)); }} aria-pressed={open}
           className={`chip min-h-[48px] px-2 py-2 text-base ${open ? "selected" : ""}`}>
           Other gap
         </button>
       </div>
       {open && (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
+          <UnitPicker unit={unit} onChange={switchUnit} />
           <div className="flex items-stretch gap-2">
             <button onClick={() => stepGap(-1)} aria-label="One inch less" className="btn-ghost w-14 shrink-0 text-base">−1&quot;</button>
             <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
               style={err ? { borderColor: "var(--bad)" } : undefined}>
-              <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>Gap</span>
+              <span className="flex items-baseline justify-between text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>
+                Gap <span className="rounded px-1 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{UNIT_TAG[unit]}</span>
+              </span>
               <input value={txt} inputMode="decimal" enterKeyHint="done" aria-label="Gap" autoComplete="off"
                 onChange={(e) => {
                   const t = e.target.value.replace(/[^\d.'"\- ]/g, "").slice(0, 8);
                   setTxt(t);
-                  const um = parseTradeSize(t, 26);
+                  const um = parseSizeIn(t, unit, 26);
                   if (um !== null && valid(toFeet(um))) put(toFeet(um));
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
@@ -1482,7 +1490,7 @@ function GapPicker({ options, value, max, count, span, exact = true, onChange }:
             <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost w-14 shrink-0 text-base">+1&quot;</button>
           </div>
           <div className="min-h-[16px] text-xs font-semibold" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
-            {err ?? (typed !== null ? `= ${formatFtIn(typed)}` : "4.6 = 4' 6\"")}
+            {err ?? (typed !== null ? `= ${sutEcho(typed)}` : "")}
           </div>
         </div>
       )}
@@ -1517,17 +1525,23 @@ function TypeCards({ onPick, big }: { onPick: (t: OpeningType) => void; big?: bo
  * (3 = 3 ft, 6.9 = 6'9"). A partition taller than the door gets fixed glass
  * over it; the picture shows a 10 ft partition so that is visible.
  */
-function DoorSizeStep({ o, onChange, onNext }: {
-  o: Opts; onChange: (w: string, h: string) => void; onNext: () => void;
+function DoorSizeStep({ o, unit, onUnit, onChange, onNext }: {
+  o: Opts; unit: SizeUnit; onUnit: (u: SizeUnit) => void; onChange: (w: string, h: string) => void; onNext: () => void;
 }) {
-  const [w, setW] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorW) || 3)));
-  const [h, setH] = useState(() => formatTradeSize(feet(parseFloat(o.partDoorH) || 7)));
+  const [w, setW] = useState(() => formatSizeIn(feet(parseFloat(o.partDoorW) || 3), unit));
+  const [h, setH] = useState(() => formatSizeIn(feet(parseFloat(o.partDoorH) || 7), unit));
   const hBox = useRef<HTMLInputElement | null>(null);
-  const wu = parseTradeSize(w), hu = parseTradeSize(h);
+  const wu = parseSizeIn(w, unit), hu = parseSizeIn(h, unit);
+  /** a new unit rewrites the two boxes too, as on the size page */
+  const switchUnit = (u: SizeUnit) => {
+    if (wu !== null) setW(formatSizeIn(wu, u));
+    if (hu !== null) setH(formatSizeIn(hu, u));
+    onUnit(u);
+  };
   const okW = wu !== null && wu >= feet(1.5) && wu <= feet(8);
   const okH = hu !== null && hu >= feet(5) && hu <= feet(10);
   const put = (nw: string, nh: string) => {
-    const a = parseTradeSize(nw), b = parseTradeSize(nh);
+    const a = parseSizeIn(nw, unit), b = parseSizeIn(nh, unit);
     if (a && b) onChange(String(Math.round(toFeet(a) * 10000) / 10000), String(Math.round(toFeet(b) * 10000) / 10000));
   };
   return (
@@ -1535,18 +1549,19 @@ function DoorSizeStep({ o, onChange, onNext }: {
       <div className="card grid place-items-center p-3">
         <MiniElevation item={buildJobItem(1, "partition", feet(10), feet(10), 1, metaFor("partition", o))} size={150} />
       </div>
+      <UnitPicker unit={unit} onChange={switchUnit} />
       <div className="card p-3">
         <div className="flex gap-2">
-          <SizeInput label="Door width" value={w} bad={!!w.trim() && !okW}
+          <SizeInput label="Door width" unit={UNIT_TAG[unit]} value={w} bad={!!w.trim() && !okW}
             inputRef={() => {}} onNext={() => hBox.current?.focus()}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setW(t); put(t, h); }} />
-          <SizeInput label="Door height" value={h} bad={!!h.trim() && !okH} last
+          <SizeInput label="Door height" unit={UNIT_TAG[unit]} value={h} bad={!!h.trim() && !okH} last
             inputRef={(el) => { hBox.current = el; }} onNext={() => { if (okW && okH) onNext(); }}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setH(t); put(w, t); }} />
         </div>
         <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
           style={{ color: okW && okH ? "var(--good)" : "var(--bad)" }}>
-          {okW && okH ? `${formatFtIn(wu!)} × ${formatFtIn(hu!)}`
+          {okW && okH ? `${sutEcho(wu!)} × ${sutEcho(hu!)}`
             : !okW ? "Door width: 1' 6\" to 8'" : "Door height: 5' to 10'"}
         </div>
       </div>
