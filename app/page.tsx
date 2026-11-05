@@ -255,6 +255,9 @@ export default function FabriQ() {
   const [exitHint, setExitHint] = useState(false);
   /** when Back last reached the bottom of the app's own history */
   const [backAt, setBackAt] = useState(0);
+  /** whether a job is open — read by the Back handler, which outlives renders */
+  const hasItems = useRef(false);
+  useEffect(() => { hasItems.current = items.length > 0; }, [items]);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The 45-second demo: shown once to a first-time user, and on request after. */
   const [demo, setDemo] = useState(false);
@@ -337,10 +340,19 @@ export default function FabriQ() {
   // Settings gets its own entry too, so back closes it instead of the app.
   useEffect(() => {
     const onPop = () => {
-      if (!window.history.state?.fabriq) {
+      const st = window.history.state;
+      if (!st?.fabriq) {
         // Back at the bottom of the app's history: handled below, where it
         // can see whether a job is open.
         setBackAt(Date.now());
+        return;
+      }
+      // An entry left over from before a reload (the phone reloads the page
+      // after a PDF is shared): Settings or the demo are not open any more,
+      // and Results with no job shows nothing. Back on it changed nothing on
+      // screen, so the fabricator thought Back was broken — step past it.
+      if (st.fabriq === "settings" || st.fabriq === "demo" || (st.fabriq === "result" && !hasItems.current)) {
+        window.history.back();
         return;
       }
       setShowSettings(false);
@@ -705,6 +717,9 @@ function JobScreen({
     const onPop = () => {
       const st = window.history.state;
       if (st?.fabriq === "add") {
+        // a step of an add flow that is no longer open (left over from before
+        // a reload) — nothing to show, so Back goes on past it
+        if (!flowOpen.current) { window.history.back(); return; }
         setFlow((f) => (f ? { ...f, step: st.step } : f));
         setPart(st.part ?? 0);
         window.scrollTo({ top: 0 });
