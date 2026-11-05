@@ -253,6 +253,8 @@ export default function FabriQ() {
   const [recent, setRecent] = useState<ProjectRec[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [exitHint, setExitHint] = useState(false);
+  /** when Back last reached the bottom of the app's own history */
+  const [backAt, setBackAt] = useState(0);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The 45-second demo: shown once to a first-time user, and on request after. */
   const [demo, setDemo] = useState(false);
@@ -303,7 +305,10 @@ export default function FabriQ() {
     }
     // The job that was open comes back open: a phone often reloads the page
     // after the fabricator shares a PDF to WhatsApp and returns.
-    const open = saved.find((p) => p.id === readOpenJob());
+    // Only a job touched in the last 30 minutes: opening the app from the
+    // home screen the next day starts on the first screen, the job waiting
+    // under Recent jobs (it used to reopen the old job, and Back closed the app).
+    const open = saved.find((p) => p.id === readOpenJob(30 * 60 * 1000));
     if (open) {
       projectId.current = open.id;
       lastSaved.current = JSON.stringify([open.items, open.customer ?? ""]);
@@ -333,11 +338,9 @@ export default function FabriQ() {
   useEffect(() => {
     const onPop = () => {
       if (!window.history.state?.fabriq) {
-        // Back on the first screen: warn; the next Back leaves the app,
-        // unless a tap first puts the guard back in place.
-        setExitHint(true);
-        if (exitTimer.current) clearTimeout(exitTimer.current);
-        exitTimer.current = setTimeout(() => setExitHint(false), 2500);
+        // Back at the bottom of the app's history: handled below, where it
+        // can see whether a job is open.
+        setBackAt(Date.now());
         return;
       }
       setShowSettings(false);
@@ -432,6 +435,26 @@ export default function FabriQ() {
     }
   };
 
+  /** Close the open job — it stays saved under Recent jobs — and show the first screen. */
+  const goHome = () => {
+    setItems([]);
+    setJobName("");
+    forgetJob();
+    setView("job");
+    window.scrollTo({ top: 0 });
+  };
+  // Back on a job goes to the first screen (the job stays saved under Recent
+  // jobs), not out of the app. Back on the first screen warns; the next Back
+  // leaves, unless a tap first puts the guard back in place.
+  useEffect(() => {
+    if (!backAt) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (items.length > 0) { goHome(); return; }
+    setExitHint(true);
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+    exitTimer.current = setTimeout(() => setExitHint(false), 2500);
+  }, [backAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const newJob = () => {
     setItems([]);
     setJobName("");
@@ -464,6 +487,7 @@ export default function FabriQ() {
           onDemo={openDemo}
           recent={recent}
           onOpenRecent={openProject}
+          onHome={goHome}
           onRemoveRecent={(p) => {
             if (window.confirm(`Delete "${p.customer || p.title}"? This cannot be undone.`)) setRecent(removeProject(p.id));
           }}
@@ -627,7 +651,7 @@ function fixedPart(type: OpeningType, o: Opts): string | null {
 
 function JobScreen({
   items, shopName, jobName, onJobName, onAdd, onReplace, onRemove, onDone, onSettings, onDemo,
-  recent, onOpenRecent, onRemoveRecent,
+  recent, onOpenRecent, onRemoveRecent, onHome,
 }: {
   items: JobItem[];
   shopName: string;
@@ -642,6 +666,8 @@ function JobScreen({
   recent: ProjectRec[];
   onOpenRecent: (p: ProjectRec) => void;
   onRemoveRecent: (p: ProjectRec) => void;
+  /** close this job (it stays under Recent jobs) and show the first screen */
+  onHome: () => void;
 }) {
   const [type, setType] = useState<OpeningType>(() => lastForm.type);
   const [o, setO] = useState<Opts>(() => lastForm.opts);
@@ -1292,6 +1318,14 @@ function JobScreen({
         </div>
       ) : (
         <>
+          {/* the way out of a job: it is saved, and waits under Recent jobs */}
+          <div className="-mb-1 flex items-center justify-between">
+            <button onClick={onHome} className="btn-ghost flex items-center gap-1 px-3 py-1.5 text-sm">
+              <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              Home
+            </button>
+            <span className="text-xs" style={{ color: "var(--ink-3)" }}>Saved · in Recent jobs</span>
+          </div>
           {/* the next step, first on the page — never scrolled away by a long list */}
           <button onClick={onDone}
             className="btn-primary flex w-full items-center gap-3 px-4 py-2.5 text-left">
@@ -2310,11 +2344,21 @@ function writeUnit(u: SizeUnit) {
 }
 
 const OPEN_KEY = "fabriq.openJob";
-function readOpenJob(): string | null {
-  try { return localStorage.getItem(OPEN_KEY); } catch { return null; }
+const OPEN_AT_KEY = "fabriq.openJobAt";
+/** The open job, if it was touched within `maxAgeMs` (any age when not given). */
+function readOpenJob(maxAgeMs?: number): string | null {
+  try {
+    const id = localStorage.getItem(OPEN_KEY);
+    if (!id || maxAgeMs === undefined) return id;
+    const at = Number(localStorage.getItem(OPEN_AT_KEY)) || 0;
+    return Date.now() - at <= maxAgeMs ? id : null;
+  } catch { return null; }
 }
 function writeOpenJob(id: string | null) {
-  try { if (id) localStorage.setItem(OPEN_KEY, id); else localStorage.removeItem(OPEN_KEY); } catch { /* storage blocked — a reload shows Recent jobs instead */ }
+  try {
+    if (id) { localStorage.setItem(OPEN_KEY, id); localStorage.setItem(OPEN_AT_KEY, String(Date.now())); }
+    else { localStorage.removeItem(OPEN_KEY); localStorage.removeItem(OPEN_AT_KEY); }
+  } catch { /* storage blocked — a reload shows Recent jobs instead */ }
 }
 
 function markDemoSeen() {
