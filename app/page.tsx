@@ -258,6 +258,11 @@ export default function FabriQ() {
   /** whether a job is open — read by the Back handler, which outlives renders */
   const hasItems = useRef(false);
   useEffect(() => { hasItems.current = items.length > 0; }, [items]);
+  /** the screen showing, for the Back handler */
+  const viewNow = useRef<"job" | "result">("job");
+  useEffect(() => { viewNow.current = view; }, [view]);
+  /** set by "< Sizes": that Back goes to the job's sizes, not home */
+  const toSizes = useRef(false);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The 45-second demo: shown once to a first-time user, and on request after. */
   const [demo, setDemo] = useState(false);
@@ -308,10 +313,13 @@ export default function FabriQ() {
     }
     // The job that was open comes back open: a phone often reloads the page
     // after the fabricator shares a PDF to WhatsApp and returns.
-    // Only a job touched in the last 30 minutes: opening the app from the
-    // home screen the next day starts on the first screen, the job waiting
-    // under Recent jobs (it used to reopen the old job, and Back closed the app).
-    const open = saved.find((p) => p.id === readOpenJob(30 * 60 * 1000));
+    // Only within the same visit — the reload a phone does after a PDF is
+    // shared. Opening the app afresh (closed and opened again, or from the
+    // home screen) always starts on the first screen, the job waiting under
+    // Recent jobs.
+    let sameSession = false;
+    try { sameSession = sessionStorage.getItem("fabriq.live") === "1"; sessionStorage.setItem("fabriq.live", "1"); } catch { /* no session storage: start fresh */ }
+    const open = sameSession ? saved.find((p) => p.id === readOpenJob()) : undefined;
     if (open) {
       projectId.current = open.id;
       lastSaved.current = JSON.stringify([open.items, open.customer ?? ""]);
@@ -355,6 +363,12 @@ export default function FabriQ() {
         window.history.back();
         return;
       }
+      // Back from the Material List goes straight to the first screen (the
+      // job stays saved under Recent jobs) — only "< Sizes" goes to the sizes.
+      if (viewNow.current === "result" && st.fabriq !== "result") {
+        if (toSizes.current) toSizes.current = false;
+        else { setBackAt(Date.now()); return; }
+      }
       setShowSettings(false);
       setDemo(false);
       setView(window.history.state?.fabriq === "result" ? "result" : "job");
@@ -386,6 +400,7 @@ export default function FabriQ() {
     window.scrollTo({ top: 0 });
   };
   const backToJob = () => {
+    toSizes.current = true;
     // from the Cutting Sheet that is two pages back: past the Material List too
     if (window.history.state?.tab === "cutting") window.history.go(-2);
     else if (window.history.state?.fabriq === "result") window.history.back();
