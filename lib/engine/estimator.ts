@@ -613,7 +613,7 @@ function pallaKey(item: JobItem): "75" | "60" | "50" {
 }
 
 /**
- * Door (single, hinged): chokhat (frame, optional) + palla (outer leaf,
+ * Door (single, hinged): chokhat (3-side frame, optional) + palla (outer leaf,
  * one profile all 4 sides) + N center rails (same size class as palla,
  * different double-grooved die) dividing the leaf into N+1 zones, each
  * filled with sheet or jali (both fitted with rubber gasket).
@@ -643,7 +643,8 @@ function expandDoorItem(item: JobItem): CutPiece[] {
       push("door_frame_pattam", item.width, "Frame Top");
       push("door_frame_pattam", item.height, "Frame Left");
       push("door_frame_pattam", item.height, "Frame Right");
-      push("door_frame_pattam", item.width, "Frame Bottom");
+      // no bottom: a chokhat goes on 3 sides only — a rail across the
+      // doorway trips people (fabricator-confirmed 2026-11-08)
     }
 
     // Top/Bottom/Center rails all span the SAME horizontal gap — between

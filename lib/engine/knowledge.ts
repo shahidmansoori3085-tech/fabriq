@@ -270,7 +270,8 @@ The rule is (profile width in inches − 0.5"). This SAME clearance is used
 twice, which is the part people miss.
 
 PIECES AND HOW EACH LENGTH IS FOUND
-• Frame (chokhat) — 4 pieces at full opening width and height. Only cut when
+• Frame (chokhat) — 3 pieces: top at full opening width, left and right at
+  full height. There is NO bottom piece (nothing across the doorway). Only cut when
   the door needs a new frame; a door going into an existing frame skips these
   entirely, which is a large material difference.
 • Leaf left/right — opening HEIGHT minus the clearance.
