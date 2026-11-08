@@ -541,9 +541,9 @@ function expandNormalItem(item: JobItem): CutPiece[] {
  * Domal 27/29mm: whole shutter is a 4-side mini-frame from ONE profile
  * (glass shutter = 2046, jali shutter = 2081) — no separate handle/
  * interlock/bearing roles like Normal Sliding. A single interlock strip
- * (2091) is cut to shutter height per GLASS shutter only, where shutters
- * meet in track — jali shutters don't take an interlock (fabricator-
- * confirmed 2026-07-27).
+ * pair (2091) is cut to shutter height at every meeting of two GLASS
+ * shutters — jali shutters don't take an interlock (founder-confirmed
+ * 2026-07-27 and again 2026-11-08).
  */
 function expandDomalItem(item: JobItem): CutPiece[] {
   const pieces: CutPiece[] = [];
@@ -552,7 +552,6 @@ function expandDomalItem(item: JobItem): CutPiece[] {
   // (sliding-zone height) − Domal deduction.
   const shutterW = Math.round(item.width / 2);
   const shutterH = fx.slidingH - DOMAL_DEFAULTS.shutterHeightDeduction;
-  const n = item.shutters.length;
 
   for (let q = 0; q < item.qty; q++) {
     const wId = `${item.id}${item.qty > 1 ? `.${q + 1}` : ""}`;
@@ -596,9 +595,12 @@ function expandDomalItem(item: JobItem): CutPiece[] {
       push(secId, shutterH, `${sn} Shutter Right${tag}`);
     });
 
-    // Interlock patti (male+female) at every shutter meeting = 2×(shutters−1),
-    // each cut to shutter height. Video-confirmed 2026-08-04: 2T=2, 3T=4, 4T=6.
-    const meetings = Math.max(0, n - 1);
+    // Interlock patti (male+female pair) only where two GLASS shutters meet —
+    // jali shutters never take one (founder-confirmed again 2026-11-08). Each
+    // glass–glass meeting = 2 strips cut to shutter height: GG=2, GGG=4,
+    // GGJ=2, GJ=0. (All-glass counts match the 2026-08-04 video: 2T=2, 3T=4.)
+    const glassShutters = item.shutters.filter((sh) => sh.kind !== "jali").length;
+    const meetings = Math.max(0, glassShutters - 1);
     for (let k = 0; k < 2 * meetings; k++) {
       push("domal_interlock", shutterH, `Interlock ${k + 1}`);
     }
