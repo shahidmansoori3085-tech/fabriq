@@ -30,6 +30,9 @@ export const DEFAULTS = {
   wastagePct: 5,
 };
 
+/** Normal sliding top/bottom track cut between the sides: W − 6 sut. */
+const NORMAL_TRACK_DEDUCTION = mm(6 * 3.175);
+
 /**
  * Domal 27/29mm deductions — same starting numbers as Normal Sliding
  * (section identity is founder-confirmed, exact deduction values are NOT
@@ -510,11 +513,15 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     // sliding zone only, and the band above is a full SP frame (top, bottom,
     // 2 sides) on the frame top, its glass held by a glazing clip all round.
     const fx = domalFix(item);
+    // 90° frame (founder 2026-11-08; Aluminium center point ×3): the sides run
+    // full height and the top and bottom tracks fit BETWEEN them, sitting in
+    // the sides' 9mm lips — so each track is cut W − 6 sut (19mm).
     const sideH = fx.hasFix ? fx.slidingH : item.height;
-    push(top, item.width, "Top");
+    const trackW = item.width - NORMAL_TRACK_DEDUCTION;
+    push(top, trackW, "Top");
     push(top, sideH, "Left Side");
     push(top, sideH, "Right Side");
-    push(bottom, item.width, "Bottom");
+    push(bottom, trackW, "Bottom");
     if (fx.hasFix) {
       push(DOMAL_SP, item.width, "Fix Top (SP)");
       push(DOMAL_SP, item.width, "Fix Bottom (SP)");
@@ -784,20 +791,25 @@ export function partitionGeometry(item: JobItem): PartGeom {
     ...(sheetFt > 0 ? [face + glassBandH + face / 2] : []),
   ];
 
-  // Outer SP frame. Top runs the full width; the bottom stops at the door
-  // jamb — nobody puts a rail across a doorway. Sides are full height.
+  // Outer SP frame, 90° (founder 2026-11-08; Amar Aluminum point ×3, SMART
+  // ALUMINIUM): the top runs the full width; every vertical — the two SP
+  // sides, each DP and the door jamb — hangs under it at H − one face and
+  // stands on the floor; the bottom is cut per bay BETWEEN the verticals and
+  // stops at the door jamb (nobody puts a rail across a doorway).
   const topClip = door.topH > 0 ? [door.topH] : [];
+  const vertH = item.height - face;
+  const vertJ = hY.map((y) => y - face);
   RUN("partition_frame", item.width, "SP Top", [...dpX, ...jambX], [...colCells, ...(door.topH > 0 ? [doorW] : [])]);
-  RUN("partition_frame", fieldW, "SP Bottom", dpX.map((x) => x - face), colCells);
-  RUN("partition_frame", item.height, "SP Left", hY, rowCells);
+  for (let b = 0; b < bays; b++) P("partition_frame", cellW, bays > 1 ? `SP Bottom (bay ${b + 1})` : "SP Bottom", [cellW]);
+  RUN("partition_frame", vertH, "SP Left", vertJ, rowCells);
   // Beside a door the right SP borders the door leaf, which takes no clip —
   // only the glass above the door, when there is some.
-  RUN("partition_frame", item.height, "SP Right", hY, hasDoor ? topClip : rowCells);
+  RUN("partition_frame", vertH, "SP Right", vertJ, hasDoor ? topClip : rowCells);
 
   if (hasDoor) {
     // DP jamb: glass on one side, the door on the other — one clip (and the
     // glass above the door on the door side).
-    RUN("partition_divider", innerH, "DP Door-jamb", hY.map((y) => y - face), [...rowCells, ...topClip]);
+    RUN("partition_divider", vertH, "DP Door-jamb", vertJ, [...rowCells, ...topClip]);
     if (door.topH > 0) {
       // Door head: a DP across the door column, glass above, the door below.
       P("partition_divider", doorW, "DP Door-head", [doorW]);
@@ -829,7 +841,7 @@ export function partitionGeometry(item: JobItem): PartGeom {
   // Verticals run full height; horizontals are cut BETWEEN them, one piece
   // per bay — both running full length would put two profiles in one crossing.
   for (let i = 0; i < bays - 1; i++) {
-    RUN("partition_divider", innerH, `DP Vertical ${i + 1}`, hY.map((y) => y - face), times(rowCells, 2));
+    RUN("partition_divider", vertH, `DP Vertical ${i + 1}`, vertJ, times(rowCells, 2));
   }
   for (let b = 0; b < bays; b++) {
     const bay = bays > 1 ? ` (bay ${b + 1})` : "";
