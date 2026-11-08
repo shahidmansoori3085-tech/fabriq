@@ -16,12 +16,14 @@ export const DEFAULTS = {
   // against a real 72"×60" 3-track job (handle/interlock came out 58.375",
   // so deduction = 60 − 58.375 = 1.625").
   shutterHeightDeduction: mm(41.3),
-  // Glass deduction — fabricator-verified 2026-07-27: glass = shutter opening
-  // − 2×(profile face-width − glazing groove depth). Handle/Interlock/Bearing
-  // are all 40mm face-width with a 9mm-deep glazing groove, so net deduction
-  // = 2×(40−9) = 62mm, same on width and height (all three pieces match).
-  glassDeductionW: mm(62),
-  glassDeductionH: mm(62),
+  // Glass — founder decision 2026-11-08, from Indian fabrication videos
+  // (Aluminium center point ×3, Aluminium classes, VR alluminium):
+  //   width  = bearing + 5 sut      → shutterW − (80 − 15.875) = shutterW − 64.125mm
+  //   height = H − 4"2 sut          → shutterH − (107.95 − 41.3) ≈ shutterH − 2⅝" (66.675mm)
+  // Was 2×(40−9) = 62mm both ways, which left the glass 2mm too wide and
+  // ~4.7mm too tall to drop in.
+  glassDeductionW: mm(64.125),
+  glassDeductionH: mm(66.675),
   /** bearing (horizontal) length = shutterW − this (handle+interlock webs) */
   bearingDeduction: mm(80),
   /** rubber/pile wastage allowance */
@@ -803,10 +805,13 @@ export function partitionGeometry(item: JobItem): PartGeom {
     }
     // Door leaf, built like the standalone door: stiles full height, rails
     // fitted BETWEEN the stiles (leaf width − clearance), one middle rail.
-    // Its height is the door opening (floor to the SP or door head above)
-    // less one face and ¾", as it always was for a full-height door.
-    const leafW = doorW - inches(0.75);
-    const leafH = door.openH - face - inches(0.75);
+    // Standard gaps (founder 2026-11-08; SMART ALUMINIUM partition-door video:
+    // "हाइट में केवल 3 सूत … चौड़ाई में केवल 2 सूत"): the leaf is the clear door
+    // opening (floor to the SP or door head above) less 3 sut in height and
+    // 2 sut in width. It used to take a whole face + ¾" off the height (~2" short).
+    const SUT = mm(3.175);
+    const leafW = doorW - 2 * SUT;
+    const leafH = door.openH - 3 * SUT;
     const dClr = doorClearance("60");
     const railW = leafW - dClr;
     P("door_palla_60", railW, "Door Top");

@@ -21,7 +21,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 25 rft",
-  "pane glass 547600x1115900 x2"
+  "pane glass 545475x1111225 x2"
  ],
  "Normal 1219200x1219200 | tracks=2, mix=GJ": [
   "buy 2t_bottom full:0 half:1",
@@ -46,8 +46,8 @@
   "hardware Mesh spline / rubber 12 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 25 rft",
-  "pane glass 547600x1115900 x1",
-  "pane mesh 547600x1115900 x1"
+  "pane glass 545475x1111225 x1",
+  "pane mesh 545475x1111225 x1"
  ],
  "Normal 1219200x1219200 | tracks=2, mix=JJ": [
   "buy 2t_bottom full:0 half:1",
@@ -72,7 +72,7 @@
   "hardware Mesh spline / rubber 23 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 25 rft",
-  "pane mesh 547600x1115900 x2"
+  "pane mesh 545475x1111225 x2"
  ],
  "Normal 1219200x1219200 | tracks=3, mix=GGJ": [
   "buy 3t_bottom full:0 half:1",
@@ -101,8 +101,8 @@
   "hardware Mesh spline / rubber 12 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 37 rft",
-  "pane glass 547600x1115900 x2",
-  "pane mesh 547600x1115900 x1"
+  "pane glass 545475x1111225 x2",
+  "pane mesh 545475x1111225 x1"
  ],
  "Normal 1219200x1219200 | tracks=3, mix=GGG": [
   "buy 3t_bottom full:0 half:1",
@@ -130,7 +130,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 37 rft",
-  "pane glass 547600x1115900 x3"
+  "pane glass 545475x1111225 x3"
  ],
  "Normal 1219200x1219200 | tracks=3, mix=GJJ": [
   "buy 3t_bottom full:0 half:1",
@@ -159,8 +159,8 @@
   "hardware Mesh spline / rubber 23 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 37 rft",
-  "pane glass 547600x1115900 x1",
-  "pane mesh 547600x1115900 x2"
+  "pane glass 545475x1111225 x1",
+  "pane mesh 545475x1111225 x2"
  ],
  "Normal 1219200x1219200 | tracks=3, mix=GG": [
   "buy 3t_bottom full:0 half:1",
@@ -184,7 +184,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 25 rft",
-  "pane glass 547600x1115900 x2"
+  "pane glass 545475x1111225 x2"
  ],
  "Normal 1219200x1219200 | tracks=4, mix=GGGJ": [
   "buy 2t_bottom full:0 half:1",
@@ -217,8 +217,8 @@
   "hardware Mesh spline / rubber 12 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 50 rft",
-  "pane glass 547600x1115900 x3",
-  "pane mesh 547600x1115900 x1"
+  "pane glass 545475x1111225 x3",
+  "pane mesh 545475x1111225 x1"
  ],
  "Normal 1219200x1219200 | tracks=4, mix=GGJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -251,8 +251,8 @@
   "hardware Mesh spline / rubber 23 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 50 rft",
-  "pane glass 547600x1115900 x2",
-  "pane mesh 547600x1115900 x2"
+  "pane glass 545475x1111225 x2",
+  "pane mesh 545475x1111225 x2"
  ],
  "Normal 1219200x1219200 | tracks=4, mix=GGGG": [
   "buy 2t_bottom full:0 half:1",
@@ -284,7 +284,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 50 rft",
-  "pane glass 547600x1115900 x4"
+  "pane glass 545475x1111225 x4"
  ],
  "Normal 1219200x1219200 | tracks=4, mix=GJJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -317,8 +317,8 @@
   "hardware Mesh spline / rubber 35 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 50 rft",
-  "pane glass 547600x1115900 x1",
-  "pane mesh 547600x1115900 x3"
+  "pane glass 545475x1111225 x1",
+  "pane mesh 545475x1111225 x3"
  ],
  "Normal 1908175x1397000 | tracks=3, mix=GGJ": [
   "buy 3t_bottom full:0 half:1",
@@ -347,8 +347,8 @@
   "hardware Mesh spline / rubber 16 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 48 rft",
-  "pane glass 892088x1293700 x2",
-  "pane mesh 892088x1293700 x1"
+  "pane glass 889963x1289025 x2",
+  "pane mesh 889963x1289025 x1"
  ],
  "Normal 1908175x1397000 | tracks=3, mix=GGG": [
   "buy 3t_bottom full:0 half:1",
@@ -376,7 +376,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 48 rft",
-  "pane glass 892088x1293700 x3"
+  "pane glass 889963x1289025 x3"
  ],
  "Normal 1908175x1397000 | tracks=3, mix=GJJ": [
   "buy 3t_bottom full:0 half:1",
@@ -405,8 +405,8 @@
   "hardware Mesh spline / rubber 31 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 48 rft",
-  "pane glass 892088x1293700 x1",
-  "pane mesh 892088x1293700 x2"
+  "pane glass 889963x1289025 x1",
+  "pane mesh 889963x1289025 x2"
  ],
  "Normal 1908175x1397000 | tracks=3, mix=GG": [
   "buy 3t_bottom full:0 half:1",
@@ -430,7 +430,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 32 rft",
-  "pane glass 892088x1293700 x2"
+  "pane glass 889963x1289025 x2"
  ],
  "Normal 1908175x1397000 | tracks=2, mix=GG": [
   "buy 2t_bottom full:0 half:1",
@@ -454,7 +454,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 32 rft",
-  "pane glass 892088x1293700 x2"
+  "pane glass 889963x1289025 x2"
  ],
  "Normal 1908175x1397000 | tracks=2, mix=GJ": [
   "buy 2t_bottom full:0 half:1",
@@ -479,8 +479,8 @@
   "hardware Mesh spline / rubber 16 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 32 rft",
-  "pane glass 892088x1293700 x1",
-  "pane mesh 892088x1293700 x1"
+  "pane glass 889963x1289025 x1",
+  "pane mesh 889963x1289025 x1"
  ],
  "Normal 1908175x1397000 | tracks=2, mix=JJ": [
   "buy 2t_bottom full:0 half:1",
@@ -505,7 +505,7 @@
   "hardware Mesh spline / rubber 31 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 32 rft",
-  "pane mesh 892088x1293700 x2"
+  "pane mesh 889963x1289025 x2"
  ],
  "Normal 1908175x1397000 | tracks=4, mix=GGGJ": [
   "buy 2t_bottom full:0 half:1",
@@ -538,8 +538,8 @@
   "hardware Mesh spline / rubber 16 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 64 rft",
-  "pane glass 892088x1293700 x3",
-  "pane mesh 892088x1293700 x1"
+  "pane glass 889963x1289025 x3",
+  "pane mesh 889963x1289025 x1"
  ],
  "Normal 1908175x1397000 | tracks=4, mix=GGJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -572,8 +572,8 @@
   "hardware Mesh spline / rubber 31 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 64 rft",
-  "pane glass 892088x1293700 x2",
-  "pane mesh 892088x1293700 x2"
+  "pane glass 889963x1289025 x2",
+  "pane mesh 889963x1289025 x2"
  ],
  "Normal 1908175x1397000 | tracks=4, mix=GGGG": [
   "buy 2t_bottom full:0 half:1",
@@ -605,7 +605,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 64 rft",
-  "pane glass 892088x1293700 x4"
+  "pane glass 889963x1289025 x4"
  ],
  "Normal 1908175x1397000 | tracks=4, mix=GJJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -638,8 +638,8 @@
   "hardware Mesh spline / rubber 46 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 64 rft",
-  "pane glass 892088x1293700 x1",
-  "pane mesh 892088x1293700 x3"
+  "pane glass 889963x1289025 x1",
+  "pane mesh 889963x1289025 x3"
  ],
  "Normal 965200x2133600 | tracks=2, mix=GG": [
   "buy 2t_bottom full:0 half:1",
@@ -663,7 +663,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 36 rft",
-  "pane glass 420600x2030300 x2"
+  "pane glass 418475x2025625 x2"
  ],
  "Normal 965200x2133600 | tracks=2, mix=GJ": [
   "buy 2t_bottom full:0 half:1",
@@ -688,8 +688,8 @@
   "hardware Mesh spline / rubber 17 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 36 rft",
-  "pane glass 420600x2030300 x1",
-  "pane mesh 420600x2030300 x1"
+  "pane glass 418475x2025625 x1",
+  "pane mesh 418475x2025625 x1"
  ],
  "Normal 965200x2133600 | tracks=2, mix=JJ": [
   "buy 2t_bottom full:0 half:1",
@@ -714,7 +714,7 @@
   "hardware Mesh spline / rubber 34 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 36 rft",
-  "pane mesh 420600x2030300 x2"
+  "pane mesh 418475x2025625 x2"
  ],
  "Normal 965200x2133600 | tracks=3, mix=GGJ": [
   "buy 3t_bottom full:0 half:1",
@@ -743,8 +743,8 @@
   "hardware Mesh spline / rubber 17 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 54 rft",
-  "pane glass 420600x2030300 x2",
-  "pane mesh 420600x2030300 x1"
+  "pane glass 418475x2025625 x2",
+  "pane mesh 418475x2025625 x1"
  ],
  "Normal 965200x2133600 | tracks=3, mix=GGG": [
   "buy 3t_bottom full:0 half:1",
@@ -772,7 +772,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 54 rft",
-  "pane glass 420600x2030300 x3"
+  "pane glass 418475x2025625 x3"
  ],
  "Normal 965200x2133600 | tracks=3, mix=GJJ": [
   "buy 3t_bottom full:0 half:1",
@@ -801,8 +801,8 @@
   "hardware Mesh spline / rubber 34 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 54 rft",
-  "pane glass 420600x2030300 x1",
-  "pane mesh 420600x2030300 x2"
+  "pane glass 418475x2025625 x1",
+  "pane mesh 418475x2025625 x2"
  ],
  "Normal 965200x2133600 | tracks=3, mix=GG": [
   "buy 3t_bottom full:0 half:1",
@@ -826,7 +826,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 36 rft",
-  "pane glass 420600x2030300 x2"
+  "pane glass 418475x2025625 x2"
  ],
  "Normal 965200x2133600 | tracks=4, mix=GGGJ": [
   "buy 2t_bottom full:0 half:1",
@@ -859,8 +859,8 @@
   "hardware Mesh spline / rubber 17 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 71 rft",
-  "pane glass 420600x2030300 x3",
-  "pane mesh 420600x2030300 x1"
+  "pane glass 418475x2025625 x3",
+  "pane mesh 418475x2025625 x1"
  ],
  "Normal 965200x2133600 | tracks=4, mix=GGJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -893,8 +893,8 @@
   "hardware Mesh spline / rubber 34 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 71 rft",
-  "pane glass 420600x2030300 x2",
-  "pane mesh 420600x2030300 x2"
+  "pane glass 418475x2025625 x2",
+  "pane mesh 418475x2025625 x2"
  ],
  "Normal 965200x2133600 | tracks=4, mix=GGGG": [
   "buy 2t_bottom full:0 half:1",
@@ -926,7 +926,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 71 rft",
-  "pane glass 420600x2030300 x4"
+  "pane glass 418475x2025625 x4"
  ],
  "Normal 965200x2133600 | tracks=4, mix=GJJJ": [
   "buy 2t_bottom full:0 half:1",
@@ -959,8 +959,8 @@
   "hardware Mesh spline / rubber 51 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 71 rft",
-  "pane glass 420600x2030300 x1",
-  "pane mesh 420600x2030300 x3"
+  "pane glass 418475x2025625 x1",
+  "pane mesh 418475x2025625 x3"
  ],
  "Normal 3048000x2438400 | tracks=3, mix=GGJ": [
   "buy 3t_bottom full:1 half:0",
@@ -989,8 +989,8 @@
   "hardware Mesh spline / rubber 27 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 82 rft",
-  "pane glass 1462000x2335100 x2",
-  "pane mesh 1462000x2335100 x1"
+  "pane glass 1459875x2330425 x2",
+  "pane mesh 1459875x2330425 x1"
  ],
  "Normal 3048000x2438400 | tracks=3, mix=GGG": [
   "buy 3t_bottom full:1 half:0",
@@ -1018,7 +1018,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 82 rft",
-  "pane glass 1462000x2335100 x3"
+  "pane glass 1459875x2330425 x3"
  ],
  "Normal 3048000x2438400 | tracks=3, mix=GJJ": [
   "buy 3t_bottom full:1 half:0",
@@ -1047,8 +1047,8 @@
   "hardware Mesh spline / rubber 53 rft",
   "hardware Rollers / Bearings 6 nos",
   "hardware Wool pile 82 rft",
-  "pane glass 1462000x2335100 x1",
-  "pane mesh 1462000x2335100 x2"
+  "pane glass 1459875x2330425 x1",
+  "pane mesh 1459875x2330425 x2"
  ],
  "Normal 3048000x2438400 | tracks=3, mix=GG": [
   "buy 3t_bottom full:1 half:0",
@@ -1072,7 +1072,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 55 rft",
-  "pane glass 1462000x2335100 x2"
+  "pane glass 1459875x2330425 x2"
  ],
  "Normal 3048000x2438400 | tracks=2, mix=GG": [
   "buy 2t_bottom full:1 half:0",
@@ -1096,7 +1096,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 55 rft",
-  "pane glass 1462000x2335100 x2"
+  "pane glass 1459875x2330425 x2"
  ],
  "Normal 3048000x2438400 | tracks=2, mix=GJ": [
   "buy 2t_bottom full:1 half:0",
@@ -1121,8 +1121,8 @@
   "hardware Mesh spline / rubber 27 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 55 rft",
-  "pane glass 1462000x2335100 x1",
-  "pane mesh 1462000x2335100 x1"
+  "pane glass 1459875x2330425 x1",
+  "pane mesh 1459875x2330425 x1"
  ],
  "Normal 3048000x2438400 | tracks=2, mix=JJ": [
   "buy 2t_bottom full:1 half:0",
@@ -1147,7 +1147,7 @@
   "hardware Mesh spline / rubber 53 rft",
   "hardware Rollers / Bearings 4 nos",
   "hardware Wool pile 55 rft",
-  "pane mesh 1462000x2335100 x2"
+  "pane mesh 1459875x2330425 x2"
  ],
  "Normal 3048000x2438400 | tracks=4, mix=GGGJ": [
   "buy 2t_bottom full:1 half:0",
@@ -1180,8 +1180,8 @@
   "hardware Mesh spline / rubber 27 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 109 rft",
-  "pane glass 1462000x2335100 x3",
-  "pane mesh 1462000x2335100 x1"
+  "pane glass 1459875x2330425 x3",
+  "pane mesh 1459875x2330425 x1"
  ],
  "Normal 3048000x2438400 | tracks=4, mix=GGJJ": [
   "buy 2t_bottom full:1 half:0",
@@ -1214,8 +1214,8 @@
   "hardware Mesh spline / rubber 53 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 109 rft",
-  "pane glass 1462000x2335100 x2",
-  "pane mesh 1462000x2335100 x2"
+  "pane glass 1459875x2330425 x2",
+  "pane mesh 1459875x2330425 x2"
  ],
  "Normal 3048000x2438400 | tracks=4, mix=GGGG": [
   "buy 2t_bottom full:1 half:0",
@@ -1247,7 +1247,7 @@
   "hardware Lock 1 nos",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 109 rft",
-  "pane glass 1462000x2335100 x4"
+  "pane glass 1459875x2330425 x4"
  ],
  "Normal 3048000x2438400 | tracks=4, mix=GJJJ": [
   "buy 2t_bottom full:1 half:0",
@@ -1280,8 +1280,8 @@
   "hardware Mesh spline / rubber 79 rft",
   "hardware Rollers / Bearings 8 nos",
   "hardware Wool pile 109 rft",
-  "pane glass 1462000x2335100 x1",
-  "pane mesh 1462000x2335100 x3"
+  "pane glass 1459875x2330425 x1",
+  "pane mesh 1459875x2330425 x3"
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=2, mix=GG": [
   "buy domal_frame_2t full:1 half:0",
@@ -17040,11 +17040,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17056,8 +17056,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17065,11 +17065,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17081,8 +17081,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17090,11 +17090,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17106,8 +17106,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17115,11 +17115,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17131,8 +17131,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17140,11 +17140,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17156,8 +17156,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17165,11 +17165,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17181,8 +17181,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17190,11 +17190,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17206,8 +17206,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17215,11 +17215,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17231,8 +17231,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1219200x1219200 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17240,11 +17240,11 @@
   "buy glazing_clip full:1 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:0",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1123950 Door Left",
-  "cut door_palla_60 1123950 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1171575 Door Left",
+  "cut door_palla_60 1171575 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1143000 DP Door-jamb Clip",
   "cut glazing_clip 1143000 SP Left Clip",
   "cut glazing_clip 342900 SP Bottom Clip",
@@ -17256,8 +17256,8 @@
   "cut partition_frame 342900 SP Bottom",
   "hardware Sheet rubber gasket 9 rft",
   "pane glass 330200x1130300 x1",
-  "pane glass 692150x511175 x1",
-  "pane sheet 692150x511175 x1"
+  "pane glass 704850x534988 x1",
+  "pane sheet 704850x534988 x1"
  ],
  "Partition 1908175x1397000 | partDoor=no, partBayFt=2, partRowFt=3": [
   "buy glazing_clip full:4 half:0",
@@ -17451,11 +17451,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:1 half:0",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
@@ -17470,10 +17470,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 484187.5x1308100 x2",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17481,11 +17481,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:1 half:0",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
@@ -17500,10 +17500,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 484187.5x1308100 x2",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17511,11 +17511,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:1 half:0",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
   "cut glazing_clip 1320800 DP Vertical 1 Clip",
@@ -17530,10 +17530,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 484187.5x1308100 x2",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17541,11 +17541,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17555,10 +17555,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17566,11 +17566,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17580,10 +17580,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17591,11 +17591,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17605,10 +17605,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17616,11 +17616,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17630,10 +17630,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17641,11 +17641,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17655,10 +17655,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17666,11 +17666,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1031875 SP Bottom Clip",
   "cut glazing_clip 1031875 SP Top Clip",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
@@ -17680,10 +17680,10 @@
   "cut partition_frame 1397000 SP Left",
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
-  "hardware Sheet rubber gasket 9 rft",
+  "hardware Sheet rubber gasket 10 rft",
   "pane glass 1019175x1308100 x1",
-  "pane glass 692150x600075 x1",
-  "pane sheet 692150x600075 x1"
+  "pane glass 704850x623888 x1",
+  "pane sheet 704850x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17691,11 +17691,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17705,10 +17705,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17716,11 +17716,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17730,10 +17730,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17741,11 +17741,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17755,10 +17755,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17766,11 +17766,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17780,10 +17780,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17791,11 +17791,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17805,10 +17805,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17816,11 +17816,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17830,10 +17830,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17841,11 +17841,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17855,10 +17855,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17866,11 +17866,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17880,10 +17880,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17891,11 +17891,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 879475 SP Bottom Clip",
@@ -17905,10 +17905,10 @@
   "cut partition_frame 1397000 SP Right",
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 879475 SP Bottom",
-  "hardware Sheet rubber gasket 10 rft",
-  "pane glass 844550x600075 x1",
+  "hardware Sheet rubber gasket 11 rft",
+  "pane glass 857250x623888 x1",
   "pane glass 866775x1308100 x1",
-  "pane sheet 844550x600075 x1"
+  "pane sheet 857250x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17916,11 +17916,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -17931,9 +17931,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -17941,11 +17941,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -17956,9 +17956,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -17966,11 +17966,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -17981,9 +17981,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -17991,11 +17991,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18006,9 +18006,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -18016,11 +18016,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18031,9 +18031,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -18041,11 +18041,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18056,9 +18056,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -18066,11 +18066,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18081,9 +18081,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -18091,11 +18091,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18106,9 +18106,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 1908175x1397000 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -18116,11 +18116,11 @@
   "buy glazing_clip full:2 half:0",
   "buy partition_divider full:0 half:1",
   "buy partition_frame full:1 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 1301750 Door Left",
-  "cut door_palla_60 1301750 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 1349375 Door Left",
+  "cut door_palla_60 1349375 Door Right",
   "cut glazing_clip 1320800 DP Door-jamb Clip",
   "cut glazing_clip 1320800 SP Left Clip",
   "cut glazing_clip 727075 SP Bottom Clip",
@@ -18131,9 +18131,9 @@
   "cut partition_frame 1908175 SP Top",
   "cut partition_frame 727075 SP Bottom",
   "hardware Sheet rubber gasket 12 rft",
+  "pane glass 1009650x623888 x1",
   "pane glass 714375x1308100 x1",
-  "pane glass 996950x600075 x1",
-  "pane sheet 996950x600075 x1"
+  "pane sheet 1009650x623888 x1"
  ],
  "Partition 965200x2133600 | partDoor=no, partBayFt=2, partRowFt=3": [
   "buy glazing_clip full:3 half:0",
@@ -18813,11 +18813,11 @@
   "buy glazing_clip full:9 half:0",
   "buy partition_divider full:3 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 514350 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 514350 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 514350 DP Glass-row 1 (bay 2) Clip",
@@ -18884,8 +18884,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 501650x749300 x12",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -18893,11 +18893,11 @@
   "buy glazing_clip full:8 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -18944,8 +18944,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 501650x1149350 x8",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -18953,11 +18953,11 @@
   "buy glazing_clip full:8 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19004,8 +19004,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 501650x1149350 x8",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19013,11 +19013,11 @@
   "buy glazing_clip full:8 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 698500 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 698500 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 698500 DP Glass-row 1 (bay 2) Clip",
@@ -19069,8 +19069,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 685800x749300 x9",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19078,11 +19078,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19119,8 +19119,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 685800x1149350 x6",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19128,11 +19128,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19169,8 +19169,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 685800x1149350 x6",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19178,11 +19178,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 2) Clip",
@@ -19219,8 +19219,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 1054100x749300 x6",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19228,11 +19228,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 2) Clip",
@@ -19259,8 +19259,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 1054100x1149350 x4",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19268,11 +19268,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 692150 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 692150 Door Bottom",
-  "cut door_palla_60 692150 Door Top",
+  "cut door_center_60 704850 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 704850 Door Bottom",
+  "cut door_palla_60 704850 Door Top",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 1066800 DP Glass-row 1 (bay 2) Clip",
@@ -19299,8 +19299,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 13 rft",
   "pane glass 1054100x1149350 x4",
-  "pane glass 692150x1120775 x1",
-  "pane sheet 692150x1120775 x1"
+  "pane glass 704850x1144588 x1",
+  "pane sheet 704850x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19308,11 +19308,11 @@
   "buy glazing_clip full:8 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 2) Clip",
@@ -19364,8 +19364,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x749300 x9",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19373,11 +19373,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19414,8 +19414,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x1149350 x6",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19423,11 +19423,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19464,8 +19464,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x1149350 x6",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19473,11 +19473,11 @@
   "buy glazing_clip full:8 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 647700 DP Glass-row 1 (bay 2) Clip",
@@ -19529,8 +19529,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x749300 x9",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19538,11 +19538,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19579,8 +19579,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x1149350 x6",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19588,11 +19588,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19629,8 +19629,8 @@
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
   "pane glass 635000x1149350 x6",
-  "pane glass 844550x1120775 x1",
-  "pane sheet 844550x1120775 x1"
+  "pane glass 857250x1144588 x1",
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19638,11 +19638,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
@@ -19678,9 +19678,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
-  "pane glass 844550x1120775 x1",
+  "pane glass 857250x1144588 x1",
   "pane glass 977900x749300 x6",
-  "pane sheet 844550x1120775 x1"
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19688,11 +19688,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19718,9 +19718,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
-  "pane glass 844550x1120775 x1",
+  "pane glass 857250x1144588 x1",
   "pane glass 977900x1149350 x4",
-  "pane sheet 844550x1120775 x1"
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19728,11 +19728,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 844550 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 844550 Door Bottom",
-  "cut door_palla_60 844550 Door Top",
+  "cut door_center_60 857250 Door Middle",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
+  "cut door_palla_60 857250 Door Bottom",
+  "cut door_palla_60 857250 Door Top",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19758,9 +19758,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 14 rft",
-  "pane glass 844550x1120775 x1",
+  "pane glass 857250x1144588 x1",
   "pane glass 977900x1149350 x4",
-  "pane sheet 844550x1120775 x1"
+  "pane sheet 857250x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19768,11 +19768,11 @@
   "buy glazing_clip full:7 half:0",
   "buy partition_divider full:2 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 596900 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 596900 DP Glass-row 1 (bay 1) Clip",
   "cut glazing_clip 596900 DP Glass-row 1 (bay 2) Clip",
@@ -19823,9 +19823,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 584200x749300 x9",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19833,11 +19833,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19873,9 +19873,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 584200x1149350 x6",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -19883,11 +19883,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -19923,9 +19923,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 584200x1149350 x6",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -19933,11 +19933,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
@@ -19973,9 +19973,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x749300 x6",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -19983,11 +19983,11 @@
   "buy glazing_clip full:5 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -20013,9 +20013,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x1149350 x4",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -20023,11 +20023,11 @@
   "buy glazing_clip full:5 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -20053,9 +20053,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x1149350 x4",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 half:1",
@@ -20063,11 +20063,11 @@
   "buy glazing_clip full:6 half:0",
   "buy partition_divider full:2 half:0",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
   "cut glazing_clip 762000 DP Door-jamb Clip",
@@ -20103,9 +20103,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x749300 x6",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=3.5": [
   "buy door_center_60 full:0 half:1",
@@ -20113,11 +20113,11 @@
   "buy glazing_clip full:5 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -20143,9 +20143,9 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x1149350 x4",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ],
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3.5, partBayFt=3, partRowFt=4": [
   "buy door_center_60 full:0 half:1",
@@ -20153,11 +20153,11 @@
   "buy glazing_clip full:5 half:0",
   "buy partition_divider full:1 half:1",
   "buy partition_frame full:2 half:1",
-  "cut door_center_60 996950 Door Middle",
-  "cut door_palla_60 2343150 Door Left",
-  "cut door_palla_60 2343150 Door Right",
-  "cut door_palla_60 996950 Door Bottom",
-  "cut door_palla_60 996950 Door Top",
+  "cut door_center_60 1009650 Door Middle",
+  "cut door_palla_60 1009650 Door Bottom",
+  "cut door_palla_60 1009650 Door Top",
+  "cut door_palla_60 2390775 Door Left",
+  "cut door_palla_60 2390775 Door Right",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Door-jamb Clip",
   "cut glazing_clip 1162050 DP Vertical 1 Clip",
@@ -20183,8 +20183,8 @@
   "cut partition_frame 2438400 SP Right",
   "cut partition_frame 3048000 SP Top",
   "hardware Sheet rubber gasket 15 rft",
+  "pane glass 1009650x1144588 x1",
   "pane glass 901700x1149350 x4",
-  "pane glass 996950x1120775 x1",
-  "pane sheet 996950x1120775 x1"
+  "pane sheet 1009650x1144588 x1"
  ]
 }
