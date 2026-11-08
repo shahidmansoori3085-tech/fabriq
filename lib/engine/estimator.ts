@@ -564,11 +564,15 @@ function expandDomalItem(item: JobItem): CutPiece[] {
 
     // Outer frame (Domal track). With a fixed top, the left/right verticals
     // only run the sliding-zone height; the fixed band above uses SP pipe.
+    // A 2-track window uses 2051 (two legs); 3 tracks and up use 2062 (three
+    // legs). Decided by the tracks chosen, not the shutter count (3T may carry 2).
     const sideH = fx.hasFix ? fx.slidingH : item.height;
-    push("domal_frame", item.width, "Frame Top");
-    push("domal_frame", sideH, "Frame Left");
-    push("domal_frame", sideH, "Frame Right");
-    push("domal_frame", item.width, "Frame Bottom");
+    const tracks = parseInt(item.meta.tracks ?? "", 10) || item.shutters.length;
+    const frameSec = tracks <= 2 ? "domal_frame_2t" : "domal_frame";
+    push(frameSec, item.width, "Frame Top");
+    push(frameSec, sideH, "Frame Left");
+    push(frameSec, sideH, "Frame Right");
+    push(frameSec, item.width, "Frame Bottom");
 
     // Fixed top band (optional): a full SP frame (top, bottom, 2 sides) sitting
     // on the Domal frame top — the clip cannot hold on the Domal frame, so the

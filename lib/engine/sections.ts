@@ -82,9 +82,15 @@ export const SECTIONS: Record<string, Section> = {
   // (2046, "Domal Glass Handle") slides on this track. 2046/2047 are
   // interchangeable dies for the glass shutter (fabricator's choice, same
   // role) — same pattern as 2081/2082 for the jali shutter.
+  // Tracks = the raised legs the shutters ride on (founder, 2026-11-08):
+  // 2062 has three legs → 3-track; 2051 has two legs → 2-track.
   domal_frame: {
-    id: "domal_frame", name: "Domal Track/Frame", label: "Domal Track",
+    id: "domal_frame", name: "Domal 3-Track Frame", label: "Domal 3T Track",
     omeo: "2062", size: "80.5×45.4", tier: "VERIFIED",
+  },
+  domal_frame_2t: {
+    id: "domal_frame_2t", name: "Domal 2-Track Frame", label: "Domal 2T Track",
+    omeo: "2051", size: "45×45", tier: "VERIFIED",
   },
   domal_glass_shutter: {
     id: "domal_glass_shutter", name: "Domal Glass Handle (2046/2047)", label: "Glass Shutter",
@@ -298,6 +304,7 @@ export const SECTION_WEIGHTS: Record<string, SectionWeight> = {
 
   // ---- Domal (doc 08 §Domal) — note the 15'/12' reference lengths ----
   domal_frame: { kgPerFt: 4.968 / 16, basis: "exact", source: "OMEO 2062 · 4.968 Kg/16'" },
+  domal_frame_2t: { kgPerFt: 3.2 / 15, basis: "exact", source: "OMEO 2051 · 3.200 Kg/15'" },
   domal_glass_shutter: { kgPerFt: 3.2 / 15, basis: "exact", source: "OMEO 2046 · 3.200 Kg/15'" },
   domal_jali_shutter: { kgPerFt: 3.226 / 12, basis: "exact", source: "OMEO 2081 · 3.226 Kg/12'" },
   domal_interlock: { kgPerFt: 0.88 / 12, basis: "exact", source: "OMEO 2091 · 0.880 Kg/12'" },
