@@ -8,6 +8,9 @@ export interface ShopProfile {
   address?: string;
   gstin?: string;
   tagline?: string;
+  /** Sliding windows with 3 or 4 glass shutters: "half" = every shutter is
+   *  half the window (default, opens half); "equal" = they share the width. */
+  shutterSplit?: "half" | "equal";
 }
 
 const KEY = "fabriq_shop";

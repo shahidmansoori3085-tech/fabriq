@@ -220,7 +220,10 @@ function itemLabel(it: JobItem): string {
   const name = it.system === "domal" ? "Domal" : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
-  return `${name} ${m.tracks} Track · ${mix}${fix}`;
+  // Shown only where it changes the cut: 3 or more glass shutters.
+  const glass = it.shutters.filter((s) => s.kind !== "jali").length;
+  const split = m.shutterSplit === "equal" && glass >= 3 ? " · Equal shutters" : "";
+  return `${name} ${m.tracks} Track · ${mix}${fix}${split}`;
 }
 
 /** The kind of window without its fixed-glass height — for "add more of this
@@ -430,18 +433,23 @@ export default function FabriQ() {
     writeOpenJob(id);
   }, [items, jobName]);
 
+  /** The shop's sliding-shutter choice (Settings) goes on each new or edited
+   *  item, so a later change in Settings never alters a saved item silently. */
+  const withShopChoices = (meta: Record<string, string>) =>
+    shop.shutterSplit === "equal" ? { ...meta, shutterSplit: "equal" } : meta;
+
   const addItem = (type: OpeningType, w: Um, h: Um, qty: number, meta: Record<string, string>) => {
     setItems((prev) => {
       // Next free number, not length+1 — deleting W2 must not make two W3s.
       const n = prev.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0) + 1;
-      return [...prev, buildJobItem(n, type, w, h, qty, meta)];
+      return [...prev, buildJobItem(n, type, w, h, qty, withShopChoices(meta))];
     });
   };
 
   /** Edited in place: same id, same position in the list. */
   const replaceItem = (id: string, type: OpeningType, w: Um, h: Um, qty: number, meta: Record<string, string>) => {
     const n = parseInt(id.slice(1), 10) || 1;
-    setItems((prev) => prev.map((it) => (it.id === id ? buildJobItem(n, type, w, h, qty, meta) : it)));
+    setItems((prev) => prev.map((it) => (it.id === id ? buildJobItem(n, type, w, h, qty, withShopChoices(meta)) : it)));
   };
 
   const forgetJob = () => {
@@ -2485,6 +2493,30 @@ function SettingsModal({ shop, onSave, onClose }: {
           {field("name", "Business name", "e.g. Al-Noor Aluminium")}
           {field("phone", "Mobile", "98765 43210", "tel")}
           {field("address", "Address", "Optional")}
+        </div>
+
+        <div className="mt-5">
+          <div className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>Sliding shutter size</div>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>
+            For windows with 3 or 4 glass shutters.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {([
+              ["half", "Half each", "Each shutter is half the window. Opens half."],
+              ["equal", "Equal share", "Shutters share the width. Opens more."],
+            ] as const).map(([v, title, sub]) => {
+              const on = (s.shutterSplit ?? "half") === v;
+              return (
+                <button key={v} type="button" onClick={() => setS((p) => ({ ...p, shutterSplit: v }))}
+                  className="card px-3 py-2.5 text-left"
+                  style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}
+                  aria-pressed={on}>
+                  <div className="text-sm font-bold">{title}</div>
+                  <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{sub}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <button onClick={() => onSave({ ...s, name: s.name.trim() })} className="btn-primary mt-6 w-full py-3.5">
