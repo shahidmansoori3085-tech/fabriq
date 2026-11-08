@@ -108,9 +108,10 @@ sections top and bottom.
 PIECES AND HOW EACH LENGTH IS FOUND
 • Outer frame — 4 pieces. Top and both sides are cut from the top-track
   section; the bottom is a different, heavier bottom-track section (it carries
-  the shutter weight and holds the roller path). Top and bottom are cut to the
-  full opening WIDTH; the two sides to the full opening HEIGHT. The frame sits
-  in the wall opening, so it is NOT reduced.
+  the shutter weight and holds the roller path). The frame is joined at 90°:
+  the two sides are cut to the full opening HEIGHT, and the top and bottom fit
+  BETWEEN them, sitting in the sides' 9mm lips, so they are cut to the opening
+  WIDTH minus 6 sut (19mm).
 • Shutter width — always the opening WIDTH ÷ 2, for every track count. This
   surprises people: a 3-track window's shutters are not one third of the
   width. Each shutter must cover half the frame so one can slide fully behind
@@ -121,9 +122,10 @@ PIECES AND HOW EACH LENGTH IS FOUND
 • Handle and Interlock — one each per shutter, cut to the SHUTTER HEIGHT.
 • Bearing (top and bottom of each shutter) — cut to shutter width minus 80mm,
   because the Handle and Interlock verticals already occupy that much.
-• Glass — shutter width and height each minus 62mm. All three shutter profiles
-  are 40mm wide with a 9mm-deep glazing groove, so the glass loses
-  2 × (40 − 9) = 62mm on both axes.
+• Glass — width is the bearing length plus 5 sut (shutter width minus about
+  64mm); height is the opening HEIGHT minus 4" 2 sut (shutter height minus
+  2⅝"). This is how Indian fabricators cut it, and it leaves room to drop the
+  glass in.
 
 WHAT CHANGES THE BUILD — so what must be known
 • TRACK COUNT (2 / 3 / 4). Never infer this from the opening size. A shop
@@ -312,16 +314,20 @@ THE TWO PROFILES — and why the clip count differs
 Both have a 38.1mm (1.5") sight-line face.
 
 PIECES AND HOW EACH LENGTH IS FOUND
-• SP outer frame — top and both sides at full width/height; the BOTTOM piece
-  is width minus both verticals' faces, because it fits between them.
-• DP verticals — one at each bay boundary, cut to the inner height.
-• DP horizontals — one at each row boundary, cut to the field width.
+• SP outer frame, joined at 90° — the TOP runs the full width. Both SP sides
+  hang under it, cut to the height minus one face (1.5"), and stand on the
+  floor. The BOTTOM is cut bay by bay, between the verticals.
+• DP verticals — one at each bay boundary, also height minus one face, down
+  to the floor.
+• DP horizontals — one at each row boundary, cut bay by bay between the
+  verticals.
 • Panel (glass or sheet) — the clear cell opening minus 12.7mm (4 sut / half
   an inch) on BOTH width and height. Video-confirmed as the safe value; 3 sut
   only if the frame is perfectly square.
 • Door column (optional) — reserves its own width, adds a DP jamb, and a leaf
-  built from the standard door palla profile with one middle rail. The door
-  leaf takes NO glazing clip.
+  built from the standard door palla profile with one middle rail. The leaf is
+  the clear door opening minus 3 sut in height and 2 sut in width (standard
+  gaps). The door leaf takes NO glazing clip.
 
 HOW THE GRID IS DECIDED — this is what must be asked
 The number of dividers is NOT a fixed rule; it comes from spacing the
