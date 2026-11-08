@@ -30,7 +30,7 @@ for (const tracks of ["2", "3"]) {
   const ps = expandItem(d);
   check(ps.filter((p) => p.sectionId === "partition_frame").length === 4, "Domal: SP on all 4 sides");
   check(ps.some((p) => p.role === "Fix Bottom (SP)"), "Domal: SP bottom on the frame top");
-  check(ps.filter((p) => p.sectionId === "domal_frame").length === 4, "Domal: its own frame stays whole");
+  check(ps.filter((p) => p.sectionId === "domal_frame_2t").length === 4, "Domal: its own frame stays whole (2-track = 2051)");
 }
 if (fails) { console.error(`${fails} failures`); process.exit(1); }
 console.log("NORMAL FIXED TOP HOLDS");
