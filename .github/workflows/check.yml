@@ -1,0 +1,39 @@
+name: Check task branch
+
+# Runs the same gate as the production deploy (type check + engine tests),
+# plus lint, on every task branch. This keeps the heavy checks on GitHub's
+# machines instead of the founder's laptop. Never deploys anything.
+
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Engine tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true # reported, not yet a gate (baseline not clean-checked)
