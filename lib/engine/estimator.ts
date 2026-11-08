@@ -477,8 +477,36 @@ function frameSections(item: JobItem): { top: string; bottom: string } {
  * the other(s); extra tracks just give room to park more shutters, they
  * don't shrink shutter width.
  */
+/**
+ * Sliding shutter width — the same rule worldwide (Indian, Pakistani,
+ * Nigerian videos 2026-11-08): bearing = (W − K) ÷ N, where N is the number
+ * of shutters that SHARE the width and K is a per-system constant for that N.
+ * Only used when the shop picks "equal share" (meta.shutterSplit = "equal");
+ * the default is W/2 for every shutter. Only glass shutters share the width;
+ * a jali covers one glass shutter's opening, so GJ, GGJ and GGJJ stay at W/2.
+ * N = 3 or 4 only when that many glass shutters run side by side (GGG, GGGG).
+ *   Normal 18mm (Aluminium center point): K₂ = 6¼" (≡ W/2 − 80mm, unchanged),
+ *     K₃ = 7½", K₄ = 11"; shutter width = bearing + 80mm (handle + interlock).
+ *   Domal 27×65 (Ramhans, SMART ALUMINIUM ×2): N=2 W/2 (founder job),
+ *     N=3 (W + 1⅝") ÷ 3, N=4 (W + 4") ÷ 4.
+ */
+export function slidingShutterW(item: JobItem): Um {
+  // Shop preference (founder 2026-11-08): most keep every shutter at W/2
+  // (window opens 50%); some share the width equally (opens ~66% / 75%).
+  // Default stays W/2; "equal" is opt-in via meta.shutterSplit.
+  if (item.meta.shutterSplit !== "equal") return Math.round(item.width / 2);
+  const glass = item.shutters.filter((s) => s.kind !== "jali").length;
+  const n = Math.min(4, Math.max(2, glass));
+  if (n === 2) return Math.round(item.width / 2);
+  if (item.system === "domal") {
+    return Math.round((item.width + (n === 3 ? inches(1.625) : inches(4))) / n);
+  }
+  const k = n === 3 ? inches(7.5) : inches(11);
+  return Math.round((item.width - k) / n) + DEFAULTS.bearingDeduction;
+}
+
 export function shutterSize(item: JobItem, d: { shutterHeightDeduction: Um }) {
-  const shutterW = Math.round(item.width / 2);
+  const shutterW = slidingShutterW(item);
   // a fixed top (Domal or normal sliding) leaves the shutters the zone below it
   const shutterH = domalFix(item).slidingH - d.shutterHeightDeduction;
   return { shutterW, shutterH };
@@ -557,9 +585,9 @@ function expandNormalItem(item: JobItem): CutPiece[] {
 function expandDomalItem(item: JobItem): CutPiece[] {
   const pieces: CutPiece[] = [];
   const fx = domalFix(item);
-  // Sliding shutter: width = W/2 always (founder-confirmed, kept); height =
-  // (sliding-zone height) − Domal deduction.
-  const shutterW = Math.round(item.width / 2);
+  // Sliding shutter: width from slidingShutterW (W/2 unless 3–4 glass
+  // shutters share the width); height = (sliding-zone height) − Domal deduction.
+  const shutterW = slidingShutterW(item);
   const shutterH = fx.slidingH - DOMAL_DEFAULTS.shutterHeightDeduction;
 
   for (let q = 0; q < item.qty; q++) {
@@ -1046,7 +1074,7 @@ export function estimate(items: JobItem[]): MaterialList {
     if (item.system === "domal") {
       const fx = domalFix(item);
       const n = item.shutters.length;
-      const shutterW = Math.round(item.width / 2);
+      const shutterW = slidingShutterW(item);
       const shutterH = fx.slidingH - DOMAL_DEFAULTS.shutterHeightDeduction;
       const gW = shutterW - DOMAL_DEFAULTS.glassDeductionW;
       const gH = shutterH - DOMAL_DEFAULTS.glassDeductionH;

@@ -9,7 +9,7 @@
 import { formatFtInSut, toFeet, mm } from "@/lib/engine/units";
 import type { JobItem, MaterialList } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
-import { partitionLayout, zGeometry, domalFix } from "@/lib/engine/estimator";
+import { partitionLayout, zGeometry, domalFix, slidingShutterW } from "@/lib/engine/estimator";
 import { SectionDrawing } from "./section-profiles";
 
 const INK = "#1b2330";
@@ -175,7 +175,7 @@ export function DimensionedElevation({ item }: { item: JobItem }) {
     const each = (item.width - 2 * mm(30)) / n;
     for (let i = 0; i < n; i++)
       cells.push(at(mm(30) + i * each, top + mm(30), each, item.height - top - 2 * mm(30), item.shutters[i]?.kind ?? "glass", `w${i}`));
-    note += `${n} shutters, each ${mmOf(Math.round(item.width / 2))} mm wide (overlapping)`;
+    note += `${n} shutters, each ${mmOf(slidingShutterW(item))} mm wide (overlapping)`;
   }
 
   return (

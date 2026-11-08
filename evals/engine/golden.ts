@@ -83,6 +83,23 @@ const near = (a: number, b: number) => Math.abs(a - b) <= 1600; // ±1.6 mm ≈ 
   if (!sd || !near(sd.length, 55.375 * INCH)) fails.push(`Domal 66x58 job: shutter side ${sd?.length} µm, measured 55.375"`);
 }
 
+// ---- "Equal share" shutter option (shop setting, opt-in) ----
+{
+  const at = (meta: Record<string, string>, re: RegExp) =>
+    estimate([deriveItem("W1", "window", 72 * INCH, 48 * INCH, 1, meta)]).pieces.find((p) => re.test(p.role))?.length ?? 0;
+  const want = (label: string, got: number, inches: number) => {
+    if (!near(got, inches * INCH)) fails.push(`${label}: ${(got / INCH).toFixed(3)}", want ${inches}"`);
+  };
+  // Normal GGG, equal: bearing = (72 − 7½) ÷ 3 = 21½" (Aluminium center point)
+  want("Normal 3T GGG equal bearing", at({ system: "normal", tracks: "3", mix: "GGG", shutterSplit: "equal" }, /Bearing Top/), 21.5);
+  // A jali still covers one glass: GGJ stays W/2 − 80mm even when equal is on
+  want("Normal 3T GGJ equal bearing", at({ system: "normal", tracks: "3", mix: "GGJ", shutterSplit: "equal" }, /Bearing Top/), 36 - 80 / 25.4);
+  // Default (no setting) is W/2 for GGG too
+  want("Normal 3T GGG default bearing", at({ system: "normal", tracks: "3", mix: "GGG" }, /Bearing Top/), 36 - 80 / 25.4);
+  // Domal GGG, equal: shutter = (72 + 1⅝) ÷ 3 (Ramhans, SMART ALUMINIUM)
+  want("Domal 3T GGG equal shutter", at({ system: "domal", tracks: "3", mix: "GGG", shutterSplit: "equal" }, /Shutter Top/), (72 + 1.625) / 3);
+}
+
 const keys = Object.keys(now).length;
 if (update) {
   writeFileSync(FILE, JSON.stringify(now, null, 1) + "\n");
