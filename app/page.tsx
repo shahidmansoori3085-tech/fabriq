@@ -1283,9 +1283,9 @@ function JobScreen({
                       )}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
                     {keys.map(([k, label]) => (
-                      <SizeParts key={k} label={label} unit={unit} value={row[k]}
+                      <SizeInput key={k} label={label} unit={UNIT_TAG[unit]} value={row[k]}
                         bad={!!p.warn} last={!!flow.editing && k === keys[keys.length - 1][0]}
                         inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
                         onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
@@ -1536,15 +1536,21 @@ function GapPicker({ options, value, max, count, span, exact = true, unit, onUni
           <UnitPicker unit={unit} onChange={switchUnit} />
           <div className="flex items-stretch gap-2">
             <button onClick={() => stepGap(-1)} aria-label="One inch less" className="btn-ghost w-14 shrink-0 text-base">−1&quot;</button>
-            <div className="min-w-0 flex-1">
-              <SizeParts label="Gap" unit={unit} value={txt} bad={!!err} last inputRef={() => {}}
-                onNext={() => (document.activeElement as HTMLElement | null)?.blur()}
-                onChange={(t) => {
+            <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
+              style={err ? { borderColor: "var(--bad)" } : undefined}>
+              <span className="flex items-baseline justify-between text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>
+                Gap <span className="rounded px-1 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{UNIT_TAG[unit]}</span>
+              </span>
+              <input value={txt} inputMode="decimal" enterKeyHint="done" aria-label="Gap" autoComplete="off"
+                onChange={(e) => {
+                  const t = e.target.value.replace(/[^\d.'"\- ]/g, "").slice(0, 8);
                   setTxt(t);
                   const um = parseSizeIn(t, unit, 26);
                   if (um !== null && valid(toFeet(um))) put(toFeet(um));
-                }} />
-            </div>
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none" />
+            </label>
             <button onClick={() => stepGap(1)} aria-label="One inch more" className="btn-ghost w-14 shrink-0 text-base">+1&quot;</button>
           </div>
           <div className="min-h-[16px] text-xs font-semibold" style={{ color: err ? "var(--bad)" : "var(--ink-3)" }}>
@@ -1609,11 +1615,11 @@ function DoorSizeStep({ o, unit, onUnit, onChange, onNext }: {
       </div>
       <UnitPicker unit={unit} onChange={switchUnit} />
       <div className="card p-3">
-        <div className="flex flex-col gap-2">
-          <SizeParts label="Door width" unit={unit} value={w} bad={!!w.trim() && !okW}
+        <div className="flex gap-2">
+          <SizeInput label="Door width" unit={UNIT_TAG[unit]} value={w} bad={!!w.trim() && !okW}
             inputRef={() => {}} onNext={() => hBox.current?.focus()}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setW(t); put(t, h); }} />
-          <SizeParts label="Door height" unit={unit} value={h} bad={!!h.trim() && !okH} last
+          <SizeInput label="Door height" unit={UNIT_TAG[unit]} value={h} bad={!!h.trim() && !okH} last
             inputRef={(el) => { hBox.current = el; }} onNext={() => { if (okW && okH) onNext(); }}
             onChange={(v) => { const t = v.replace(/[^\d.]/g, "").slice(0, 8); setH(t); put(w, t); }} />
         </div>
@@ -1628,88 +1634,54 @@ function DoorSizeStep({ o, unit, onUnit, onChange, onNext }: {
   );
 }
 
-/** How to type a size in each unit — said once, above the boxes. */
-const UNIT_HELP: Record<SizeUnit, string> = {
-  ft: "inch 0 to 11 · sut 0 to 7",
-  in: "sut 0 to 7",
-  mm: "numbers only, e.g. 1372",
-};
-
-/** The boxes each unit is typed in. */
-const PARTS: Record<SizeUnit, string[]> = { ft: ["ft", "inch", "sut"], in: ["inch", "sut"], mm: ["mm"] };
-/** "4.6.2" → ["4", "6", "2"] for the unit's boxes. */
-function splitSize(v: string, unit: SizeUnit): string[] {
-  const n = PARTS[unit].length;
-  const bits = unit === "mm" ? [v] : v.split(".");
-  return Array.from({ length: n }, (_, i) => bits[i] ?? "");
-}
-/** The boxes back into one size string the parser reads ("4.6.2", "54.2", "1372"). */
-function joinSize(parts: string[], unit: SizeUnit): string {
-  if (unit === "mm") return parts[0];
-  if (parts.every((p) => !p)) return "";
-  const out = parts.map((p) => p || "0");
-  while (out.length > 1 && !parts[out.length - 1]) out.pop(); // no trailing empty boxes
-  return out.join(".");
-}
-
-/**
- * One size as separate boxes — Feet | Inch | Sut (or Inch | Sut, or MM) —
- * each with its unit written in it, on the plain number keyboard. Nothing to
- * learn: no point to type between feet and inches.
- */
-function SizeParts({ label, unit, value, bad, last, inputRef, onChange, onNext }: {
-  label: string; unit: SizeUnit; value: string; bad?: boolean; last?: boolean;
+/** One size box on the phone's own number keyboard, its name inside the box. */
+function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onChange, onNext }: {
+  label: string; unit?: string; value: string; placeholder?: string; bad?: boolean; last?: boolean;
   inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void;
 }) {
-  const names = PARTS[unit];
-  const parts = splitSize(value, unit);
-  const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const set = (i: number, raw: string) => {
-    const max = unit === "mm" ? 5 : i === 0 ? 3 : unit === "ft" && i === 1 ? 2 : 1;
-    const next = [...parts];
-    next[i] = raw.replace(/\D/g, "").slice(0, max);
-    onChange(joinSize(next, unit));
-  };
   return (
-    <div>
-      <div className="mb-1 text-xs font-bold" style={{ color: "var(--ink-2)" }}>{label}</div>
-      <div className="flex gap-1.5">
-        {names.map((n, i) => (
-          <label key={n} className={`dim-input flex min-w-0 items-baseline gap-1 px-2.5 py-1.5 ${n === "sut" ? "flex-[0.8]" : "flex-1"}`}
-            style={bad ? { borderColor: "var(--bad)" } : undefined}>
-            <input ref={(el) => { refs.current[i] = el; if (i === 0) inputRef(el); }}
-              value={parts[i]} aria-label={`${label} ${n}`} type="text" inputMode="numeric" autoComplete="off"
-              enterKeyHint={last && i === names.length - 1 ? "done" : "next"}
-              onChange={(e) => set(i, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                if (i < names.length - 1) refs.current[i + 1]?.focus(); else onNext();
-              }}
-              className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none" />
-            <span className="shrink-0 text-xs font-bold" style={{ color: "var(--ink-3)" }}>{n}</span>
-          </label>
-        ))}
-      </div>
-    </div>
+    <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
+      style={bad ? { borderColor: "var(--bad)" } : undefined}>
+      <span className="flex items-baseline justify-between gap-1 text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>
+        <span className="truncate">{label}</span>
+        {unit && <span className="shrink-0 rounded px-1 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{unit}</span>}
+      </span>
+      <input ref={inputRef} value={value} placeholder={placeholder} aria-label={label}
+        type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
+        className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:font-normal placeholder:text-[#c2c7cf]" />
+    </label>
   );
 }
 
+const UNIT_TAG: Record<SizeUnit, string> = { ft: "ft", in: "inch", mm: "mm" };
+/** How to type a size in each unit — said once, above the boxes. */
+const UNIT_HELP: Record<SizeUnit, string> = {
+  ft: "4.6 = 4 ft 6 in · 4.6.2 = 4 ft 6 in 2 sut",
+  in: "54 = 54 in · 54.2 = 54 in 2 sut",
+  mm: "1372 = 1372 mm",
+};
+
 /** Feet · Inch · MM — the unit the sizes are typed in. */
 function UnitPicker({ unit, onChange }: { unit: SizeUnit; onChange: (u: SizeUnit) => void }) {
-  const opts: [SizeUnit, string, string][] = [["ft", "Feet", "ft · inch · sut"], ["in", "Inch", "inch · sut"], ["mm", "MM", "millimetre"]];
+  const opts: [SizeUnit, string][] = [["ft", "Feet"], ["in", "Inch"], ["mm", "MM"]];
   return (
-    <div className="card p-3">
-      <div className="mb-2 text-sm font-bold">Measure in</div>
-      <div role="radiogroup" aria-label="Size unit" className="grid grid-cols-3 gap-2">
-        {opts.map(([u, label, sub]) => (
-          <button key={u} role="radio" aria-checked={unit === u} onClick={() => onChange(u)}
-            className={`chip flex flex-col items-center py-2 ${unit === u ? "selected" : ""}`}>
-            <span className="text-base font-bold">{label}</span>
-            <span className="text-[11px] font-semibold" style={{ color: "var(--ink-3)" }}>{sub}</span>
-          </button>
-        ))}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-xs font-bold" style={{ color: "var(--ink-3)" }}>Size in</span>
+        <div role="radiogroup" aria-label="Size unit" className="grid flex-1 grid-cols-3 gap-1 rounded-[var(--radius)] p-1"
+          style={{ background: "var(--surface-3)" }}>
+          {opts.map(([u, label]) => (
+            <button key={u} role="radio" aria-checked={unit === u} onClick={() => onChange(u)}
+              className="rounded-[8px] py-1.5 text-sm font-bold"
+              style={unit === u ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(0,0,0,.08)" } : { color: "var(--ink-3)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
+      <div className="text-xs font-semibold tabnum" style={{ color: "var(--ink-2)" }}>{UNIT_HELP[unit]}</div>
     </div>
   );
 }
