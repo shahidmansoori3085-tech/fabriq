@@ -10,7 +10,7 @@
  */
 import { mm, inches } from "../engine/units";
 import type {
-  StudioSystem, SizeDef, SizeCase, PartDef, ProfileDef, Evidence, ExtraDef, Cond,
+  StudioSystem, SizeDef, SizeCase, PartDef, ProfileDef, Evidence, ExtraDef, Cond, ProfileKind,
 } from "./model";
 
 const SUT = 3175;
@@ -158,7 +158,7 @@ export const NORMAL_25: StudioSystem = {
     size("glassW", "Glass width", rule("bearing", inches(0.75), VIDEO("bearing + ¾″"))),
     size("glassH", "Glass height", rule("shutterH", -inches(4.125), VIDEO("shutter − 4⅛″"))),
   ],
-  parts: NORMAL_18.parts.map((p) => ({ ...p, profile: [{ id: `${p.id}_25` }] })),
+  parts: NORMAL_18.parts.map((p) => ({ ...p, profile: [{ id: "" }] })),
   notes: ["Profiles: add the codes from your catalogue. Track and side cuts are not known yet — teach them from one window."],
 };
 
@@ -191,11 +191,7 @@ export const DOMAL_35: StudioSystem = {
       rule("shutterH", -inches(4.625), VIDEO("2-track: shutter − 4⅝″"), { when: { tracks: "2" } }),
       rule("shutterH", -inches(5), VIDEO("3+1 / 4+1: shutter − 5″"))),
   ],
-  parts: DOMAL_27.parts.map((p) => ({
-    ...p,
-    profile: [{ id: p.scope === "window" ? "d35_frame" : p.scope === "meeting" ? "d35_interlock" : "d35_shutter" }],
-    meshProfile: p.meshProfile ? "d35_shutter" : undefined,
-  })),
+  parts: DOMAL_27.parts.map((p) => ({ ...p, profile: [{ id: "" }], meshProfile: undefined })),
   notes: ["The mesh shutter in 3+1 / 4+1 is taken as the same width as a glass shutter — check it on your first job."],
 };
 
@@ -277,3 +273,28 @@ export const BLANK_SLIDING: StudioSystem = {
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27, NORMAL_25, DOMAL_35, NORMAL_5T, AMPLE_22, BLANK_SLIDING, BLANK_DOMAL_TYPE,
 ];
+
+/** What each built-in section is, so the picker can offer the right ones. */
+const KIND_OF: Record<string, ProfileKind> = {
+  "2t_top": "track", "2t_bottom": "track", "3t_top": "track", "3t_bottom": "track",
+  handle_std: "handle", interlock: "interlock", bearing: "bearing",
+  domal_frame_2t: "frame", domal_frame: "frame", domal_glass_shutter: "shutter",
+  domal_jali_shutter: "mesh-shutter", domal_interlock: "interlock-patti",
+  a22_track_2t: "track", a22_track_3t: "track", a22_shutter: "shutter", a22_interlock: "interlock-patti",
+};
+for (const t of TEMPLATES) for (const p of t.profiles) p.kind ??= KIND_OF[p.id] ?? "other";
+
+/** The kind of section each built-in part takes (for blanks and drafts with no sections yet). */
+export const PART_KIND: Record<string, ProfileKind> = {
+  top: "track", left: "track", right: "track", bottom: "track",
+  handle: "handle", interlock: "interlock", bearingTop: "bearing", bearingBottom: "bearing",
+  frameTop: "frame", frameLeft: "frame", frameRight: "frame", frameBottom: "frame",
+  shutterTop: "shutter", shutterBottom: "shutter", shutterLeft: "shutter", shutterRight: "shutter",
+};
+
+/** Every built-in section, once — the starting section library. */
+export const BUILT_IN_PROFILES: ProfileDef[] = (() => {
+  const seen = new Map<string, ProfileDef>();
+  for (const t of TEMPLATES) for (const p of t.profiles) if (!seen.has(p.id)) seen.set(p.id, p);
+  return [...seen.values()];
+})();

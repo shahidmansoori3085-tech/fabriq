@@ -91,11 +91,15 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
 // 6b. Video-based drafts give the video numbers, labelled "observed".
 {
   const d35 = TEMPLATES.find((s) => s.id === "domal-35")!;
-  const r = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "2" } });
+  let noSection = false;
+  try { evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "2" } }); }
+  catch (e) { noSection = e instanceof StudioUnknownError && e.missing.every((m) => m.startsWith("Section for")); }
+  expect(noSection, "a draft with no sections chosen must ask for sections (and only that)");
+  const r = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "2" } }, { allowUnknown: true });
   const v = (id: string) => r.sizes.find((s) => s.id === id)!;
   expect(Math.abs(v("shutterH").value! - 45 * IN) <= 1 && v("shutterH").status === "observed", "35×75 2″ track: H − 3″, observed");
   expect(Math.abs(v("shutterW").value! - 29.8125 * IN) <= 1, "35×75 2-track width (W − ⅜″) ÷ 2");
-  const r4 = evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" });
+  const r4 = evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" }, { allowUnknown: true });
   expect(r4.pieces.filter((p) => /Interlock/.test(p.role)).length === 4, "3+1: 2 glass meetings × 2 patti");
 }
 

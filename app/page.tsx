@@ -1342,6 +1342,7 @@ function JobScreen({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <InstallButton />
+          <a href="/studio" className="btn-ghost px-3 py-2 text-sm">My systems</a>
           <button onClick={onSettings} className="btn-ghost px-3 py-2 text-sm">Settings</button>
         </div>
       </div>

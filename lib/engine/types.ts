@@ -30,6 +30,8 @@ export interface CutPiece {
   itemId: string; // "W1"
   role: string; // "Top", "Left Side", "S1 Handle"...
   label: string; // full label "W1 6'×6' — Top"
+  /** cut angle, when the system says (System Studio systems always do) */
+  angle?: 90 | 45;
 }
 
 /** One physical bar with pieces nested onto it */

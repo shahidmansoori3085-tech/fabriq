@@ -215,8 +215,18 @@ export const SECTIONS: Record<string, Section> = {
   },
 };
 
+/** Sections a shop added in the System Studio — known to packing and sheets
+ *  like built-in ones. Built-in ids always win, so a shop entry can never
+ *  change an existing system's cut list. */
+const CUSTOM_SECTIONS: Record<string, Section> = {};
+
+export function registerCustomSections(list: Section[]): void {
+  for (const k of Object.keys(CUSTOM_SECTIONS)) delete CUSTOM_SECTIONS[k];
+  for (const s of list) if (!SECTIONS[s.id]) CUSTOM_SECTIONS[s.id] = s;
+}
+
 export function getSection(id: string): Section {
-  const s = SECTIONS[id];
+  const s = SECTIONS[id] ?? CUSTOM_SECTIONS[id];
   if (!s) throw new Error(`Unknown section: ${id}`);
   return s;
 }

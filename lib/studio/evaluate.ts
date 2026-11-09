@@ -118,37 +118,41 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
   const glassCount = kinds.filter((k) => k !== "jali").length;
   const meetings = Math.max(0, glassCount - 1);
 
-  const parts = sys.parts.filter((p) => matches(p.when, vars));
+  const parts = sys.parts.filter((p) => p.enabled !== false && matches(p.when, vars));
   const needed = new Set<string>([
     ...parts.map((p) => p.length),
     ...(kinds.length ? [sys.infill.w, sys.infill.h] : []),
   ]);
+  const len = (id: string) => values[id] ?? 0;
+  const profileFor = (p: (typeof parts)[number]) => (p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1])?.id ?? "";
   const missing = [...needed].filter((id) => values[id] === null || values[id] === undefined)
     .map((id) => trace.find((t) => t.id === id)?.label ?? id);
+  // a part with no section chosen cannot be bought or packed
+  for (const p of parts) {
+    const used = p.scope === "meeting" ? meetings > 0 : p.scope === "shutter" ? kinds.length > 0 : true;
+    if (used && !profileFor(p)) missing.push(`Section for ${p.role.replace(/\{.\}/g, "").trim()}`);
+  }
   if (missing.length && !opts.allowUnknown) throw new StudioUnknownError(missing);
-
-  const len = (id: string) => values[id] ?? 0;
-  const profileFor = (p: (typeof parts)[number]) => (p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1]).id;
 
   const pieces: CutPiece[] = [];
   for (let q = 0; q < job.qty; q++) {
     const wId = `${job.id}${job.qty > 1 ? `.${q + 1}` : ""}`;
-    const push = (sectionId: string, length: Um, role: string) =>
-      pieces.push({ sectionId, length, itemId: wId, role, label: `${wId}${job.sizeLabel ? ` ${job.sizeLabel}` : ""} — ${role}` });
+    const push = (sectionId: string, length: Um, role: string, angle: 90 | 45) =>
+      pieces.push({ sectionId, length, itemId: wId, role, angle, label: `${wId}${job.sizeLabel ? ` ${job.sizeLabel}` : ""} — ${role}` });
 
     for (const p of parts.filter((x) => x.scope === "window")) {
-      for (let c = 0; c < p.count; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(c + 1)));
+      for (let c = 0; c < p.count; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(c + 1)), p.angle);
     }
     kinds.forEach((kind, i) => {
       for (const p of parts.filter((x) => x.scope === "shutter")) {
         const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p);
         const role = p.role.replace("{s}", `S${i + 1}`).replace("{tag}", kind === "jali" ? " (Mesh)" : "");
-        for (let c = 0; c < p.count; c++) push(sec, len(p.length), role);
+        for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);
       }
     });
     let k = 0;
     for (const p of parts.filter((x) => x.scope === "meeting")) {
-      for (let c = 0; c < p.count * meetings; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(++k)));
+      for (let c = 0; c < p.count * meetings; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(++k)), p.angle);
     }
   }
 

@@ -71,11 +71,37 @@ export interface PartDef {
   angle: 90 | 45;
   /** only cut when this matches */
   when?: Cond;
+  /** false = the shop does not use this part (kept, so it can be ticked back) */
+  enabled?: boolean;
 }
+
+/** What a section is used as — filters the section picker for each part. */
+export type ProfileKind =
+  | "track" | "frame" | "handle" | "interlock" | "slim-interlock" | "bearing"
+  | "shutter" | "mesh-shutter" | "interlock-patti" | "rail" | "bead" | "mullion" | "other";
+
+export const PROFILE_KINDS: { id: ProfileKind; label: string }[] = [
+  { id: "track", label: "Track (top / bottom / side)" },
+  { id: "frame", label: "Frame" },
+  { id: "handle", label: "Handle" },
+  { id: "interlock", label: "Interlock" },
+  { id: "slim-interlock", label: "Slim interlock" },
+  { id: "bearing", label: "Bearing / H-section" },
+  { id: "shutter", label: "Shutter (4 sides)" },
+  { id: "mesh-shutter", label: "Mesh shutter" },
+  { id: "interlock-patti", label: "Interlock patti / clip" },
+  { id: "rail", label: "Rail / track clip" },
+  { id: "bead", label: "Glazing clip / bead" },
+  { id: "mullion", label: "Mullion / center" },
+  { id: "other", label: "Other" },
+];
 
 export interface ProfileDef {
   id: string;
   name: string;
+  kind?: ProfileKind;
+  /** true = added by this shop (editable); built-ins are copied before editing */
+  mine?: boolean;
   /** catalogue code(s), e.g. { omeo: "2051" } — shop's own code under "shop" */
   codes?: Record<string, string>;
   size?: string;          // "45×45"
