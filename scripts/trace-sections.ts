@@ -21,7 +21,9 @@ import { tmpdir } from "node:os";
 interface Cell { code: string; w: number; h: number; note?: string; /** stored under this key when one code is printed on two profiles */ key?: string }
 interface Manifest {
   /** "grid" = Ample-style 2×3 cells with grey metal (default); "cad-red" = CAD drawings with red outlines (OMEO) */
-  style?: "grid" | "cad-red" | "dark-fill";
+  style?: "grid" | "cad-red" | "dark-fill" | "black-grid";
+  /** black-grid: the page's table of cells */
+  grid?: { cols: number; rows: number; drawTop?: number; drawBottom?: number };
   /** part of the page height taken by the title band (skipped); default 0.16 */
   skipTop?: number;
   catalogue: string;          // PDF path
@@ -165,6 +167,55 @@ function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "
   });
 }
 
+/**
+ * Black line-art pages in a ruled table (Alucoat): find the table, split it
+ * into equal cells, keep the drawing band of each cell (below the title,
+ * above the data row), wipe thin dimension lines with a morphological
+ * opening, and keep the largest remaining dark shape.
+ */
+function blackGrid(img: ReturnType<typeof readPgm>, g: NonNullable<Manifest["grid"]>) {
+  const { w, h, px } = img;
+  const dark = (x: number, y: number) => px[y * w + x] < 110;
+  // the table frame: longest dark horizontal and vertical runs
+  const rowRun = (y: number) => { let best = 0, cur = 0; for (let x = 0; x < w; x++) { cur = dark(x, y) ? cur + 1 : 0; if (cur > best) best = cur; } return best; };
+  const colRun = (x: number) => { let best = 0, cur = 0; for (let y = 0; y < h; y++) { cur = dark(x, y) ? cur + 1 : 0; if (cur > best) best = cur; } return best; };
+  const longRows: number[] = []; for (let y = 0; y < h; y++) if (rowRun(y) > w * 0.6) longRows.push(y);
+  const longCols: number[] = []; for (let x = 0; x < w; x++) if (colRun(x) > h * 0.4) longCols.push(x);
+  const T0 = Math.min(...longRows), T1 = Math.max(...longRows), L0 = Math.min(...longCols), L1 = Math.max(...longCols);
+  const cw = (L1 - L0) / g.cols, ch = (T1 - T0) / g.rows;
+  const out: ReturnType<typeof metal>[] = [];
+  for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+    const x0 = Math.round(L0 + c * cw + cw * 0.03), x1 = Math.round(L0 + (c + 1) * cw - cw * 0.03);
+    const y0 = Math.round(T0 + r * ch + ch * (g.drawTop ?? 0.13)), y1 = Math.round(T0 + r * ch + ch * (g.drawBottom ?? 0.72));
+    const bw = x1 - x0, bh = y1 - y0;
+    const m0 = new Uint8Array(bw * bh);
+    for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) m0[y * bw + x] = dark(x + x0, y + y0) ? 1 : 0;
+    const R = 2;
+    const er = new Uint8Array(bw * bh);
+    for (let y = R; y < bh - R; y++) for (let x = R; x < bw - R; x++) {
+      let all = 1; for (let dy = -R; dy <= R && all; dy++) for (let dx = -R; dx <= R; dx++) if (!m0[(y + dy) * bw + x + dx]) { all = 0; break; }
+      er[y * bw + x] = all;
+    }
+    // largest eroded component, grown back inside the original ink
+    const lab = new Int32Array(bw * bh).fill(-1); let best = -1, bestN = 0; const st: number[] = [];
+    for (let i = 0; i < er.length; i++) {
+      if (!er[i] || lab[i] >= 0) continue; let n = 0; lab[i] = i; st.push(i);
+      while (st.length) { const q = st.pop()!; n++; const x = q % bw, y = (q - x) / bw;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue; const q2 = ny * bw + nx; if (er[q2] && lab[q2] < 0) { lab[q2] = i; st.push(q2); } } }
+      if (n > bestN) { bestN = n; best = i; }
+    }
+    const mask = new Uint8Array(bw * bh);
+    for (let i = 0; i < er.length; i++) if (lab[i] === best) {
+      const x = i % bw, y = (i - x) / bw;
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < bw && ny < bh && m0[ny * bw + nx]) mask[ny * bw + nx] = 1; }
+    }
+    let minX = bw, minY = bh, maxX = 0, maxY = 0;
+    for (let i = 0; i < mask.length; i++) if (mask[i]) { const x = i % bw, y = (i - x) / bw; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    out.push({ mask, bw, bh, box: { minX, minY, maxX: maxX + 1, maxY: maxY + 1 }, n: bestN });
+  }
+  return out;
+}
+
 function headers(img: ReturnType<typeof readPgm>) {
   const { w, h, px } = img;
   const bands: [number, number][] = [];
@@ -284,6 +335,11 @@ function trace(m: Manifest) {
   const out: Record<string, TracedShape> = existsSync(m.out) ? JSON.parse(readFileSync(m.out, "utf8")) : {};
   const problems: string[] = [];
   for (const pg of m.pages) {
+    if (m.style === "black-grid") {
+      const found = blackGrid(render(m.catalogue, pg.page), m.grid!);
+      pg.cells.forEach((c, i) => { if (c && found[i]) save(c, found[i], pg.page); });
+      continue;
+    }
     if (m.style === "cad-red" || m.style === "dark-fill") {
       const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.filter(Boolean).length, m.style, m.skipTop ?? 0.16);
       let k = 0;

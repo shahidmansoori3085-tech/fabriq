@@ -6,6 +6,7 @@ import type { ProfileDef } from "./model";
 import ample from "./shapes/ample.json";
 import omeo from "./shapes/omeo.json";
 import banuhashim from "./shapes/banuhashim.json";
+import alucoat from "./shapes/alucoat.json";
 
 export interface Shape { code: string; maker: string; w: number; h: number; paths: string[]; source: string; scaleCheck: number }
 
@@ -13,6 +14,7 @@ const BY_MAKER: Record<string, Record<string, Shape>> = {
   ample: ample as Record<string, Shape>,
   omeo: omeo as Record<string, Shape>,
   bh: banuhashim as Record<string, Shape>,
+  alucoat: alucoat as Record<string, Shape>,
 };
 
 /** The traced shape of a section, if one exists ("2046/2047" tries each code). */

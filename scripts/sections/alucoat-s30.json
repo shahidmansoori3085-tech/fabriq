@@ -1,0 +1,6 @@
+{ "style": "black-grid", "grid": { "cols": 3, "rows": 4 }, "catalogue": "E:/alu-tool/research/catalogue/new-series/Alucoat Catelogue_2024-compressed.pdf", "out": "lib/studio/shapes/alucoat.json", "maker": "Alucoat", "pages": [
+ { "page": 20, "cells": [
+  {"code":"AT-30001","w":85,"h":33},{"code":"AT-30002","w":81.8,"h":47},{"code":"AT-30003","w":124,"h":33},
+  {"code":"AT-30004","w":120.6,"h":47},{"code":"AT-30016","w":54.4,"h":37.8},{"code":"AT-30017","w":93.8,"h":37.8},
+  {"code":"AT-30018","w":71.6,"h":37.8},{"code":"AT-30019","w":111,"h":37.8},{"code":"AT-30005","w":67.4,"h":30},
+  {"code":"AT-30006","w":67.4,"h":30},{"code":"AT-30007","w":37.1,"h":35.1},{"code":"AT-30008","w":37.1,"h":41.62} ] } ] }

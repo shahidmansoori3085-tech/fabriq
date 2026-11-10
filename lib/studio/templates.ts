@@ -409,6 +409,39 @@ export const GULF: StudioSystem = base({
   notes: ["Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
 });
 
+/** Alucoat S-30 Gulf — every section named on the catalogue page (p.20). */
+export const GULF_S30: StudioSystem = withAlternatives(base({
+  id: "gulf-s30", name: "Gulf S-30 — Alucoat", group: "gulf", maker: "Alucoat",
+  blurb: "Vertical Gulf top and sides, separate bottom Gulf track, 90° screwed; glass or DGU shutter with interlock clip",
+  profiles: [
+    prof("at_v2", "2 Track Vertical Gulf", "track", { alucoat: "AT-30001" }, "85×33", { value: 5.1, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_b2", "2 Track Bottom Gulf", "track", { alucoat: "AT-30002" }, "81.8×47", { value: 7.7, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_v3", "3 Track Vertical Gulf", "track", { alucoat: "AT-30003" }, "124×33", { value: 6.9, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_b3", "3 Track Bottom Gulf", "track", { alucoat: "AT-30004" }, "120.6×47", { value: 10.6, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_t2", "2 Track", "track", { alucoat: "AT-30016" }, "54.4×37.8", { value: 5.1, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_t3", "3 Track", "track", { alucoat: "AT-30017" }, "93.8×37.8", { value: 7.5, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_t2l", "2 Track with Leg", "track", { alucoat: "AT-30018" }, "71.6×37.8", { value: 6.5, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_t3l", "3 Track with Leg", "track", { alucoat: "AT-30019" }, "111×37.8", { value: 9.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_sgu", "Single Glass Shutter", "shutter", { alucoat: "AT-30005" }, "67.4×30", { value: 4.45, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_dgu", "DGU Shutter", "shutter", { alucoat: "AT-30006" }, "67.4×30", { value: 4.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_clip", "Interlock Clip", "interlock-patti", { alucoat: "AT-30007" }, "37.1×35.1", { value: 1.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20"), { faceMm: 12 }),
+    prof("at_dbl", "Double Interlock", "interlock", { alucoat: "AT-30008" }, "37.1×41.62", { value: 2.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+  ],
+  sizes: UNKNOWN_SIZES(),
+  parts: [
+    part("frameTop", "Top", byTracks("at_v2", "at_v3"), "window", "frameW", 90, "frame-top"),
+    part("frameLeft", "Left Side", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
+    part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
+    part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLeft", "{s} Shutter Left{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterRight", "{s} Shutter Right{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock Clip {k}", "at_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
+  notes: ["Section names are printed in the Alucoat catalogue. Gulf shops differ on which piece runs full length — teach from one window."],
+}), "interlock", ["at_clip", "at_dbl"]);
+
 /* ———————————————— blanks ———————————————— */
 
 export const BLANK_DOMAL_TYPE: StudioSystem = base({
@@ -440,7 +473,7 @@ export const TEMPLATES: StudioSystem[] = [
   NORMAL_25, NORMAL_5T,
   AMPLE_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37, BH_31,
-  GULF,
+  GULF_S30, GULF,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
 
