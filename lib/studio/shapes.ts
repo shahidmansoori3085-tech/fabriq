@@ -19,6 +19,7 @@ const BY_MAKER: Record<string, Record<string, Shape>> = {
 
 /** The traced shape of a section, if one exists ("2046/2047" tries each code). */
 export function shapeOf(p: ProfileDef | undefined): Shape | undefined {
+  if (p?.shape) return { code: p.id, maker: "yours", source: "Traced from your photo", ...p.shape };
   if (!p?.codes) return undefined;
   for (const [maker, code] of Object.entries(p.codes)) {
     const book = BY_MAKER[maker];

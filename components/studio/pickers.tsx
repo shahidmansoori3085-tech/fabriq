@@ -6,6 +6,23 @@ import { PROFILE_KINDS } from "../../lib/studio/model";
 import { allProfiles, newId, type StudioLibrary } from "../../lib/studio/store";
 import { Sheet, Field } from "../studio-ui";
 import SectionSketch from "../section-sketch";
+import { traceImage } from "../../lib/studio/tracer";
+
+/** Read a picture into a grey array, at most 1400 px on its long side. */
+async function grayFromFile(file: File): Promise<{ g: Uint8Array; w: number; h: number }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
+    const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const ctx = c.getContext("2d")!; ctx.drawImage(img, 0, 0, w, h);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    const g = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) g[i] = Math.round(d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11);
+    return { g, w, h };
+  } finally { URL.revokeObjectURL(url); }
+}
 
 export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
   lib: StudioLibrary; kind?: ProfileKind; title: string;
@@ -64,6 +81,19 @@ export function ProfileForm({ initial, onSave, onCancel }: {
   const [stock, setStock] = useState<number[]>(initial.stockFt?.length ? initial.stockFt : [16]);
   const [other, setOther] = useState("");
   const [face, setFace] = useState(initial.faceMm ? String(initial.faceMm) : "");
+  const [shape, setShape] = useState(initial.shape);
+  const [pic, setPic] = useState<{ g: Uint8Array; w: number; h: number } | null>(null);
+  const [invert, setInvert] = useState(false);
+  const [traceMsg, setTraceMsg] = useState("");
+  const dims = size.split(/[×x*]/).map((v) => parseFloat(v)).filter((v) => v > 0);
+  const runTrace = (p: { g: Uint8Array; w: number; h: number } | null, inv: boolean) => {
+    if (!p) return;
+    if (dims.length !== 2) { setTraceMsg("Type the size (mm) first, e.g. 65×29 — the drawing is scaled to it."); return; }
+    const t = traceImage(p.g, p.w, p.h, dims[0], dims[1], inv);
+    if (!t) { setTraceMsg("No section found in this picture. Try a closer, straight photo."); return; }
+    setShape(t);
+    setTraceMsg(t.scaleCheck > 4 ? `Traced, but its shape is ${t.scaleCheck}% off the size you typed — check the size, or crop closer.` : "Traced to your size.");
+  };
 
   const toggleStock = (ft: number) => setStock((s) => (s.includes(ft) ? (s.length > 1 ? s.filter((x) => x !== ft) : s) : [...s, ft]));
   const save = () => {
@@ -75,6 +105,7 @@ export function ProfileForm({ initial, onSave, onCancel }: {
       codes: code.trim() ? { [maker.trim().toLowerCase() || "code"]: code.trim() } : undefined,
       size: size.trim() || undefined,
       faceMm: parseFloat(face) > 0 ? parseFloat(face) : undefined,
+      shape,
       ref: initial.ref,
       kg: parseFloat(kg) > 0 ? { value: parseFloat(kg), perFt: parseFloat(kgPer) || 16 } : undefined,
       stockFt,
@@ -101,6 +132,33 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         <div className="flex flex-1 flex-col gap-3">
           <Field label="Size (mm)" hint="Width × height, as the catalogue prints it"><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
         </div>
+      </div>
+      <div className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+        <div className="flex items-center gap-3">
+          <span className="h-20 w-24 shrink-0 overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)" }}>
+            <SectionSketch p={{ id: "x", name, kind, size, shape, stockFt: [16], source: { status: "suggested", source: "" } }} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold">Real drawing</div>
+            <div className="text-xs" style={{ color: "var(--ink-3)" }}>Photo or screenshot of the section from your catalogue. One section per picture.</div>
+            <label className="mt-2 inline-block cursor-pointer text-sm font-semibold" style={{ color: "var(--accent)" }}>
+              {shape ? "Use another picture" : "+ Add from photo"}
+              <input type="file" accept="image/*" hidden onChange={async (e) => {
+                const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+                setTraceMsg("Tracing…");
+                try { const p = await grayFromFile(f); setPic(p); runTrace(p, invert); } catch { setTraceMsg("Could not read this picture."); }
+              }} />
+            </label>
+          </div>
+        </div>
+        {traceMsg && <p className="mt-2 text-xs" style={{ color: shape && !traceMsg.includes("off") ? "var(--good)" : "var(--warn)" }}>{traceMsg}</p>}
+        {pic && (
+          <div className="mt-2 flex gap-3 text-xs font-semibold">
+            <button type="button" style={{ color: "var(--accent)" }} onClick={() => runTrace(pic, invert)}>Trace again with this size</button>
+            <button type="button" style={{ color: "var(--accent)" }} onClick={() => { setInvert(!invert); runTrace(pic, !invert); }}>Light drawing on dark</button>
+          </div>
+        )}
+        {shape && <button type="button" className="mt-2 text-xs font-semibold" style={{ color: "var(--bad)" }} onClick={() => { setShape(undefined); setPic(null); setTraceMsg(""); }}>Remove drawing</button>}
       </div>
       <Field label="Width seen from the front (mm)" hint="Optional. Used for the drawing. Empty = taken from the size.">
         <input className="field px-3 py-2.5" inputMode="decimal" value={face} onChange={(e) => setFace(e.target.value)} placeholder="auto" />
