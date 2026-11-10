@@ -1,0 +1,3 @@
+{ "catalogue": "E:/alu-tool/research/catalogue/new-series/26 MM.pdf", "out": "lib/studio/shapes/ample.json", "maker": "Ample", "pages": [
+ { "page": 2, "cells": [ null,{"code":"995389","w":85.8,"h":40},null,null,null,{"code":"992265","w":56,"h":26} ] },
+ { "page": 3, "cells": [ {"code":"992268","w":85.89,"h":20},{"code":"992266","w":56,"h":26},{"code":"992267","w":35.89,"h":20} ] } ] }

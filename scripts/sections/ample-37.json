@@ -1,0 +1,3 @@
+{ "catalogue": "E:/alu-tool/research/catalogue/new-series/37MM-37MM SLEEK.pdf", "out": "lib/studio/shapes/ample.json", "maker": "Ample", "pages": [
+ { "page": 2, "cells": [ {"code":"41016","w":109.9,"h":49.8},{"code":"41015","w":90,"h":53},{"code":"41014","w":140,"h":53},{"code":"41068","w":82.7,"h":37.01},{"code":"41076","w":82.7,"h":37.01},{"code":"41074","w":82.7,"h":37.01} ] },
+ { "page": 3, "cells": [ {"code":"41310","w":82.7,"h":37.01,"key":"41310-37"},{"code":"41083","w":15.77,"h":16.49,"key":"41083-37cap"},null,{"code":"41300","w":52.21,"h":57.1},{"code":"41069","w":52.21,"h":44.94},null ] } ] }

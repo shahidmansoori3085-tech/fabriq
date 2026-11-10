@@ -122,6 +122,8 @@ export interface ProfileDef {
   faceMm?: number;
   /** catalogue page it came from, shown with the section */
   ref?: string;
+  /** traced shape key when it differs from the code (one code printed on two profiles) */
+  shapeKey?: string;
   /** catalogue weight, exactly as printed */
   kg?: { value: number; perFt: number };
   /** bar lengths the shop buys, feet; first = default */

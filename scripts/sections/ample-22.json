@@ -1,0 +1,2 @@
+{ "catalogue": "E:/alu-tool/research/catalogue/new-series/22 MM.pdf", "out": "lib/studio/shapes/ample.json", "maker": "Ample", "pages": [
+ { "page": 2, "cells": [ {"code":"41084","w":83.9,"h":35},{"code":"41083","w":53.9,"h":35},{"code":"41082","w":55.8,"h":22},{"code":"41085","w":65,"h":22},{"code":"992134","w":16.2,"h":12.9},{"code":"41085","w":30.9,"h":26.2,"key":"41085-cap"} ] } ] }

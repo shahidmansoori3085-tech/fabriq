@@ -4,9 +4,47 @@
  * dimension lines. The shape is a clear guide by kind (track channels, sash
  * box with glass pocket, interlock hook…); the numbers are the catalogue's.
  */
+import { useId } from "react";
 import type { ProfileDef } from "../lib/studio/model";
+import { shapeOf, type Shape } from "../lib/studio/shapes";
 
 export default function SectionSketch({ p, tracks = 2 }: { p: ProfileDef | undefined; tracks?: number }) {
+  const real = shapeOf(p);
+  if (real) return <RealSection s={real} />;
+  return <GuideSketch p={p} tracks={tracks} />;
+}
+
+/** The section exactly as the catalogue draws it — traced, to scale, in mm. */
+function RealSection({ s }: { s: Shape }) {
+  const uid = useId().replace(/:/g, "");
+  const { w, h } = s;
+  const big = Math.max(w, h);
+  const pad = big * 0.3, fs = big / 9, lw = big / 160;
+  const check = s.scaleCheck > 4;
+  return (
+    <svg viewBox={`${-pad} ${-pad} ${w + pad * 2} ${h + pad * 2}`} className="h-full w-full" role="img" aria-label={`Section ${s.code}, ${w} by ${h} mm`}>
+      <defs>
+        <linearGradient id={`m${uid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#e9edf1" /><stop offset="0.5" stopColor="#c3cad2" /><stop offset="1" stopColor="#dfe4ea" />
+        </linearGradient>
+      </defs>
+      <rect x={-pad} y={-pad} width={w + pad * 2} height={h + pad * 2} fill="#f8fafc" />
+      <path d={s.paths.join("")} fill={`url(#m${uid})`} stroke="#3f4752" strokeWidth={lw} strokeLinejoin="round" fillRule="evenodd" />
+      <g stroke="#2563eb" strokeWidth={lw * 0.9} fill="#2563eb" fontSize={fs} fontFamily="ui-sans-serif, system-ui" fontWeight={600}>
+        <line x1={0} y1={h + pad * 0.45} x2={w} y2={h + pad * 0.45} />
+        <line x1={0} y1={h + pad * 0.3} x2={0} y2={h + pad * 0.6} /><line x1={w} y1={h + pad * 0.3} x2={w} y2={h + pad * 0.6} />
+        <text x={w / 2} y={h + pad * 0.45 + fs * 1.15} textAnchor="middle" stroke="none">{w}</text>
+        <line x1={w + pad * 0.45} y1={0} x2={w + pad * 0.45} y2={h} />
+        <line x1={w + pad * 0.3} y1={0} x2={w + pad * 0.6} y2={0} /><line x1={w + pad * 0.3} y1={h} x2={w + pad * 0.6} y2={h} />
+        <text transform={`translate(${w + pad * 0.45 + fs * 1.15} ${h / 2}) rotate(90)`} textAnchor="middle" stroke="none">{h}</text>
+      </g>
+      {check && <text x={-pad * 0.8} y={-pad * 0.35} fontSize={fs * 0.8} fill="#b45309" fontWeight={700}>check size</text>}
+    </svg>
+  );
+}
+
+/** A clear guide by kind, when the real shape has not been traced yet. */
+function GuideSketch({ p, tracks = 2 }: { p: ProfileDef | undefined; tracks?: number }) {
   const nums = (p?.size ?? "").split(/[×x*]/).map((s) => parseFloat(s)).filter((n) => n > 0);
   const known = nums.length === 2;
   const kind = p?.kind ?? "other";

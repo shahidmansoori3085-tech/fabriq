@@ -1,0 +1,3 @@
+{ "catalogue": "E:/alu-tool/research/catalogue/new-series/domal-section.pdf", "out": "lib/studio/shapes/ample.json", "maker": "Ample", "pages": [
+ { "page": 2, "cells": [ {"code":"214313","w":76,"h":45.51},{"code":"214314","w":45,"h":45},{"code":"214315","w":65.98,"h":25.99},{"code":"214318","w":95.11,"h":46.28},{"code":"214317","w":131,"h":45.48},{"code":"214319","w":117.7,"h":44.98} ] },
+ { "page": 3, "cells": [ {"code":"214340","w":117.7,"h":44.98},{"code":"214342","w":9.68,"h":7.1},{"code":"42054","w":130,"h":46} ] } ] }
