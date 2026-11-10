@@ -13,16 +13,31 @@ import {
 } from "../../lib/studio/store";
 import { SYSTEM_STATUS, type StudioUnit } from "../../lib/studio/format";
 import StudioEditor, { nextStep, ProfileForm } from "../../components/studio-editor";
-import { Badge, Seg, Sheet, SectionTitle, SlidingThumb } from "../../components/studio-ui";
+import { Badge, Seg, Sheet, SectionTitle } from "../../components/studio-ui";
+import WindowDrawing from "../../components/studio-drawing";
+import { windowGeometry } from "../../lib/studio/geometry";
+import { findProfile } from "../../lib/studio/store";
+import { inches } from "../../lib/engine/units";
 
 type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string } | { kind: "sections" };
 const UNIT_KEY = "fabriq_studio_unit";
 
-const GROUPS: { title: string; sub: string; ids: string[] }[] = [
-  { title: "Ready to use", sub: "Checked on real jobs. Change anything you do differently.", ids: ["normal-18", "domal-27"] },
-  { title: "Series drafts", sub: "Parts are set. Some cuts come from shop videos, the rest you teach.", ids: ["domal-35", "normal-25", "normal-5t", "ample-22"] },
-  { title: "Start from nothing", sub: "Any other series: sleek 29 / 31 / 37, Gulf, mini domal…", ids: ["blank-sliding", "blank-domal-type"] },
+const GROUPS: { id: NonNullable<StudioSystem["group"]>; title: string; sub: string }[] = [
+  { id: "ready", title: "Ready to use", sub: "Checked on real jobs. Change anything your shop does differently." },
+  { id: "domal", title: "Domal type", sub: "One shutter profile goes round. Sections from the catalogues; cuts you teach." },
+  { id: "sleek", title: "Sleek and slim interlock", sub: "Interlock or slim interlock picked shutter by shutter." },
+  { id: "bombay", title: "Bombay type", sub: "Handle, interlock and bearing shutters." },
+  { id: "gulf", title: "Gulf", sub: "Separate bottom track, 90° screwed frame." },
+  { id: "special", title: "Special", sub: "" },
+  { id: "blank", title: "Start from nothing", sub: "Any other series — choose every section yourself." },
 ];
+
+/** A small, real drawing of a system (first layout, 5′ × 4′). */
+function Thumb({ sys, lib }: { sys: StudioSystem; lib: StudioLibrary }) {
+  const lay = sys.layouts[0];
+  const g = windowGeometry(sys, { id: "T", W: inches(60), H: inches(48), qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" }, (id) => findProfile(lib, id));
+  return <WindowDrawing g={g} unit="in" pick={null} compact />;
+}
 
 export default function StudioPage() {
   const [lib, setLib] = useState<StudioLibrary | null>(null);
@@ -78,7 +93,7 @@ export default function StudioPage() {
           }}
           onDelete={() => { commit({ ...lib, systems: lib.systems.filter((s) => s.id !== current.id) }); setView({ kind: "home" }); }} />
       ) : view.kind === "new" ? (
-        <NewSystem onPick={create} onBack={() => setView({ kind: "home" })} />
+        <NewSystem lib={lib} onPick={create} onBack={() => setView({ kind: "home" })} />
       ) : view.kind === "sections" ? (
         <Sections lib={lib} onSave={addProfile}
           onRemove={(id) => commit({ ...lib, profiles: lib.profiles.filter((p) => p.id !== id) })}
@@ -106,11 +121,10 @@ export default function StudioPage() {
             {lib.systems.map((s) => {
               const st = SYSTEM_STATUS[s.status];
               const n = nextStep(s);
-              const mix = s.layouts[0]?.mixes[0] ?? "GG";
               return (
                 <button key={s.id} onClick={() => { setView({ kind: "system", id: s.id }); window.scrollTo({ top: 0 }); }}
                   className="card flex items-center gap-3 p-3 text-left">
-                  <span className="h-12 w-[72px] shrink-0"><SlidingThumb mix={mix} domal={s.family === "domal-type"} /></span>
+                  <span className="w-[76px] shrink-0"><Thumb sys={s} lib={lib} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate font-bold">{s.name}</span>
@@ -154,33 +168,32 @@ export default function StudioPage() {
   );
 }
 
-function NewSystem({ onPick, onBack }: { onPick: (id: string) => void; onBack: () => void }) {
+function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: string) => void; onBack: () => void }) {
   return (
     <>
       <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← My systems</button>
       <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">New system</h1>
-      <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Pick the closest one. You can change every piece, section and cut after.</p>
-      {GROUPS.map((g) => (
-        <div key={g.title}>
-          <SectionTitle>{g.title}</SectionTitle>
-          <p className="-mt-1 mb-2 text-xs" style={{ color: "var(--ink-3)" }}>{g.sub}</p>
-          <div className="flex flex-col gap-2">
-            {g.ids.map((id) => {
-              const t = TEMPLATES.find((x) => x.id === id)!;
-              return (
-                <button key={id} onClick={() => onPick(id)} className="card flex items-center gap-3 p-3 text-left">
-                  <span className="h-12 w-[72px] shrink-0"><SlidingThumb mix={t.layouts[0]?.mixes[0] ?? "GG"} domal={t.family === "domal-type"} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-bold">{t.name}</span>
-                    <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{t.blurb}</span>
-                  </span>
-                  <span aria-hidden style={{ color: "var(--accent)" }}>＋</span>
+      <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Pick the closest one. Every piece, section, angle and cut can be changed after.</p>
+      {GROUPS.map((g) => {
+        const list = TEMPLATES.filter((t) => t.group === g.id);
+        if (!list.length) return null;
+        return (
+          <div key={g.id}>
+            <SectionTitle>{g.title}</SectionTitle>
+            {g.sub && <p className="-mt-1 mb-2 text-xs" style={{ color: "var(--ink-3)" }}>{g.sub}</p>}
+            <div className="grid grid-cols-2 gap-2">
+              {list.map((t) => (
+                <button key={t.id} onClick={() => onPick(t.id)} className="card flex flex-col gap-2 p-2.5 text-left">
+                  <span className="block rounded-lg p-1.5" style={{ background: "var(--surface-2)" }}><Thumb sys={t} lib={lib} /></span>
+                  <span className="block text-sm font-bold leading-tight">{t.name}</span>
+                  <span className="block text-[11px] leading-snug" style={{ color: "var(--ink-3)" }}>{t.blurb}</span>
+                  {t.maker && <span className="mt-auto self-start rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{t.maker} sections</span>}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }

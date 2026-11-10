@@ -73,7 +73,20 @@ export interface PartDef {
   when?: Cond;
   /** false = the shop does not use this part (kept, so it can be ticked back) */
   enabled?: boolean;
+  /** where the piece sits in the window — drives the drawing */
+  place?: Place;
+  /** true = the shop picks this part's section per SHUTTER (e.g. slim interlock small on one, big on another) */
+  perShutter?: boolean;
 }
+
+/**
+ * Where a piece sits, seen from the front. Sash places are per shutter:
+ * "sash-lock" is the outer (handle) stile, "sash-meet" the stile at the meeting.
+ */
+export type Place =
+  | "frame-top" | "frame-bottom" | "frame-left" | "frame-right"
+  | "sash-top" | "sash-bottom" | "sash-lock" | "sash-meet"
+  | "meeting" | "other";
 
 /** What a section is used as — filters the section picker for each part. */
 export type ProfileKind =
@@ -105,6 +118,10 @@ export interface ProfileDef {
   /** catalogue code(s), e.g. { omeo: "2051" } — shop's own code under "shop" */
   codes?: Record<string, string>;
   size?: string;          // "45×45"
+  /** width seen from the front of the window, mm (for the drawing); derived from size when unset */
+  faceMm?: number;
+  /** catalogue page it came from, shown with the section */
+  ref?: string;
   /** catalogue weight, exactly as printed */
   kg?: { value: number; perFt: number };
   /** bar lengths the shop buys, feet; first = default */
@@ -132,6 +149,10 @@ export interface StudioSystem {
   family: SystemFamily;
   /** one line the shop recognises: "27×65 domal, one profile all 4 sides" */
   blurb: string;
+  /** where the New-system screen lists it */
+  group?: "ready" | "bombay" | "domal" | "sleek" | "gulf" | "special" | "blank";
+  /** maker of the sections in this draft, when it is one catalogue's set */
+  maker?: string;
   version: number;
   status: SystemStatus;
   /** template id + version this was copied from */

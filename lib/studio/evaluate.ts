@@ -17,6 +17,8 @@ export interface StudioJob {
   /** one letter per shutter, left to right: G glass, J mesh, S sheet */
   mix: string;
   switches?: Record<string, string>;
+  /** choices made on one shutter only, left to right (e.g. which slim interlock) */
+  perShutter?: Record<string, string>[];
   /** label text for the cut list ("6'0×4'0"); optional */
   sizeLabel?: string;
 }
@@ -124,7 +126,10 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     ...(kinds.length ? [sys.infill.w, sys.infill.h] : []),
   ]);
   const len = (id: string) => values[id] ?? 0;
-  const profileFor = (p: (typeof parts)[number]) => (p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1])?.id ?? "";
+  const profileFor = (p: (typeof parts)[number], shutter?: number) => {
+    const v = shutter !== undefined && job.perShutter?.[shutter] ? { ...vars, ...job.perShutter[shutter] } : vars;
+    return (p.profile.find((x) => matches(x.when, v)) ?? p.profile[p.profile.length - 1])?.id ?? "";
+  };
   const missing = [...needed].filter((id) => values[id] === null || values[id] === undefined)
     .map((id) => trace.find((t) => t.id === id)?.label ?? id);
   // a part with no section chosen cannot be bought or packed
@@ -145,7 +150,7 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     }
     kinds.forEach((kind, i) => {
       for (const p of parts.filter((x) => x.scope === "shutter")) {
-        const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p);
+        const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p, i);
         const role = p.role.replace("{s}", `S${i + 1}`).replace("{tag}", kind === "jali" ? " (Mesh)" : "");
         for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);
       }

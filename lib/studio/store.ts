@@ -27,12 +27,22 @@ export function loadLibrary(): StudioLibrary {
   try {
     const raw = localStorage.getItem(KEY);
     const lib = raw ? JSON.parse(raw) : EMPTY;
-    const out = valid(lib) ? lib : EMPTY;
+    const out = valid(lib) ? { ...lib, systems: lib.systems.map(migrate) } : EMPTY;
     registerProfiles(out.profiles);
     return out;
   } catch {
     return EMPTY;
   }
+}
+
+/** Systems saved before pieces had a place in the drawing get one from their template. */
+function migrate(sys: StudioSystem): StudioSystem {
+  if (sys.parts.every((p) => p.place)) return sys;
+  const tpl = TEMPLATES.find((t) => t.id === sys.basedOn?.id);
+  return {
+    ...sys,
+    parts: sys.parts.map((p) => (p.place ? p : { ...p, place: tpl?.parts.find((x) => x.id === p.id)?.place ?? "other" })),
+  };
 }
 
 export function saveLibrary(lib: StudioLibrary): void {

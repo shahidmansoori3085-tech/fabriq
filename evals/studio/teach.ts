@@ -77,7 +77,7 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
 
   const cuts = (W: number, H: number) => ({
     frameTop: W, frameLeft: H,
-    shutterTop: Math.round(W / 2) - 4 * SUT, shutterLeft: H - 20 * SUT,
+    shutterTop: Math.round(W / 2) - 4 * SUT, shutterLock: H - 20 * SUT,
   });
   const g = (W: number, H: number) => ({ w: Math.round(W / 2) - 4 * SUT - 28 * SUT, h: H - 20 * SUT - 28 * SUT });
   const t = teach(AMPLE_22, job({ W: 48 * IN, H: 48 * IN, tracks: 2, mix: "GG", measured: cuts(48 * IN, 48 * IN), glass: g(48 * IN, 48 * IN) }));
@@ -101,6 +101,14 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
   expect(Math.abs(v("shutterW").value! - 29.8125 * IN) <= 1, "35×75 2-track width (W − ⅜″) ÷ 2");
   const r4 = evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" }, { allowUnknown: true });
   expect(r4.pieces.filter((p) => /Interlock/.test(p.role)).length === 4, "3+1: 2 glass meetings × 2 patti");
+}
+
+// 6c. One window, two interlocks: small on one shutter, slim on the next.
+{
+  const a29 = TEMPLATES.find((t) => t.id === "ample-29")!;
+  const r = evaluate(a29, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", perShutter: [{}, { pick_shutterMeet: "a29_slim" }] }, { allowUnknown: true });
+  const meet = r.pieces.filter((p) => /Interlock/.test(p.role)).map((p) => `${p.role}:${p.sectionId}`);
+  expect(meet.join(",") === "S1 Interlock:a29_interlock,S2 Interlock:a29_slim", `per-shutter interlock: ${meet.join(",")}`);
 }
 
 // 7. Every template is well-formed: sizes only use W, H or an earlier size;
