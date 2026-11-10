@@ -341,11 +341,11 @@ function trace(m: Manifest) {
       continue;
     }
     if (m.style === "cad-red" || m.style === "dark-fill") {
-      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.filter(Boolean).length, m.style, m.skipTop ?? 0.16);
-      let k = 0;
-      pg.cells.forEach((c) => {
+      // every drawing on the page is found (in reading order); null cells are skipped
+      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, m.skipTop ?? 0.16);
+      pg.cells.forEach((c, i) => {
         if (!c) return;
-        const r = found[k++];
+        const r = found[i];
         if (!r) { problems.push(`${c.code}: not found on page ${pg.page}`); return; }
         save(c, r, pg.page);
       });

@@ -442,6 +442,69 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
   notes: ["Section names are printed in the Alucoat catalogue. Gulf shops differ on which piece runs full length — teach from one window."],
 }), "interlock", ["at_clip", "at_dbl"]);
 
+/* ———————————————— Casement / Z-section (verified) ———————————————— */
+// Founder-verified Z rules (engine, docs/09): sight line 40 mm on frame and Z-pipe,
+// sash laps 5 mm onto the frame / mullion on every side (+10 mm), glass 5 mm
+// smaller than its pocket on every side, mullion takes 20 mm from each sash.
+const Z_SIZES: SizeDef[] = [
+  size("frameW", "Outer top / bottom", rule("W", 0, FOUNDER("outer frame full width, 45°"))),
+  size("frameH", "Outer sides", rule("H", 0, FOUNDER("outer frame full height, 45°"))),
+  size("sashW", "Sash width",
+    rule("W", mm(10), FOUNDER("1 sash: W − 80 + 10 mm overlap"), { when: { shutters: "1" }, pre: -mm(80) }),
+    rule("W", mm(10), FOUNDER("2 sashes: (W − 80 − 40) ÷ 2 + 10"), { when: { shutters: "2" }, pre: -mm(120), den: 2 }),
+    rule("W", mm(10), FOUNDER("3 sashes: (W − 80 − 80) ÷ 3 + 10"), { when: { shutters: "3" }, pre: -mm(160), den: 3 }),
+    rule("W", mm(10), FOUNDER("4 sashes: (W − 80 − 120) ÷ 4 + 10"), { when: { shutters: "4" }, pre: -mm(200), den: 4 })),
+  size("sashH", "Sash height", rule("H", -mm(70), FOUNDER("H − 80 + 10 mm overlap"))),
+  size("mullionH", "Mullion", rule("H", -mm(80), FOUNDER("between outer top and bottom: H − 2 × 40"))),
+  size("pocketW", "Glass pocket width (clip)", rule("sashW", -mm(80), FOUNDER("sash − 2 × 40"))),
+  size("pocketH", "Glass pocket height (clip)", rule("sashH", -mm(80), FOUNDER("sash − 2 × 40"))),
+  size("glassW", "Glass width", rule("pocketW", -mm(10), FOUNDER("pocket − 5 mm each side"))),
+  size("glassH", "Glass height", rule("pocketH", -mm(10), FOUNDER("pocket − 5 mm each side"))),
+];
+
+function zSystem(id: string, name: string, outer: string, pipe: string, center: string, blurb: string): StudioSystem {
+  return {
+    id, name, family: "casement", group: "casement", maker: "OMEO", blurb, version: 1, status: "verified",
+    layouts: [{ tracks: 1, mixes: ["G", "J"] }, { tracks: 2, mixes: ["GG", "GJ"] }, { tracks: 3, mixes: ["GGG"] }, { tracks: 4, mixes: ["GGGG"] }],
+    switches: [],
+    profiles: [
+      prof("z_outer_40", "Z Outer Frame 40×40", "frame", { omeo: "2076" }, "40×40", { value: 2.37, perFt: 15 }, CATALOGUE("OMEO 2076")),
+      prof("z_outer_55", "Z Outer Frame 40×55", "frame", { omeo: "2088" }, "55.6×40.4", { value: 2.81, perFt: 12 }, CATALOGUE("OMEO 2088"), { faceMm: 40 }),
+      prof("z_pipe_40", "Z-Pipe (sash) 40×40", "shutter", { omeo: "2077" }, "40×40", { value: 3.094, perFt: 15 }, CATALOGUE("OMEO 2077")),
+      prof("z_pipe_55", "Z-Pipe (sash) 40×55", "shutter", { napl: "20610" }, "55.6×40.2", undefined, CATALOGUE("NAPL 20610"), { faceMm: 40 }),
+      prof("z_center_55", "Z Center / Mullion 40×55", "mullion", { omeo: "2086" }, "54.3×40.3", { value: 3.275, perFt: 12 }, CATALOGUE("OMEO 2086"), { faceMm: 40 }),
+      prof("z_center_70", "Z Center / Mullion 40×70", "mullion", { omeo: "2079" }, "70.6×40.4", { value: 3.18, perFt: 12 }, CATALOGUE("OMEO 2079"), { faceMm: 40 }),
+      prof("z_clip", "Z Glazing Clip", "bead", { omeo: "2078" }, "22.2×17.9", { value: 0.755, perFt: 12 }, CATALOGUE("OMEO 2078")),
+    ].filter((p) => [outer, pipe, center, "z_clip"].includes(p.id)),
+    sizes: Z_SIZES,
+    parts: [
+      part("outerTop", "Outer Top", outer, "window", "frameW", 45, "frame-top"),
+      part("outerBottom", "Outer Bottom", outer, "window", "frameW", 45, "frame-bottom"),
+      part("outerLeft", "Outer Left", outer, "window", "frameH", 45, "frame-left"),
+      part("outerRight", "Outer Right", outer, "window", "frameH", 45, "frame-right"),
+      part("mullion", "Mullion {k}", center, "between", "mullionH", 90, "mullion"),
+      part("sashTop", "{s} Shutter Top{tag}", pipe, "shutter", "sashW", 45, "sash-top"),
+      part("sashBottom", "{s} Shutter Bottom{tag}", pipe, "shutter", "sashW", 45, "sash-bottom"),
+      part("sashLeft", "{s} Shutter Left{tag}", pipe, "shutter", "sashH", 45, "sash-lock"),
+      part("sashRight", "{s} Shutter Right{tag}", pipe, "shutter", "sashH", 45, "sash-meet"),
+      part("clipTop", "{s} Clip Top", "z_clip", "shutter", "pocketW", 90, "other", { onlyGlass: true }),
+      part("clipBottom", "{s} Clip Bottom", "z_clip", "shutter", "pocketW", 90, "other", { onlyGlass: true }),
+      part("clipLeft", "{s} Clip Left", "z_clip", "shutter", "pocketH", 90, "other", { onlyGlass: true }),
+      part("clipRight", "{s} Clip Right", "z_clip", "shutter", "pocketH", 90, "other", { onlyGlass: true }),
+    ],
+    infill: { w: "glassW", h: "glassH" },
+    extras: [],
+    wastagePct: 5,
+    jobs: [],
+    notes: ["Openable sashes on friction stays. Hardware is not in the list (founder scope)."],
+  };
+}
+
+export const Z_40 = zSystem("z-40", "Z-section 40 (casement)", "z_outer_40", "z_pipe_40", "z_center_55",
+  "Openable windows: Z outer frame and Z-pipe sash at 45°, center mullion between sashes, glass held by clip");
+export const Z_55 = zSystem("z-55", "Z-section 55 heavy (casement)", "z_outer_55", "z_pipe_55", "z_center_70",
+  "Large windows and doors: heavy Z frame, Z-pipe and 70 mm center");
+
 /* ———————————————— blanks ———————————————— */
 
 export const BLANK_DOMAL_TYPE: StudioSystem = base({
@@ -474,6 +537,7 @@ export const TEMPLATES: StudioSystem[] = [
   AMPLE_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37, BH_31,
   GULF_S30, GULF,
+  Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
 
@@ -484,6 +548,9 @@ export const PART_KIND: Record<string, ProfileKind> = {
   frameTop: "frame", frameLeft: "frame", frameRight: "frame", frameBottom: "frame",
   shutterTop: "shutter", shutterBottom: "shutter", shutterLeft: "shutter", shutterRight: "shutter",
   shutterLock: "shutter", shutterMeet: "interlock",
+  outerTop: "frame", outerBottom: "frame", outerLeft: "frame", outerRight: "frame", mullion: "mullion",
+  sashTop: "shutter", sashBottom: "shutter", sashLeft: "shutter", sashRight: "shutter",
+  clipTop: "bead", clipBottom: "bead", clipLeft: "bead", clipRight: "bead",
 };
 
 /** Every built-in section, once — the starting section library. */

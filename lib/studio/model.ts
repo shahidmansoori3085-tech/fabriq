@@ -53,7 +53,8 @@ export interface SizeDef {
 export type PartScope =
   | "window"        // once per window
   | "shutter"       // once per shutter (glass and mesh)
-  | "meeting";      // once per place two GLASS shutters meet
+  | "meeting"       // once per place two GLASS shutters meet
+  | "between";      // once between every two shutters / sashes (casement mullion)
 
 export interface PartDef {
   id: string;
@@ -75,6 +76,8 @@ export interface PartDef {
   enabled?: boolean;
   /** where the piece sits in the window — drives the drawing */
   place?: Place;
+  /** cut only for glass shutters (glazing clip) */
+  onlyGlass?: boolean;
   /** true = the shop picks this part's section per SHUTTER (e.g. slim interlock small on one, big on another) */
   perShutter?: boolean;
   /** draw / build the section turned the other way round (its face mirrored) */
@@ -88,7 +91,7 @@ export interface PartDef {
 export type Place =
   | "frame-top" | "frame-bottom" | "frame-left" | "frame-right"
   | "sash-top" | "sash-bottom" | "sash-lock" | "sash-meet"
-  | "meeting" | "other";
+  | "meeting" | "mullion" | "other";
 
 /** What a section is used as — filters the section picker for each part. */
 export type ProfileKind =
@@ -144,7 +147,7 @@ export interface SwitchDef {
   default: string;
 }
 
-export type SystemFamily = "sliding" | "domal-type";
+export type SystemFamily = "sliding" | "domal-type" | "casement";
 export type SystemStatus = "draft" | "teaching" | "checked" | "verified";
 
 export interface StudioSystem {
@@ -154,7 +157,7 @@ export interface StudioSystem {
   /** one line the shop recognises: "27×65 domal, one profile all 4 sides" */
   blurb: string;
   /** where the New-system screen lists it */
-  group?: "ready" | "bombay" | "domal" | "sleek" | "gulf" | "special" | "blank";
+  group?: "ready" | "bombay" | "domal" | "sleek" | "gulf" | "casement" | "special" | "blank";
   /** maker of the sections in this draft, when it is one catalogue's set */
   maker?: string;
   version: number;

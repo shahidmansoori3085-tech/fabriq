@@ -28,6 +28,7 @@ const GROUPS: { id: NonNullable<StudioSystem["group"]>; title: string; sub: stri
   { id: "sleek", title: "Sleek and slim interlock", sub: "Interlock or slim interlock picked shutter by shutter." },
   { id: "bombay", title: "Bombay type", sub: "Handle, interlock and bearing shutters." },
   { id: "gulf", title: "Gulf", sub: "Separate bottom track, 90° screwed frame." },
+  { id: "casement", title: "Casement / Z-section", sub: "Openable sashes on friction stays." },
   { id: "special", title: "Special", sub: "" },
   { id: "blank", title: "Start from nothing", sub: "Any other series — choose every section yourself." },
 ];

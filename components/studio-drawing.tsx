@@ -56,6 +56,49 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
   // back tracks first, so the front shutter laps over the one behind it
   const order = [...g.shutters].sort((a, b) => b.track - a.track || a.index - b.index);
 
+  // sliding shutters are clipped to the opening (they run behind the frame);
+  // casement sashes lap over the frame and are drawn on top of it
+  const shuttersEl = (
+      <g clipPath={compact || g.casement ? undefined : `url(#${id("opening")})`}>
+        {order.map((s) => (
+          <g key={s.index} onClick={tap({ type: "shutter", index: s.index })} style={{ cursor: onPick ? "pointer" : undefined }}>
+            <rect x={s.pane.x} y={s.pane.y} width={s.pane.w} height={s.pane.h}
+              fill={s.kind === "J" ? `url(#${id("mesh")})` : s.kind === "S" ? "#d6d3d1" : `url(#${id("glass")})`} />
+            {s.kind === "G" && (
+              <g pointerEvents="none" stroke="#ffffff" strokeOpacity={0.75} strokeLinecap="round">
+                <line x1={s.pane.x + s.pane.w * 0.18} y1={s.pane.y + s.pane.h * 0.42} x2={s.pane.x + s.pane.w * 0.42} y2={s.pane.y + s.pane.h * 0.16} strokeWidth={big / 260} />
+                <line x1={s.pane.x + s.pane.w * 0.26} y1={s.pane.y + s.pane.h * 0.5} x2={s.pane.x + s.pane.w * 0.5} y2={s.pane.y + s.pane.h * 0.24} strokeWidth={big / 520} />
+              </g>
+            )}
+            {g.casement && s.hinge && !compact && (() => {
+              const hx = s.hinge === "left" ? s.pane.x : s.pane.x + s.pane.w, ox = s.hinge === "left" ? s.pane.x + s.pane.w : s.pane.x;
+              return <polyline points={`${hx},${s.pane.y} ${ox},${s.pane.y + s.pane.h / 2} ${hx},${s.pane.y + s.pane.h}`} fill="none" stroke="#475569" strokeWidth={1} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" pointerEvents="none" />;
+            })()}
+            {isShutter(s.index) && <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="var(--accent)" fillOpacity={0.12} stroke="var(--accent)" strokeWidth={2.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+            {g.sash.filter((m) => m.shutter === s.index).map((m, k) => memberEl(m, `s${s.index}-${k}`))}
+            {g.sash.filter((m) => m.shutter === s.index).map((m, k) => glow(m, `sg${s.index}-${k}`))}
+            {g.patti.filter((m) => m.shutter === s.index).map((m, k) => (
+              <g key={`p${k}`}>
+                <polygon points={pts(m.poly)} fill="#9aa3ad" stroke={isPart(m) ? "var(--accent)" : "#5f6874"} strokeWidth={isPart(m) ? 2.2 : 0.6} vectorEffect="non-scaling-stroke"
+                  onClick={tap({ type: "part", id: m.partId })} style={{ cursor: onPick ? "pointer" : undefined }} />
+                {glow(m, `pg${k}`)}
+              </g>
+            ))}
+            {/* handle on the lock stile */}
+            {!compact && (() => {
+              const lockM = g.sash.find((m) => m.shutter === s.index && m.place === "sash-lock");
+              if (!lockM) return null;
+              const xs = lockM.poly.map((p) => p[0]);
+              const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = s.y + s.h / 2;
+              const hw = Math.max(6, (Math.max(...xs) - Math.min(...xs)) * 0.32);
+              return <rect x={cx - hw / 2} y={cy - big / 40} width={hw} height={big / 20} rx={hw / 2} fill="#4b5563" pointerEvents="none" />;
+            })()}
+          </g>
+        ))}
+      </g>
+
+  );
+
   return (
     <svg viewBox={vb} className="block h-auto w-full select-none" role="img"
       aria-label={`Window ${fmtLen(W * 1000, unit)} by ${fmtLen(H * 1000, unit)}`} onClick={() => onPick?.(null)}>
@@ -83,47 +126,15 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
       {/* wall opening shadow */}
       <rect x={0} y={0} width={W} height={H} fill="#e5e7eb" />
 
-      {/* shutters, clipped to what shows inside the frame (they run behind it) */}
-      <g clipPath={compact ? undefined : `url(#${id("opening")})`}>
-        {order.map((s) => (
-          <g key={s.index} onClick={tap({ type: "shutter", index: s.index })} style={{ cursor: onPick ? "pointer" : undefined }}>
-            <rect x={s.pane.x} y={s.pane.y} width={s.pane.w} height={s.pane.h}
-              fill={s.kind === "J" ? `url(#${id("mesh")})` : s.kind === "S" ? "#d6d3d1" : `url(#${id("glass")})`} />
-            {s.kind === "G" && (
-              <g pointerEvents="none" stroke="#ffffff" strokeOpacity={0.75} strokeLinecap="round">
-                <line x1={s.pane.x + s.pane.w * 0.18} y1={s.pane.y + s.pane.h * 0.42} x2={s.pane.x + s.pane.w * 0.42} y2={s.pane.y + s.pane.h * 0.16} strokeWidth={big / 260} />
-                <line x1={s.pane.x + s.pane.w * 0.26} y1={s.pane.y + s.pane.h * 0.5} x2={s.pane.x + s.pane.w * 0.5} y2={s.pane.y + s.pane.h * 0.24} strokeWidth={big / 520} />
-              </g>
-            )}
-            {isShutter(s.index) && <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="var(--accent)" fillOpacity={0.12} stroke="var(--accent)" strokeWidth={2.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
-            {g.sash.filter((m) => m.shutter === s.index).map((m, k) => memberEl(m, `s${s.index}-${k}`))}
-            {g.sash.filter((m) => m.shutter === s.index).map((m, k) => glow(m, `sg${s.index}-${k}`))}
-            {g.patti.filter((m) => m.shutter === s.index).map((m, k) => (
-              <g key={`p${k}`}>
-                <polygon points={pts(m.poly)} fill="#9aa3ad" stroke={isPart(m) ? "var(--accent)" : "#5f6874"} strokeWidth={isPart(m) ? 2.2 : 0.6} vectorEffect="non-scaling-stroke"
-                  onClick={tap({ type: "part", id: m.partId })} style={{ cursor: onPick ? "pointer" : undefined }} />
-                {glow(m, `pg${k}`)}
-              </g>
-            ))}
-            {/* handle on the lock stile */}
-            {!compact && (() => {
-              const lockM = g.sash.find((m) => m.shutter === s.index && m.place === "sash-lock");
-              if (!lockM) return null;
-              const xs = lockM.poly.map((p) => p[0]);
-              const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = s.y + s.h / 2;
-              const hw = Math.max(6, (Math.max(...xs) - Math.min(...xs)) * 0.32);
-              return <rect x={cx - hw / 2} y={cy - big / 40} width={hw} height={big / 20} rx={hw / 2} fill="#4b5563" pointerEvents="none" />;
-            })()}
-          </g>
-        ))}
-      </g>
-
+      {!g.casement && shuttersEl}
       {/* frame on top */}
       {g.frame.map((m, k) => memberEl(m, `f${k}`))}
       {g.frame.map((m, k) => glow(m, `fg${k}`))}
+      {/* casement sashes lap over the frame */}
+      {g.casement && shuttersEl}
 
       {/* rollers, seen through the bottom track */}
-      {!compact && g.shutters.map((s) => [0.16, 0.84].map((f, k) => (
+      {!compact && !g.casement && g.shutters.map((s) => [0.16, 0.84].map((f, k) => (
         <circle key={`r${s.index}${k}`} cx={s.x + s.w * f} cy={H - g.faces.bottom / 2} r={Math.max(4, g.faces.bottom * 0.22)}
           fill="none" stroke="#6b7280" strokeWidth={0.8} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
       )))}
@@ -135,7 +146,7 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
           <Dim x1={-pad * 0.45} y1={0} x2={-pad * 0.45} y2={H} label={fmtLen(H * 1000, unit)} fs={fs} vertical />
           {g.sizesKnown && g.shutters.length > 0 && (
             <Dim x1={g.shutters[0].x} y1={H + pad * 0.42} x2={g.shutters[0].x + g.shutters[0].w} y2={H + pad * 0.42}
-              label={`Shutter ${fmtLen(g.shutterW * 1000, unit)}`} fs={fs * 0.85} muted />
+              label={`${g.casement ? "Sash" : "Shutter"} ${fmtLen(g.shutterW * 1000, unit)}`} fs={fs * 0.85} muted />
           )}
           {g.sizesKnown && g.shutters.length > 0 && (
             <Dim x1={W + pad * 0.45} y1={g.shutters[0].y} x2={W + pad * 0.45} y2={g.shutters[0].y + g.shutters[0].h}

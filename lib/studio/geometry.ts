@@ -39,6 +39,8 @@ export interface ShutterGeo {
   /** glass / mesh opening */
   pane: { x: number; y: number; w: number; h: number };
   lockSide: "left" | "right";
+  /** casement: the side it is hinged on */
+  hinge?: "left" | "right";
   track: number;
 }
 
@@ -53,6 +55,8 @@ export interface WindowGeo {
   shutterW: number; shutterH: number;
   /** shutter sizes came from the system's rules (false = estimated for the picture) */
   sizesKnown: boolean;
+  /** openable (casement): sashes lap over the frame and open on hinges */
+  casement: boolean;
 }
 
 const TYPICAL: Record<string, number> = { frame: 45, sash: 55, patti: 9 };
@@ -70,7 +74,7 @@ export function faceOf(p: ProfileDef | undefined, role: "frame" | "sash" | "patt
 }
 
 const placeRole = (pl: Place | undefined): "frame" | "sash" | "patti" =>
-  pl?.startsWith("frame") ? "frame" : pl === "meeting" ? "patti" : "sash";
+  pl?.startsWith("frame") || pl === "mullion" ? "frame" : pl === "meeting" ? "patti" : "sash";
 
 export function profileOf(sys: StudioSystem, part: PartDef, vars: Record<string, string>, extra?: Record<string, string>): string {
   const v = extra ? { ...vars, ...extra } : vars;
@@ -122,7 +126,8 @@ export function windowGeometry(
   const mix = [...job.mix] as ("G" | "J" | "S")[];
   const n = Math.max(1, mix.length);
   const innerW = W - l - r, innerH = H - t - b;
-  const svW = values.shutterW ?? null, svH = values.shutterH ?? null;
+  const casement = sys.family === "casement";
+  const svW = (casement ? values.sashW : values.shutterW) ?? null, svH = (casement ? values.sashH : values.shutterH) ?? null;
   const sizesKnown = svW != null && svH != null;
   // A shutter runs a little into the frame on every side; when its size is
   // not taught yet the picture uses a typical overlap.
@@ -133,11 +138,23 @@ export function windowGeometry(
 
   const shutters: ShutterGeo[] = [];
   const sash: Member[] = [];
+  // casement: the opening is split into cells by mullions; each sash laps over its cell
+  const fM = face("mullion");
+  const mF = fM.part ? fM.mm || 40 : 0;
+  const cellW = (innerW - (n - 1) * mF) / n;
+  if (casement && fM.part) {
+    for (let i = 0; i < n - 1; i++) {
+      const mx = l + (i + 1) * cellW + i * mF;
+      frame.push({ partId: fM.part.id, place: "mullion", poly: [[mx, t], [mx + mF, t], [mx + mF, H - b], [mx, H - b]], known: fM.known, vertical: true,
+        stops: fM.stops, axis: [mx, 0, mx + mF, 0], shape: fM.shape, flip: fM.part.flipSection, angle: 90, face: mF, depth: fM.depth });
+    }
+  }
   for (let i = 0; i < n; i++) {
-    const x = n === 1 ? (W - shutterW) / 2 : x0 + (i * (x1 - x0 - shutterW)) / (n - 1);
+    const x = casement ? l + i * (cellW + mF) - (shutterW - cellW) / 2 : n === 1 ? (W - shutterW) / 2 : x0 + (i * (x1 - x0 - shutterW)) / (n - 1);
     const y = (H - shutterH) / 2;
     const w = shutterW, h = shutterH;
-    const lockSide: "left" | "right" = x + w / 2 < W / 2 ? "left" : "right";
+    const hinge: "left" | "right" = n === 1 || i < n / 2 ? "left" : "right";
+    const lockSide: "left" | "right" = casement ? (hinge === "left" ? "right" : "left") : x + w / 2 < W / 2 ? "left" : "right";
     const sT = face("sash-top", i), sB = face("sash-bottom", i), sL0 = face("sash-lock", i), sM0 = face("sash-meet", i);
     const left = lockSide === "left" ? sL0 : sM0, right = lockSide === "left" ? sM0 : sL0;
     const st = sT.mm || 50, sb = sB.mm || st, sl = left.mm || st, sr = right.mm || st;
@@ -156,7 +173,7 @@ export function windowGeometry(
       push(sB, [[x + sl, y + h - sb], [x + w - sr, y + h - sb], [x + w - sr, y + h], [x + sl, y + h]], false, [0, y + h, 0, y + h - sb]);
     }
     shutters.push({
-      index: i, kind: mix[i] ?? "G", x, y, w, h, lockSide, track: i % Math.max(1, job.tracks),
+      index: i, kind: mix[i] ?? "G", x, y, w, h, lockSide, hinge: casement ? hinge : undefined, track: casement ? 0 : i % Math.max(1, job.tracks),
       pane: { x: x + sl, y: y + st, w: Math.max(1, w - sl - sr), h: Math.max(1, h - st - sb) },
     });
   }
@@ -176,5 +193,5 @@ export function windowGeometry(
     }
   }
 
-  return { W, H, frame, shutters, sash, patti, faces: { top: t, bottom: b, left: l, right: r }, mitre, shutterW, shutterH, sizesKnown };
+  return { W, H, frame, shutters, sash, patti, faces: { top: t, bottom: b, left: l, right: r }, mitre, shutterW, shutterH, sizesKnown, casement };
 }

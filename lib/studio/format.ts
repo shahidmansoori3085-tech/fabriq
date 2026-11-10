@@ -80,7 +80,8 @@ export function whenText(sys: StudioSystem, when: SizeCase["when"]): string {
   const bits: string[] = [];
   for (const [k, v] of Object.entries(when)) {
     const vals = Array.isArray(v) ? v : [v];
-    if (k === "tracks") bits.push(`${vals.join(" or ")}-track`);
+    if (k === "tracks") bits.push(sys.family === "casement" ? `${vals.join(" or ")} sash` : `${vals.join(" or ")}-track`);
+    else if (k === "shutters" && sys.family === "casement") bits.push(`${vals.join(" or ")} sash`);
     else if (k === "glass") bits.push(`${vals.join(" or ")} glass shutters`);
     else if (k === "mix") bits.push(vals.map(mixText).join(" or "));
     else {
@@ -90,5 +91,8 @@ export function whenText(sys: StudioSystem, when: SizeCase["when"]): string {
   }
   return bits.join(", ");
 }
+
+/** "2-track" for sliding, "2 sashes" for casement */
+export const layoutLabel = (sys: StudioSystem, n: number) => (sys.family === "casement" ? `${n} sash${n > 1 ? "es" : ""}` : `${n}-track`);
 
 export const inchOf = (um: Um) => um / UM_PER_INCH;

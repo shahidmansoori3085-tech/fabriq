@@ -134,7 +134,7 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     .map((id) => trace.find((t) => t.id === id)?.label ?? id);
   // a part with no section chosen cannot be bought or packed
   for (const p of parts) {
-    const used = p.scope === "meeting" ? meetings > 0 : p.scope === "shutter" ? kinds.length > 0 : true;
+    const used = p.scope === "meeting" ? meetings > 0 : p.scope === "between" ? kinds.length > 1 : p.scope === "shutter" ? kinds.length > 0 : true;
     if (used && !profileFor(p)) missing.push(`Section for ${p.role.replace(/\{.\}/g, "").trim()}`);
   }
   if (missing.length && !opts.allowUnknown) throw new StudioUnknownError(missing);
@@ -150,11 +150,15 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     }
     kinds.forEach((kind, i) => {
       for (const p of parts.filter((x) => x.scope === "shutter")) {
+        if (p.onlyGlass && kind !== "glass") continue;
         const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p, i);
         const role = p.role.replace("{s}", `S${i + 1}`).replace("{tag}", kind === "jali" ? " (Mesh)" : "");
         for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);
       }
     });
+    for (const p of parts.filter((x) => x.scope === "between")) {
+      for (let c = 0; c < p.count * Math.max(0, kinds.length - 1); c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(c + 1)), p.angle);
+    }
     let k = 0;
     for (const p of parts.filter((x) => x.scope === "meeting")) {
       for (let c = 0; c < p.count * meetings; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(++k)), p.angle);

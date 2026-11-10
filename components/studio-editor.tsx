@@ -12,7 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
-import { fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -33,12 +33,13 @@ const SCOPE_TITLE: Record<PartScope, string> = {
   window: "Frame",
   shutter: "Each shutter",
   meeting: "Where two glass shutters meet",
+  between: "Between sashes (mullion)",
 };
 
 const PLACE_TEXT: Record<Place, string> = {
   "frame-top": "Frame · top", "frame-bottom": "Frame · bottom", "frame-left": "Frame · left side", "frame-right": "Frame · right side",
   "sash-top": "Shutter · top", "sash-bottom": "Shutter · bottom", "sash-lock": "Shutter · handle side", "sash-meet": "Shutter · meeting side",
-  meeting: "Between glass shutters", other: "Not in the drawing",
+  meeting: "Between glass shutters", mullion: "Mullion between sashes", other: "Not in the drawing",
 };
 
 function roleFrom(name: string, scope: PartScope): string {
@@ -241,7 +242,7 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
       <div className="mt-3 flex flex-wrap gap-1.5">
         {sys.layouts.map((l) => (
           <button key={l.tracks} onClick={() => onLayout(l.tracks, l.mixes[0])} aria-pressed={l.tracks === tracks}
-            className={`chip px-3 py-1.5 text-sm ${l.tracks === tracks ? "selected" : ""}`}>{l.tracks}-track</button>
+            className={`chip px-3 py-1.5 text-sm ${l.tracks === tracks ? "selected" : ""}`}>{layoutLabel(sys, l.tracks)}</button>
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -503,7 +504,7 @@ function PiecesList({ sys, lib, unit, values, tracks, onChange, onSelect }: {
 
   return (
     <div>
-      {(["window", "shutter", "meeting"] as PartScope[]).map((scope) => {
+      {((sys.family === "casement" ? ["window", "between", "shutter"] : ["window", "shutter", "meeting"]) as PartScope[]).map((scope) => {
         const list = sys.parts.filter((p) => p.scope === scope);
         return (
           <div key={scope}>
@@ -547,12 +548,12 @@ function PiecesList({ sys, lib, unit, values, tracks, onChange, onSelect }: {
         );
       })}
 
-      <SectionTitle>Track counts this system makes</SectionTitle>
+      <SectionTitle>{sys.family === "casement" ? "Sash counts this system makes" : "Track counts this system makes"}</SectionTitle>
       <div className="card p-3">
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map((t) => (
             <button key={t} onClick={() => toggleTracks(t)} aria-pressed={tracksOn.has(t)}
-              className={`chip px-3.5 py-2 text-sm ${tracksOn.has(t) ? "selected" : ""}`}>{t}-track</button>
+              className={`chip px-3.5 py-2 text-sm ${tracksOn.has(t) ? "selected" : ""}`}>{layoutLabel(sys, t)}</button>
           ))}
         </div>
         <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Each track count keeps its own cut rules.</p>

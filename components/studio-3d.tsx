@@ -123,7 +123,7 @@ export default function Window3D({ g, pick, onPick, tracks }: { g: WindowGeo; pi
     g.frame.forEach((m, i) => { const geo = memberGeometry(m, H, 0); if (geo) out.push({ key: `f${i}`, geo, m }); });
     g.sash.forEach((m, i) => {
       const s = g.shutters[m.shutter ?? 0];
-      const center = -frameDepth * ((s?.track ?? 0) + 0.5) / Math.max(1, tracks);
+      const center = g.casement ? (m.depth ?? 28) * 0.35 : -frameDepth * ((s?.track ?? 0) + 0.5) / Math.max(1, tracks);
       const geo = memberGeometry(m, H, center + (m.depth ?? 28) / 2);
       if (geo) out.push({ key: `s${i}`, geo, m });
     });
@@ -150,7 +150,7 @@ export default function Window3D({ g, pick, onPick, tracks }: { g: WindowGeo; pi
           onClick={click({ type: "part", id: m.partId })} />
       ))}
       {g.shutters.map((s) => {
-        const center = -frameDepth * (s.track + 0.5) / Math.max(1, tracks);
+        const center = g.casement ? 6 : -frameDepth * (s.track + 0.5) / Math.max(1, tracks);
         const p = s.pane;
         return (
           <mesh key={`g${s.index}`} position={[p.x + p.w / 2, H - (p.y + p.h / 2), center]} material={s.kind === "J" ? mesh : glass}
