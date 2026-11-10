@@ -10,6 +10,7 @@ import { mixToShutters, doorMixToZones } from "./questions";
 import { estimate } from "./estimator";
 import { SECTIONS } from "./sections";
 import type { JobItem, MaterialList, OpeningType, SystemId } from "./types";
+import { studioSystem } from "../studio/runtime";
 
 /** How many openable Z-pipe shutters a custom panel row (e.g. "F2,O,F2") needs —
  *  mirrors estimator.ts's own panel parsing, just counting sashes rather than
@@ -55,7 +56,18 @@ export function buildJobItem(
   let sys: SystemId;
   let shutters: JobItem["shutters"];
 
-  if ((type === "door" || type === "partition") && next.system === "z_section") {
+  if (type === "window" && next.system?.startsWith("studio:")) {
+    // The shop's own System Studio system — a frozen copy goes with the item.
+    const id = next.system.slice(7);
+    const s = studioSystem(id);
+    sys = "studio";
+    next.studioId = id;
+    if (s && !next.studio) next.studio = JSON.stringify(s);
+    const lay = s?.layouts.find((l) => String(l.tracks) === next.tracks) ?? s?.layouts[0];
+    next.tracks = next.tracks ?? String(lay?.tracks ?? 2);
+    next.mix = next.mix && next.mix.length ? next.mix : lay?.mixes[0] ?? "GG";
+    shutters = mixToShutters(next.mix);
+  } else if ((type === "door" || type === "partition") && next.system === "z_section") {
     // A Z-section door (one hinged leaf, the big section) or a Z-section
     // partition (fixed glass grid) — named a door / partition in the job,
     // built by the Z-section engine.

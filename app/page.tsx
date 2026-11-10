@@ -20,6 +20,10 @@ import {
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
+import { systemOfItem, studioSystems, studioSystem, studioReady } from "@/lib/studio/runtime";
+import { loadLibrary } from "@/lib/studio/store";
+import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
+import StudioThumb from "@/components/studio-thumb";
 import { markInstalls, markSource, markStep } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
@@ -44,7 +48,7 @@ import { InstallButton } from "@/components/install";
 
 /* ————————————————— item options ————————————————— */
 
-type WinSys = "normal" | "domal" | "z_section";
+type WinSys = "normal" | "domal" | "z_section" | `studio:${string}`;
 
 /** Everything the add-item form can ask. Kept between adds on purpose: a job
  *  is usually ten windows of the same kind, so only the size changes. */
@@ -156,6 +160,7 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     if (o.zType === "combo") { m.zComboDir = o.zComboDir; m.zFixedFt = o.zFixedFt; }
     return m;
   }
+  if (o.sys.startsWith("studio:")) return { system: o.sys, tracks: o.tracks, mix: o.mix };
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
@@ -175,6 +180,9 @@ function optsFromItem(it: JobItem): Opts {
     if (it.system === "z_section") { o.partSys = "z"; pick("zSize", m.zSize); }
     pick("partDoor", m.partDoor); pick("partDoorW", m.partDoorW); pick("partDoorH", m.partDoorH); pick("partBayFt", m.partBayFt);
     pick("partRowFt", m.partRowFt); pick("partSheetFt", m.partSheetFt);
+  } else if (it.system === "studio") {
+    o.sys = `studio:${m.studioId}`;
+    pick("tracks", m.tracks); pick("mix", m.mix);
   } else if (it.system === "z_section") {
     o.sys = "z_section";
     pick("zType", m.zType); pick("zComboDir", m.zComboDir); pick("zFixedFt", m.zFixedFt); pick("zSash", m.zSashCount);
@@ -216,6 +224,11 @@ function itemLabel(it: JobItem): string {
     return m.zType === "combo"
       ? `${base} (${formatFtIn(feet(parseFloat(m.zFixedFt ?? "2") || 2))} fixed, ${labelOf(Z_DIRS, m.zComboDir).toLowerCase()})${sashes}`
       : `${base}${sashes}`;
+  }
+  if (it.system === "studio") {
+    const s = systemOfItem(it);
+    const n = parseInt(m.tracks ?? "", 10) || it.shutters.length;
+    return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}`;
   }
   const name = it.system === "domal" ? "Domal" : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
@@ -261,6 +274,8 @@ export default function FabriQ() {
   /** whether a job is open — read by the Back handler, which outlives renders */
   const hasItems = useRef(false);
   useEffect(() => { hasItems.current = items.length > 0; }, [items]);
+  // the shop's own Studio systems and sections, for the system choice and the cut list
+  useEffect(() => { loadLibrary(); }, []);
   /** the screen showing, for the Back handler */
   const viewNow = useRef<"job" | "result">("job");
   useEffect(() => { viewNow.current = view; }, [view]);
@@ -602,6 +617,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const kind: StepId[] = o.partSys === "z" ? ["zProfile", ...door] : door;
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
+  if (o.sys.startsWith("studio:")) return ["type", "system", "tracks", "mix", "size"];
   if (o.sys === "z_section") {
     return [
       "type", "system", "zType",
@@ -1055,6 +1071,19 @@ function JobScreen({
 
         {flow.step === "system" && (
           <div className="flex flex-col gap-2">
+            {studioSystems().map((s) => {
+              // a system with sections or cuts still missing cannot cut yet — send the shop to finish it
+              const ready = studioReady(s);
+              return (
+                <Choice key={s.id} wide selected={o.sys === `studio:${s.id}`}
+                  onClick={() => {
+                    if (!ready) { window.location.href = "/studio"; return; }
+                    const l = s.layouts[0]; choose({ sys: `studio:${s.id}`, tracks: String(l?.tracks ?? 2), mix: l?.mixes[0] ?? "GG" });
+                  }}
+                  title={s.name} sub={ready ? "My system" : "Not ready yet — finish it in My systems"}
+                  picture={<span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={s} /></span>} />
+              );
+            })}
             {SYSTEMS.map(([v, label]) => (
               <Choice key={v} wide selected={o.sys === v} onClick={() => choose({ sys: v as WinSys })}
                 title={label} sub={SYSTEM_INFO[v as WinSys].sub}
@@ -1064,7 +1093,32 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "tracks" && (
+        {flow.step === "tracks" && o.sys.startsWith("studio:") && (() => {
+          const s = studioSystem(o.sys.slice(7));
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              {(s?.layouts ?? []).map((l) => (
+                <Choice key={l.tracks} selected={o.tracks === String(l.tracks)} onClick={() => choose({ tracks: String(l.tracks), mix: l.mixes[0] })}
+                  title={layoutLabel(s!, l.tracks)} picture={<span className="block w-28"><StudioThumb sys={s!} tracks={l.tracks} mix={l.mixes[0]} /></span>} />
+              ))}
+            </div>
+          );
+        })()}
+
+        {flow.step === "mix" && o.sys.startsWith("studio:") && (() => {
+          const s = studioSystem(o.sys.slice(7));
+          const lay = s?.layouts.find((l) => String(l.tracks) === o.tracks) ?? s?.layouts[0];
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              {(lay?.mixes ?? []).map((mx) => (
+                <Choice key={mx} selected={o.mix === mx} onClick={() => choose({ mix: mx })} title={studioMixText(mx)}
+                  picture={<span className="block w-28"><StudioThumb sys={s!} tracks={lay!.tracks} mix={mx} /></span>} />
+              ))}
+            </div>
+          );
+        })()}
+
+        {flow.step === "tracks" && !o.sys.startsWith("studio:") && (
           <div className="grid grid-cols-2 gap-2">
             {TRACKS.map(([v, label]) => (
               <Choice key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
@@ -1073,7 +1127,7 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "mix" && (
+        {flow.step === "mix" && !o.sys.startsWith("studio:") && (
           <div className="grid grid-cols-2 gap-2">
             {(MIXES[o.tracks] ?? MIXES["2"]).map(([v, label]) => (
               <Choice key={v} selected={o.mix === v} onClick={() => choose({ mix: v })} title={label}

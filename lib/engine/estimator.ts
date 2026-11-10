@@ -9,6 +9,21 @@ import type {
 } from "./types";
 import { packAllSections, summarize } from "./cutting";
 import { getSection } from "./sections";
+import { evaluate as studioEvaluate, StudioUnknownError } from "../studio/evaluate";
+import { systemOfItem, studioJobOf } from "../studio/runtime";
+
+/** A System Studio window: pieces, panels and hardware from the shop's own system. */
+function studioResult(item: JobItem) {
+  const sys = systemOfItem(item);
+  if (!sys) throw new ImpossibleLayoutError(item.id, "system not found on this phone", 0);
+  try {
+    return { sys, r: studioEvaluate(sys, { ...studioJobOf(item), sizeLabel: `${formatFtInSut(item.width)}×${formatFtInSut(item.height)}` }) };
+  } catch (e) {
+    // a layout the shop has not taught: refuse by name, never guess a cut
+    if (e instanceof StudioUnknownError) throw new ImpossibleLayoutError(item.id, `not taught yet in ${sys.name}: ${e.missing.join(", ")}`, 0);
+    throw e;
+  }
+}
 
 /** Default deductions (µm) — calibratable per fabricator. Normal Sliding. */
 export const DEFAULTS = {
@@ -514,6 +529,7 @@ export function shutterSize(item: JobItem, d: { shutterHeightDeduction: Um }) {
 
 /** Expand one item (×qty) into cut pieces */
 export function expandItem(item: JobItem): CutPiece[] {
+  if (item.system === "studio") return studioResult(item).r.pieces;
   if (item.system === "domal") return expandDomalItem(item);
   if (item.system === "door_single") return expandDoorItem(item);
   if (item.system === "partition") return expandPartitionItem(item);
@@ -999,8 +1015,27 @@ export function estimate(items: JobItem[]): MaterialList {
   let sheetSplineFt = 0;
   let woolpileFt = 0;
   let rollers = 0, locks = 0, cleats = 0, hinges = 0;
+  const studioHw = new Map<string, { formula: string; qty: number; unit: string }>();
 
   for (const item of items) {
+    if (item.system === "studio") {
+      const { r } = studioResult(item);
+      for (const p of r.panels) {
+        const target = p.kind === "sheet" ? sheet : p.kind === "jali" ? mesh : glass;
+        target.push({ itemId: item.id, width: p.w, height: p.h, count: p.count });
+        if (p.kind === "jali") meshSplineFt += 2 * (toFeet(p.w) + toFeet(p.h)) * p.count;
+        if (p.kind === "sheet") sheetSplineFt += 2 * (toFeet(p.w) + toFeet(p.h)) * p.count;
+      }
+      for (const x of r.hardware) {
+        if (x.id === "rollers") { rollers += x.qty; continue; }
+        if (x.id === "lock") { locks += x.qty; continue; }
+        if (x.id === "cleats") { cleats += x.qty; continue; }
+        if (x.id === "woolpile") { woolpileFt += x.qty; continue; }
+        const e = studioHw.get(x.name);
+        if (e) e.qty += x.qty; else studioHw.set(x.name, { formula: x.formula, qty: x.qty, unit: x.unit });
+      }
+      continue;
+    }
     if (item.system === "door_single") {
       const clearance = doorClearance(pallaKey(item));
       const pallaW = item.width - clearance;
@@ -1161,6 +1196,7 @@ export function estimate(items: JobItem[]): MaterialList {
       name: "Sheet rubber gasket", formula: `sheet perimeter +${DEFAULTS.wastagePct}%`,
       qty: Math.ceil(sheetSplineFt * wastage), unit: "rft",
     });
+  for (const [name, x] of studioHw) hardware.push({ name, formula: x.formula, qty: x.unit === "rft" ? Math.ceil(x.qty * wastage) : x.qty, unit: x.unit });
   const bars16 = sections.reduce((a, s) => a + s.bars16, 0);
   const bars8 = sections.reduce((a, s) => a + s.bars8, 0);
   // Sum the ACTUAL stock length of each section's bars (some sections — e.g.

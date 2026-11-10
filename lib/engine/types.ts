@@ -1,7 +1,7 @@
 import type { Um } from "./units";
 
 export type OpeningType = "window" | "door" | "partition";
-export type SystemId = "normal_2t" | "normal_3t" | "domal" | "door_single" | "partition" | "z_section";
+export type SystemId = "normal_2t" | "normal_3t" | "domal" | "door_single" | "partition" | "z_section" | "studio";
 
 /** One opening the fabricator entered (a window/door/partition) */
 export interface JobItem {
