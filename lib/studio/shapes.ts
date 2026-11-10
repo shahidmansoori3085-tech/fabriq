@@ -4,17 +4,27 @@
  */
 import type { ProfileDef } from "./model";
 import ample from "./shapes/ample.json";
+import omeo from "./shapes/omeo.json";
+import banuhashim from "./shapes/banuhashim.json";
 
 export interface Shape { code: string; maker: string; w: number; h: number; paths: string[]; source: string; scaleCheck: number }
 
-const BY_MAKER: Record<string, Record<string, Shape>> = { ample: ample as Record<string, Shape> };
+const BY_MAKER: Record<string, Record<string, Shape>> = {
+  ample: ample as Record<string, Shape>,
+  omeo: omeo as Record<string, Shape>,
+  bh: banuhashim as Record<string, Shape>,
+};
 
-/** The traced shape of a section, if one exists. */
+/** The traced shape of a section, if one exists ("2046/2047" tries each code). */
 export function shapeOf(p: ProfileDef | undefined): Shape | undefined {
   if (!p?.codes) return undefined;
   for (const [maker, code] of Object.entries(p.codes)) {
-    const s = BY_MAKER[maker]?.[p.shapeKey ?? code];
-    if (s) return s;
+    const book = BY_MAKER[maker];
+    if (!book) continue;
+    for (const c of [p.shapeKey, ...code.split("/")].filter(Boolean) as string[]) {
+      const s = book[c.trim()];
+      if (s) return s;
+    }
   }
   return undefined;
 }

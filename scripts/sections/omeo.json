@@ -1,0 +1,9 @@
+{ "style": "cad-red", "catalogue": "C:/Users/umarm/Downloads/Open omeo ctlogue.pdf", "out": "lib/studio/shapes/omeo.json", "maker": "OMEO", "pages": [
+ { "page": 42, "cells": [ {"code":"1000","w":62,"h":32},{"code":"1011","w":62,"h":32} ] },
+ { "page": 46, "cells": [ {"code":"1021","w":92,"h":32},{"code":"1031","w":92,"h":32} ] },
+ { "page": 47, "cells": [ {"code":"1041","w":40,"h":18},{"code":"1051","w":40,"h":18},{"code":"1042","w":40,"h":18},{"code":"1052","w":40,"h":18} ] },
+ { "page": 52, "cells": [ {"code":"2046","w":65,"h":27},{"code":"2061","w":80,"h":45} ] },
+ { "page": 53, "cells": [ {"code":"2051","w":45,"h":45},{"code":"2047","w":65,"h":27} ] },
+ { "page": 54, "cells": [ {"code":"2081","w":65.3,"h":27.3},{"code":"2082","w":67,"h":26.2} ] },
+ { "page": 55, "cells": [ {"code":"2062","w":80.5,"h":45.4},{"code":"2041","w":65.8,"h":27.3} ] },
+ { "page": 59, "cells": [ {"code":"2071","w":16,"h":10.8},{"code":"2091","w":39.4,"h":28} ] } ] }

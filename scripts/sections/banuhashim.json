@@ -1,0 +1,2 @@
+{ "style": "dark-fill", "skipTop": 0.07, "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf", "out": "lib/studio/shapes/banuhashim.json", "maker": "Banu Hashim", "pages": [
+ { "page": 61, "cells": [ {"code":"BH-6406","w":59,"h":31.4},{"code":"BH-6407","w":59,"h":31.4},{"code":"BH-6408","w":38.1,"h":20.2} ] } ] }
