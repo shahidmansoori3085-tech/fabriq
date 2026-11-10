@@ -7,7 +7,7 @@
 import { registerCustomSections, type Section } from "../engine/sections";
 import type { ProfileDef, StudioSystem } from "./model";
 import { BUILT_IN_PROFILES, TEMPLATES } from "./templates";
-import { registerStudioSystems } from "./runtime";
+import { registerStudioSystems, registerShopProfiles } from "./runtime";
 
 const KEY = "fabriq_studio_v1";
 
@@ -31,6 +31,7 @@ export function loadLibrary(): StudioLibrary {
     const out = valid(lib) ? { ...lib, systems: lib.systems.map(migrate) } : EMPTY;
     registerProfiles(out.profiles);
     registerStudioSystems(out.systems);
+    registerShopProfiles(out.profiles);
     return out;
   } catch {
     return EMPTY;
@@ -50,6 +51,7 @@ function migrate(sys: StudioSystem): StudioSystem {
 export function saveLibrary(lib: StudioLibrary): void {
   registerProfiles(lib.profiles);
   registerStudioSystems(lib.systems);
+  registerShopProfiles(lib.profiles);
   try { localStorage.setItem(KEY, JSON.stringify(lib)); } catch { /* storage full — kept for this session */ }
 }
 

@@ -252,6 +252,32 @@ export const AMPLE_27: StudioSystem = base({
   ],
 });
 
+/** Eleanor's 27 mm domal set (catalogue pages 28–29). Codes and sizes printed; roles read from the drawings. */
+export const ELEANOR_27: StudioSystem = {
+  ...AMPLE_27,
+  id: "eleanor-27", name: "Domal 27×65 — Eleanor", maker: "Eleanor",
+  blurb: "Eleanor 2701 2-track / 2702 3-track frame, 2722 shutter on 4 sides; pick your interlock patti",
+  profiles: [
+    prof("el_2701", "27 mm 2-Track Frame", "frame", { eleanor: "2701" }, "45×45", { value: 2.9, perFt: 12 }, DRAWING("Eleanor p.28")),
+    prof("el_2702", "27 mm 3-Track Frame", "frame", { eleanor: "2702" }, "75×45", { value: 4.45, perFt: 12 }, DRAWING("Eleanor p.28")),
+    prof("el_2703", "27 mm 3-Track Frame (leg)", "frame", { eleanor: "2703" }, "75×45", { value: 4.0, perFt: 12 }, DRAWING("Eleanor p.28")),
+    prof("el_2704", "27 mm 3-Track + Mesh Frame", "frame", { eleanor: "2704" }, "80.5×45.4", { value: 4.0, perFt: 12 }, DRAWING("Eleanor p.28")),
+    prof("el_2722", "27 mm Shutter", "shutter", { eleanor: "2722" }, "65×27", { value: 2.7, perFt: 12 }, DRAWING("Eleanor p.29")),
+    prof("el_2720", "27 mm Shutter (light)", "shutter", { eleanor: "2720" }, "65×26", { value: 2.2, perFt: 12 }, DRAWING("Eleanor p.29")),
+    prof("el_2719", "27 mm Shutter 66", "shutter", { eleanor: "2719" }, "66×27", { value: 2.7, perFt: 12 }, DRAWING("Eleanor p.29")),
+    prof("el_2718", "27 mm Shutter (hook)", "shutter", { eleanor: "2718" }, "65×27", { value: 2.85, perFt: 12 }, DRAWING("Eleanor p.29")),
+  ],
+  parts: [
+    ...domalFrame(byTracks("el_2701", "el_2702")),
+    part("shutterTop", "{s} Shutter Top{tag}", "el_2722", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "el_2722", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLeft", "{s} Shutter Left{tag}", "el_2722", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterRight", "{s} Shutter Right{tag}", "el_2722", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock {k}", "", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
+  notes: ["Eleanor prints codes and sizes but not names — which section does which job is read from the drawings. Choose your interlock patti."],
+};
+
 export const DOMAL_35: StudioSystem = base({
   id: "domal-35", name: "Domal 35×75", group: "domal",
   blurb: "One 35×75 profile on all 4 sides + interlock patti; 2-track, 3+1 or 4+1. Choose your sections.",
@@ -534,7 +560,7 @@ export const BLANK_SLIDING: StudioSystem = {
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
-  AMPLE_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
+  AMPLE_27, ELEANOR_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37, BH_31,
   GULF_S30, GULF,
   Z_40, Z_55,

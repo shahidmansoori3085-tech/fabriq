@@ -3,7 +3,7 @@
  * FabriQ visual language (D12): the fabricator SEES what is being asked.
  * Deterministic SVG renderers — dimensions always come from engine data.
  */
-import { systemOfItem, studioJobOf } from "@/lib/studio/runtime";
+import { systemOfItem, studioJobOf, shopProfile } from "@/lib/studio/runtime";
 import { windowGeometry } from "@/lib/studio/geometry";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import WindowDrawing from "./studio-drawing";
@@ -41,7 +41,7 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
   if (item.system === "studio") {
     const sys = systemOfItem(item);
     if (sys) {
-      const g = windowGeometry(sys, studioJobOf(item), (id) => BUILT_IN_PROFILES.find((p) => p.id === id));
+      const g = windowGeometry(sys, studioJobOf(item), (id) => shopProfile(id) ?? BUILT_IN_PROFILES.find((p) => p.id === id));
       return <span className="inline-block" style={{ width: size }}><WindowDrawing g={g} unit="in" pick={null} compact /></span>;
     }
   }

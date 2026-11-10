@@ -21,11 +21,13 @@ import { tmpdir } from "node:os";
 interface Cell { code: string; w: number; h: number; note?: string; /** stored under this key when one code is printed on two profiles */ key?: string }
 interface Manifest {
   /** "grid" = Ample-style 2×3 cells with grey metal (default); "cad-red" = CAD drawings with red outlines (OMEO) */
-  style?: "grid" | "cad-red" | "dark-fill" | "black-grid";
+  style?: "grid" | "cad-red" | "dark-fill" | "black-grid" | "orange-fill";
   /** black-grid: the page's table of cells */
   grid?: { cols: number; rows: number; drawTop?: number; drawBottom?: number };
   /** part of the page height taken by the title band (skipped); default 0.16 */
   skipTop?: number;
+  /** when the two printed sizes disagree, trust the larger scale (the size that spans the whole drawing) */
+  scaleWhenOff?: "mean" | "max";
   catalogue: string;          // PDF path
   out: string;                // JSON written here
   maker: string;
@@ -78,11 +80,16 @@ function renderColor(pdf: string, page: number, dpi: number) {
  * every narrow region enclosed by them (a wall drawn as two lines). Wide
  * enclosed regions are hollow chambers and stay empty.
  */
-function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" = "cad-red", skipTop = 0.16) {
+function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" | "orange-fill" = "cad-red", skipTop = 0.16) {
   const { w, h, rgb } = img;
   const ink = new Uint8Array(w * h);
   for (let p = 0; p < w * h; p++) {
     const r = rgb[p * 3], g = rgb[p * 3 + 1], b = rgb[p * 3 + 2];
+    if (style === "orange-fill") {
+      // Eleanor: sections filled orange; the pale watermark and black dimensions are left out
+      ink[p] = r > 190 && g > 60 && g < 175 && b < 110 && r - b > 120 ? 1 : 0;
+      continue;
+    }
     if (style === "dark-fill") {
       // Banu Hashim: sections filled slate grey; table bars are navy (much bluer), text black
       const lum = (r + g + b) / 3;
@@ -340,7 +347,7 @@ function trace(m: Manifest) {
       pg.cells.forEach((c, i) => { if (c && found[i]) save(c, found[i], pg.page); });
       continue;
     }
-    if (m.style === "cad-red" || m.style === "dark-fill") {
+    if (m.style === "cad-red" || m.style === "dark-fill" || m.style === "orange-fill") {
       // every drawing on the page is found (in reading order); null cells are skipped
       const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, m.skipTop ?? 0.16);
       pg.cells.forEach((c, i) => {
@@ -369,7 +376,7 @@ function trace(m: Manifest) {
       const sx = c.w / pw, sy = c.h / ph;
       const check = Math.abs(sx - sy) / Math.max(sx, sy);
       if (check > 0.04) problems.push(`${c.code}: printed ${c.w}×${c.h} does not match the drawing (${(check * 100).toFixed(1)}% off) — check by hand`);
-      const s = (sx + sy) / 2;
+      const s = check > 0.04 && m.scaleWhenOff === "max" ? Math.max(sx, sy) : (sx + sy) / 2;
       const loops = contours(r.mask, r.bw, r.bh)
         .map((l) => simplifyLoop(l, 1.2))
         .filter((l) => l.length > 3);

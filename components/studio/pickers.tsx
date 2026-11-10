@@ -7,6 +7,7 @@ import { allProfiles, newId, type StudioLibrary } from "../../lib/studio/store";
 import { Sheet, Field } from "../studio-ui";
 import SectionSketch from "../section-sketch";
 import { traceImage } from "../../lib/studio/tracer";
+import { readDxf } from "../../lib/studio/dxf";
 
 /** Read a picture into a grey array, at most 1400 px on its long side. */
 async function grayFromFile(file: File): Promise<{ g: Uint8Array; w: number; h: number }> {
@@ -140,11 +141,20 @@ export function ProfileForm({ initial, onSave, onCancel }: {
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold">Real drawing</div>
-            <div className="text-xs" style={{ color: "var(--ink-3)" }}>Photo or screenshot of the section from your catalogue. One section per picture.</div>
+            <div className="text-xs" style={{ color: "var(--ink-3)" }}>A DXF from your extruder (exact), or a photo / screenshot of the section from your catalogue. One section per file.</div>
             <label className="mt-2 inline-block cursor-pointer text-sm font-semibold" style={{ color: "var(--accent)" }}>
-              {shape ? "Use another picture" : "+ Add from photo"}
-              <input type="file" accept="image/*" hidden onChange={async (e) => {
+              {shape ? "Use another photo or DXF" : "+ Add from photo or DXF"}
+              <input type="file" accept="image/*,.dxf" hidden onChange={async (e) => {
                 const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+                if (/\.dxf$/i.test(f.name)) {
+                  // a CAD drawing is exact: its own size is the section's size
+                  const d = readDxf(await f.text());
+                  if (!d) { setTraceMsg("No closed section found in this DXF."); return; }
+                  setShape(d); setPic(null);
+                  if (!size.trim()) setSize(`${d.w}×${d.h}`);
+                  setTraceMsg(`From the DXF: ${d.w} × ${d.h} mm.`);
+                  return;
+                }
                 setTraceMsg("Tracing…");
                 try { const p = await grayFromFile(f); setPic(p); runTrace(p, invert); } catch { setTraceMsg("Could not read this picture."); }
               }} />

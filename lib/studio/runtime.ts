@@ -3,11 +3,16 @@
  * A job item keeps a frozen copy of its system (meta.studio), so editing a
  * system later never silently changes a job already made.
  */
-import type { StudioSystem } from "./model";
+import type { ProfileDef, StudioSystem } from "./model";
 import type { JobItem } from "../engine/types";
 import { evaluate, type StudioJob } from "./evaluate";
 
 let systems: StudioSystem[] = [];
+let shopProfiles: ProfileDef[] = [];
+
+/** The shop's own sections (with their traced drawings), for pictures outside the Studio. */
+export function registerShopProfiles(list: ProfileDef[]): void { shopProfiles = list; }
+export function shopProfile(id: string): ProfileDef | undefined { return shopProfiles.find((p) => p.id === id); }
 
 export function registerStudioSystems(list: StudioSystem[]): void { systems = list; }
 export function studioSystems(): StudioSystem[] { return systems; }
