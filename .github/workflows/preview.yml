@@ -1,0 +1,52 @@
+name: Private preview (not production)
+
+# A test copy of the System Studio branch for the founder to check before it
+# goes to everyone. Deploys a Vercel PREVIEW only — never --prod — so the
+# public app is not touched. The preview link is printed in the job summary.
+
+on:
+  push:
+    branches: [claude/system-studio]
+  workflow_dispatch: {}
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Engine tests
+        run: npm test
+
+      - name: Pull Vercel environment (preview)
+        run: npx vercel pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build
+        run: npx vercel build --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy preview
+        id: deploy
+        run: |
+          url=$(npx vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview: $url"
+          echo "### Private preview: $url" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
