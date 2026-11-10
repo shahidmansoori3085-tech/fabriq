@@ -6,6 +6,8 @@
  */
 import type { PartDef, Place, ProfileDef, StudioSystem } from "./model";
 import { jobVars, matches, computeSizes, type StudioJob } from "./evaluate";
+import { shapeOf, type Shape } from "./shapes";
+import { faceStops, type Stop } from "./relief";
 
 export type Pt = [number, number];
 
@@ -18,6 +20,16 @@ export interface Member {
   /** the section is known (false = drawn at a typical size) */
   known: boolean;
   vertical: boolean;
+  /** the real section seen from the front: colour stops from outer edge to inner edge */
+  stops?: Stop[];
+  /** outer-edge point → inner-edge point, for laying the stops across the member */
+  axis?: [number, number, number, number];
+  /** for the 3D view: the real section, its joint and its face / depth in mm */
+  shape?: Shape;
+  flip?: boolean;
+  angle?: 90 | 45;
+  face?: number;
+  depth?: number;
 }
 
 export interface ShutterGeo {
@@ -75,9 +87,16 @@ export function windowGeometry(
   const at = (pl: Place) => parts.find((p) => p.place === pl);
   const face = (pl: Place, shutter?: number) => {
     const p = at(pl);
-    if (!p) return { mm: 0, known: true, part: undefined as PartDef | undefined };
+    if (!p) return { mm: 0, known: true, part: undefined as PartDef | undefined, stops: undefined as Stop[] | undefined, shape: undefined as Shape | undefined, depth: 0 };
     const id = profileOf(sys, p, vars, shutter !== undefined ? job.perShutter?.[shutter] : undefined);
-    return { ...faceOf(find(id), placeRole(pl)), part: p };
+    const prof = find(id);
+    const shape = shapeOf(prof);
+    const role = placeRole(pl);
+    const stops = shape && role !== "patti" ? faceStops(shape, role, !!p.flipSection) : undefined;
+    const fo = faceOf(prof, role);
+    const nums = (prof?.size ?? "").split(/[×x*]/).map(parseFloat).filter((n) => n > 0);
+    const depth = shape ? (role === "frame" ? shape.w : shape.h) : nums.length === 2 ? (role === "frame" ? Math.max(...nums) : Math.min(...nums)) : role === "frame" ? 60 : 28;
+    return { ...fo, part: p, stops, shape, depth };
   };
 
   const fT = face("frame-top"), fB = face("frame-bottom"), fL = face("frame-left"), fR = face("frame-right");
@@ -85,19 +104,19 @@ export function windowGeometry(
   const mitre = (fT.part?.angle ?? 45) === 45;
 
   const frame: Member[] = [];
-  const add = (p: PartDef | undefined, poly: Pt[], known: boolean, vertical: boolean) =>
-    p && frame.push({ partId: p.id, place: p.place!, poly, known, vertical });
+  const add = (f: { part?: PartDef; known: boolean; stops?: Stop[]; shape?: Shape; mm: number; depth: number }, poly: Pt[], vertical: boolean, axis: [number, number, number, number]) =>
+    f.part && frame.push({ partId: f.part.id, place: f.part.place!, poly, known: f.known, vertical, stops: f.stops, axis, shape: f.shape, flip: f.part.flipSection, angle: f.part.angle, face: f.mm, depth: f.depth });
   if (mitre) {
-    add(fT.part, [[0, 0], [W, 0], [W - r, t], [l, t]], fT.known, false);
-    add(fB.part, [[l, H - b], [W - r, H - b], [W, H], [0, H]], fB.known, false);
-    add(fL.part, [[0, 0], [l, t], [l, H - b], [0, H]], fL.known, true);
-    add(fR.part, [[W, 0], [W, H], [W - r, H - b], [W - r, t]], fR.known, true);
+    add(fT, [[0, 0], [W, 0], [W - r, t], [l, t]], false, [0, 0, 0, t]);
+    add(fB, [[l, H - b], [W - r, H - b], [W, H], [0, H]], false, [0, H, 0, H - b]);
+    add(fL, [[0, 0], [l, t], [l, H - b], [0, H]], true, [0, 0, l, 0]);
+    add(fR, [[W, 0], [W, H], [W - r, H - b], [W - r, t]], true, [W, 0, W - r, 0]);
   } else {
     // 90°: sides run full height, top and bottom fit between them
-    add(fL.part, [[0, 0], [l, 0], [l, H], [0, H]], fL.known, true);
-    add(fR.part, [[W - r, 0], [W, 0], [W, H], [W - r, H]], fR.known, true);
-    add(fT.part, [[l, 0], [W - r, 0], [W - r, t], [l, t]], fT.known, false);
-    add(fB.part, [[l, H - b], [W - r, H - b], [W - r, H], [l, H]], fB.known, false);
+    add(fL, [[0, 0], [l, 0], [l, H], [0, H]], true, [0, 0, l, 0]);
+    add(fR, [[W - r, 0], [W, 0], [W, H], [W - r, H]], true, [W, 0, W - r, 0]);
+    add(fT, [[l, 0], [W - r, 0], [W - r, t], [l, t]], false, [0, 0, 0, t]);
+    add(fB, [[l, H - b], [W - r, H - b], [W - r, H], [l, H]], false, [0, H, 0, H - b]);
   }
 
   const mix = [...job.mix] as ("G" | "J" | "S")[];
@@ -123,18 +142,18 @@ export function windowGeometry(
     const left = lockSide === "left" ? sL0 : sM0, right = lockSide === "left" ? sM0 : sL0;
     const st = sT.mm || 50, sb = sB.mm || st, sl = left.mm || st, sr = right.mm || st;
     const sashMitre = (sT.part?.angle ?? 45) === 45;
-    const push = (f: typeof sT, poly: Pt[], vertical: boolean) =>
-      f.part && sash.push({ partId: f.part.id, place: f.part.place!, shutter: i, poly, known: f.known, vertical });
+    const push = (f: typeof sT, poly: Pt[], vertical: boolean, axis: [number, number, number, number]) =>
+      f.part && sash.push({ partId: f.part.id, place: f.part.place!, shutter: i, poly, known: f.known, vertical, stops: f.stops, axis, shape: f.shape, flip: f.part.flipSection, angle: f.part.angle, face: f.mm, depth: f.depth });
     if (sashMitre) {
-      push(sT, [[x, y], [x + w, y], [x + w - sr, y + st], [x + sl, y + st]], false);
-      push(sB, [[x + sl, y + h - sb], [x + w - sr, y + h - sb], [x + w, y + h], [x, y + h]], false);
-      push(left, [[x, y], [x + sl, y + st], [x + sl, y + h - sb], [x, y + h]], true);
-      push(right, [[x + w, y], [x + w, y + h], [x + w - sr, y + h - sb], [x + w - sr, y + st]], true);
+      push(sT, [[x, y], [x + w, y], [x + w - sr, y + st], [x + sl, y + st]], false, [0, y, 0, y + st]);
+      push(sB, [[x + sl, y + h - sb], [x + w - sr, y + h - sb], [x + w, y + h], [x, y + h]], false, [0, y + h, 0, y + h - sb]);
+      push(left, [[x, y], [x + sl, y + st], [x + sl, y + h - sb], [x, y + h]], true, [x, 0, x + sl, 0]);
+      push(right, [[x + w, y], [x + w, y + h], [x + w - sr, y + h - sb], [x + w - sr, y + st]], true, [x + w, 0, x + w - sr, 0]);
     } else {
-      push(left, [[x, y], [x + sl, y], [x + sl, y + h], [x, y + h]], true);
-      push(right, [[x + w - sr, y], [x + w, y], [x + w, y + h], [x + w - sr, y + h]], true);
-      push(sT, [[x + sl, y], [x + w - sr, y], [x + w - sr, y + st], [x + sl, y + st]], false);
-      push(sB, [[x + sl, y + h - sb], [x + w - sr, y + h - sb], [x + w - sr, y + h], [x + sl, y + h]], false);
+      push(left, [[x, y], [x + sl, y], [x + sl, y + h], [x, y + h]], true, [x, 0, x + sl, 0]);
+      push(right, [[x + w - sr, y], [x + w, y], [x + w, y + h], [x + w - sr, y + h]], true, [x + w, 0, x + w - sr, 0]);
+      push(sT, [[x + sl, y], [x + w - sr, y], [x + w - sr, y + st], [x + sl, y + st]], false, [0, y, 0, y + st]);
+      push(sB, [[x + sl, y + h - sb], [x + w - sr, y + h - sb], [x + w - sr, y + h], [x + sl, y + h]], false, [0, y + h, 0, y + h - sb]);
     }
     shutters.push({
       index: i, kind: mix[i] ?? "G", x, y, w, h, lockSide, track: i % Math.max(1, job.tracks),

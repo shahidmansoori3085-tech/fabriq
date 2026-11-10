@@ -27,14 +27,26 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
 
   const memberEl = (m: Member, key: string) => {
     const on = isPart(m);
+    // the real section seen from the front: its steps and grooves run the length of the piece
+    const relief = m.stops && m.axis && !compact;
+    const gid = id(`r${key}`);
     return (
-      <polygon key={key} points={pts(m.poly)}
-        fill={`url(#${id(m.vertical ? "aluV" : "aluH")})`}
+      <g key={key}>
+        {relief && (
+          <defs>
+            <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={m.axis![0]} y1={m.axis![1]} x2={m.axis![2]} y2={m.axis![3]}>
+              {m.stops!.map((s, k) => <stop key={k} offset={s.o} stopColor={s.c} />)}
+            </linearGradient>
+          </defs>
+        )}
+      <polygon points={pts(m.poly)}
+        fill={relief ? `url(#${gid})` : `url(#${id(m.vertical ? "aluV" : "aluH")})`}
         stroke={on ? "var(--accent)" : "#7d8794"} strokeWidth={on ? 2.2 : 0.7} vectorEffect="non-scaling-stroke"
         strokeDasharray={m.known ? undefined : "4 3"}
         style={{ cursor: onPick ? "pointer" : undefined }}
         onClick={tap({ type: "part", id: m.partId })}>
       </polygon>
+      </g>
     );
   };
   const glow = (m: Member, key: string) => isPart(m) && (

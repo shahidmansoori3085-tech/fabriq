@@ -77,6 +77,8 @@ export interface PartDef {
   place?: Place;
   /** true = the shop picks this part's section per SHUTTER (e.g. slim interlock small on one, big on another) */
   perShutter?: boolean;
+  /** draw / build the section turned the other way round (its face mirrored) */
+  flipSection?: boolean;
 }
 
 /**

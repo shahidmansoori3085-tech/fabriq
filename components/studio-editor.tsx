@@ -13,7 +13,11 @@ import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../li
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
 import { fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, type StudioUnit } from "../lib/studio/format";
+import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
+
+// three.js is heavy: load the 3D view only when it is opened
+const Window3D = dynamic(() => import("./studio-3d"), { ssr: false, loading: () => <div className="grid h-[380px] place-items-center text-sm" style={{ color: "var(--ink-3)" }}>Building 3D…</div> });
 import SectionSketch from "./section-sketch";
 import { SectionPicker } from "./studio/pickers";
 import { CutsTab } from "./studio/rules";
@@ -77,6 +81,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   const [pick, setPick] = useState<Pick>(null);
   const [tab, setTab] = useState<Tab>("pieces");
   const [menu, setMenu] = useState(false);
+  const [view3d, setView3d] = useState(false);
   const [picker, setPicker] = useState<{ partId: string; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
 
@@ -145,14 +150,15 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
 
       {/* ——— the window ——— */}
       <div ref={top} className="card mt-4 overflow-hidden" style={{ scrollMarginTop: 8 }}>
-        <div className="flex items-center justify-between px-3 pt-3">
-          <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
-            {pick ? "Tap empty space to close" : "Tap any piece or shutter"}
+        <div className="flex items-center justify-between gap-2 px-3 pt-3">
+          <Seg small value={view3d ? "3d" : "2d"} onChange={(v) => setView3d(v === "3d")} options={[{ value: "2d", label: "Drawing" }, { value: "3d", label: "3D" }]} />
+          <span className="text-right text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>
+            {view3d ? "Drag to turn · tap a piece" : pick ? "Tap empty space to close" : "Tap any piece or shutter"}
+            <br />To scale{geo.sizesKnown ? "" : " · shutter size estimated"}
           </span>
-          <span className="text-xs" style={{ color: "var(--ink-3)" }}>To scale{geo.sizesKnown ? "" : " · shutter size estimated"}</span>
         </div>
         <div className="px-2 pb-1 pt-1">
-          <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} />
+          {view3d ? <Window3D g={geo} pick={pick} onPick={setPick} tracks={tracks} /> : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} />}
         </div>
         <WindowBar sys={sys} unit={unit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
           onSize={(w, h) => { setW(w); setH(h); }}
@@ -400,7 +406,12 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, onPatch, onSys, on
         </Field>
       </div>
 
-      <button onClick={onDelete} className="mt-4 text-sm font-semibold" style={{ color: "var(--bad)" }}>Remove this piece</button>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <button onClick={() => onPatch({ flipSection: !p.flipSection })} className="btn-ghost px-3 py-2 text-sm">
+          ⇄ Turn section{p.flipSection ? " (turned)" : ""}
+        </button>
+        <button onClick={onDelete} className="text-sm font-semibold" style={{ color: "var(--bad)" }}>Remove this piece</button>
+      </div>
     </div>
   );
 }
