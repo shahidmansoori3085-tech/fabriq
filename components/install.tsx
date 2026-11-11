@@ -6,11 +6,14 @@
  * Android / Chrome hand the page an install prompt (beforeinstallprompt); the
  * button opens that real dialog in one tap. iPhone has no such prompt — the
  * only way is Share → Add to Home Screen — so there the button opens a short
- * picture guide instead. Once the app runs from the home screen, the button
- * is gone.
+ * picture guide instead. An Android phone's own browser (Oppo, Vivo, Mi…)
+ * hides install deep in its menu, so there the button sends the fabricator on
+ * to Chrome, where the install dialog opens by itself. Once the app runs from
+ * the home screen, the button is gone.
  */
 import { useEffect, useState } from "react";
-import { OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
+import { OpenInChromeSheet, openJob, useInApp } from "@/components/open-in-browser";
+import { chromeLink, isOtherAndroidBrowser, takeInstallAsk } from "@/lib/inapp";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -39,12 +42,15 @@ const isIOS = () =>
 export function InstallButton() {
   /** null until mounted — the server can't know, so nothing renders there. */
   const [show, setShow] = useState<boolean | null>(null);
-  const [help, setHelp] = useState<"ios" | "samsung" | "other" | "inapp" | null>(null);
+  const [help, setHelp] = useState<"ios" | "samsung" | "other" | "inapp" | "chrome" | "ready" | null>(null);
   const inApp = useInApp();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShow(!isStandalone());
+    // Sent here by another browser's Install button: offer it straight away
+    // (the install dialog itself needs a tap, the browser insists on it)
+    if (takeInstallAsk() && !isStandalone()) setHelp("ready");
     const onInstalled = () => { saved = null; setShow(false); setHelp(null); };
     window.addEventListener("appinstalled", onInstalled);
     return () => window.removeEventListener("appinstalled", onInstalled);
@@ -62,7 +68,7 @@ export function InstallButton() {
       return;
     }
     // Instagram's browser cannot install anything: go to Chrome first
-    setHelp(inApp ? "inapp" : isIOS() ? "ios" : /SamsungBrowser/.test(navigator.userAgent) ? "samsung" : "other");
+    setHelp(inApp ? "inapp" : isIOS() ? "ios" : isOtherAndroidBrowser() ? "chrome" : "other");
   };
 
   return (
@@ -75,8 +81,58 @@ export function InstallButton() {
       </button>
       {help === "inapp" && inApp
         ? <OpenInChromeSheet app={inApp} what="Installing the app" onClose={() => setHelp(null)} />
+        : help === "chrome" ? <ToChromeSheet onClose={() => setHelp(null)} onMenu={() => setHelp("samsung")} isSamsung={/SamsungBrowser/.test(navigator.userAgent)} onOther={() => setHelp("other")} />
+        : help === "ready" ? <ReadySheet onInstall={() => { setHelp(null); void install(); }} onClose={() => setHelp(null)} />
         : help && help !== "inapp" && <InstallHelp kind={help} onClose={() => setHelp(null)} />}
     </>
+  );
+}
+
+/** The sheet's frame: icon, title, one line under it. */
+function Sheet({ title, sub, onClose, children }: { title: string; sub: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl p-5 sm:rounded-2xl"
+        style={{ background: "var(--surface)", paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a 48px icon in a sheet */}
+          <img src="/icons/icon-192.png" alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl" />
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold">{title}</h2>
+            <p className="text-sm" style={{ color: "var(--ink-2)" }}>{sub}</p>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Oppo / Vivo / Mi browser: one button on to Chrome, which installs in two taps. */
+function ToChromeSheet({ onClose, onMenu, onOther, isSamsung }: { onClose: () => void; onMenu: () => void; onOther: () => void; isSamsung: boolean }) {
+  return (
+    <Sheet title="Install FabriQ" sub="This browser cannot install apps easily. Chrome installs FabriQ in 2 taps. Your sizes go with you." onClose={onClose}>
+      <a href={chromeLink(openJob(), { install: true })} className="btn-primary mt-5 block w-full py-3.5 text-center">
+        Open in Chrome to install
+      </a>
+      <button onClick={isSamsung ? onMenu : onOther} className="mt-3 w-full py-2 text-center text-xs" style={{ color: "var(--ink-3)" }}>
+        No Chrome on this phone? <u>Install from this browser&apos;s menu</u>
+      </button>
+    </Sheet>
+  );
+}
+
+/** Arrived in Chrome to install: the one tap the browser needs before its dialog. */
+function ReadySheet({ onInstall, onClose }: { onInstall: () => void; onClose: () => void }) {
+  return (
+    <Sheet title="Install FabriQ" sub="Opens from your home screen like an app, and works without internet." onClose={onClose}>
+      <button onClick={onInstall} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 py-3.5">
+        <PhoneDownIcon />
+        Install app
+      </button>
+      <button onClick={onClose} className="btn-ghost mt-3 w-full py-3">Not now</button>
+    </Sheet>
   );
 }
 

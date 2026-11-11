@@ -28,6 +28,21 @@ export function inAppBrowser(): InApp {
 
 export const isAndroid = () => typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 
+/**
+ * An Android phone's own browser (Oppo/Realme HeyTap, Vivo, Mi, Opera, UC,
+ * Firefox, Samsung…) rather than Chrome. These hide "install" deep in their
+ * menus, or have none — Chrome installs in two taps.
+ */
+export function isOtherAndroidBrowser(): boolean {
+  if (!isAndroid()) return false;
+  const ua = navigator.userAgent;
+  if (!/Chrome\/\d/.test(ua)) return true; // Firefox and the like
+  return /HeyTap|VivoBrowser|MiuiBrowser|OppoBrowser|Realme|UCBrowser|OPR\/|Opera|SamsungBrowser|YaBrowser|PHX|Quark|Mint|Silk/i.test(ua);
+}
+
+/** Asked to install on arrival (sent on from another browser's Install button). */
+export const INSTALL_PARAM = "install";
+
 export interface CarriedJob { items: JobItem[]; customer?: string }
 
 const PARAM = "j";
@@ -50,9 +65,11 @@ function decode(s: string): CarriedJob | null {
 }
 
 /** This page's link with the job in it, as Chrome should open it. */
-export function chromeLink(job: CarriedJob | null): string {
+export function chromeLink(job: CarriedJob | null, opts?: { install?: boolean }): string {
   const url = new URL(window.location.href);
   url.searchParams.delete(PARAM);
+  url.searchParams.delete(INSTALL_PARAM);
+  if (opts?.install) url.searchParams.set(INSTALL_PARAM, "1");
   // counted as /from/<source>/open-in-chrome: how many made the jump
   if (url.searchParams.get("utm_source")) url.searchParams.set("utm_campaign", "open-in-chrome");
   else url.searchParams.set("utm_source", "open-in-chrome");
@@ -61,6 +78,15 @@ export function chromeLink(job: CarriedJob | null): string {
   // Android: an intent link opens Chrome itself, out of Instagram's browser
   return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;`
     + `S.browser_fallback_url=${encodeURIComponent(url.toString())};end`;
+}
+
+/** True once when this page was opened to install; the mark leaves the address bar. */
+export function takeInstallAsk(): boolean {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get(INSTALL_PARAM) !== "1") return false;
+  url.searchParams.delete(INSTALL_PARAM);
+  window.history.replaceState(window.history.state, "", url.pathname + url.search);
+  return true;
 }
 
 /** The job a link brought along, taken out of the address bar. */
