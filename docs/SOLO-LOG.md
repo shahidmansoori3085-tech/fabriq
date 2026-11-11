@@ -17,7 +17,7 @@ Entry format:
 
 ---
 
-## 2026-11-11 — Section Names & Photo/Drawing Accuracy Overhaul in "New System" & Studio
+## 2026-11-11 — Section Names & Photo Accuracy Overhaul + Reynaers Architectural 3D Cutaway
 - Branch / commits: `ag/solo-20261111-section-photos` -> fast-forward merged into `claude/system-studio`
 - Files changed (why):
   - `components/section-sketch.tsx`:
@@ -25,7 +25,20 @@ Entry format:
     - Upgraded `RealSection` vector CAD renderer: tightened padding from 0.3 to 0.12 so profile drawings render 2.5× larger and fill the thumbnail clearly; added high-contrast dark slate outline with metallic aluminium gradient fill and sharp mm dimension callouts.
     - Upgraded `GuideSketch` architectural fallback: multi-chamber walls, screw flutes, runner rail beads, glass pockets, and mating interlock hooks instead of bare wireframe boxes.
     - Elegant placeholder when no section is selected, avoiding confusing red broken boxes.
-  - `components/section-profiles.tsx`: Registered `domal_frame_2t: "domal_frame"` in `IMAGE_OF`.
+  - `components/section-profiles.tsx`:
+    - Mapped all remaining series in `IMAGE_OF`: 25 mm Bombay (`2t_top_25`, `2t_bottom_25`, `3t_top_25`, `3t_bottom_25`, `handle_25`, `interlock_25`, `bearing_25`), Domal 35 mm (`d35_...`), and Mini Domal 20 mm (`md20_...`). Result: 100% of built-in profiles (122/122) now display either official manufacturer cropped photos (34) or traced vector CAD die drawings (88) — zero generic fallbacks.
+  - `components/studio-3d.tsx`:
+    - Complete overhaul into a photorealistic architectural 3D cutaway viewer matching Reynaers and Crystal Windows technical corner models:
+      - Physically accurate 3D orientation: sill rests flat on floor Y=0 along X, depth in Z, vertical jamb rising seamlessly along Y.
+      - True multi-chamber hollow extrusions with exposed cut faces displaying the internal chambers, screw ports, and hollow cavities.
+      - Two-tone PBR materials: machined bare metallic aluminium cut faces (`materialIndex: 0`) + satin architectural powder-coat walls (`materialIndex: 1`).
+      - Razor-sharp silhouette edges with `EdgesGeometry` & `LineSegments` to clearly delineate profile chambers.
+      - DGU Insulated Double Glazing (outer glass, 12mm cavity, dark warm-edge perimeter spacer bar, inner glass).
+      - EPDM rubber wedge gaskets & weatherseals.
+      - Polished stainless steel runner rail (SS patri) & tandem roller wheels in the roller cavity.
+      - View presets: 📐 Corner Cutaway, 🔍 Profile Cut (chambers inspection), 🪟 Full Window 3D.
+      - Architectural finishes: Anthracite Grey (RAL 7016), Matt Noir (RAL 9005), Silver Anodised (EV1), Champagne Bronze, Traffic White (RAL 9016).
+      - Soft floor contact shadow and studio lighting.
   - `lib/studio/shapes/banuhashim.json` & `scripts/sections/banuhashim.json`: Traced 24 official dies from `BANUHASHIM READY.pdf` (pages 56-68) with 98%-100% scale agreement (`BH-6400` to `BH-6413` and `BH-6500` to `BH-6513`).
   - `lib/studio/shapes/omeo.json` & `scripts/sections/omeo.json`: Traced OMEO 1081 Interlock profile from page 51.
   - `lib/studio/templates.ts`:

@@ -269,6 +269,24 @@ const IMAGE_OF: Record<string, string> = {
   door_center_60: "door_center_75",
   door_center_50: "door_center_75",
   domal_frame_2t: "domal_frame",
+  // 25 mm Bombay sliding
+  "2t_top_25": "2t_top",
+  "2t_bottom_25": "2t_bottom",
+  "3t_top_25": "3t_top",
+  "3t_bottom_25": "3t_bottom",
+  handle_25: "handle_std",
+  interlock_25: "interlock",
+  bearing_25: "bearing",
+  // Domal 35 mm
+  d35_track_2t: "domal_frame",
+  d35_track_3t: "domal_frame",
+  d35_shutter: "domal_glass_shutter",
+  d35_interlock: "domal_interlock",
+  // Mini Domal 20 mm
+  md20_track_2t: "domal_frame",
+  md20_track_3t: "domal_frame",
+  md20_shutter: "domal_glass_shutter",
+  md20_patti: "domal_interlock",
 };
 
 export function hasImage(sectionId: string): boolean {
