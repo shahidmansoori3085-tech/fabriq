@@ -38,10 +38,12 @@ FabriQ is a phone web app for Indian aluminium fabricators:
 | **Private preview** `app-3pa0k75gn-indian-steels.vercel.app` | branch `claude/system-studio` | Only people logged in to the "Indian steels" Vercel team can open it. Founder is checking it now. Every push to this branch updates it (`.github/workflows/preview.yml`). |
 | `claude/golden-tests` | older work | Fully contained in `claude/system-studio`. Ignore it. |
 
-`claude/system-studio` is **22 commits ahead of `main`**:
+`claude/system-studio` is ahead of `main`:
 - golden tests,
 - engine fixes (Domal 2051 / interlock, 90° frames, glass rule, equal share),
-- the whole System Studio.
+- the whole System Studio,
+- verified section templates for Sleek 29mm, 37mm, Banu Hashim 31mm & 35mm (Top/Bottom rails, Handle stiles, Slim interlocks, T-spines),
+- photorealistic architectural 3D corner cutaway viewer (Reynaers / Crystal Windows style with DGU glass, gaskets, and stainless steel rails).
 
 **Nothing goes to production until the founder writes clearly that it should go
 live for everyone** (e.g. "sabke liye live karo"). See §9.

@@ -96,7 +96,9 @@ export function teach(input: StudioSystem, t: TaughtJob): TeachResult {
       when: scopeFor(sys, s.id, vars, cur), base: tmpl.base, num: tmpl.num, den: tmpl.den, pre: tmpl.pre,
       add: constant, evidence: { status: "suggested", source: src },
     };
-    const same = s.cases.findIndex((c) => JSON.stringify(c.when) === JSON.stringify(scoped.when));
+    const normWhen = (w?: Record<string, string | string[]>) =>
+      w ? JSON.stringify(Object.keys(w).sort().reduce((acc, k) => { acc[k] = w[k]; return acc; }, {} as Record<string, string | string[]>)) : "";
+    const same = s.cases.findIndex((c) => normWhen(c.when) === normWhen(scoped.when));
     if (same >= 0) s.cases[same] = scoped; else s.cases.unshift(scoped);
     learned.push({ size: s.id, label: s.label, constant, changed: true });
   }

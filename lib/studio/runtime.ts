@@ -31,10 +31,19 @@ export function studioReady(s: StudioSystem): boolean {
 }
 
 export function studioJobOf(item: JobItem): StudioJob {
+  let extraSwitches: Record<string, string> = {};
+  if (item.meta.studioSwitches) {
+    try { extraSwitches = JSON.parse(item.meta.studioSwitches); } catch { /* ignore */ }
+  }
+  for (const [k, v] of Object.entries(item.meta)) {
+    if (k.startsWith("switch_") && typeof v === "string") {
+      extraSwitches[k.replace(/^switch_/, "")] = v;
+    }
+  }
   return {
     id: item.id, W: item.width, H: item.height, qty: item.qty,
     tracks: parseInt(item.meta.tracks ?? "", 10) || item.shutters.length || 2,
     mix: item.shutters.map((s) => (s.kind === "jali" ? "J" : s.kind === "sheet" ? "S" : "G")).join(""),
-    switches: { mode: item.meta.shutterSplit === "equal" ? "equal" : "half" },
+    switches: { mode: item.meta.shutterSplit === "equal" ? "equal" : "half", ...extraSwitches },
   };
 }
