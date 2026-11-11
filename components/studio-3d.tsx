@@ -290,7 +290,7 @@ export default function Window3D({
             const a = pos.getX(i), c = pos.getZ(i);
             if (Math.abs(c) < 1e-6) pos.setZ(i, a); // Mitre 45° at corner origin, 90° cut at end!
           }
-          gFb.needsUpdate = true;
+          pos.needsUpdate = true;
         }
         // Rotate so depth extrudes along +X
         const rot = new THREE.Matrix4().makeRotationY(Math.PI / 2);
@@ -312,7 +312,7 @@ export default function Window3D({
             const a = pos.getX(i), c = pos.getZ(i);
             if (Math.abs(c) < 1e-6) pos.setZ(i, a); // Mitre 45° at corner origin, 90° cut at top!
           }
-          gFs.needsUpdate = true;
+          pos.needsUpdate = true;
         }
         // Rotate so depth extrudes along +Y
         const rot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
@@ -338,7 +338,7 @@ export default function Window3D({
             const a = pos.getX(i), c = pos.getZ(i);
             if (Math.abs(c) < 1e-6) pos.setZ(i, a);
           }
-          gSb.needsUpdate = true;
+          pos.needsUpdate = true;
         }
         const rot = new THREE.Matrix4().makeRotationY(Math.PI / 2);
         rot.setPosition(sashFace, trackFloorY, trackOffsetZ);
@@ -359,7 +359,7 @@ export default function Window3D({
             const a = pos.getX(i), c = pos.getZ(i);
             if (Math.abs(c) < 1e-6) pos.setZ(i, a);
           }
-          gSs.needsUpdate = true;
+          pos.needsUpdate = true;
         }
         const rot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
         rot.setPosition(sashFace, trackFloorY, trackOffsetZ);
