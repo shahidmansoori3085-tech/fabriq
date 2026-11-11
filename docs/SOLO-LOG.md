@@ -17,6 +17,19 @@ Entry format:
 
 ---
 
+## 2026-11-11 — Comprehensive FabriQ Systems & Sections Handbook PDF (A to Z)
+- Branch / commits: `ag/solo-20261111-systems-handbook-pdf` -> fast-forward merged into `claude/system-studio`
+- Files changed (why):
+  - `docs/FABRIQ_SYSTEMS_HANDBOOK.pdf` & `docs/systems-handbook.html`:
+    - Generated a crystal-clear 10-page A4 master handbook covering all 11 major aluminium systems (Normal 18mm, Bombay 25mm, Domal 27mm, Domal 35mm, Ample 29mm, Banu Hashim 31mm, Gulf 35mm, Z-40, Z-55, Partitions 2.5″×1.5″, Aluminium Doors).
+    - Every system includes system name, overview, technical specs, and a structured section card for every profile used.
+    - Each section card features official manufacturer cropped photos / vector CAD die shapes, dual English & Hindi names, standard die code, dimensions, and explicit fabrication rules / conditions ("Kahan aur Kab Lagta Hai").
+  - `scripts/build-handbook.ts`: Automated standalone build script compiling SVG CAD paths and base64 catalogue PNGs to PDF via Headless Chrome.
+- GitHub check: tsc 0 errors, local evals pass.
+- Preview: Available in docs and as downloadable PDF artifact.
+- Numbers changed (source): Official manufacturer catalogue specs (OMEO, Banu Hashim, Ample).
+- Unsure / skipped: None.
+
 ## 2026-11-11 — Section Names & Photo Accuracy Overhaul + Reynaers Architectural 3D Cutaway
 - Branch / commits: `ag/solo-20261111-section-photos` -> fast-forward merged into `claude/system-studio`
 - Files changed (why):
