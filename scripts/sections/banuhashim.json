@@ -1,2 +1,80 @@
-{ "style": "dark-fill", "skipTop": 0.07, "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf", "out": "lib/studio/shapes/banuhashim.json", "maker": "Banu Hashim", "pages": [
- { "page": 61, "cells": [ {"code":"BH-6406","w":59,"h":31.4},{"code":"BH-6407","w":59,"h":31.4},{"code":"BH-6408","w":38.1,"h":20.2} ] } ] }
+{
+  "style": "dark-fill",
+  "skipTop": 0.07,
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf",
+  "out": "lib/studio/shapes/banuhashim.json",
+  "maker": "Banu Hashim",
+  "pages": [
+    {
+      "page": 59,
+      "cells": [
+        { "code": "BH-6400", "w": 85.00, "h": 33.10 },
+        { "code": "BH-6401", "w": 80.80, "h": 47.60 },
+        { "code": "BH-6402", "w": 124.70, "h": 33.10 }
+      ]
+    },
+    {
+      "page": 60,
+      "cells": [
+        { "code": "BH-6403", "w": 120.50, "h": 47.60 },
+        { "code": "BH-6404", "w": 65.90, "h": 29.00 },
+        { "code": "BH-6405", "w": 65.90, "h": 29.00 }
+      ]
+    },
+    {
+      "page": 61,
+      "cells": [
+        { "code": "BH-6406", "w": 59.00, "h": 31.40 },
+        { "code": "BH-6407", "w": 59.00, "h": 31.40 },
+        { "code": "BH-6408", "w": 38.10, "h": 20.20 }
+      ]
+    },
+    {
+      "page": 62,
+      "cells": [
+        { "code": "BH-6409", "w": 80.10, "h": 20.20 },
+        { "code": "BH-6410", "w": 38.10, "h": 20.20 },
+        { "code": "BH-6411", "w": 80.10, "h": 20.20 }
+      ]
+    },
+    {
+      "page": 64,
+      "cells": [
+        { "code": "BH-6500", "w": 100.00, "h": 32.80 },
+        { "code": "BH-6501", "w": 95.00, "h": 31.20 },
+        { "code": "BH-6502", "w": 150.00, "h": 32.80 }
+      ]
+    },
+    {
+      "page": 65,
+      "cells": [
+        { "code": "BH-6503", "w": 145.60, "h": 31.20 },
+        { "code": "BH-6504", "w": 58.00, "h": 31.70 },
+        { "code": "BH-6505", "w": 58.00, "h": 31.70 }
+      ]
+    },
+    {
+      "page": 66,
+      "cells": [
+        { "code": "BH-6506", "w": 47.20, "h": 27.50 },
+        { "code": "BH-6507", "w": 47.20, "h": 27.50 },
+        { "code": "BH-6508", "w": 96.00, "h": 27.00 }
+      ]
+    },
+    {
+      "page": 67,
+      "cells": [
+        { "code": "BH-6509", "w": 96.00, "h": 27.00 },
+        { "code": "BH-6510", "w": 58.90, "h": 35.20 },
+        { "code": "BH-6511", "w": 58.90, "h": 35.20 }
+      ]
+    },
+    {
+      "page": 68,
+      "cells": [
+        { "code": "BH-6512", "w": 10.80, "h": 14.00 },
+        { "code": "BH-6513", "w": 14.50, "h": 17.96 }
+      ]
+    }
+  ]
+}

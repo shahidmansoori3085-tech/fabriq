@@ -43,7 +43,8 @@ FabriQ is a phone web app for Indian aluminium fabricators:
 - engine fixes (Domal 2051 / interlock, 90° frames, glass rule, equal share),
 - the whole System Studio,
 - verified section templates for Sleek 29mm, 37mm, Banu Hashim 31mm & 35mm (Top/Bottom rails, Handle stiles, Slim interlocks, T-spines),
-- photorealistic architectural 3D corner cutaway viewer (Reynaers / Crystal Windows style with DGU glass, gaskets, and stainless steel rails).
+- photorealistic architectural 3D corner cutaway viewer (Reynaers / Crystal Windows style with DGU glass, gaskets, and stainless steel rails),
+- section names and photo/CAD drawing overhaul across "New system" and Studio (real cropped photos from /public/sections/, 24 Banu Hashim dies traced from catalogue, full-bleed 2.5× larger RealSection vector rendering, and multi-chamber architectural guide sketches).
 
 **Nothing goes to production until the founder writes clearly that it should go
 live for everyone** (e.g. "sabke liye live karo"). See §9.

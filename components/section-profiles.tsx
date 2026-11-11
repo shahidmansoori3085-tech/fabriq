@@ -265,7 +265,11 @@ const SECTION_IMAGES = new Set<string>([
 /** Sections drawn by another one's catalogue picture: every door center rail
  *  is the same profile — a tube with the moulding on BOTH sides (the shutter
  *  has it on one) — so the 63 and 50 show the 75's drawing, not a plain box. */
-const IMAGE_OF: Record<string, string> = { door_center_60: "door_center_75", door_center_50: "door_center_75" };
+const IMAGE_OF: Record<string, string> = {
+  door_center_60: "door_center_75",
+  door_center_50: "door_center_75",
+  domal_frame_2t: "domal_frame",
+};
 
 export function hasImage(sectionId: string): boolean {
   return SECTION_IMAGES.has(IMAGE_OF[sectionId] ?? sectionId);

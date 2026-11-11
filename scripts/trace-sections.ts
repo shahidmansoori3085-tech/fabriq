@@ -119,7 +119,7 @@ function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "
   }
   // sections: pieces of one drawing (outline, fill, small islands) are joined when their boxes touch
   const M = Math.round(Math.min(w, h) * 0.012);
-  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * 0.9 && c.n > 40);
+  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * 0.96 && c.n > 40);
   let merged = true;
   while (merged) {
     merged = false;

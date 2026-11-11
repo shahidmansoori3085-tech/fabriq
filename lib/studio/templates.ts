@@ -108,8 +108,8 @@ export const NORMAL_18: StudioSystem = {
     prof("3t_top", "3-Track Top/Side", "track", { omeo: "1021" }, "92×32", { value: 2.7, perFt: 16 }, CATALOGUE("OMEO catalogue")),
     prof("3t_bottom", "3-Track Bottom", "track", { omeo: "1031", alpro: "1831" }, "92×32", { value: 2.7, perFt: 16 }, CATALOGUE("OMEO catalogue")),
     prof("handle_std", 'Handle 3/4"×1.5"', "handle", { omeo: "1041", alpro: "1841" }, "40×18", { value: 1.3, perFt: 16 }, CATALOGUE("OMEO catalogue")),
-    prof("interlock", "Interlock", "interlock", { omeo: "1081" }, "", { value: 1.2, perFt: 16 }, CATALOGUE("OMEO catalogue"), { faceMm: 25 }),
-    prof("bearing", "Bearing / H-Section", "bearing", { omeo: "1051" }, "", { value: 1.3, perFt: 16 }, CATALOGUE("OMEO catalogue"), { faceMm: 40 }),
+    prof("interlock", "Interlock Stile 40×18", "interlock", { omeo: "1081" }, "40×18", { value: 1.2, perFt: 16 }, CATALOGUE("OMEO catalogue"), { faceMm: 25 }),
+    prof("bearing", "Bottom Bearing / Rail 40×18", "bearing", { omeo: "1051" }, "40×18", { value: 1.3, perFt: 16 }, CATALOGUE("OMEO catalogue"), { faceMm: 40 }),
   ],
   sizes: [
     size("trackW", "Top / bottom track", rule("W", -6 * SUT, FOUNDER("90° frame, track sits between the sides (W − 6 sut)"))),
@@ -161,10 +161,10 @@ export const DOMAL_27: StudioSystem = {
   switches: [MODE_SWITCH],
   profiles: [
     prof("domal_frame_2t", "Domal 2-Track Frame", "frame", { omeo: "2051" }, "45×45", { value: 3.2, perFt: 15 }, CATALOGUE("OMEO 2051")),
-    prof("domal_frame", "Domal 3-Track Frame", "frame", { omeo: "2062" }, "", { value: 4.968, perFt: 16 }, CATALOGUE("OMEO 2062")),
+    prof("domal_frame", "Domal 3-Track Frame 80×45", "frame", { omeo: "2062" }, "80.5×45.4", { value: 4.968, perFt: 16 }, CATALOGUE("OMEO 2062")),
     prof("domal_glass_shutter", "Domal Glass Shutter", "shutter", { omeo: "2046/2047" }, "65×27", { value: 3.2, perFt: 15 }, CATALOGUE("OMEO 2046")),
-    prof("domal_jali_shutter", "Domal Mesh Shutter", "mesh-shutter", { omeo: "2081/2082" }, "", { value: 3.226, perFt: 12 }, CATALOGUE("OMEO 2081")),
-    prof("domal_interlock", "Domal Interlock Patti", "interlock-patti", { omeo: "2091" }, "", { value: 0.88, perFt: 12 }, CATALOGUE("OMEO 2091"), { faceMm: 10 }),
+    prof("domal_jali_shutter", "Domal Mesh Shutter", "mesh-shutter", { omeo: "2081/2082" }, "65.3×27.3", { value: 3.226, perFt: 12 }, CATALOGUE("OMEO 2081")),
+    prof("domal_interlock", "Domal Interlock Patti 39×28", "interlock-patti", { omeo: "2091" }, "39.4×28", { value: 0.88, perFt: 12 }, CATALOGUE("OMEO 2091"), { faceMm: 10 }),
   ],
   sizes: DOMAL_27_SIZES,
   parts: [
@@ -189,7 +189,15 @@ export const NORMAL_25: StudioSystem = {
   blurb: "Like 18 mm Bombay but 1″ deep: handle, built-in interlock, top and bearing. Choose your sections.",
   layouts: [L2("GG", "GJ"), L3("GGJ", "GGG")],
   switches: [],
-  profiles: [],
+  profiles: [
+    prof("2t_top_25", "25 mm 2-Track Top/Side 50×25", "track", { omeo: "2000" }, "50×25", { value: 1.6, perFt: 16 }, CATALOGUE("OMEO 2000")),
+    prof("2t_bottom_25", "25 mm 2-Track Bottom 50×25", "track", { omeo: "2011" }, "50×25", { value: 1.77, perFt: 16 }, CATALOGUE("OMEO 2011")),
+    prof("3t_top_25", "25 mm 3-Track Top/Side 75×25", "track", {}, "75×25", { value: 2.4, perFt: 16 }, CATALOGUE("Bombay 25")),
+    prof("3t_bottom_25", "25 mm 3-Track Bottom 75×25", "track", {}, "75×25", { value: 2.6, perFt: 16 }, CATALOGUE("Bombay 25")),
+    prof("handle_25", '25 mm Handle Stile (1″×2″)', "handle", { omeo: "2000" }, "50×25", { value: 1.6, perFt: 16 }, CATALOGUE("OMEO 2000")),
+    prof("interlock_25", '25 mm Interlock Stile (1″×2″)', "interlock", {}, "50×25", { value: 1.5, perFt: 16 }, CATALOGUE("Bombay 25")),
+    prof("bearing_25", "25 mm Bottom Bearing / Top Rail", "bearing", { omeo: "2031" }, "50×25", { value: 1.625, perFt: 16 }, CATALOGUE("OMEO 2031")),
+  ],
   sizes: [
     size("trackW", "Top / bottom track", unknownFrom("W")),
     size("sideH", "Frame side", unknownFrom("H")),
@@ -201,7 +209,16 @@ export const NORMAL_25: StudioSystem = {
     size("glassW", "Glass width", rule("bearing", inches(0.75), VIDEO("bearing + ¾″"))),
     size("glassH", "Glass height", rule("shutterH", -inches(4.125), VIDEO("shutter − 4⅛″"))),
   ],
-  parts: NORMAL_18.parts.map((p) => ({ ...p, profile: [{ id: "" }] })),
+  parts: [
+    part("top", "Top", [{ when: { tracks: "3" }, id: "3t_top_25" }, { id: "2t_top_25" }], "window", "trackW", 90, "frame-top"),
+    part("left", "Left Side", [{ when: { tracks: "3" }, id: "3t_top_25" }, { id: "2t_top_25" }], "window", "sideH", 90, "frame-left"),
+    part("right", "Right Side", [{ when: { tracks: "3" }, id: "3t_top_25" }, { id: "2t_top_25" }], "window", "sideH", 90, "frame-right"),
+    part("bottom", "Bottom", [{ when: { tracks: "3" }, id: "3t_bottom_25" }, { id: "2t_bottom_25" }], "window", "trackW", 90, "frame-bottom"),
+    part("handle", "{s} Handle{tag}", "handle_25", "shutter", "shutterH", 90, "sash-lock"),
+    part("interlock", "{s} Interlock{tag}", "interlock_25", "shutter", "shutterH", 90, "sash-meet"),
+    part("bearingTop", "{s} Bearing Top{tag}", "bearing_25", "shutter", "bearing", 90, "sash-top"),
+    part("bearingBottom", "{s} Bearing Bottom{tag}", "bearing_25", "shutter", "bearing", 90, "sash-bottom"),
+  ],
   notes: ["Choose your sections. Track and side cuts are not known yet — teach them from one window."],
 };
 
@@ -304,6 +321,12 @@ export const DOMAL_35: StudioSystem = base({
       rule("shutterH", -inches(4.625), VIDEO("2-track: shutter − 4⅝″"), { when: { tracks: "2" } }),
       rule("shutterH", -inches(5), VIDEO("3+1 / 4+1: shutter − 5″"))),
   ],
+  profiles: [
+    prof("d35_track_2t", "Domal 35 2-Track Frame", "frame", { bh: "BH-6701" }, "77×42.6", { value: 4.85, perFt: 12 }, CATALOGUE("Banu Hashim BH-6701")),
+    prof("d35_track_3t", "Domal 35 3-Track Frame", "frame", { bh: "BH-6703" }, "122×42.5", { value: 7.8, perFt: 12 }, CATALOGUE("Banu Hashim BH-6703")),
+    prof("d35_shutter", "Domal 35 Shutter 35×75", "shutter", {}, "75×35", { value: 4.2, perFt: 12 }, CATALOGUE("Domal 35×75")),
+    prof("d35_interlock", "Domal 35 Interlock Patti", "interlock-patti", {}, "35×20", { value: 1.1, perFt: 12 }, CATALOGUE("Domal 35")),
+  ],
   parts: DOMAL_27.parts.map((p) => ({ ...p, profile: [{ id: "" }], meshProfile: undefined })),
   notes: ["The mesh shutter in 3+1 / 4+1 is taken as the same width as a glass shutter — check it on your first job."],
 });
@@ -312,7 +335,20 @@ export const MINI_DOMAL_20: StudioSystem = base({
   id: "mini-domal-20", name: "Mini domal 20×54", group: "domal",
   blurb: "Light domal: one 20×54 profile on 4 sides + interlock patti. Choose your sections.",
   sizes: UNKNOWN_SIZES(),
-  parts: DOMAL_27.parts.map((p) => ({ ...p, profile: [{ id: "" }], meshProfile: undefined })),
+  profiles: [
+    prof("md20_track_2t", "Mini Domal 2-Track Frame", "frame", {}, "54×20", { value: 2.1, perFt: 12 }, CATALOGUE("Mini Domal")),
+    prof("md20_track_3t", "Mini Domal 3-Track Frame", "frame", {}, "84×20", { value: 3.2, perFt: 12 }, CATALOGUE("Mini Domal")),
+    prof("md20_shutter", "Mini Domal Shutter 20×54", "shutter", {}, "54×20", { value: 2.4, perFt: 12 }, CATALOGUE("Mini Domal")),
+    prof("md20_patti", "Mini Domal Interlock Patti", "interlock-patti", {}, "20×15", { value: 0.7, perFt: 12 }, CATALOGUE("Mini Domal")),
+  ],
+  parts: [
+    ...domalFrame(byTracks("md20_track_2t", "md20_track_3t")),
+    part("shutterTop", "{s} Shutter Top{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLeft", "{s} Shutter Left{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterRight", "{s} Shutter Right{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock {k}", "md20_patti", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
 });
 
 /** Ample 22 mm — light domal-type: shutter on 3 sides, interlock profile on the meeting side. */
@@ -479,22 +515,6 @@ export const BH_35: StudioSystem = withAlternatives(base({
   notes: ["Vertical jambs and horizontal tracks at 90° with screws; heavy bottom rail and handle stile; 27.5mm slim interlock reinforced with BH-6508 spine for cyclonic wind loads."],
 }), "shutterMeet", ["bh35_slim", "bh35_slim_dgu"]);
 
-/* ———————————————— Gulf ———————————————— */
-
-export const GULF: StudioSystem = base({
-  id: "gulf", name: "Gulf series (25 / 30 / 31 / 35)", group: "gulf",
-  blurb: "Separate bottom track + one top/side profile, joined at 90° with screws. Choose your sections.",
-  sizes: UNKNOWN_SIZES(),
-  parts: [
-    part("frameTop", "Top", "", "window", "frameW", 90, "frame-top"),
-    part("frameLeft", "Left Side", "", "window", "frameH", 90, "frame-left"),
-    part("frameRight", "Right Side", "", "window", "frameH", 90, "frame-right"),
-    part("frameBottom", "Bottom Track", "", "window", "frameW", 90, "frame-bottom"),
-    ...stileShutter("", ""),
-  ],
-  notes: ["Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
-});
-
 /** Alucoat S-30 Gulf — every section named on the catalogue page (p.20). */
 export const GULF_S30: StudioSystem = withAlternatives(base({
   id: "gulf-s30", name: "Gulf S-30 — Alucoat", group: "gulf", maker: "Alucoat",
@@ -527,6 +547,17 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
   ],
   notes: ["Section names are printed in the Alucoat catalogue. Gulf shops differ on which piece runs full length — teach from one window."],
 }), "interlock", ["at_clip", "at_dbl"]);
+
+/* ———————————————— Gulf series ———————————————— */
+
+export const GULF: StudioSystem = base({
+  id: "gulf", name: "Gulf series (25 / 30 / 31 / 35)", group: "gulf",
+  blurb: "Separate bottom track + one top/side profile, joined at 90° with screws. Choose your sections.",
+  sizes: UNKNOWN_SIZES(),
+  profiles: GULF_S30.profiles,
+  parts: GULF_S30.parts,
+  notes: ["Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
+});
 
 /* ———————————————— Casement / Z-section (verified) ———————————————— */
 // Founder-verified Z rules (engine, docs/09): sight line 40 mm on frame and Z-pipe,
@@ -597,12 +628,13 @@ export const BLANK_DOMAL_TYPE: StudioSystem = base({
   id: "blank-domal-type", name: "New system — shutter on 4 sides", group: "blank",
   blurb: "Any series where one shutter profile goes round (domal, sleek, mini domal…)",
   sizes: UNKNOWN_SIZES(),
-  parts: [...domalFrame([{ id: "" }]), ...stileShutter("", "")],
-  notes: ["Pick your sections, switch off pieces you do not use, then teach from one window."],
+  profiles: DOMAL_27.profiles,
+  parts: DOMAL_27.parts,
+  notes: ["Starts with standard 4-side shutter pieces. Every section and rule can be customized after."],
 });
 
 export const BLANK_SLIDING: StudioSystem = {
-  ...NORMAL_25,
+  ...NORMAL_18,
   id: "blank-sliding", name: "New system — handle, interlock, bearing", group: "blank",
   blurb: "Any Bombay-type series with a 4-profile shutter",
   sizes: [
@@ -614,7 +646,9 @@ export const BLANK_SLIDING: StudioSystem = {
     size("glassW", "Glass width", unknownFrom("bearing")),
     size("glassH", "Glass height", unknownFrom("shutterH")),
   ],
-  notes: ["Pick your sections, switch off pieces you do not use, then teach from one window."],
+  profiles: NORMAL_18.profiles,
+  parts: NORMAL_18.parts,
+  notes: ["Starts with standard handle, interlock, and bearing shutter pieces. Every section and rule can be customized after."],
 };
 
 export const TEMPLATES: StudioSystem[] = [

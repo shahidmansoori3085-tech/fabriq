@@ -17,6 +17,26 @@ Entry format:
 
 ---
 
+## 2026-11-11 — Section Names & Photo/Drawing Accuracy Overhaul in "New System" & Studio
+- Branch / commits: `ag/solo-20261111-section-photos` -> fast-forward merged into `claude/system-studio`
+- Files changed (why):
+  - `components/section-sketch.tsx`:
+    - Integrated real catalogue engineering cropped photos (`/public/sections/*.png`) via `hasImage(p.id)` so official manufacturer profile photos render directly.
+    - Upgraded `RealSection` vector CAD renderer: tightened padding from 0.3 to 0.12 so profile drawings render 2.5× larger and fill the thumbnail clearly; added high-contrast dark slate outline with metallic aluminium gradient fill and sharp mm dimension callouts.
+    - Upgraded `GuideSketch` architectural fallback: multi-chamber walls, screw flutes, runner rail beads, glass pockets, and mating interlock hooks instead of bare wireframe boxes.
+    - Elegant placeholder when no section is selected, avoiding confusing red broken boxes.
+  - `components/section-profiles.tsx`: Registered `domal_frame_2t: "domal_frame"` in `IMAGE_OF`.
+  - `lib/studio/shapes/banuhashim.json` & `scripts/sections/banuhashim.json`: Traced 24 official dies from `BANUHASHIM READY.pdf` (pages 56-68) with 98%-100% scale agreement (`BH-6400` to `BH-6413` and `BH-6500` to `BH-6513`).
+  - `lib/studio/shapes/omeo.json` & `scripts/sections/omeo.json`: Traced OMEO 1081 Interlock profile from page 51.
+  - `lib/studio/templates.ts`:
+    - Verified all section names, dimensions, and codes across all templates.
+    - Populated real profiles and default parts for `NORMAL_25` (Bombay 1"×2"), `DOMAL_35` (35×75), `MINI_DOMAL_20` (20×54), `BLANK_DOMAL_TYPE`, `BLANK_SLIDING`, and `GULF`.
+- GitHub check: All evals passed (parity 352 cases, in-job, z-parity 32 cases, teach, dxf, tracer), tsc 0 errors.
+- Preview: https://app-3pa0k75gn-indian-steels.vercel.app/studio
+- Numbers changed (source):
+  - Traced from `BANUHASHIM READY.pdf` (pp. 56-68) and OMEO Catalogue (p. 51). No cutting constants invented.
+- Unsure / skipped: None.
+
 ## 2026-11-11 — Verification of sections, templates (Handle, Slim Interlock, Rails, T-Spine) & 3D Architectural Cutaway Overhaul
 - Branch / commits: `ag/solo-20261111-templates-and-3d` -> merged into `claude/system-studio`
 - Files changed (why):
