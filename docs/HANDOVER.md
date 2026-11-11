@@ -1,0 +1,285 @@
+# FabriQ — full handover (read this first)
+
+Written by Claude Code on 2026-11-11. This document lets another agent (for
+example Antigravity) continue FabriQ when Claude Code is out of usage. Keep it
+true: **whoever changes the app updates this file in the same commit.**
+
+---
+
+## 1. The product in one minute
+
+FabriQ is a phone web app for Indian aluminium fabricators:
+
+- **Input:** window / door / partition sizes.
+- **Output:** a material list (pipes to buy per stock length, glass, hardware)
+  and a cutting sheet.
+- **Accuracy is the whole product.** A wrong number wastes the fabricator's
+  aluminium.
+
+**Founder:** a fabricator himself. He writes in Hinglish (often in capitals).
+
+**How to work with the founder:**
+- **Talk to him** in simple Hinglish, short sentences.
+- **Never show him code.** Explain what changed and what he can now do.
+- **App text** must be simple professional English with short sentences.
+  - No Hinglish in the UI.
+  - Never write "owner" wording ("ask the owner", "only the owner…").
+  - No prices, rates or money anywhere in the app.
+- **Fabrication:** reason from geometry yourself (roller → shutter → glass).
+  Ask him only for real measurements.
+
+---
+
+## 2. What is live today (2026-11-11)
+
+| Where | What | Notes |
+|---|---|---|
+| **Production** `app-six-lilac-20.vercel.app` | branch `main` @ `92899a4` | What every customer sees. **No System Studio yet.** |
+| **Private preview** `app-3pa0k75gn-indian-steels.vercel.app` | branch `claude/system-studio` | Only people logged in to the "Indian steels" Vercel team can open it. Founder is checking it now. Every push to this branch updates it (`.github/workflows/preview.yml`). |
+| `claude/golden-tests` | older work | Fully contained in `claude/system-studio`. Ignore it. |
+
+`claude/system-studio` is **22 commits ahead of `main`**:
+- golden tests,
+- engine fixes (Domal 2051 / interlock, 90° frames, glass rule, equal share),
+- the whole System Studio.
+
+**Nothing goes to production until the founder writes clearly that it should go
+live for everyone** (e.g. "sabke liye live karo"). See §9.
+
+---
+
+## 3. Repository map (`E:\alu-tool\app`, Next.js 16, React 19, Tailwind 4)
+
+**Read `AGENTS.md` before touching Next.js code.** This Next version has breaking
+changes; its docs are in `node_modules/next/dist/docs/`.
+
+| Path | What it is |
+|---|---|
+| `app/page.tsx` (~2,650 lines) | The whole main app: job screen, add-window flow, results, settings. CRLF line endings. |
+| `app/studio/page.tsx` | System Studio: My systems, New system, My sections. |
+| `lib/engine/` | **The built-in engine.** `estimator.ts` (all systems, `estimate()`), `cutting.ts` (bar packing), `sections.ts` (section master), `units.ts` (µm, sut, parsing), `questions.ts`, `quick-item.ts` (`buildJobItem`), `sheet-seed.ts`, `review.ts`, `knowledge.ts`. |
+| `lib/studio/` | **System Studio engine.** See §5. |
+| `components/` | `diagrams.tsx` (job pictures), `eng-sheet.tsx` (engineering sheet), `studio-*.tsx` + `components/studio/*` (Studio UI), `section-sketch.tsx`, `studio-3d.tsx` (three.js). |
+| `lib/ai/` | AI providers for reading sheet photos (gateway, gemini, openrouter, nvidia). Needs keys from Vercel env. |
+| `scripts/trace-sections.ts` + `scripts/sections/*.json` | Catalogue section tracer (§6). |
+| `evals/` | All tests (§7). |
+| `docs/studio/` | Studio design, evidence register (every number's source), research audit. |
+| `.github/workflows/` | `check.yml` (non-main branches: tsc + tests + lint), `preview.yml` (private preview), `deploy.yml` (production, on push to `main`). |
+
+**Research outside the repo (`E:\alu-tool`):**
+- `docs/16`–`19`: customer call, fabrication handbook, doc 18 + its review,
+  knowledge map.
+- `research/`: videos, catalogues, transcripts.
+- `research/catalogue/new-series/`: the 15 catalogue PDFs.
+
+---
+
+## 4. Built-in engine — the rules that must not break
+
+- **Units:** everything is integer **µm**. 1 sut = 1/8″ = **3175 µm**. Never
+  round to mm inside the engine.
+- **Systems:** `normal_2t`, `normal_3t`, `domal`, `door_single`, `partition`,
+  `z_section`, and `studio` (a System Studio system, §5).
+
+**Verified constants** (founder jobs). Do not change without the founder:
+
+| What | Value | Basis |
+|---|---|---|
+| Normal shutter H | H − 41.3 mm | founder's 72×60 job |
+| Normal track | W − 6 sut | 90° frame |
+| Normal bearing | shutterW − 80 mm | |
+| Normal glass | shutterW − 64.125, shutterH − 66.675 | videos |
+| Domal shutter H | H − 66.7 mm | founder's 66×58 job |
+| Domal glass | shutter − 102 mm (both ways) | |
+| Domal frame | 2-track = 2051 (`domal_frame_2t`), 3-track = 2062 | |
+| Domal interlock | 2 per *glass–glass* meeting | |
+| Shutter width | W/2 | **"Equal share"** (Settings) is opt-in |
+| Z-section | sight line 40, sash +10, glass −5/side, mullion takes 20 each side | |
+| Door | clearance = profile inches − ½″ | |
+| Partition | SP/DP 38.1 face, panel − 4 sut | door leaf −2 sut / −3 sut |
+
+**Never invent a cutting number.**
+- Catalogues print sizes and weights, **never** cutting rules.
+- Doc 18's formulas (Gulf H−55/65/75, Domal (W+22)/2 and so on) were **made up**
+  and are rejected.
+- Every number needs a source in `docs/studio/FORMULA_EVIDENCE_REGISTER.md`.
+
+**Stock lengths:** the default is 16′ bars with 8′ halves. Some sections ship
+12′ (`barLengthFt`).
+
+---
+
+## 5. System Studio (`lib/studio/`) — how it works
+
+The shop builds its own window system. Every system is **data**, not code.
+
+**Files:**
+
+| File | What it does |
+|---|---|
+| `model.ts` | The data model. `StudioSystem` = `profiles` + `sizes` + `parts` + `extras` + `switches` + `layouts`. **Sizes** are rules: `round((base·num + pre)/den) + add`, with cases chosen by `when` (tracks, glass count, switches). `add: null` = unknown → cutting is blocked. Every case carries `evidence` (verified / observed / suggested / unknown). **Parts** say which profile, how many, cut to which size, the angle (45/90), and the place in the drawing. **Scopes:** window, shutter, meeting (glass–glass), between (casement mullion). |
+| `evaluate.ts` | Turns a system + job into pieces, panels, hardware and a trace. Throws `StudioUnknownError` when a size or section is missing. `perShutter` lets each shutter pick its own section (e.g. slim interlock small on one shutter, big on the next). |
+| `teach.ts` | One real job sets each constant (the slope comes from geometry, never from fitting two jobs). `check()` compares with a second job (½ sut tolerance, never averaged). A learned rule is scoped to the track count plus the switches it uses. |
+| `templates.ts` | All drafts — see below. `BUILT_IN_PROFILES` is the section library. |
+| `geometry.ts` | Front-view geometry, to scale, from the same data. |
+| `relief.ts` | Front-face shading from the real section shape. |
+| `components/studio-3d.tsx` | Real sections extruded with mitres. |
+| `shapes.ts` + `shapes/*.json` | Traced catalogue shapes by maker code. `shapeOf(profile)` also uses the shop's own traced or DXF shape (`profile.shape`). |
+| `tracer.ts` | In-phone photo tracer. |
+| `dxf.ts` | DXF section import. |
+| `store.ts` | The shop's library in `localStorage` key `fabriq_studio_v1` (this phone only), plus export/import as a file. |
+| `runtime.ts` | Registry used by the main app. `systemOfItem()` reads the frozen copy. |
+
+**Templates in `templates.ts`:**
+
+| Template | Status |
+|---|---|
+| `normal-18`, `domal-27` (OMEO) | verified; parity tests prove engine-exact |
+| `z-40`, `z-55` casement | verified; z-parity |
+| `normal-25`, `normal-5t`, `domal-35` | some rules from videos (observed) |
+| `ample-22` (mini domal), `-25`, `-26`, `-27`, `-29`, `-37` | catalogue sections, cuts unknown |
+| `eleanor-27`, `bh-31` | catalogue sections, cuts unknown |
+| `gulf-s30` (Alucoat), `mini-domal-20`, `gulf` | catalogue sections or structure only, cuts unknown |
+| `blank-*` | blank starting points |
+
+**Studio systems inside a real job:**
+1. The add-window flow lists the shop's systems first (`studio:<id>`).
+   Unfinished ones send the shop to My systems.
+2. `buildJobItem` stores a **frozen JSON copy** in `item.meta.studio`, so
+   editing a system never changes an old job.
+3. `estimate()` builds the item through `studioResult()`. A layout that has
+   not been taught is refused by name.
+
+**UI:** the editor has the drawing / 3D on top, a piece or shutter panel, and
+the tabs Pieces · Cutting list · Teach · Rules.
+
+---
+
+## 6. Catalogue section tracer
+
+Run it with:
+
+```
+PDFTOPPM=<path to pdftoppm.exe> npx tsx scripts/trace-sections.ts scripts/sections/<file>.json
+```
+
+Poppler is at `C:\Users\umarm\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin\`.
+
+**Manifest fields:**
+- `catalogue`: a Windows path like `E:/...`, not `/e/...`.
+- `out`: a `lib/studio/shapes/*.json` file.
+- `maker`
+- `style`
+- `pages[].cells`: in reading order, with the printed `w`/`h`. Use `null` to
+  skip a drawing.
+- `key`: when one code is printed on two profiles.
+- `skipTop`
+- `scaleWhenOff: "max"`
+- `grid` (for `black-grid`).
+
+**Styles:**
+
+| Style | Used for |
+|---|---|
+| `grid` | Ample: 2×3 cells, grey metal |
+| `cad-red` | OMEO: red outlines / green fill, thin walls filled |
+| `dark-fill` | Banu Hashim |
+| `black-grid` | Alucoat: ruled table, opening removes dimension lines |
+| `orange-fill` | Eleanor |
+
+**Scale check:** the two printed sizes must agree within 4 %. If they do not,
+the shape is flagged "check size" in the app.
+
+**Always look at a preview after tracing.** Write a temporary SVG to `public/`,
+then delete it. Register a new maker in `shapes.ts` under the same code key the
+profiles use (`codes: { maker: "code" }`).
+
+**Traced so far:**
+- Ample: 22, 25, 26, 27 domal, 29, 37 (74 sections).
+- OMEO: Bombay 18, domal and Z (23 sections).
+- Banu Hashim: 31 mm, p.61.
+- Alucoat: S-30, p.20.
+- Eleanor: 27 domal, pp.36–37.
+
+**Known catalogue facts:**
+- Antigravity's `research/catalogue/new-series/INDEX.md` is wrong in places:
+  32 mm is casement, and the Ample domal codes are wrong.
+- Ample 22's code 41085 is printed on two profiles.
+
+---
+
+## 7. Tests (all must pass; `npm test` runs them in order)
+
+| Test | What it guards |
+|---|---|
+| `evals/units/parse.ts` | Parsing sizes as typed. |
+| `evals/engine/invariants.ts`, `options.ts`, `z-door-partition.ts`, `normal-fix-top.ts`, `z-middle-fix.ts` | Engine invariants and options. |
+| `evals/engine/golden.ts` + `golden.json` | **Every question path's exact cut list** (622 paths) plus the founder's jobs. `--update` rewrites `golden.json` — only after the founder agrees the change is right, and say why in the commit. |
+| `evals/studio/parity.ts` | Studio Normal 18 / Domal 27 = engine, exactly (352 cases). |
+| `evals/studio/teach.ts` | Teach and check behaviour, template sanity. |
+| `evals/studio/z-parity.ts` | Z 40 / 55 = engine (32 windows). |
+| `evals/studio/tracer.ts` | The photo tracer. |
+| `evals/studio/in-job.ts` | Studio systems through the real job path, and the frozen copy. |
+| `evals/studio/dxf.ts` | DXF import. |
+
+`evals/sheets/run.ts` (`npm run eval:sheets`) is the AI sheet-reading eval. It
+needs API keys. Run it before changing AI prompts or seeding.
+
+**On this laptop:** tests take minutes and the laptop has about 1 GB free RAM.
+Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
+
+---
+
+## 8. Laptop and tool quirks
+
+- **Windows.** Many files have **CRLF** line endings (`app/page.tsx`,
+  `lib/engine/*`). Exact-text edits must handle `\r\n`.
+- **Dev server:** `.claude/launch.json` "fabriq" → `npm run dev` on port **3002**.
+  Never `npm run build` while it runs (it corrupts `.next`).
+- **Vercel:** this machine cannot reach `api.vercel.com` reliably. Deploy only
+  through GitHub Actions, never the local `vercel` CLI.
+- **GitHub:** there is no `gh` CLI. Use the REST API with the token from
+  `git credential fill` (never print it).
+- **Preview link:** after a push to `claude/system-studio`, open the "Private
+  preview" run's summary on GitHub. Each run prints `Preview: https://…`.
+
+---
+
+## 9. Releasing to everyone (only on the founder's clear words)
+
+1. All checks are green on `claude/system-studio`, and the founder has checked
+   the private preview.
+2. `git checkout main && git pull --ff-only origin main && git merge --ff-only claude/system-studio`.
+   If fast-forward fails, stop and ask.
+3. `git push origin main`. `deploy.yml` runs the tests and deploys to production.
+4. Check `https://app-six-lilac-20.vercel.app/studio` loads. Tell the founder.
+
+---
+
+## 10. Backlog (highest value first)
+
+1. **Founder's review of the private preview.** Fix whatever he reports.
+2. **Founder questions** (ask in simple Hinglish):
+   - Gulf: does the side run full height, or the bottom track full width?
+   - 4-track Normal: which section? It is built on the 2-track today.
+   - Is 2081 the mesh shutter?
+   - Roller height photo.
+   - A real DXF from his extruder, to test DXF import.
+3. Teach the drafts from his real windows. He enters one window, then checks
+   with a second.
+4. Stock lengths per profile in the optimiser: the Studio stores
+   `stockFt[]`, but packing still uses only the first length.
+5. More catalogue pages: Eleanor 21–26 / 29 / 32 / 35, the Banu Hashim series,
+   the Ample 30 / 32 / 40 / 50 casement pages.
+6. Studio: fixed-top band (the engine has it, the Studio does not), openable
+   doors and partitions in the Studio, glass bead / rubber in 3D.
+7. Login and cloud sync (Supabase), sharing systems from extruders.
+
+---
+
+## 11. Where to log work
+
+Write every working session in **`docs/SOLO-LOG.md`** (date, branch,
+commits, what changed, what is unsure).
+
+Claude Code reads it on return and reviews those commits first.
