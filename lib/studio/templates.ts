@@ -488,12 +488,12 @@ export const BH_31: StudioSystem = withAlternatives(base({
 
 export const BH_35: StudioSystem = withAlternatives(base({
   id: "bh-35", name: "35 mm Gulf — Banu Hashim", group: "gulf", maker: "Banu Hashim",
-  blurb: "BH-6500 top and sides, BH-6501 bottom, 90° screwed; slim interlock small (6506) or big (6508) shutter by shutter",
+  blurb: "Like Euro: BH-6501 / 6503 top and bottom with track rail 6513; left and right one-groove BH-6500 / 6502; slim interlock small (6506) or big (6508)",
   profiles: [
-    prof("bh35_v2", "35 mm 2-Track Vertical (top and sides)", "track", { bh: "BH-6500" }, "100×32.8", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
-    prof("bh35_b2", "35 mm 2-Track Bottom", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
-    prof("bh35_v3", "35 mm 3-Track Vertical (top and sides)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
-    prof("bh35_b3", "35 mm 3-Track Bottom", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_v2", "35 mm Side Track, one groove (2-track)", "track", { bh: "BH-6500" }, "100×32.8", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_b2", "35 mm 2-Track (top and bottom)", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_v3", "35 mm Side Track, one groove (3-track)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_b3", "35 mm 3-Track (top and bottom)", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
     prof("bh35_rail", "35 mm Shutter Top / Bottom (single glass)", "shutter", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
     prof("bh35_rail_dgu", "35 mm Shutter Top / Bottom (double glass)", "shutter", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
     prof("bh35_handle", "35 mm Shutter (single glass)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
@@ -502,22 +502,28 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_spine", "35 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27 }),
     prof("bh35_slim_dgu", "35 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.6, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
     prof("bh35_spine_dgu", "35 mm Slim Interlock — big, double glass", "slim-interlock", { bh: "BH-6509" }, "96×27", { value: 5.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64"), { faceMm: 27 }),
-    prof("bh35_patri", "35 mm Track Rail", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
+    prof("bh35_patri", "35 mm Roller Clip (track rail)", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
   ],
-  sizes: UNKNOWN_SIZES(),
+  sizes: [
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(42.4), ev("suggested", "From the drawings (window built from the sections): 2 × 31.2 track + 4.0 clip − 24 roller. Check on one window."))),
+    ...UNKNOWN_SIZES().slice(4),
+  ],
   parts: [
-    part("frameTop", "Top", byTracks("bh35_v2", "bh35_v3"), "window", "frameW", 90, "frame-top"),
+    part("frameTop", "Top Track", byTracks("bh35_b2", "bh35_b3"), "window", "frameW", 90, "frame-top"),
     part("frameBottom", "Bottom Track", byTracks("bh35_b2", "bh35_b3"), "window", "frameW", 90, "frame-bottom"),
-    part("frameLeft", "Left Side", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
-    part("frameRight", "Right Side", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
+    part("frameLeft", "Left Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
+    part("trackClip", "{s} Roller Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh35_handle", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
-    "Gulf: the bottom track is its own section; top and both sides are one section.",
-    "Banu Hashim names BH-6501 \"top and bottom\". If your shop puts it on top too, change the Top piece.",
+    "Gulf is built like Euro. Only the left and right sides change: a one-groove track takes the place of the Euro track there.",
+    "Top and bottom are the same track (Banu Hashim prints 6501 as \"top and bottom\"); the roller runs on the 6513 clip.",
   ],
 }), "shutterMeet", ["bh35_slim", "bh35_spine", "bh35_slim_dgu", "bh35_spine_dgu"]);
 
@@ -549,7 +555,9 @@ export const EURO_26: StudioSystem = withAlternatives(base({
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full height"))),
     size("clipW", "Roller clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
-    size("shutterH", "Shutter height", unknownFrom("H")),
+    size("shutterH", "Shutter height",
+      rule("H", -mm(69.8), ev("suggested", "From the drawings (window built from the sections): 2 × 44.9 track + 3.9 clip − 24 roller. Check on one window."), { when: { tracks: "2" } }),
+      rule("H", -mm(69.9), ev("suggested", "From the drawings (window built from the sections): 2 × 45.0 track + 3.9 clip − 24 roller. Check on one window."))),
     size("glassW", "Glass width", unknownFrom("shutterW")),
     size("glassH", "Glass height", unknownFrom("shutterH")),
   ],
@@ -573,12 +581,12 @@ export const EURO_26: StudioSystem = withAlternatives(base({
 /** Gulf slim 25 — Banu Hashim catalogue pp.35–38. */
 export const GULF_25: StudioSystem = withAlternatives(base({
   id: "gulf-25", name: "Gulf slim 25 mm — Banu Hashim", group: "gulf", maker: "Banu Hashim",
-  blurb: "BH-2550 / 2552 top and sides, BH-2551 / 2553 bottom, 90°; shutter 2554 + 2555, slim interlock small (2556) or big (2557)",
+  blurb: "Like Euro: BH-2551 / 2553 top and bottom with roller clip 2559; left and right one-groove BH-2550 / 2552; slim interlock small (2556) or big (2557)",
   profiles: [
-    prof("bh_2550", "Gulf 25 2-Track Vertical (top and sides)", "track", { bh: "BH-2550" }, "75.7×24.8", { value: 2.9, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
-    prof("bh_2551", "Gulf 25 2-Track Bottom", "track", { bh: "BH-2551" }, "71.8×29.8", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
-    prof("bh_2552", "Gulf 25 3-Track Vertical (top and sides)", "track", { bh: "BH-2552" }, "112.5×24.8", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
-    prof("bh_2553", "Gulf 25 3-Track Bottom", "track", { bh: "BH-2553" }, "108.6×29.8", { value: 5.1, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
+    prof("bh_2550", "Gulf 25 Side Track, one groove (2-track)", "track", { bh: "BH-2550" }, "75.7×24.8", { value: 2.9, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2551", "Gulf 25 2-Track (top and bottom)", "track", { bh: "BH-2551" }, "71.8×29.8", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2552", "Gulf 25 Side Track, one groove (3-track)", "track", { bh: "BH-2552" }, "112.5×24.8", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2553", "Gulf 25 3-Track (top and bottom)", "track", { bh: "BH-2553" }, "108.6×29.8", { value: 5.1, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2554", "Gulf 25 Shutter Top / Bottom", "shutter", { bh: "BH-2554" }, "53.8×22.2", { value: 2.2, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2555", "Gulf 25 Shutter", "handle", { bh: "BH-2555" }, "62.37×25.5", { value: 2.4, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2556", "Gulf 25 Slim Interlock — small", "slim-interlock", { bh: "BH-2556" }, "35.8×20.3", { value: 1.9, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.3 }),
@@ -586,21 +594,26 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     prof("bh_2558", "Gulf 25 Top Track Guide", "rail", { bh: "BH-2558" }, "12×15", { value: 0.7, perFt: 12 }, CATALOGUE("Banu Hashim p.37")),
     prof("bh_2559", "Euro Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
   ],
-  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
+  sizes: [
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(39.6), ev("suggested", "From the drawings (window built from the sections): 2 × 29.8 track + 3.9 clip − 24 roller. Check on one window."))),
+    ...UNKNOWN_SIZES().slice(4),
+  ],
   parts: [
-    part("frameTop", "Top", byTracks("bh_2550", "bh_2552"), "window", "frameW", 90, "frame-top"),
+    part("frameTop", "Top Track", byTracks("bh_2551", "bh_2553"), "window", "frameW", 90, "frame-top"),
     part("frameBottom", "Bottom Track", byTracks("bh_2551", "bh_2553"), "window", "frameW", 90, "frame-bottom"),
-    part("frameLeft", "Left Side", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-left"),
-    part("frameRight", "Right Side", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-right"),
-    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other", { enabled: false }),
+    part("frameLeft", "Left Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-right"),
+    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh_2555", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh_2556", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
-    "Gulf: the bottom track is its own section; top and both sides are one section.",
-    "The roller clip is off — Gulf's bottom track carries the roller. Turn it on if your shop adds one.",
+    "Gulf is built like Euro. Only the left and right sides change: a one-groove track takes the place of the Euro track there.",
+    "Top and bottom are the same track; the roller runs on the clip in the bottom track.",
     "Gulf shops differ on which piece runs full length — teach from one window.",
   ],
 }), "shutterMeet", ["bh_2556", "bh_2557"]);
@@ -625,9 +638,9 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
   ],
   sizes: UNKNOWN_SIZES(),
   parts: [
-    part("frameTop", "Top", byTracks("at_v2", "at_v3"), "window", "frameW", 90, "frame-top"),
-    part("frameLeft", "Left Side", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
-    part("frameRight", "Right Side", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
+    part("frameTop", "Top Track", byTracks("at_t2", "at_t3"), "window", "frameW", 90, "frame-top"),
+    part("frameLeft", "Left Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
     part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
     part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
@@ -635,18 +648,18 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     part("shutterRight", "{s} Shutter Right{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-meet"),
     part("interlock", "Interlock Clip {k}", "at_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
   ],
-  notes: ["Section names are printed in the Alucoat catalogue. Gulf shops differ on which piece runs full length — teach from one window."],
+  notes: ["The vertical Gulf (AT-30001) has one groove, so it goes on the left and right; the top takes the 2-track (AT-30016). Check which bottom your shop uses.", "Gulf shops differ on which piece runs full length — teach from one window."],
 }), "interlock", ["at_clip", "at_dbl"]);
 
 /* ———————————————— Gulf series ———————————————— */
 
 export const GULF: StudioSystem = base({
   id: "gulf", name: "Gulf series — any size (25 to 35)", group: "gulf",
-  blurb: "Separate bottom track + one top/side profile, joined at 90° with screws. Choose your sections.",
+  blurb: "Built like Euro; the left and right sides take a one-groove track. Choose your sections.",
   sizes: UNKNOWN_SIZES(),
   profiles: GULF_S30.profiles,
   parts: GULF_S30.parts,
-  notes: ["Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
+  notes: ["Gulf is built like Euro; only the left and right sides change to a one-groove track.", "Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
 });
 
 /* ———————————————— Casement / Z-section (verified) ———————————————— */

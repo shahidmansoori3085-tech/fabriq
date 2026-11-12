@@ -27,7 +27,7 @@ const GROUPS: { id: NonNullable<StudioSystem["group"]>; title: string; sub: stri
   { id: "domal", title: "Domal type", sub: "One shutter profile goes round. Sections from the catalogues; cuts you teach." },
   { id: "sleek", title: "Sleek and slim interlock", sub: "Interlock or slim interlock picked shutter by shutter." },
   { id: "bombay", title: "Bombay type", sub: "Handle, interlock and bearing shutters." },
-  { id: "gulf", title: "Euro and Gulf", sub: "Euro: one track all round, roller on a clip. Gulf: its own bottom track. Slim interlock small or big." },
+  { id: "gulf", title: "Euro and Gulf", sub: "Euro: one track all round, roller on a clip. Gulf: the same, but the left and right sides take a one-groove track. Slim interlock small or big." },
   { id: "casement", title: "Casement / Z-section", sub: "Openable sashes on friction stays." },
   { id: "special", title: "Special", sub: "" },
   { id: "blank", title: "Start from nothing", sub: "Any other series — choose every section yourself." },

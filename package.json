@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts && tsx evals/engine/normal-fix-top.ts && tsx evals/engine/z-middle-fix.ts && tsx evals/engine/golden.ts && tsx evals/studio/parity.ts && tsx evals/studio/teach.ts && tsx evals/studio/z-parity.ts && tsx evals/studio/tracer.ts && tsx evals/studio/in-job.ts && tsx evals/studio/dxf.ts && tsx evals/studio/derive.ts",
+    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts && tsx evals/engine/normal-fix-top.ts && tsx evals/engine/z-middle-fix.ts && tsx evals/engine/golden.ts && tsx evals/studio/parity.ts && tsx evals/studio/teach.ts && tsx evals/studio/z-parity.ts && tsx evals/studio/tracer.ts && tsx evals/studio/in-job.ts && tsx evals/studio/dxf.ts && tsx evals/studio/derive.ts && tsx evals/studio/assemble.ts",
     "eval:sheets": "tsx evals/sheets/run.ts"
   },
   "dependencies": {

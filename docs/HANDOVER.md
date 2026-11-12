@@ -260,7 +260,9 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
 
 ---
 
-**Cuts from the drawing** (`lib/studio/derive.ts`): systems marked `heightFrom: domal-legs` get a Rules-tab card — shutter height = H − 2 × frame height + roller (24 mm, every roller). It shows "Same cut" against the real rule and fills only unknown heights (never a verified one). Proven on OMEO Domal (0.1 / 0.7 mm). Euro and Gulf do not use it yet.
+**Cuts from the drawing** (`lib/studio/derive.ts`): systems marked `heightFrom: domal-legs` get a Rules-tab card — shutter height = H − 2 × frame height + roller (24 mm, every roller). It shows "Same cut" against the real rule and fills only unknown heights (never a verified one). Proven on OMEO Domal (0.1 / 0.7 mm).
+
+**Windows built from the drawings** (`lib/studio/assemble.ts`, `scripts/assemble-window.ts`, test `evals/studio/assemble.ts`): sections become solids; clip, roller and shutter are slid into place by bisection. Gives Euro 26 H − 69.9 / 69.8, Gulf 25 H − 39.6, Gulf 35 H − 42.4 (suggested in the templates). Gulf = Euro with one-groove left/right tracks (founder; drawings agree).
 
 ## 10. Backlog (highest value first)
 

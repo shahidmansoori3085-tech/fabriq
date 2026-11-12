@@ -58,8 +58,25 @@ tips, plus the roller). Code: `lib/studio/derive.ts`; test: `evals/studio/derive
 
 Status in the Studio: **suggested** ("From the drawing … check on one window").
 Shutter width (half / equal share) and glass are not from this rule.
-Euro and Gulf: roller runs on a clip / inside a channel, so this rule is NOT used
-for them yet — their shutter height is taught from one real window.
+Euro and Gulf: see "Windows built from the drawings" below (clip height added).
+
+## Windows built from the drawings (2026-11-12)
+`lib/studio/assemble.ts` turns each traced section into a solid at catalogue
+scale, places track, clip, 24 mm roller and shutter, and finds every contact by
+bisection (halve the gap until 0.005 mm). Script: `scripts/assemble-window.ts`
+(picture: `docs/studio/assembled.html`); test: `evals/studio/assemble.ts`.
+Rule (checked on Domal): shutter = H − top tip − bottom tip − clip + 24.
+
+| System | Track tip | Clip stands | Shutter | Status |
+|---|---|---|---|---|
+| Domal OMEO 3T / 2T | 45.41 / 45.01 | — | H − 66.8 / H − 66.0 | matches engine H − 66.7 ✓ |
+| Euro 26 BH 3T / 2T (6001 / 6000 + 2559) | 45.00 / 44.91 | 3.9 | H − 69.9 / H − 69.8 | suggested |
+| Gulf 25 BH (2551 / 2553 + 2559) | 29.81 | 3.9 | H − 39.6 | suggested |
+| Gulf 35 BH (6501 / 6503 + 6513) | 31.21 | 4.0 | H − 42.4 | suggested |
+
+Gulf (founder): built like Euro; the left and right sides take a one-groove
+track in place of the Euro track (not an extra piece). The drawings agree: BH
+2550 / 2552 / 6500 and Alucoat AT-30001 have one groove; 2551 / 6501 have two.
 
 ## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
 - BH-6001 (Euro 3-track): table H 35.00, drawing 45 → **45** (trace 99.3%).
