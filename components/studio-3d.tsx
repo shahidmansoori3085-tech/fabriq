@@ -166,7 +166,7 @@ export default function Window3D({
   onPick: (p: Pick) => void;
   tracks: number;
 }) {
-  const [mode, setMode] = useState<"corner" | "cutface" | "full">("corner");
+  const [mode, setMode] = useState<"corner" | "sliding" | "cutface" | "full">("corner");
   const [finish, setFinish] = useState<FinishId>("anthracite");
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -505,12 +505,16 @@ export default function Window3D({
     return all.find((m) => m.partId === pick.id);
   }, [pick, g]);
 
-  const setViewPreset = (nextMode: "corner" | "cutface" | "full") => {
+  const setViewPreset = (nextMode: "corner" | "sliding" | "cutface" | "full") => {
     setMode(nextMode);
     if (!controlsRef.current) return;
     if (nextMode === "corner") {
       controlsRef.current.object.position.set(310, 240, 260);
       controlsRef.current.target.set(120, 85, 40);
+    } else if (nextMode === "sliding") {
+      // Architectural sliding patio cutaway view (Reynaers CP 130 / ConceptPatio 45Pa)
+      controlsRef.current.object.position.set(320, 160, 240);
+      controlsRef.current.target.set(130, 65, 45);
     } else if (nextMode === "cutface") {
       // Direct view into the sliced extrusion cross-section chambers
       controlsRef.current.object.position.set(480, 75, 45);
@@ -538,6 +542,17 @@ export default function Window3D({
             }`}
           >
             <span>📐</span> Corner Cutaway
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewPreset("sliding")}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+              mode === "sliding"
+                ? "bg-stone-900 text-white shadow-xs"
+                : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
+            }`}
+          >
+            <span>🏗️</span> Patio Cut (Reynaers)
           </button>
           <button
             type="button"
@@ -601,10 +616,11 @@ export default function Window3D({
         <directionalLight position={[380, 180, -180]} intensity={0.9} />
         <directionalLight position={[80, -180, 180]} intensity={0.35} />
 
-        {(mode === "corner" || mode === "cutface") && cornerData && (
+        {(mode === "corner" || mode === "sliding" || mode === "cutface") && cornerData && (
           <group position={[-50, -35, -20]}>
             {/* Extruded Profile Members with Two-Tone Reynaers Cutaway Materials */}
             {cornerData.members.map(({ key, geo, edges, m }) => {
+              if (mode === "sliding" && (key === "cfs" || key === "css")) return null;
               const isPicked = pick?.type === "part" && pick.id === m.partId;
               const mats = isPicked ? [pickedMat, pickedMat] : [cutFaceMat, powderCoatMat];
               return (
@@ -780,7 +796,9 @@ export default function Window3D({
             <span className="text-stone-400">ℹ️</span>
             <span>
               {mode === "corner"
-                ? "360° Architectural Cutaway (Reynaers style) • Drag to turn • Scroll to zoom"
+                ? "360° Architectural Corner Cutaway • Drag to rotate • Scroll to zoom"
+                : mode === "sliding"
+                ? "Reynaers CP 130 / ConceptPatio 45Pa Cutaway • Sill track, runner rail, rollers & DGU glazing"
                 : mode === "cutface"
                 ? "Cutface Inspection: Exposed internal extrusion chambers & hollows"
                 : "Full window 3D • Tap any piece to inspect section"}

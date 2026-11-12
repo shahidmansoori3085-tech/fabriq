@@ -250,6 +250,8 @@ function face(spec: Spec, W: number, H: number): React.ReactNode {
  * is a graceful fallback for any section not yet cropped.
  */
 const SECTION_IMAGES = new Set<string>([
+  // Banu Hashim verified catalogue scanned profiles
+  "bh_2559", "bh_6000", "bh_6001", "bh_6408", "bh_6409", "bh_6410", "bh_6411", "bh_6500", "bh_6501",
   // Normal Sliding
   "2t_top", "2t_bottom", "3t_top", "3t_bottom", "handle_std", "handle_2x1", "bearing", "interlock",
   // Domal 27mm
@@ -266,6 +268,23 @@ const SECTION_IMAGES = new Set<string>([
  *  is the same profile — a tube with the moulding on BOTH sides (the shutter
  *  has it on one) — so the 63 and 50 show the 75's drawing, not a plain box. */
 const IMAGE_OF: Record<string, string> = {
+  // Banu Hashim Die mappings
+  "BH-2559": "bh_2559",
+  "BH-6000": "bh_6000",
+  "BH-6001": "bh_6001",
+  "BH-6408": "bh_6408",
+  "BH-6409": "bh_6409",
+  "BH-6410": "bh_6410",
+  "BH-6411": "bh_6411",
+  "BH-6500": "bh_6500",
+  "BH-6501": "bh_6501",
+  bh31_slim: "bh_6408",
+  bh31_spine: "bh_6409",
+  bh31_slim_dgu: "bh_6410",
+  bh31_spine_dgu: "bh_6411",
+  bh35_v2: "bh_6500",
+  bh35_b2: "bh_6501",
+  bh35_patri: "bh_2559",
   door_center_60: "door_center_75",
   door_center_50: "door_center_75",
   domal_frame_2t: "domal_frame",
@@ -290,16 +309,19 @@ const IMAGE_OF: Record<string, string> = {
 };
 
 export function hasImage(sectionId: string): boolean {
-  return SECTION_IMAGES.has(IMAGE_OF[sectionId] ?? sectionId);
+  const mapped = IMAGE_OF[sectionId] ?? sectionId;
+  return SECTION_IMAGES.has(mapped) || SECTION_IMAGES.has(mapped.toLowerCase().replace(/-/g, "_"));
 }
 
 /** Raise whenever a drawing in /public/sections changes — phones keep the
  *  pictures offline, and a new version is a new URL they have not cached. */
-const DRAWINGS_VERSION = 10;
+const DRAWINGS_VERSION = 11;
 
 /** The picture file for a section. */
 export function imageSrc(sectionId: string): string {
-  return `/sections/${IMAGE_OF[sectionId] ?? sectionId}.png?v=${DRAWINGS_VERSION}`;
+  const mapped = IMAGE_OF[sectionId] ?? sectionId;
+  const target = SECTION_IMAGES.has(mapped) ? mapped : mapped.toLowerCase().replace(/-/g, "_");
+  return `/sections/${target}.png?v=${DRAWINGS_VERSION}`;
 }
 
 /* ————————————————— compact profile (table cells) ————————————————— */
