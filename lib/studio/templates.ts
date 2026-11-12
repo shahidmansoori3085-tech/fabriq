@@ -271,6 +271,49 @@ export const AMPLE_27: StudioSystem = base({
   ],
 });
 
+/**
+ * Banu Hashim 27×65 domal (catalogue pp.42–46). Same build as OMEO domal, but
+ * its running legs stand 48.9 mm (OMEO 45.4), so the shutter is ~7 mm shorter.
+ * Measured by building the window from the traced drawings (lib/studio/assemble.ts).
+ */
+export const BH_27: StudioSystem = withAlternatives(base({
+  id: "bh-27", name: "Domal 27×65 — Banu Hashim", group: "domal", maker: "Banu Hashim",
+  blurb: "BH-6032 2-track / 6040 3-track with leg, 45°; shutter BH-2122 on 4 sides; domal clip 6048 or interlock 2118",
+  switches: [MODE_SWITCH],
+  layouts: [L2(), L3()],
+  profiles: [
+    prof("bh27_t2", "Domal 27 2-Track with Leg", "frame", { bh: "BH-6032" }, "66.3×49.91", { value: 4.2, perFt: 12 }, CATALOGUE("Banu Hashim p.44")),
+    prof("bh27_t3", "Domal 27 3-Track with Leg", "frame", { bh: "BH-6040" }, "101.9×50", { value: 5.45, perFt: 12 }, CATALOGUE("Banu Hashim p.45")),
+    prof("bh27_t4", "Domal 27 4-Track with Leg", "frame", { bh: "BH-6045" }, "136×49.81", { value: 7.55, perFt: 12 }, CATALOGUE("Banu Hashim p.45")),
+    prof("bh27_t1", "Domal 27 Single Track", "frame", { bh: "BH-6031" }, "39.7×48.2", { value: 2.1, perFt: 12 }, CATALOGUE("Banu Hashim p.44")),
+    prof("bh27_shutter", "Domal 27 Shutter 66×26", "shutter", { bh: "BH-2122" }, "66×26", { value: 2.3, perFt: 12 }, CATALOGUE("Banu Hashim p.42")),
+    prof("bh27_clip", "Domal Clip", "interlock-patti", { bh: "BH-6048" }, "39×28.7", { value: 1.1, perFt: 12 }, CATALOGUE("Banu Hashim p.46"), { faceMm: 10 }),
+    prof("bh27_interlock", "Interlock", "interlock-patti", { bh: "BH-2118" }, "28.1×28.5", { value: 0.9, perFt: 12 }, CATALOGUE("Banu Hashim p.42"), { faceMm: 10 }),
+  ],
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Domal frame goes round at 45°, full width (as OMEO)"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "Domal frame goes round at 45°, full height (as OMEO)"))),
+    size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Half the window, as Domal"), { den: 2 })),
+    size("shutterH", "Shutter height",
+      rule("H", -mm(73.7), ev("suggested", "From the drawings (window built from the sections): 2 × 48.9 leg − 24 roller. OMEO is H − 66.7: these legs stand 3.5 mm taller. Check on one window."), { when: { tracks: "2" } }),
+      unknownFrom("H")),
+    size("glassW", "Glass width", unknownFrom("shutterW")),
+    size("glassH", "Glass height", unknownFrom("shutterH")),
+  ],
+  parts: [
+    ...domalFrame(byTracks("bh27_t2", "bh27_t3")),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh27_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh27_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLeft", "{s} Shutter Left{tag}", "bh27_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterRight", "{s} Shutter Right{tag}", "bh27_shutter", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock {k}", "bh27_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
+  notes: [
+    "Banu Hashim's 27 mm domal legs stand 48.9 mm; OMEO, Ample and Eleanor stand 45. Do not use an OMEO cut list with these tracks: the shutter comes out about 7 mm too long.",
+    "3-track height not measured yet (the catalogue drawing of 6040 did not trace cleanly) — teach it from one window.",
+  ],
+}), "interlock", ["bh27_clip", "bh27_interlock"]);
+
 /** Eleanor's 27 mm domal set (catalogue pages 28–29). Codes and sizes printed; roles read from the drawings. */
 export const ELEANOR_27: StudioSystem = {
   ...AMPLE_27,
@@ -366,9 +409,16 @@ export const AMPLE_22: StudioSystem = base({
       CATALOGUE("Ample 22 mm p.2 (the code is also printed on a 30.9×26.2 cap — confirm with dealer)")),
     prof("a22_clip", "22 mm Glazing Clip", "bead", { ample: "992134" }, "16.2×12.9", perM(0.117), CATALOGUE("Ample 22 mm p.2")),
   ],
-  sizes: UNKNOWN_SIZES(),
+  sizes: [
+    ...UNKNOWN_SIZES().slice(0, 3),
+    size("shutterH", "Shutter height", rule("H", -mm(46), ev("suggested", "From the drawings (window built from the sections): 2 × 35.0 track − 24 roller; roller on the pointed track, no clip. Check on one window."))),
+    ...UNKNOWN_SIZES().slice(4),
+  ],
   parts: [...domalFrame(byTracks("a22_track_2t", "a22_track_3t")), ...stileShutter("a22_shutter", "a22_interlock")],
-  notes: ["Catalogue gives sizes only. Teach every cut from one window you have made."],
+  notes: [
+    "The shutter runs on the pointed track; the tall hooked wall on the outside is only design. No clip in the track.",
+    "Catalogue gives sizes only. Teach every other cut from one window you have made.",
+  ],
 });
 
 export const AMPLE_25: StudioSystem = base({
@@ -381,9 +431,20 @@ export const AMPLE_25: StudioSystem = base({
     prof("a25_track_3t_leg", "25 mm 3-Track with leg", "track", { ample: "41021" }, "101×42.5", perM(1.45), DRAWING("Ample 25 mm p.2")),
     prof("a25_shutter", "25 mm Shutter", "shutter", { ample: "914744" }, "54.9×25.52", perM(0.635), DRAWING("Ample 25 mm p.2")),
     prof("a25_interlock", "25 mm Interlock", "interlock", { ample: "41323" }, "63×25.52", perM(0.75), DRAWING("Ample 25 mm p.2")),
+    prof("a25_clip", "25 mm Roller Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 25 mm p.3; drawing traced from the 29 mm catalogue p.5")),
   ],
-  sizes: UNKNOWN_SIZES(),
-  parts: [...domalFrame(byTracks("a25_track_2t", "a25_track_3t")), ...stileShutter("a25_shutter", "a25_interlock")],
+  sizes: [
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(58.4), ev("suggested", "From the drawings (window built from the sections): 2 × 40.0 track + 2.4 clip − 24 roller. Check on one window."))),
+    ...UNKNOWN_SIZES().slice(4),
+  ],
+  parts: [
+    ...domalFrame(byTracks("a25_track_2t", "a25_track_3t")),
+    part("trackClip", "{s} Roller Clip", "a25_clip", "shutter", "clipW", 90, "other"),
+    ...stileShutter("a25_shutter", "a25_interlock"),
+  ],
+  notes: ["The roller runs on clip 914401 snapped into the track, like Euro. Any outer leg on the track is only design."],
 });
 
 export const AMPLE_26: StudioSystem = base({
@@ -758,7 +819,7 @@ export const BLANK_SLIDING: StudioSystem = {
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
-  AMPLE_27, ELEANOR_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
+  AMPLE_27, ELEANOR_27, BH_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37,
   EURO_26, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,

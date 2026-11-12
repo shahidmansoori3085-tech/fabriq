@@ -7,6 +7,7 @@ import ample from "./shapes/ample.json";
 import omeo from "./shapes/omeo.json";
 import banuhashim from "./shapes/banuhashim.json";
 import banuhashimEuro from "./shapes/banuhashim-euro.json";
+import banuhashim27 from "./shapes/banuhashim-27.json";
 import alucoat from "./shapes/alucoat.json";
 import eleanor from "./shapes/eleanor.json";
 
@@ -15,7 +16,7 @@ export interface Shape { code: string; maker: string; w: number; h: number; path
 const BY_MAKER: Record<string, Record<string, Shape>> = {
   ample: ample as Record<string, Shape>,
   omeo: omeo as Record<string, Shape>,
-  bh: { ...banuhashim, ...banuhashimEuro } as Record<string, Shape>,
+  bh: { ...banuhashim, ...banuhashimEuro, ...banuhashim27 } as Record<string, Shape>,
   alucoat: alucoat as Record<string, Shape>,
   eleanor: eleanor as Record<string, Shape>,
 };

@@ -112,7 +112,7 @@ export const tipAt = (track: Solid, x: number, from: number) => from - rayToMate
 export function runners(track: Solid, w: number, h: number) {
   const legs: { x0: number; x1: number }[] = [];
   for (let x = 0.25; x < w; x += 0.25) {
-    if (tipAt(track, x, h + 5) < h - 1.5) continue;
+    if (tipAt(track, x, h + 5) < h - 2) continue;
     const g = legs[legs.length - 1];
     if (g && x - g.x1 <= 0.6) g.x1 = x; else legs.push({ x0: x, x1: x });
   }
@@ -132,7 +132,13 @@ export function runners(track: Solid, w: number, h: number) {
     if (!used.has(c.i) && !used.has(c.i + 1)) { used.add(c.i); used.add(c.i + 1); us.push(c.m); }
   }
   us.sort((p, q) => p - q);
-  return us.length ? { kind: "U" as const, at: us } : { kind: "leg" as const, at: mids.filter((m) => m > 2 && m < w - 2) };
+  if (us.length) return { kind: "U" as const, at: us };
+  // single legs: the running legs share one height; an outer flange that stands
+  // taller once (Banu Hashim "with leg" tracks) is not a running leg
+  const top = legs.map((g) => { let m = 0; for (let x = g.x0; x <= g.x1; x += 0.25) m = Math.max(m, tipAt(track, x, h + 5)); return Math.round(m * 2) / 2; });
+  const count = (v: number) => top.filter((t) => t === v).length;
+  const common = top.reduce((b, t) => (count(t) > count(b) ? t : b), top[0]);
+  return { kind: "leg" as const, at: legs.filter((_, i) => count(common) === 1 || top[i] === common).map((g) => (g.x0 + g.x1) / 2) };
 }
 
 /** The channel of a shutter member that faces the track: mouth at shape x = edge, going in along dir. */
@@ -173,13 +179,25 @@ export function buildSliding(st: Stack, get: Get): Result {
   const tipB = tipNear(b.solid, x, rb.kind, b.h);
   const tipT = tipNear(t.solid, rt.at[0], rt.kind, t.h);
 
-  // drop the clip into the bottom U until it sits
+  // Put the clip in the bottom U. Its legs are springs — they squeeze and snap
+  // into the U — so the clip sits on its head / wings: the lowest row of the
+  // clip's top part that is (almost) as wide as its widest rests on the U tips.
   let clipUp = 0, clipSolid: Solid = [];
   if (st.clip) {
     const c = get(st.clip);
-    const hung = place(c.solid, 1, 0, x - c.w / 2, 0, -1, b.h + 30 + c.h);
-    clipSolid = move(hung, 0, -slideUntilTouch(hung, b.solid, 0, -1, 80).dist);
-    clipUp = bounds(clipSolid).y1 - tipB;
+    const width = (y: number) => {
+      const l = rayToMaterial(c.solid, -1, y, 1, 0, c.w + 2), r = rayToMaterial(c.solid, c.w + 1, y, -1, 0, c.w + 2);
+      return l > c.w + 1.5 ? 0 : c.w + 2 - l - r;
+    };
+    const rows: { y: number; w: number }[] = [];
+    for (let y = 0.1; y <= c.h * 0.45; y += 0.1) rows.push({ y, w: width(y) });
+    const widest = Math.max(...rows.map((r) => r.w));
+    const wing = rows.filter((r) => r.w >= widest - 0.6).pop()!; // underside of the wings / head
+    let rest = 0;
+    for (let d = -wing.w / 2; d <= wing.w / 2; d += 0.25) rest = Math.max(rest, tipAt(b.solid, x + d, b.h + 10));
+    const headTop = rest + wing.y;
+    clipSolid = place(c.solid, 1, 0, x - c.w / 2, 0, -1, headTop);
+    clipUp = headTop - tipB;
   }
   const run = tipB + clipUp;
 

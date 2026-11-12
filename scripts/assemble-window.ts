@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { solidOf, place, runners, buildSliding, type Stack } from "../lib/studio/assemble";
 
 const book: Record<string, { w: number; h: number; paths: string[] }> = {};
-for (const f of ["omeo", "banuhashim", "banuhashim-euro", "alucoat"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
+for (const f of ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro", "banuhashim-27", "alucoat"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
 const shape = (code: string) => { const s = book[code]; if (!s) throw new Error(`no traced shape ${code}`); return { ...s, solid: solidOf(s.paths) }; };
 const r2 = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
@@ -24,6 +24,18 @@ const asBottom = (code: string) => { const s = shape(code); return { ...s, solid
 const STACKS: Stack[] = [
   { name: "Domal 27 OMEO, 3-track", bottom: "2062", top: "2062", shutter: "2046", mouth: "end", engine: 66.7 },
   { name: "Domal 27 OMEO, 2-track", bottom: "2051", top: "2051", shutter: "2046", mouth: "end", engine: 66.7 },
+  // the same 27×65 domal from other makers
+  { name: "Domal 27 Ample, 3-track", bottom: "214313", top: "214313", shutter: "214315", mouth: "end", engine: 66.7 },
+  { name: "Domal 27 Ample, 2-track", bottom: "214314", top: "214314", shutter: "214315", mouth: "end", engine: 66.7 },
+  { name: "Domal 27 Eleanor, 3-track", bottom: "2702", top: "2702", shutter: "2722", mouth: "start", engine: 66.7 },
+  { name: "Domal 27 Eleanor, 2-track", bottom: "2701", top: "2701", shutter: "2722", mouth: "start", engine: 66.7 },
+  { name: "Domal 27 Banu Hashim, 2-track with leg", bottom: "BH-6032", top: "BH-6032", shutter: "BH-6050", mouth: "start", engine: 66.7 },
+  { name: "Domal 27 Banu Hashim, 4-track with leg", bottom: "BH-6045", top: "BH-6045", shutter: "BH-6050", mouth: "start", engine: 66.7 },
+  // Ample 25: Euro build — the roller runs on clip 914401 in the track (founder; clip on catalogue p.3)
+  { name: "25 mm Ample, 2-track (clip 914401)", bottom: "955388", top: "955388", clip: "914401", shutter: "914744", mouth: "end" },
+  { name: "25 mm Ample, 3-track (clip 914401)", bottom: "955389", top: "955389", clip: "914401", shutter: "914744", mouth: "end" },
+  // Ample 22 mini domal: runs on the pointed hook track; the tall C wall outside is only design; no clip (founder)
+  { name: "Mini domal 22 Ample, 2-track", bottom: "41083", top: "41083", shutter: "41082", mouth: "start" },
   { name: "Euro 26 BH, 3-track", bottom: "BH-6001", top: "BH-6001", clip: "BH-2559", shutter: "BH-6003", mouth: "start" },
   { name: "Euro 26 BH, 2-track", bottom: "BH-6000", top: "BH-6000", clip: "BH-2559", shutter: "BH-6003", mouth: "start" },
   // Gulf = Euro, but the left and right sides take a one-groove track (founder 2026-11-12)

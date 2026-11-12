@@ -11,13 +11,13 @@
  */
 import { readFileSync } from "node:fs";
 import { solidOf, box, slideUntilTouch, place, runners, buildSliding, type Stack } from "../../lib/studio/assemble";
-import { EURO_26, GULF_25, BH_35 } from "../../lib/studio/templates";
+import { EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
 const fails: string[] = [];
 const expect = (ok: boolean, msg: string) => { if (!ok) fails.push(msg); };
 const book: Record<string, { w: number; h: number; paths: string[] }> = {};
-for (const f of ["omeo", "banuhashim", "banuhashim-euro"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
+for (const f of ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro", "banuhashim-27"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
 const get = (code: string) => ({ ...book[code], solid: solidOf(book[code].paths) });
 const HALF_SUT = 1.5875;
 
@@ -35,6 +35,18 @@ for (const code of ["2062", "2051"]) {
   expect(Math.abs(r.takeOff - 66.7) <= HALF_SUT, `Domal ${code}: drawing gives H − ${r.takeOff.toFixed(2)}, engine H − 66.7`);
 }
 
+// 2b. Same 27×65 domal, other makers: Ample and Eleanor cut the same as OMEO;
+//     Banu Hashim's legs stand 48.9 mm, so its shutter is ~7 mm shorter.
+for (const [code, sh, mouth, want] of [["214313", "214315", "end", 66.7], ["2702", "2722", "start", 66.7], ["BH-6032", "BH-6050", "start", 73.7]] as const) {
+  const r = buildSliding({ name: code, bottom: code, top: code, shutter: sh, mouth }, get);
+  console.log(`  domal ${code}: H − ${r.takeOff.toFixed(2)} mm`);
+  expect(Math.abs(r.takeOff - want) <= (want === 66.7 ? HALF_SUT : 0.3), `${code}: drawing gives H − ${r.takeOff.toFixed(2)}, expected ~H − ${want}`);
+}
+{
+  const c = BH_27.sizes.find((s) => s.id === "shutterH")!.cases[0];
+  expect(c.add === -73700, `bh-27 2-track shutter rule should be H − 73.7, is ${c.add}`);
+}
+
 // 3. Euro and Gulf: what the templates say is what the drawings give
 const ruleFor = (sys: StudioSystem, tracks: string) => {
   const c = sys.sizes.find((s) => s.id === "shutterH")!.cases.find((x) => !x.when || x.when.tracks === tracks)!;
@@ -45,14 +57,22 @@ const cases: [StudioSystem, string, Stack][] = [
   [EURO_26, "2", { name: "Euro 2T", bottom: "BH-6000", top: "BH-6000", clip: "BH-2559", shutter: "BH-6003", mouth: "start" }],
   [GULF_25, "2", { name: "Gulf 25 2T", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2554", mouth: "start" }],
   [BH_35, "2", { name: "Gulf 35 2T", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6504", mouth: "start" }],
+  [AMPLE_25, "2", { name: "Ample 25 2T", bottom: "955388", top: "955388", clip: "914401", shutter: "914744", mouth: "end" }],
 ];
 for (const [sys, tracks, st] of cases) {
   const r = buildSliding(st, get);
   console.log(`  ${st.name}: clip stands ${r.clipUp.toFixed(2)} mm, H − ${r.takeOff.toFixed(2)} mm`);
-  expect(r.clipUp > 3 && r.clipUp < 5, `${st.name}: clip should stand ~4 mm above the track, got ${r.clipUp.toFixed(2)}`);
+  expect(r.clipUp > 2 && r.clipUp < 5, `${st.name}: clip should stand ~4 mm above the track, got ${r.clipUp.toFixed(2)}`);
   expect(r.clear, `${st.name}: shutter should go over the track and clip without hitting`);
   expect(r.topGap >= r.wheel, `${st.name}: shutter must lift out (needs ${r.wheel.toFixed(1)}, has ${r.topGap.toFixed(1)})`);
   expect(Math.abs(ruleFor(sys, tracks) - r.takeOff) < 0.1, `${st.name}: template says H − ${ruleFor(sys, tracks)}, drawings H − ${r.takeOff.toFixed(2)}`);
+}
+
+// 3b. mini domal: runs on the pointed track, no clip
+{
+  const r = buildSliding({ name: "mini", bottom: "41083", top: "41083", shutter: "41082", mouth: "start" }, get);
+  expect(Math.abs(r.takeOff - 46.0) < 0.1 && r.clear, `mini domal: H − ${r.takeOff.toFixed(2)}, clear ${r.clear}`);
+  expect(-(AMPLE_22.sizes.find((s) => s.id === "shutterH")!.cases[0].add ?? 0) === 46000, "ample-22 rule should be H − 46.0");
 }
 
 // 4. Gulf: one groove at the sides, one per shutter at top and bottom

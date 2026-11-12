@@ -73,6 +73,34 @@ Rule (checked on Domal): shutter = H − top tip − bottom tip − clip + 24.
 | Euro 26 BH 3T / 2T (6001 / 6000 + 2559) | 45.00 / 44.91 | 3.9 | H − 69.9 / H − 69.8 | suggested |
 | Gulf 25 BH (2551 / 2553 + 2559) | 29.81 | 3.9 | H − 39.6 | suggested |
 | Gulf 35 BH (6501 / 6503 + 6513) | 31.21 | 4.0 | H − 42.4 | suggested |
+| Ample 25 (955388 / 955389 + clip 914401) | 40.0 | 2.4 | H − 58.4 | suggested |
+| Mini domal Ample 22 (41083 / 41084, no clip) | 35.0 | — | H − 46.0 | suggested |
+| Domal 27 Ample 3T / 2T (214313 / 214314) | 45.51 / 45.01 | — | H − 67.0 / 66.0 | same cut as OMEO ✓ |
+| Domal 27 Eleanor (2702 / 2701) | 45.0 | — | H − 66.0 | same cut as OMEO ✓ |
+| **Domal 27 Banu Hashim 2T / 4T (6032 / 6045)** | **48.9 / 49.0** | — | **H − 73.7 / 74.0** | **~7 mm shorter than OMEO** |
+
+**Same section, different maker — what changes the cut:**
+- Domal 27 tracks: OMEO, Ample and Eleanor legs stand 45.0–45.5 mm (same cut within
+  1 mm). Banu Hashim 6032 / 6045 legs stand 48.9 mm: an OMEO cut list makes its
+  shutter ~7 mm too long. Template `bh-27` carries its own rule.
+- "With leg" tracks: the outer leg is only design (founder); the shutter runs on
+  the inner legs / U. The builder ignores a flange that stands taller only once.
+- Domal 27 shutters: glass pocket OMEO 2046 18.4 mm, Ample 214315 18.5, Eleanor
+  2720 18.4, Eleanor 2722 16.7, BH 6050 18.5; face 65 / 65.98 / 65 / 65 / 66 mm.
+  With OMEO's glass rule (shutter − 102 ⇒ glass stops 4.4 mm short of the pocket
+  bottom), Ample and BH would be shutter − 103.8 and Eleanor 2722 − 105.4.
+  Not put in the templates yet — check on one window per maker.
+
+**Not built from drawings (and why):**
+- Normal / Bombay 18, 25, 5-track: roller sits in the bearing's 9 mm pocket on a
+  round rail; the 24 mm roller does not fit (founder: 18 mm window takes no 24 mm
+  bearing). Needs the bearing roller size. Normal 18 stays on the founder job rule.
+- Ample 26 / 29 / 37 sleek: the 24 mm roller does not fit their shutter channel —
+  roller goes in a separate bottom rail. Needs the roller detail.
+- BH 31, Alucoat S-30: which track is top / bottom / side and which clip is not
+  clear from the drawings.
+- Domal 35×75, Mini domal 20×54: no section codes / drawings in the app yet.
+- Z casement: no roller; engine rules are founder-checked already.
 
 Gulf (founder): built like Euro; the left and right sides take a one-groove
 track in place of the Euro track (not an extra piece). The drawings agree: BH

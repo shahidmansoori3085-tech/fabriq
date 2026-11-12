@@ -1,0 +1,66 @@
+{
+  "style": "dark-fill",
+  "skipTop": 0.07,
+  "scaleWhenOff": "max",
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf",
+  "out": "lib/studio/shapes/banuhashim-27.json",
+  "maker": "Banu Hashim",
+  "pages": [
+    {
+      "page": 45,
+      "cells": [
+        {
+          "code": "BH-2120",
+          "w": 40,
+          "h": 45
+        },
+        {
+          "code": "BH-2122",
+          "w": 66,
+          "h": 26
+        },
+        {
+          "code": "BH-2118",
+          "w": 28.1,
+          "h": 28.5
+        }
+      ]
+    },
+    {
+      "page": 47,
+      "cells": [
+        {
+          "code": "BH-6031",
+          "w": 39.7,
+          "h": 48.2
+        },
+        {
+          "code": "BH-6032",
+          "w": 66.3,
+          "h": 49.91
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "cells": [
+        {
+          "code": "BH-6040",
+          "w": 101.9,
+          "h": 50
+        },
+        {
+          "code": "BH-6045",
+          "w": 136,
+          "h": 49.81
+        },
+        {
+          "code": "BH-6046",
+          "w": 38.2,
+          "h": 7.7
+        }
+      ]
+    }
+  ],
+  "note": "Page 45 cells and BH-6040 / 6046 traced badly (photos on the page); kept out of the shape file."
+}
