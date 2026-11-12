@@ -2,7 +2,9 @@
 /** The cut rules of a system, in shop words, with an editor for experts. */
 import { useState } from "react";
 import type { SizeCase, StudioSystem } from "../../lib/studio/model";
-import { STATUS_TEXT, ruleText, whenText, lenToInput, readLen, type StudioUnit } from "../../lib/studio/format";
+import { STATUS_TEXT, ruleText, whenText, lenToInput, readLen, fmtLen, type StudioUnit } from "../../lib/studio/format";
+import { shutterHeightFromDrawing, applyShutterHeight, sameCut, DEFAULT_ROLLER_MM } from "../../lib/studio/derive";
+import { BUILT_IN_PROFILES } from "../../lib/studio/templates";
 import { Badge, Seg, Sheet, Field } from "../studio-ui";
 
 const SIZE_BASE_LABEL = (sys: StudioSystem, id: string) =>
@@ -32,6 +34,7 @@ export function CutsTab({ sys, unit, onChange }: { sys: StudioSystem; unit: Stud
       <p className="mt-4 text-sm" style={{ color: "var(--ink-2)" }}>
         Every cut is worked out from the window size. You do not need to type these — <b>Teach</b> fills them from a window you made.
       </p>
+      <FromDrawing sys={sys} unit={unit} onChange={onChange} />
       {sys.sizes.map((s) => (
         <div key={s.id} className="card mt-3 p-3" style={{ opacity: used.has(s.id) ? 1 : 0.6 }}>
           <div className="flex items-center justify-between gap-2">
@@ -130,3 +133,55 @@ function RuleEditor({ sys, unit, sizeId, c, canRemove, onSave, onRemove, onClose
   );
 }
 
+
+/**
+ * Domal type: the shutter height read straight off the section drawings —
+ * H − 2 × frame height + roller height — next to the rule the system uses now.
+ */
+function FromDrawing({ sys, unit, onChange }: { sys: StudioSystem; unit: StudioUnit; onChange: (s: StudioSystem) => void }) {
+  const [roller, setRoller] = useState(String(sys.heightFrom?.rollerMm ?? DEFAULT_ROLLER_MM));
+  const r = parseFloat(roller);
+  const ok = Number.isFinite(r) && r > 0 && r < 80;
+  const find = (id: string) => sys.profiles.find((p) => p.id === id) ?? BUILT_IN_PROFILES.find((p) => p.id === id);
+  const rules = ok ? shutterHeightFromDrawing(sys, r, find) : [];
+  if (sys.heightFrom?.kind !== "domal-legs") return null;
+  const filled = rules.length ? applyShutterHeight(sys, rules, r) : sys;
+  const canFill = filled !== sys;
+
+  return (
+    <div className="card mt-3 p-3" style={{ borderColor: "var(--accent)" }}>
+      <div className="font-semibold">Shutter height from the drawing</div>
+      <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
+        The shutter fills the space between the frame legs, plus the roller. Shutter height = H − 2 × frame height + roller height.
+      </p>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-sm" style={{ color: "var(--ink-2)" }}>Roller height</span>
+        <input className="field w-20 px-3 py-1.5" inputMode="decimal" value={roller} onChange={(e) => setRoller(e.target.value)} />
+        <span className="text-sm" style={{ color: "var(--ink-3)" }}>mm</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-2">
+        {rules.map((x) => (
+          <div key={x.tracks} className="rounded-lg px-3 py-2" style={{ background: "var(--surface-2)" }}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
+                {x.tracks}-track · {Object.values(x.frame.codes ?? {})[0] ?? x.frame.name} frame {x.frameMm} mm
+              </span>
+              {x.diff === null ? <Badge tone="warn">New</Badge> : sameCut(x.diff) ? <Badge tone="good">Same cut</Badge> : <Badge tone="bad">Differs</Badge>}
+            </div>
+            <div className="mono mt-1 text-[15px] font-semibold">H − {fmtLen(x.takeOff, unit)}{unit !== "mm" && <span className="text-xs font-normal" style={{ color: "var(--ink-3)" }}> ({fmtLen(x.takeOff, "mm")})</span>}</div>
+            {x.current !== null && (
+              <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>
+                Your rule now: H − {fmtLen(x.current, unit)}{x.diff ? ` · ${(Math.abs(x.diff) / 1000).toFixed(1)} mm apart` : ""}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {canFill && rules.length > 0 && (
+        <button className="btn-primary mt-3 w-full py-2.5" onClick={() => onChange(filled)}>
+          Use this where the height is not known
+        </button>
+      )}
+    </div>
+  );
+}

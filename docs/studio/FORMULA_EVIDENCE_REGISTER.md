@@ -43,7 +43,27 @@ Status words used in the app:
 | 5-track 50 mm | shutter H | H − 1½" | video | observed |
 | | bearing | (W − 13¾")/5 | video | observed |
 | 22 mm (Ample) | parts | 41083/41084 track, 41082 shutter 4 sides, 41085 interlock | catalogue | parts only |
-| 22 mm, mini domal 20, 29/31/37 sleek, Gulf 25/30/31/35 | every cutting rule | — | — | **unknown** |
+| 22 mm, mini domal 20, 29/31/37 sleek, Euro 26, Gulf 25/30/31/35 | every cutting rule (Euro frame: 45°, full W/H — founder) | — | — | **unknown** |
+
+## From the section drawings (founder method, 2026-11-12)
+Every sliding roller is **24 mm** high (founder). Domal shutter height =
+**H − 2 × frame height + 24 mm** (the shutter fills the space between the leg
+tips, plus the roller). Code: `lib/studio/derive.ts`; test: `evals/studio/derive.ts`.
+
+| System | Frame | Drawing gives | Real rule | Apart |
+|---|---|---|---|---|
+| OMEO Domal 3-track | 2062, 45.4 mm | H − 66.8 mm | H − 66.7 mm (founder job) | 0.1 mm ✓ |
+| OMEO Domal 2-track | 2051, 45.0 mm | H − 66.0 mm | H − 66.7 mm | 0.7 mm ✓ |
+| Ample 27 3-track | 214313, 45.51 mm | H − 67.0 mm | (same shape as OMEO) | 0.3 mm ✓ |
+
+Status in the Studio: **suggested** ("From the drawing … check on one window").
+Shutter width (half / equal share) and glass are not from this rule.
+Euro and Gulf: roller runs on a clip / inside a channel, so this rule is NOT used
+for them yet — their shutter height is taught from one real window.
+
+## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
+- BH-6001 (Euro 3-track): table H 35.00, drawing 45 → **45** (trace 99.3%).
+- BH-6053 (Euro big slim interlock): table W 61.73, drawing 62.60 → 62.60.
 
 ## Rejected (doc 18, no source; contradicts itself or real data)
 - Domal 27 2T width (W + 22)/2, W/2 + 20, (W + 50.8)/2: three versions in one

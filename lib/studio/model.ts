@@ -162,6 +162,11 @@ export interface StudioSystem {
   group?: "ready" | "bombay" | "domal" | "sleek" | "gulf" | "casement" | "special" | "blank";
   /** maker of the sections in this draft, when it is one catalogue's set */
   maker?: string;
+  /**
+   * The shutter height can be read off the section drawings (lib/studio/derive.ts).
+   * "domal-legs": shutter = H − 2 × frame height + roller height.
+   */
+  heightFrom?: { kind: "domal-legs"; rollerMm?: number };
   version: number;
   status: SystemStatus;
   /** template id + version this was copied from */

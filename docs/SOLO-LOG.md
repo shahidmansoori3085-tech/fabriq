@@ -17,6 +17,13 @@ Entry format:
 
 ---
 
+## 2026-11-12 — Claude review of the 2026-11-11 solo work
+- Fixed: BH-31 / BH-35 added the reinforcement as an extra meeting piece. The founder says the big slim interlock replaces the small one on that shutter. It is now one piece per shutter, chosen small or big.
+- Fixed: the verification sheet named the wrong Euro parts. Euro track = BH-6001 (2-track 6000), Euro clip = BH-2559 (founder). Removed unsourced claims such as wind pressures, dB ratings and inertia. The sheet now shows only what the catalogue prints.
+- Fixed: BH-6001 was traced at height 35, a misprint in the catalogue table. The drawing says 45, and the trace now fits 45 at 99.3%.
+- Note for solo work: never write performance claims (wind, sound, strength) that the catalogue does not print.
+
+
 ## 2026-11-11 — Comprehensive FabriQ Systems & Sections Handbook PDF (A to Z)
 - Branch / commits: `ag/solo-20261111-systems-handbook-pdf` -> fast-forward merged into `claude/system-studio`
 - Files changed (why):

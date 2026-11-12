@@ -4,7 +4,10 @@ import { execSync } from 'child_process';
 
 console.log('Generating Enhanced Section Codes & Real Catalogue Verification Sheet...');
 
-const bhShapes = JSON.parse(fs.readFileSync(path.resolve('lib/studio/shapes/banuhashim.json'), 'utf8'));
+const bhShapes = {
+  ...JSON.parse(fs.readFileSync(path.resolve('lib/studio/shapes/banuhashim.json'), 'utf8')),
+  ...JSON.parse(fs.readFileSync(path.resolve('lib/studio/shapes/banuhashim-euro.json'), 'utf8')),
+};
 
 function getBase64Image(relPath: string): string {
   const fullPath = path.resolve(relPath);
@@ -61,157 +64,108 @@ interface VerificationItem {
 }
 
 const ITEMS: VerificationItem[] = [
-  // 1. Euro Track 29mm / Domal Track
   {
-    category: "1. EURO TRACK (BH-6001 & BH-6000 / BH-6400)",
-    code: "Die BH-6001 (3-Track) & BH-6000 (2-Track) / BH-6400 (Euro 31mm)",
-    name: "Euro Track 3-Track Outer Frame with Leg (Banu Hashim Domal/Euro)",
-    hindiName: "Euro Track Chaukhat (3-Track & 2-Track Outer Frame)",
-    dimensions: "BH-6001: 99.30 × 35.00 mm (BH-6000: 64.30 × 45.00 mm | BH-6400: 85.00 × 33.10 mm)",
-    weight: "BH-6001: 5.700 – 6.200 kg / 12' | BH-6000: 3.700 – 4.100 kg / 12'",
-    catalogue: "Banu Hashim Ready Catalogue Page 42 (Printed 39) & Page 56",
+    category: "1. EURO TRACK — BH-6001 (3-track) / BH-6000 (2-track)",
+    code: "Banu Hashim BH-6001 · BH-6000",
+    name: "Euro track — same track on all four sides",
+    hindiName: "Euro track (charo taraf ek hi track)",
+    dimensions: "BH-6001: 99.30 × 45.00 mm · BH-6000: 64.30 × 45.00 mm",
+    weight: "BH-6001: 5.700 – 6.200 kg / 12' · BH-6000: 3.700 – 4.100 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed page 39 (Domal series 26 × 65)",
     shapeKey: "BH-6001",
     imageFile: "public/sections/bh_6001.png",
-    condition: "Euro track sliding window ke charo taraf outer frame (top head, bottom sill aur vertical sides) par lagta hai. BH-6001 me 3 track legs aur 3 separate sliding channels hote hain. Iske runner channel par snap clip (BH-2559) fit hoti hai jispar palla smooth slide karta hai.",
+    condition: "Euro me charo taraf (upar, niche, dono side) yahi ek track lagti hai, 45° par. Niche wali track ke groove me clip BH-2559 lagti hai, aur roller us clip par chalta hai.",
     features: [
-      "Banu Hashim verified Die BH-6001: 99.30mm width, 35.00mm height, 1.12mm wall gauge",
-      "Sibling 2-Track Die BH-6000: 64.30mm width, 45.00mm height, 1.06mm wall gauge",
-      "Carries 3 glass shutters (GGG) or 2 glass + 1 mosquito wire mesh shutter (GGJ)"
-    ]
+      "Catalogue table BH-6001 ki height 35.00 chhapti hai, lekin drawing par 45 likha hai. Trace 45 par 99.3% baithta hai, isliye 45 sahi hai.",
+      "Wall (T): BH-6001 1.12 mm · BH-6000 1.06 mm",
+    ],
   },
-
-  // 2. Slim Interlock Single Glass
   {
-    category: "2. SLIM INTERLOCK (SINGLE GLASS)",
-    code: "Die BH-6408 (Banu Hashim) / Ample 41289 (Sleek 40) / 992328 (Sleek 37)",
-    name: "Slim Interlock Stile for Single Glass (SGU 5mm - 8mm)",
-    hindiName: "Slim Interlock Chhota Wala (Single Glass)",
-    dimensions: "38.10 × 20.20 mm (Visible sightline: 20.20 mm!)",
-    weight: "2.500 kg per 12ft bar (Gauge: 1.25 mm)",
-    catalogue: "Banu Hashim Ready Catalogue Page 61 (Printed 58)",
-    shapeKey: "BH-6408",
-    imageFile: "public/sections/bh_6408.png",
-    condition: "Single Glass (5mm, 6mm, 8mm Toughened Glass) wale palla ke center meeting stile me lagta hai. Bahar se room me sirf 20mm ki ultra-patli patti dikhti hai. Dono palla band hone par hooks aapas me airtight interlocking banate hain.",
-    features: [
-      "Ultra-minimalist 20.2mm visible profile face for 90%+ clear panoramic glass view",
-      "Single glass rebate with EPDM U-rubber / wedge gasket locking pocket",
-      "Double wool-pile mohair groove for 100% dust, acoustic, and wind barrier"
-    ]
-  },
-
-  // 3. Slim Interlock Double Glass
-  {
-    category: "3. SLIM INTERLOCK (DOUBLE GLASS DGU)",
-    code: "Die BH-6410 (Banu Hashim 31mm DGU) / Die BH-6507 (Gulf 35mm DGU)",
-    name: "Slim Interlock Stile for Double Glass (DGU 20mm / 24mm)",
-    hindiName: "Slim Interlock Chhota Wala (Double Glass DGU)",
-    dimensions: "38.10 × 24.00 mm (BH-6410) / 47.20 × 27.50 mm (BH-6507)",
-    weight: "2.100 kg per 12ft bar (BH-6410) / 2.600 kg per 12ft bar (BH-6507)",
-    catalogue: "Banu Hashim Ready Catalogue Page 62 (Printed 59)",
-    shapeKey: "BH-6410",
-    imageFile: "public/sections/bh_6410.png",
-    condition: "DGU Double Glazed Unit (20mm ya 24mm soundproof/acoustic double glass) wale palla me center meeting stile par lagta hai. Isme wider 24mm glass pocket hota hai jisme outer glass, warm spacer bar aur inner glass rubber seal ke saath baithte hain.",
-    features: [
-      "Deep 24.0mm pocket for 20mm/24mm insulated double glass units (DGU)",
-      "High thermal insulation & acoustic rating (up to 35 dB noise reduction)",
-      "Retains ultra-slim sightline while accommodating heavy double glazing"
-    ]
-  },
-
-  // 4. Slim Interlock Bada Vala Single Glass
-  {
-    category: "4. SLIM INTERLOCK BADA VALA (SINGLE GLASS)",
-    code: "Die BH-6409 (Banu Hashim 31mm) / Die BH-6508 (Gulf 35mm) / Ample 914806",
-    name: "Heavy Structural Reinforcement Spine for Single Glass",
-    hindiName: "Slim Interlock Bada Wala (Single Glass Heavy Wind Spine)",
-    dimensions: "80.10 × 20.20 mm (BH-6409) / 96.00 × 27.00 mm (BH-6508)",
-    weight: "4.500 kg per 12ft bar (Gauge: 1.50 mm)",
-    catalogue: "Banu Hashim Ready Catalogue Page 62 (Printed 59) & Page 64",
-    shapeKey: "BH-6409",
-    imageFile: "public/sections/bh_6409.png",
-    condition: "Single glass wale palla me interlock ke piche screw se attach hota hai. Jab window 7ft se 10ft unchi ho ya high-rise building (10th floor+) me ho, to yeh 80.1mm ki massive aluminium fin palla ko hawa ke dabav se lachakne (bend) se 100% rok leti hai.",
-    features: [
-      "Massive 80.1mm deep aerodynamic structural fin (Moment of Inertia Ixx > 18 cm4)",
-      "Direct dovetail screw mounting on BH-6408 slim interlock",
-      "Tested for high wind pressures and coastal cyclonic gusts without vibration"
-    ]
-  },
-
-  // 5. Slim Interlock Bada Vala Double Glass
-  {
-    category: "5. SLIM INTERLOCK BADA VALA (DOUBLE GLASS DGU)",
-    code: "Die BH-6411 (Banu Hashim 31mm DGU) / Die BH-6509 (Gulf 35mm DGU)",
-    name: "Heavy Structural Reinforcement Spine for Double Glass (DGU)",
-    hindiName: "Slim Interlock Bada Wala (Double Glass DGU Heavy Wind Spine)",
-    dimensions: "80.10 × 24.00 mm (BH-6411) / 96.00 × 27.00 mm (BH-6509)",
-    weight: "4.200 kg per 12ft bar (BH-6411) / 5.250 kg per 12ft bar (BH-6509)",
-    catalogue: "Banu Hashim Ready Catalogue Page 62 (Printed 59)",
-    shapeKey: "BH-6411",
-    imageFile: "public/sections/bh_6411.png",
-    condition: "Heavy DGU Double Glass wale oversized balcony shutters (8ft to 11ft height) ke meeting stiles par lagta hai. Double glass ke 100kg+ bhari vajan aur high-altitude wind suction dono ko withstand karta hai.",
-    features: [
-      "Heavy 80.1mm depth with 24mm wide DGU glass rebate integration",
-      "Heavy 1.70mm wall thickness for industrial structural rigidity",
-      "Zero deflection under 1500 Pascal cyclonic wind tunnel pressure"
-    ]
-  },
-
-  // 6. Euro Track Ki Clip / Track Rail
-  {
-    category: "6. EURO TRACK KI CLIP / TRACK RAIL (BH-2559)",
-    code: "Die BH-2559 (Banu Hashim) / Die BH-6513 (SS Patri) / Die BH-6512",
-    name: "Euro Track Rail Snap Clip / Track Runner (Banu Hashim)",
-    hindiName: "Euro Track Ki Clip / Runner Rail Patri Clip",
-    dimensions: "11.00 × 13.47 mm (BH-2559) | Thickness: 0.90 mm",
-    weight: "0.480 – 0.550 kg per 12ft bar (Die BH-2559)",
-    catalogue: "Banu Hashim Ready Catalogue Page 41 (Printed 38)",
+    category: "2. EURO CLIP — BH-2559",
+    code: "Banu Hashim BH-2559 (track rail)",
+    name: "Euro roller clip",
+    hindiName: "Euro clip (roller isi par chalta hai)",
+    dimensions: "11.00 × 13.47 mm · T 0.90 mm",
+    weight: "0.480 – 0.550 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed page 38",
     shapeKey: "BH-2559",
     imageFile: "public/sections/bh_2559.png",
-    condition: "Euro track ke runner fin channel par press karke 'tak' se snap fit hoti hai. Iske rounded runner top par shutter ke roller wheels daudte hain. Is clip ki wajah se main outer frame ka track kabhi ghisata nahi hai aur palla smooth chalta hai.",
-    features: [
-      "Banu Hashim verified Die BH-2559: 11.00mm width, 13.47mm height, 0.90mm gauge",
-      "Snap-fit dovetail locking teeth that grip the track fin securely without screws",
-      "Prevents aluminium-on-aluminium friction and roller wheel grinding"
-    ]
+    condition: "Sirf Euro me: niche ki track ke groove me dab kar lagti hai, har shutter ke neeche ek. Roller (24 mm) is par chalta hai.",
+    features: ["Gulf ki niche wali track roller khud uthati hai — wahan ye clip nahi lagti."],
   },
-
-  // 7. Gulf Series Niche Ki Track
   {
-    category: "7. GULF SERIES NICHE KI TRACK",
-    code: "Die BH-6501 (2-Track Bottom Sill) / Die BH-6503 (3-Track Bottom Sill)",
-    name: "Gulf 35mm Bottom Sill Track (Horizontal Floor Sill)",
-    hindiName: "Gulf 35 Niche Ka Bottom Track (Floor Sill)",
-    dimensions: "95.00 × 31.20 mm (BH-6501 2T) / 145.60 × 31.20 mm (BH-6503 3T)",
-    weight: "5.300 kg / 12' (BH-6501 2T) / 7.600 kg / 12' (BH-6503 3T)",
-    catalogue: "Banu Hashim Ready Catalogue Page 64 (Printed 61) & Page 65",
-    shapeKey: "BH-6501",
-    imageFile: "public/sections/bh_6501.png",
-    condition: "Gulf series me window ke niche floor/sill par horizontally lagta hai. Isme internal water drainage slope channels, weeping slots aur stainless steel round runner rail (BH-6513 SS patri) fit hoti hai jahan heavy rollers smooth slide karte hain.",
-    features: [
-      "Heavy 1.40mm bottom slab carrying massive glass weight (5.30 kg/12ft)",
-      "Internal water drainage slope channels preventing rain water back-flow into the room",
-      "Houses stainless steel cylindrical track patri (BH-6513) for zero aluminium track wear"
-    ]
+    category: "3. EURO SHUTTER — BH-6003",
+    code: "Banu Hashim BH-6003 (SGU shutter)",
+    name: "Euro shutter 65 × 26",
+    hindiName: "Euro shutter (Domal jaisa banta hai)",
+    dimensions: "65.00 × 26.00 mm · T 1.08 mm",
+    weight: "2.600 – 2.800 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed page 39",
+    shapeKey: "BH-6003",
+    condition: "Shutter Domal jaisa banta hai: upar, niche aur handle side par ye section. Meeting side par slim interlock lagta hai.",
+    features: ["Same page ka BH-6050 / 6051 (66 × 26) Domal shutter hai, jiske upar Domal clip BH-6054 lagti hai."],
   },
-
-  // 8. Gulf Series Sido Ki Track
   {
-    category: "8. GULF SERIES SIDO KI TRACK",
-    code: "Die BH-6500 (2-Track Vertical Jamb) / Die BH-6502 (3-Track Vertical Jamb)",
-    name: "Gulf 35mm Vertical Side Jamb (Wall Frame)",
-    hindiName: "Gulf 35 Sido Ka Khada Track (Vertical Jamb)",
-    dimensions: "100.00 × 32.80 mm (BH-6500 2T) / 150.00 × 32.80 mm (BH-6502 3T)",
-    weight: "3.550 kg / 12' (BH-6500 2T) / 4.900 kg / 12' (BH-6502 3T)",
-    catalogue: "Banu Hashim Ready Catalogue Page 64 (Printed 61) & Page 65",
+    category: "4. EURO SLIM INTERLOCK — chhota BH-6052 / bada BH-6053",
+    code: "Banu Hashim BH-6052 · BH-6053",
+    name: "Euro slim interlock — small and big",
+    hindiName: "Slim interlock chhota / bada",
+    dimensions: "BH-6052: 32.60 × 23.70 mm · BH-6053: 62.60 × 23.70 mm",
+    weight: "BH-6052: 1.600 – 1.800 kg / 12' · BH-6053: 2.500 – 2.700 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed page 40",
+    shapeKey: "BH-6052",
+    condition: "Domal me pehle shutter ke upar clip lagti thi; Euro me us jagah slim interlock hi lagta hai. Kabhi dono shutter par chhota, kabhi ek par chhota aur ek par bada.",
+    features: ["BH-6053: table 61.73 chhapta hai, drawing 62.60 — drawing ka naap liya hai."],
+  },
+  {
+    category: "5. GULF 25 TRACK — upar + side BH-2550 / 2552, niche BH-2551 / 2553",
+    code: "Banu Hashim BH-2550 · 2551 · 2552 · 2553",
+    name: "Gulf slim 25 mm tracks",
+    hindiName: "Gulf: niche alag track, baaki teeno side alag",
+    dimensions: "2550: 75.70 × 24.80 · 2551: 71.80 × 29.80 · 2552: 112.50 × 24.80 · 2553: 108.60 × 29.80 mm",
+    weight: "2550: 2.8 – 3.0 · 2551: 3.5 – 3.8 · 2552: 4.0 – 4.2 · 2553: 5.0 – 5.2 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed pages 35 – 36",
+    shapeKey: "BH-2551",
+    condition: "Gulf me sirf track badalti hai: niche ki track alag (2-track 2551, 3-track 2553), upar aur dono side ek hi track (2-track 2550, 3-track 2552). Joint 90°.",
+    features: ["Shutter: upar/niche BH-2554, shutter BH-2555. Top track guide BH-2558."],
+  },
+  {
+    category: "6. GULF 25 SLIM INTERLOCK — chhota BH-2556 / bada BH-2557",
+    code: "Banu Hashim BH-2556 · BH-2557",
+    name: "Gulf 25 slim interlock — small and big",
+    hindiName: "Slim interlock chhota / bada",
+    dimensions: "BH-2556: 35.80 × 20.30 mm · BH-2557: 80.00 × 20.20 mm",
+    weight: "BH-2556: 1.800 – 2.000 kg / 12' · BH-2557: 3.400 – 3.700 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed page 37",
+    shapeKey: "BH-2556",
+    condition: "Euro jaisa hi: meeting side par har shutter ka apna slim interlock — chhota ya bada.",
+    features: [],
+  },
+  {
+    category: "7. GULF 35 TRACK — BH-6500 / 6502 aur BH-6501 / 6503",
+    code: "Banu Hashim BH-6500 · 6501 · 6502 · 6503",
+    name: "Gulf 35 mm tracks",
+    hindiName: "Gulf 35: niche alag track, baaki teeno side alag",
+    dimensions: "6500: 100.00 × 32.80 · 6501: 95.00 × 31.20 · 6502: 150.00 × 32.80 · 6503: 145.60 × 31.20 mm",
+    weight: "6500: 3.4 – 3.7 · 6501: 5.1 – 5.5 · 6502: 4.7 – 5.1 · 6503: 7.35 – 7.8 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed pages 61 – 62",
     shapeKey: "BH-6500",
     imageFile: "public/sections/bh_6500.png",
-    condition: "Deewar ke dono vertical khade sides (left aur right jambs) par 90° lagta hai. Gulf system me vertical khada jamb aur niche ka bottom track alag section hote hain — vertical jamb bottom sill par 90° butt joint se baith kar heavy stainless steel screws se tight hota hai.",
-    features: [
-      "Deep 100.0mm frame depth accommodating heavy 35mm sliding shutters",
-      "90° butt screw-port bosses engineered for high-strength mechanical assembly",
-      "Integrated interlock locking pocket and wall anchor grooves"
-    ]
-  }
+    condition: "Upar aur dono side BH-6500 (3-track 6502); niche BH-6501 (3-track 6503). Joint 90°.",
+    features: ["Catalogue BH-6501 ko \"2 track top and bottom\" kehta hai. Agar aapki dukaan upar bhi 6501 lagati hai, to app me Top piece badal dijiye."],
+  },
+  {
+    category: "8. GULF 35 SLIM INTERLOCK — chhota BH-6506 / bada BH-6508",
+    code: "Banu Hashim BH-6506 · 6508 (double glass: 6507 · 6509)",
+    name: "Gulf 35 slim interlock — small and big",
+    hindiName: "Slim interlock chhota / bada",
+    dimensions: "BH-6506 / 6507: 47.20 × 27.50 mm · BH-6508 / 6509: 96.00 × 27.00 mm",
+    weight: "6506: 2.8 – 3.1 · 6507: 2.5 – 2.7 · 6508: 5.0 – 5.5 · 6509: 4.8 – 5.2 kg / 12'",
+    catalogue: "Banu Hashim Ready, printed pages 63 – 64",
+    shapeKey: "BH-6506",
+    condition: "Meeting side par har shutter ka apna slim interlock — chhota ya bada. Bada (reinforcement) alag se extra piece nahi hai; chhote ki jagah lagta hai.",
+    features: ["31 mm series me bhi yahi: chhota BH-6408, bada BH-6409 (double glass 6410 / 6411)."],
+  },
 ];
 
 const htmlContent = `<!DOCTYPE html>
@@ -443,13 +397,13 @@ const htmlContent = `<!DOCTYPE html>
   <div class="header">
     <div>
       <div class="badge">FabriQ Fabrication Verification Document</div>
-      <h1 class="title">Banu Hashim Die Numbers & Authentic Catalogue Verification</h1>
-      <div class="sub">Verified against Official Banu Hashim Ready Catalogue with Real Cropped Drawings & CAD Die Vectors</div>
+      <h1 class="title">Banu Hashim — Euro and Gulf Section Codes</h1>
+      <div class="sub">Codes, sizes and weights exactly as printed in the Banu Hashim Ready catalogue. Drawings traced from the same pages.</div>
     </div>
     <div class="meta">
-      <div><b>Target AI:</b> Claude Code & Codex</div>
+      <div><b>Corrected:</b> Euro track BH-6001, Euro clip BH-2559 (founder)</div>
       <div><b>Catalogue Source:</b> BANUHASHIM READY.pdf</div>
-      <div><b>Total Sections:</b> 8 Categories (Verified)</div>
+      <div><b>Sections:</b> 8 groups</div>
       <div><b>Timestamp:</b> ${new Date().toLocaleDateString('en-GB')}</div>
     </div>
   </div>

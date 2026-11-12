@@ -155,6 +155,7 @@ const DOMAL_27_SIZES: SizeDef[] = [
 
 export const DOMAL_27: StudioSystem = {
   id: "domal-27", name: "Domal 27×65", family: "domal-type", group: "ready", maker: "OMEO",
+  heightFrom: { kind: "domal-legs" },
   blurb: "45° frame (2-track 2051 / 3-track 2062); one shutter profile on all 4 sides + interlock patti",
   version: 1, status: "verified",
   layouts: [L2(), L3()],
@@ -243,6 +244,7 @@ export const NORMAL_5T: StudioSystem = {
 /** Ample's own 27×65 domal set. Same shape as OMEO 2046, so OMEO's measured cuts are offered — check once. */
 export const AMPLE_27: StudioSystem = base({
   id: "ample-27", name: "Domal 27×65 — Ample", group: "domal", maker: "Ample",
+  heightFrom: { kind: "domal-legs" },
   blurb: "Ample 214314 / 214313 track, 214315 shutter on 4 sides, 214342 interlock patti",
   switches: [MODE_SWITCH],
   layouts: [L2(), L3()],
@@ -297,6 +299,7 @@ export const ELEANOR_27: StudioSystem = {
 
 export const DOMAL_35: StudioSystem = base({
   id: "domal-35", name: "Domal 35×75", group: "domal",
+  heightFrom: { kind: "domal-legs" },
   blurb: "One 35×75 profile on all 4 sides + interlock patti; 2-track, 3+1 or 4+1. Choose your sections.",
   layouts: [L2("GG", "GJ"), { tracks: 4, mixes: ["GGGJ"] }, { tracks: 5, mixes: ["GGGGJ"] }],
   switches: [{
@@ -456,64 +459,151 @@ export const AMPLE_37: StudioSystem = withAlternatives(base({
 }), "shutterMeet", ["a37_interlock", "a37_slim"]);
 
 export const BH_31: StudioSystem = withAlternatives(base({
-  id: "bh-31", name: "31 mm slim — Banu Hashim", group: "sleek", maker: "Banu Hashim",
-  blurb: "BH-6400 track, BH-6404 top/bottom rail, BH-6406 handle stile with BH-6408 slim interlock and BH-6409 spine",
+  id: "bh-31", name: "31 mm slim — Banu Hashim", group: "gulf", maker: "Banu Hashim",
+  blurb: "BH-6400 / 6402 track; BH-6404 top and bottom, BH-6406 handle side; slim interlock small (6408) or big (6409) shutter by shutter",
   profiles: [
-    prof("bh31_track_2t", "31 mm 2-Track Frame", "track", { bh: "BH-6400" }, "85×33.1", { value: 3.25, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
+    prof("bh31_track_2t", "31 mm 2-Track", "track", { bh: "BH-6400" }, "85×33.1", { value: 3.25, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
     prof("bh31_track_2t_leg", "31 mm 2-Track with Leg", "track", { bh: "BH-6401" }, "80.8×47.6", { value: 4.95, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
-    prof("bh31_track_3t", "31 mm 3-Track Frame", "track", { bh: "BH-6402" }, "124.7×33.1", { value: 4.10, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
-    prof("bh31_track_3t_leg", "31 mm 3-Track with Leg", "track", { bh: "BH-6403" }, "120.5×47.6", { value: 6.65, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
-    prof("bh31_rail_sgu", "31 mm Top/Bottom Rail (SGU)", "shutter", { bh: "BH-6404" }, "65.9×29", { value: 3.85, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_rail_dgu", "31 mm Top/Bottom Rail (DGU)", "shutter", { bh: "BH-6405" }, "65.9×29", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_handle_sgu", "31 mm Handle Stile (Single Glass)", "handle", { bh: "BH-6406" }, "59×31.4", { value: 3.45, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
-    prof("bh31_handle_dgu", "31 mm Handle Stile (Double Glass)", "handle", { bh: "BH-6407" }, "59×31.4", { value: 3.15, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
-    prof("bh31_slim", "31 mm Slim Interlock SGU", "slim-interlock", { bh: "BH-6408" }, "38.1×20.2", { value: 2.50, perFt: 12 }, CATALOGUE("Banu Hashim p.58"), { faceMm: 20.2 }),
-    prof("bh31_spine", "31 mm Slim Reinforcement Spine", "interlock", { bh: "BH-6409" }, "80.1×20.2", { value: 4.50, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
-    prof("bh31_slim_dgu", "31 mm Slim Interlock DGU", "slim-interlock", { bh: "BH-6410" }, "38.1×20.2", { value: 2.10, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
-    prof("bh31_spine_dgu", "31 mm Slim Reinforcement DGU", "interlock", { bh: "BH-6411" }, "80.1×20.2", { value: 4.20, perFt: 12 }, CATALOGUE("Banu Hashim p.59")),
+    prof("bh31_track_3t", "31 mm 3-Track", "track", { bh: "BH-6402" }, "124.7×33.1", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
+    prof("bh31_track_3t_leg", "31 mm 3-Track with Leg", "track", { bh: "BH-6403" }, "120.5×47.6", { value: 6.65, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
+    prof("bh31_rail_sgu", "31 mm Shutter Top / Bottom (single glass)", "shutter", { bh: "BH-6404" }, "65.9×29", { value: 3.85, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
+    prof("bh31_rail_dgu", "31 mm Shutter Top / Bottom (double glass)", "shutter", { bh: "BH-6405" }, "65.9×29", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
+    prof("bh31_handle_sgu", "31 mm Shutter (single glass)", "handle", { bh: "BH-6406" }, "59×31.4", { value: 3.45, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
+    prof("bh31_handle_dgu", "31 mm Shutter (double glass)", "handle", { bh: "BH-6407" }, "59×31.4", { value: 3.15, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
+    prof("bh31_slim", "31 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6408" }, "38.1×20.2", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.58"), { faceMm: 20.2 }),
+    prof("bh31_spine", "31 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6409" }, "80.1×20.2", { value: 4.5, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
+    prof("bh31_slim_dgu", "31 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6410" }, "38.1×20.2", { value: 2.1, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
+    prof("bh31_spine_dgu", "31 mm Slim Interlock — big, double glass", "slim-interlock", { bh: "BH-6411" }, "80.1×20.2", { value: 4.2, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
   ],
   sizes: UNKNOWN_SIZES(),
   parts: [
     ...domalFrame(byTracks("bh31_track_2t", "bh31_track_3t")),
-    part("shutterTop", "{s} Top Rail{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Bottom Rail{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh31_handle_sgu", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterMeet", "{s} Slim Interlock{tag}", "bh31_slim", "shutter", "shutterH", 45, "sash-meet", { perShutter: true }),
-    part("interlockSpine", "Slim Reinforcement Spine {k}", "bh31_spine", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "bh31_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
-}), "shutterMeet", ["bh31_slim", "bh31_slim_dgu"]);
+  notes: ["Banu Hashim prints a plain track (6400 / 6402) and a track with leg (6401 / 6403). Pick the one your shop uses."],
+}), "shutterMeet", ["bh31_slim", "bh31_spine", "bh31_slim_dgu", "bh31_spine_dgu"]);
 
 export const BH_35: StudioSystem = withAlternatives(base({
   id: "bh-35", name: "35 mm Gulf — Banu Hashim", group: "gulf", maker: "Banu Hashim",
-  blurb: "BH-6500 vertical jamb, BH-6501 bottom track, BH-6504 rail, BH-6510 handle with BH-6506 slim interlock and BH-6508 spine",
+  blurb: "BH-6500 top and sides, BH-6501 bottom, 90° screwed; slim interlock small (6506) or big (6508) shutter by shutter",
   profiles: [
-    prof("bh35_v2", "35 mm 2-Track Side Jamb", "track", { bh: "BH-6500" }, "100×32.8", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
-    prof("bh35_b2", "35 mm 2-Track Top & Bottom", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.30, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
-    prof("bh35_v3", "35 mm 3-Track Side Jamb", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.90, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_b3", "35 mm 3-Track Top & Bottom", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.60, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_rail", "35 mm Shutter Rail (SGU)", "shutter", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.63")),
-    prof("bh35_rail_dgu", "35 mm Shutter Rail (DGU)", "shutter", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.63")),
-    prof("bh35_handle", "35 mm Handle Stile (SGU)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.00, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
-    prof("bh35_handle_dgu", "35 mm Handle Stile (DGU)", "handle", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
-    prof("bh35_slim", "35 mm Slim Interlock (SGU)", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
-    prof("bh35_slim_dgu", "35 mm Slim Interlock (DGU)", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.60, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
-    prof("bh35_spine", "35 mm Heavy Structural Spine", "interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
-    prof("bh35_patri", "Track Rail (SS Patri)", "track", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
+    prof("bh35_v2", "35 mm 2-Track Vertical (top and sides)", "track", { bh: "BH-6500" }, "100×32.8", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_b2", "35 mm 2-Track Bottom", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_v3", "35 mm 3-Track Vertical (top and sides)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
+    prof("bh35_b3", "35 mm 3-Track Bottom", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_rail", "35 mm Shutter Top / Bottom (single glass)", "shutter", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_rail_dgu", "35 mm Shutter Top / Bottom (double glass)", "shutter", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_handle", "35 mm Shutter (single glass)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
+    prof("bh35_handle_dgu", "35 mm Shutter (double glass)", "handle", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
+    prof("bh35_slim", "35 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
+    prof("bh35_spine", "35 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27 }),
+    prof("bh35_slim_dgu", "35 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.6, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
+    prof("bh35_spine_dgu", "35 mm Slim Interlock — big, double glass", "slim-interlock", { bh: "BH-6509" }, "96×27", { value: 5.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64"), { faceMm: 27 }),
+    prof("bh35_patri", "35 mm Track Rail", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
   ],
   sizes: UNKNOWN_SIZES(),
   parts: [
-    part("frameTop", "Top Track", byTracks("bh35_b2", "bh35_b3"), "window", "frameW", 90, "frame-top"),
+    part("frameTop", "Top", byTracks("bh35_v2", "bh35_v3"), "window", "frameW", 90, "frame-top"),
     part("frameBottom", "Bottom Track", byTracks("bh35_b2", "bh35_b3"), "window", "frameW", 90, "frame-bottom"),
-    part("frameLeft", "Left Side Jamb", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
-    part("frameRight", "Right Side Jamb", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
-    part("shutterTop", "{s} Top Rail{tag}", "bh35_rail", "shutter", "shutterW", 90, "sash-top"),
-    part("shutterBottom", "{s} Bottom Rail{tag}", "bh35_rail", "shutter", "shutterW", 90, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh35_handle", "shutter", "shutterH", 90, "sash-lock"),
-    part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 90, "sash-meet", { perShutter: true }),
-    part("interlockSpine", "Structural Spine {k}", "bh35_spine", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+    part("frameLeft", "Left Side", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "bh35_handle", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
-  notes: ["Vertical jambs and horizontal tracks at 90° with screws; heavy bottom rail and handle stile; 27.5mm slim interlock reinforced with BH-6508 spine for cyclonic wind loads."],
-}), "shutterMeet", ["bh35_slim", "bh35_slim_dgu"]);
+  notes: [
+    "Gulf: the bottom track is its own section; top and both sides are one section.",
+    "Banu Hashim names BH-6501 \"top and bottom\". If your shop puts it on top too, change the Top piece.",
+  ],
+}), "shutterMeet", ["bh35_slim", "bh35_spine", "bh35_slim_dgu", "bh35_spine_dgu"]);
+
+/* ———————————————— Euro (one track all round + roller clip) ———————————————— */
+
+/**
+ * Euro 26 — Banu Hashim (founder 2026-11-12): the same track on all four sides
+ * (BH-6000 2-track / BH-6001 3-track, 45°); a clip (BH-2559) snaps into the
+ * bottom track and the roller runs on it. The shutter is built like Domal, but
+ * the meeting side is a slim interlock — small or big, shutter by shutter.
+ */
+export const EURO_26: StudioSystem = withAlternatives(base({
+  id: "euro-26", name: "Euro 26 mm — Banu Hashim", group: "gulf", maker: "Banu Hashim",
+  blurb: "BH-6000 / 6001 track on all 4 sides, BH-2559 roller clip; shutter BH-6003, slim interlock small (6052) or big (6053)",
+  profiles: [
+    prof("bh_6000", "Euro 2-Track", "frame", { bh: "BH-6000" }, "64.3×45", { value: 3.9, perFt: 12 }, CATALOGUE("Banu Hashim p.39")),
+    prof("bh_6001", "Euro 3-Track", "frame", { bh: "BH-6001" }, "99.3×45", { value: 5.95, perFt: 12 },
+      CATALOGUE("Banu Hashim p.39 — table prints H 35; the drawing says 45 and the trace fits 45")),
+    prof("bh_2559", "Euro Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
+    prof("bh_6003", "Euro Shutter 65×26", "shutter", { bh: "BH-6003" }, "65×26", { value: 2.7, perFt: 12 }, CATALOGUE("Banu Hashim p.39")),
+    prof("bh_6052", "Euro Slim Interlock — small", "slim-interlock", { bh: "BH-6052" }, "32.6×23.7", { value: 1.7, perFt: 12 }, CATALOGUE("Banu Hashim p.40"), { faceMm: 23.7 }),
+    prof("bh_6053", "Euro Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6053" }, "62.6×23.7", { value: 2.6, perFt: 12 },
+      CATALOGUE("Banu Hashim p.40 — table prints W 61.73; the drawing says 62.6"), { faceMm: 23.7 }),
+    prof("bh_6050", "Domal Shutter 66×26", "shutter", { bh: "BH-6050" }, "66×26", { value: 2.35, perFt: 12 }, CATALOGUE("Banu Hashim p.40")),
+    prof("bh_6054", "Domal Clip", "interlock-patti", { bh: "BH-6054" }, "38×30.3", { value: 1.1, perFt: 12 }, CATALOGUE("Banu Hashim p.41")),
+  ],
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full height"))),
+    size("clipW", "Roller clip", unknownFrom("W")),
+    size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
+    size("shutterH", "Shutter height", unknownFrom("H")),
+    size("glassW", "Glass width", unknownFrom("shutterW")),
+    size("glassH", "Glass height", unknownFrom("shutterH")),
+  ],
+  parts: [
+    ...domalFrame(byTracks("bh_6000", "bh_6001")),
+    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other"),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh_6003", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_6003", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "bh_6003", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "bh_6052", "shutter", "shutterH", 45, "sash-meet"),
+  ],
+  notes: [
+    "Euro: one track on all four sides. The roller runs on a clip snapped into the bottom track — one clip under each shutter.",
+    "Where Domal puts a clip on the shutter, Euro uses a slim interlock: both small, or one small and one big.",
+    "Every roller is 24 mm high. Teach the shutter height from one window you made.",
+  ],
+}), "shutterMeet", ["bh_6052", "bh_6053"]);
+
+/* ———————————————— Gulf (separate bottom track) ———————————————— */
+
+/** Gulf slim 25 — Banu Hashim catalogue pp.35–38. */
+export const GULF_25: StudioSystem = withAlternatives(base({
+  id: "gulf-25", name: "Gulf slim 25 mm — Banu Hashim", group: "gulf", maker: "Banu Hashim",
+  blurb: "BH-2550 / 2552 top and sides, BH-2551 / 2553 bottom, 90°; shutter 2554 + 2555, slim interlock small (2556) or big (2557)",
+  profiles: [
+    prof("bh_2550", "Gulf 25 2-Track Vertical (top and sides)", "track", { bh: "BH-2550" }, "75.7×24.8", { value: 2.9, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2551", "Gulf 25 2-Track Bottom", "track", { bh: "BH-2551" }, "71.8×29.8", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2552", "Gulf 25 3-Track Vertical (top and sides)", "track", { bh: "BH-2552" }, "112.5×24.8", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
+    prof("bh_2553", "Gulf 25 3-Track Bottom", "track", { bh: "BH-2553" }, "108.6×29.8", { value: 5.1, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
+    prof("bh_2554", "Gulf 25 Shutter Top / Bottom", "shutter", { bh: "BH-2554" }, "53.8×22.2", { value: 2.2, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
+    prof("bh_2555", "Gulf 25 Shutter", "handle", { bh: "BH-2555" }, "62.37×25.5", { value: 2.4, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
+    prof("bh_2556", "Gulf 25 Slim Interlock — small", "slim-interlock", { bh: "BH-2556" }, "35.8×20.3", { value: 1.9, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.3 }),
+    prof("bh_2557", "Gulf 25 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-2557" }, "80×20.2", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.2 }),
+    prof("bh_2558", "Gulf 25 Top Track Guide", "rail", { bh: "BH-2558" }, "12×15", { value: 0.7, perFt: 12 }, CATALOGUE("Banu Hashim p.37")),
+    prof("bh_2559", "Euro Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
+  ],
+  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
+  parts: [
+    part("frameTop", "Top", byTracks("bh_2550", "bh_2552"), "window", "frameW", 90, "frame-top"),
+    part("frameBottom", "Bottom Track", byTracks("bh_2551", "bh_2553"), "window", "frameW", 90, "frame-bottom"),
+    part("frameLeft", "Left Side", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-left"),
+    part("frameRight", "Right Side", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-right"),
+    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other", { enabled: false }),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "bh_2555", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "bh_2556", "shutter", "shutterH", 45, "sash-meet"),
+  ],
+  notes: [
+    "Gulf: the bottom track is its own section; top and both sides are one section.",
+    "The roller clip is off — Gulf's bottom track carries the roller. Turn it on if your shop adds one.",
+    "Gulf shops differ on which piece runs full length — teach from one window.",
+  ],
+}), "shutterMeet", ["bh_2556", "bh_2557"]);
 
 /** Alucoat S-30 Gulf — every section named on the catalogue page (p.20). */
 export const GULF_S30: StudioSystem = withAlternatives(base({
@@ -551,7 +641,7 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
 /* ———————————————— Gulf series ———————————————— */
 
 export const GULF: StudioSystem = base({
-  id: "gulf", name: "Gulf series (25 / 30 / 31 / 35)", group: "gulf",
+  id: "gulf", name: "Gulf series — any size (25 to 35)", group: "gulf",
   blurb: "Separate bottom track + one top/side profile, joined at 90° with screws. Choose your sections.",
   sizes: UNKNOWN_SIZES(),
   profiles: GULF_S30.profiles,
@@ -626,6 +716,7 @@ export const Z_55 = zSystem("z-55", "Z-section 55 heavy (casement)", "z_outer_55
 
 export const BLANK_DOMAL_TYPE: StudioSystem = base({
   id: "blank-domal-type", name: "New system — shutter on 4 sides", group: "blank",
+  heightFrom: { kind: "domal-legs" },
   blurb: "Any series where one shutter profile goes round (domal, sleek, mini domal…)",
   sizes: UNKNOWN_SIZES(),
   profiles: DOMAL_27.profiles,
@@ -655,8 +746,8 @@ export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
-  AMPLE_29, AMPLE_37, BH_31, BH_35,
-  GULF_S30, GULF,
+  AMPLE_29, AMPLE_37,
+  EURO_26, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
@@ -667,7 +758,7 @@ export const PART_KIND: Record<string, ProfileKind> = {
   handle: "handle", interlock: "interlock", bearingTop: "bearing", bearingBottom: "bearing",
   frameTop: "frame", frameLeft: "frame", frameRight: "frame", frameBottom: "frame",
   shutterTop: "shutter", shutterBottom: "shutter", shutterLeft: "shutter", shutterRight: "shutter",
-  shutterLock: "shutter", shutterMeet: "interlock", interlockSpine: "interlock",
+  shutterLock: "shutter", shutterMeet: "interlock", interlockSpine: "interlock", trackClip: "rail",
   outerTop: "frame", outerBottom: "frame", outerLeft: "frame", outerRight: "frame", mullion: "mullion",
   sashTop: "shutter", sashBottom: "shutter", sashLeft: "shutter", sashRight: "shutter",
   clipTop: "bead", clipBottom: "bead", clipLeft: "bead", clipRight: "bead",

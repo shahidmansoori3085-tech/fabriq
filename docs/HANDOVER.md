@@ -141,7 +141,8 @@ The shop builds its own window system. Every system is **data**, not code.
 | `z-40`, `z-55` casement | verified; z-parity |
 | `normal-25`, `normal-5t`, `domal-35` | some rules from videos (observed) |
 | `ample-22` (mini domal), `-25`, `-26`, `-27`, `-29`, `-37` | catalogue sections, cuts unknown |
-| `eleanor-27`, `bh-31` | catalogue sections, cuts unknown |
+| `eleanor-27` | catalogue sections, cuts unknown |
+| `euro-26` (BH 6000/6001 + 2559 clip), `gulf-25` (BH 2550–2559), `bh-31`, `bh-35` | Euro and Gulf group; slim interlock small or big per shutter (one piece, never an extra spine); cuts unknown |
 | `gulf-s30` (Alucoat), `mini-domal-20`, `gulf` | catalogue sections or structure only, cuts unknown |
 | `blank-*` | blank starting points |
 
@@ -258,6 +259,8 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
 4. Check `https://app-six-lilac-20.vercel.app/studio` loads. Tell the founder.
 
 ---
+
+**Cuts from the drawing** (`lib/studio/derive.ts`): systems marked `heightFrom: domal-legs` get a Rules-tab card — shutter height = H − 2 × frame height + roller (24 mm, every roller). It shows "Same cut" against the real rule and fills only unknown heights (never a verified one). Proven on OMEO Domal (0.1 / 0.7 mm). Euro and Gulf do not use it yet.
 
 ## 10. Backlog (highest value first)
 
