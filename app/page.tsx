@@ -24,7 +24,10 @@ import { systemOfItem, studioSystems, studioSystem, studioReady, systemForWindow
 import type { StudioSystem } from "@/lib/studio/model";
 import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
-import StudioThumb from "@/components/studio-thumb";
+import StudioThumb, { MiniSection } from "@/components/studio-thumb";
+import { shapeOf } from "@/lib/studio/shapes";
+import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
+import { evaluate } from "@/lib/studio/evaluate";
 import { markInstalls, markSource, markStep } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
@@ -57,6 +60,9 @@ interface Opts {
   /** Window kind picked first: bombay (Normal), domal, euro, gulf, casement, or mine. */
   kind: string;
   sys: WinSys;
+  /** a Studio system's own choices (meeting side, track…) as JSON, and each shutter's own pick */
+  studioSw: string;
+  studioPer: string;
   tracks: string;
   mix: string;
   domalFix: string;
@@ -87,7 +93,7 @@ interface Opts {
 }
 
 const DEFAULT_OPTS: Opts = {
-  kind: "bombay", sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
+  kind: "bombay", sys: "normal", studioSw: "{}", studioPer: "[]", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
@@ -162,7 +168,12 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     if (o.zType === "combo") { m.zComboDir = o.zComboDir; m.zFixedFt = o.zFixedFt; }
     return m;
   }
-  if (o.sys.startsWith("studio:")) return { system: o.sys, tracks: o.tracks, mix: o.mix };
+  if (o.sys.startsWith("studio:")) {
+    const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
+    if (o.studioSw !== "{}") m.studioSwitches = o.studioSw;
+    if (o.studioPer !== "[]") m.studioPerShutter = o.studioPer;
+    return m;
+  }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
@@ -205,9 +216,55 @@ function kindOfSys(sys: WinSys): string {
 function sysPatch(sys: WinSys): Partial<Opts> {
   if (sys.startsWith("studio:")) {
     const l = studioSystem(sys.slice(7))?.layouts[0];
-    return { sys, tracks: String(l?.tracks ?? 2), mix: l?.mixes[0] ?? "GG" };
+    return { sys, tracks: String(l?.tracks ?? 2), mix: l?.mixes[0] ?? "GG", studioSw: "{}", studioPer: "[]" };
   }
   return sys === "z_section" ? { sys } : { sys, tracks: "2", mix: "GG" };
+}
+
+/* —— a Studio system's own questions: the meeting side, then any other choice ——
+ * Slim interlock (both the same, or one small and one big) or the shutter
+ * itself with an interlock clip — a slim never takes a clip. Only choices
+ * the system can actually cut are offered. */
+interface MeetChoice { key: string; title: string; sw: Record<string, string>; per: Record<string, string>[]; pics: string[] }
+const PICK_MEET = "pick_shutterMeet";
+function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<string, string>): MeetChoice[] {
+  const meet = s.switches.find((x) => x.id === "meet");
+  const pick = s.switches.find((x) => x.id === PICK_MEET);
+  if (!meet && (!pick || pick.options.length < 2)) return [];
+  // "Gulf 25 Slim Interlock — big (reinforcement)" → "big"
+  const short = (id: string) => {
+    const n = s.profiles.find((p) => p.id === id)?.name ?? id;
+    return (n.split(" — ")[1] ?? n.replace(/^\d+ mm /, "")).replace(/\s*\(.*?\)/g, "");
+  };
+  const out: MeetChoice[] = [];
+  const slim: Record<string, string> = meet ? { meet: "slim" } : {};
+  if (meet) out.push({ key: "clip", title: "Shutter + interlock clip", sw: { meet: "clip" }, per: [], pics: [] });
+  if (pick) {
+    for (const op of pick.options) out.push({ key: `both-${op.value}`, title: `Slim interlock · both ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
+    if (pick.options.length >= 2) {
+      const [a, b] = pick.options;
+      out.push({ key: "mixed", title: `Slim interlock · one ${short(a.value)}, one ${short(b.value)}`, sw: { ...slim, [PICK_MEET]: a.value }, per: [{ [PICK_MEET]: a.value }, { [PICK_MEET]: b.value }], pics: [] });
+    }
+  } else if (meet) out.push({ key: "slim", title: "Slim interlock", sw: slim, per: [], pics: [] });
+  // keep what can be cut; the picture is the real meeting section(s)
+  return out.filter((c) => {
+    const r = evaluate(s, { id: "Q", W: 1524000, H: 1219200, qty: 1, tracks: parseInt(tracks, 10) || 2, mix, switches: { ...sw, ...c.sw }, perShutter: c.per.length ? c.per : undefined }, { allowUnknown: true });
+    if (r.missing.length) return false;
+    c.pics = [...new Set(r.pieces.filter((p) => /Meeting Side|Interlock Clip/.test(p.role)).map((p) => p.sectionId))].slice(0, 2);
+    return true;
+  });
+}
+/** The other choices a system asks (its track, its shutter…), not the meeting side. */
+function otherSwitches(s: StudioSystem) {
+  return s.switches.filter((x) => x.id !== "meet" && x.id !== "mode" && !x.id.startsWith("pick_") && x.options.length > 1);
+}
+const parseSw = (j: string): Record<string, string> => { try { return JSON.parse(j); } catch { return {}; } };
+/** The shutter mixes of a track count this system can cut with these choices (a 4-track with no frame section is not offered). */
+function cutMixes(s: StudioSystem, tracks: number, sw: Record<string, string>): string[] {
+  const lay = s.layouts.find((l) => l.tracks === tracks);
+  return (lay?.mixes ?? []).filter((mx) =>
+    evaluate(s, { id: "Q", W: 1524000, H: 1219200, qty: 1, tracks, mix: mx, switches: sw }, { allowUnknown: true }).missing.length === 0
+    || meetChoices(s, String(tracks), mx, sw).length > 0);
 }
 
 /** A built item back into the form's choices — used to edit it. */
@@ -225,7 +282,7 @@ function optsFromItem(it: JobItem): Opts {
     pick("partRowFt", m.partRowFt); pick("partSheetFt", m.partSheetFt);
   } else if (it.system === "studio") {
     o.sys = `studio:${m.studioId}`;
-    pick("tracks", m.tracks); pick("mix", m.mix);
+    pick("tracks", m.tracks); pick("mix", m.mix); pick("studioSw", m.studioSwitches); pick("studioPer", m.studioPerShutter);
   } else if (it.system === "z_section") {
     o.sys = "z_section";
     pick("zType", m.zType); pick("zComboDir", m.zComboDir); pick("zFixedFt", m.zFixedFt); pick("zSash", m.zSashCount);
@@ -646,7 +703,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "kind" | "system" | "tracks" | "mix" | "domalFix"
+  | "type" | "kind" | "system" | "studioOpts" | "meet" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -662,7 +719,12 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
   const head: StepId[] = ["type", "kind", ...(windowChoices(o.kind).length > 1 ? ["system" as const] : [])];
-  if (o.sys.startsWith("studio:")) return [...head, "tracks", "mix", "size"];
+  if (o.sys.startsWith("studio:")) {
+    const st = studioSystem(o.sys.slice(7));
+    const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
+    const meet: StepId[] = st && meetChoices(st, o.tracks, o.mix, parseSw(o.studioSw)).length > 1 ? ["meet"] : [];
+    return [...head, ...opts, "tracks", "mix", ...meet, "size"];
+  }
   if (o.sys === "z_section") {
     return [
       ...head, "zType",
@@ -681,6 +743,8 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
 const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
   kind: "Which window?",
+  studioOpts: "Which sections?",
+  meet: "Where two shutters meet?",
   system: "Which size?",
   tracks: "How many tracks?",
   mix: "Which shutters?",
@@ -1142,13 +1206,54 @@ function JobScreen({
           </div>
         )}
 
+        {flow.step === "studioOpts" && (() => {
+          const st = studioSystem(o.sys.slice(7));
+          const sw = parseSw(o.studioSw);
+          return (
+            <div className="flex flex-col gap-4">
+              {(st ? otherSwitches(st) : []).map((x) => (
+                <div key={x.id}>
+                  <div className="mb-2 text-sm font-semibold" style={{ color: "var(--ink-2)" }}>{x.label}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {x.options.map((op) => {
+                      const on = (sw[x.id] ?? x.default) === op.value;
+                      return (
+                        <button key={op.value} type="button" aria-pressed={on} onClick={() => choose({ studioSw: JSON.stringify({ ...sw, [x.id]: op.value }) }, false)}
+                          className={`chip px-3 py-3 text-sm font-semibold ${on ? "selected" : ""}`}>{op.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <button className="btn-primary w-full py-3.5" onClick={() => choose({})}>Next</button>
+            </div>
+          );
+        })()}
+
+        {flow.step === "meet" && (() => {
+          const st = studioSystem(o.sys.slice(7));
+          const sw = parseSw(o.studioSw);
+          const list = st ? meetChoices(st, o.tracks, o.mix, sw) : [];
+          const cur = list.find((c) => c.per.length ? o.studioPer === JSON.stringify(c.per) : o.studioPer === "[]" && Object.entries(c.sw).every(([k, v]) => (sw[k] ?? st?.switches.find((x) => x.id === k)?.default) === v));
+          return (
+            <div className="flex flex-col gap-2">
+              {list.map((c) => (
+                <Choice key={c.key} wide selected={cur?.key === c.key}
+                  onClick={() => choose({ studioSw: JSON.stringify({ ...sw, ...c.sw }), studioPer: JSON.stringify(c.per) })}
+                  title={c.title} sub={c.key === "clip" ? "The shutter itself meets, with a clip on it" : c.key === "mixed" ? "One shutter small, the next big" : "Slim interlock, no clip"}
+                  picture={<span className="flex h-14 w-24 items-center justify-center gap-1">{c.pics.map((id) => { const sh = shapeOf(BUILT_IN_PROFILES.find((p) => p.id === id)); return sh ? <span key={id} className="block h-14 w-11"><MiniSection s={sh} /></span> : null; })}</span>} />
+              ))}
+            </div>
+          );
+        })()}
+
         {flow.step === "tracks" && o.sys.startsWith("studio:") && (() => {
           const s = studioSystem(o.sys.slice(7));
           return (
             <div className="grid grid-cols-2 gap-2">
-              {(s?.layouts ?? []).map((l) => (
-                <Choice key={l.tracks} selected={o.tracks === String(l.tracks)} onClick={() => choose({ tracks: String(l.tracks), mix: l.mixes[0] })}
-                  title={layoutLabel(s!, l.tracks)} picture={<span className="block w-28"><StudioThumb sys={s!} tracks={l.tracks} mix={l.mixes[0]} /></span>} />
+              {(s?.layouts ?? []).map((l) => ({ l, ok: cutMixes(s!, l.tracks, parseSw(o.studioSw)) })).filter((x) => x.ok.length).map(({ l, ok }) => (
+                <Choice key={l.tracks} selected={o.tracks === String(l.tracks)} onClick={() => choose({ tracks: String(l.tracks), mix: ok[0] })}
+                  title={layoutLabel(s!, l.tracks)} picture={<span className="block w-28"><StudioThumb sys={s!} tracks={l.tracks} mix={ok[0]} /></span>} />
               ))}
             </div>
           );
@@ -1159,7 +1264,7 @@ function JobScreen({
           const lay = s?.layouts.find((l) => String(l.tracks) === o.tracks) ?? s?.layouts[0];
           return (
             <div className="grid grid-cols-2 gap-2">
-              {(lay?.mixes ?? []).map((mx) => (
+              {(s && lay ? cutMixes(s, lay.tracks, parseSw(o.studioSw)) : []).map((mx) => (
                 <Choice key={mx} selected={o.mix === mx} onClick={() => choose({ mix: mx })} title={studioMixText(mx)}
                   picture={<span className="block w-28"><StudioThumb sys={s!} tracks={lay!.tracks} mix={mx} /></span>} />
               ))}

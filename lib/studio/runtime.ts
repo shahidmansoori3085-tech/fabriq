@@ -55,5 +55,7 @@ export function studioJobOf(item: JobItem): StudioJob {
     tracks: parseInt(item.meta.tracks ?? "", 10) || item.shutters.length || 2,
     mix: item.shutters.map((s) => (s.kind === "jali" ? "J" : s.kind === "sheet" ? "S" : "G")).join(""),
     switches: { mode: item.meta.shutterSplit === "equal" ? "equal" : "half", ...extraSwitches },
+    // each shutter's own pick (slim interlock small on one, big on the next)
+    perShutter: (() => { try { return item.meta.studioPerShutter ? JSON.parse(item.meta.studioPerShutter) as Record<string, string>[] : undefined; } catch { return undefined; } })(),
   };
 }
