@@ -12,7 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
-import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -57,7 +57,7 @@ export function nextStep(sys: StudioSystem): { text: string; tab: Tab; tone: "go
   const sections = r.missing.filter((m) => m.startsWith("Section for"));
   if (sections.length) return { text: `Choose ${sections.length === 1 ? "a section" : `${sections.length} sections`} — tap the red pieces`, tab: "pieces", tone: "bad" };
   if (r.missing.length) return { text: `${r.missing.length} cut${r.missing.length > 1 ? "s" : ""} not known yet. Teach from one window you made.`, tab: "teach", tone: "warn" };
-  if (sys.jobs.length === 0) return { text: "Ready. Check it once against a window you made.", tab: "teach", tone: "good" };
+  if (sys.jobs.length === 0) return { text: "Cuts ready. Check once with a window you made.", tab: "teach", tone: "good" };
   if (sys.status === "teaching") return { text: "Learned from your window. Check it with a second window.", tab: "teach", tone: "warn" };
   return { text: "Ready to use.", tab: "cut", tone: "good" };
 }
@@ -278,7 +278,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
   const size = sys.sizes.find((s) => s.id === p.length);
   const rule = size?.cases.find((c) => matches(c.when, vars)) ?? size?.cases[size.cases.length - 1];
   const len = values[p.length];
-  const st = rule ? (rule.add === null ? STATUS_TEXT.unknown : STATUS_TEXT[rule.evidence.status]) : STATUS_TEXT.unknown;
+  const st = rule ? evidenceBadge(rule.evidence.status, rule.evidence.source, rule.add !== null) : STATUS_TEXT.unknown;
   const per = p.scope === "window" ? "per window" : p.scope === "shutter" ? "per shutter" : "per meeting";
 
   return (
@@ -329,7 +329,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
                   <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md"><SectionSketch p={pr} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{c.when ? whenText(sys, c.when) : "Other track counts"}</span>
-                    <span className="block truncate text-sm font-bold">{pr ? `${pr.name}${pr.codes ? ` · ${Object.values(pr.codes)[0]}` : ""}` : "Choose a section"}</span>
+                    <span className="block truncate text-sm font-bold">{pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${Object.values(pr.codes)[0]} · ` : ""}${pr.name}` : "Choose a section"}</span>
                   </span>
                   <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
                 </button>
@@ -535,7 +535,7 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
                           {p.count > 1 && <span className="text-xs font-bold" style={{ color: "var(--ink-3)" }}>×{p.count}</span>}
                         </span>
                         <span className="block truncate text-xs" style={{ color: pr ? "var(--ink-3)" : "var(--bad)" }}>
-                          {pr ? `${pr.name}${pr.codes ? ` · ${Object.values(pr.codes)[0]}` : ""}${alts && alts.length > 1 ? ` · +${alts.length - 1} choice` : ""}` : "Choose a section"}
+                          {pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${Object.values(pr.codes)[0]} · ` : ""}${pr.name}${alts && alts.length > 1 ? ` · +${alts.length - 1} choice` : ""}` : "Choose a section"}
                         </span>
                       </span>
                       <span className="shrink-0 text-right">

@@ -117,11 +117,11 @@ export default function StudioPage() {
                   className="card flex items-center gap-3 p-3 text-left">
                   <span className="w-[76px] shrink-0"><Thumb sys={s} lib={lib} /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate font-bold">{s.name}</span>
+                    <span className="block truncate font-bold">{s.name}</span>
+                    <span className="mt-1 flex min-w-0 items-center gap-2">
                       <Badge tone={n.tone === "good" ? st.tone : n.tone === "warn" ? "warn" : "bad"}>{n.tone === "good" ? st.label : n.tone === "warn" ? "Learning" : "Set up"}</Badge>
+                      <span className="truncate text-xs" style={{ color: "var(--ink-3)" }}>{n.text}</span>
                     </span>
-                    <span className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>{n.text}</span>
                     <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>
                       {s.layouts.map((l) => `${l.tracks}T`).join(" · ")} · {s.parts.filter((p) => p.enabled !== false).length} pieces
                       {s.jobs.length ? ` · learned from ${s.jobs.length} window${s.jobs.length > 1 ? "s" : ""}` : ""}
@@ -185,16 +185,20 @@ function SystemCard({ t, lib, onPick }: { t: StudioSystem; lib: StudioLibrary; o
         )}
         {t.status === "verified" && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--good-soft)", color: "var(--good)" }}>Checked on real jobs</span>}
       </span>
-      <span className="block text-sm font-bold leading-tight">{t.name}</span>
-      <span className="block text-[11px] leading-snug" style={{ color: "var(--ink-3)" }}>{t.blurb}</span>
+      {/* the badge already says the kind and size: the title is the maker */}
+      <span className="block text-sm font-bold leading-tight">{t.series && t.series.type !== "other" ? (t.name.split(" — ")[1] ?? "Any maker").replace(/^./, (c) => c.toUpperCase()) : t.name}</span>
+      <span className="line-clamp-2 text-[11px] leading-snug" style={{ color: "var(--ink-3)" }}>{t.blurb}</span>
     </button>
   );
 }
 
+/** Systems the founder set aside (2026-11-13): kept in the code, not offered. */
+const DROPPED = new Set(["normal-5t", "mini-domal-20", "normal-25"]);
+
 function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: string) => void; onBack: () => void }) {
   const [type, setType] = useState<SeriesType | "all">("all");
   const [size, setSize] = useState<number | "all">("all");
-  const real = TEMPLATES.filter((t) => t.series && t.series.type !== "other");
+  const real = TEMPLATES.filter((t) => t.series && t.series.type !== "other" && !DROPPED.has(t.id));
   const ofType = real.filter((t) => type === "all" || t.series!.type === type);
   const sizes = [...new Set(ofType.map((t) => t.series!.mm).filter((m) => m > 0))].sort((a, b) => a - b);
   const shown = ofType.filter((t) => size === "all" || t.series!.mm === size)

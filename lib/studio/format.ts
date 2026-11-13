@@ -53,13 +53,23 @@ export function lenToInput(um: Um, unit: StudioUnit): string {
 
 export const STATUS_TEXT: Record<EvidenceStatus, { label: string; tone: "good" | "glass" | "warn" | "bad" }> = {
   verified: { label: "Checked", tone: "good" },
-  observed: { label: "From shop videos", tone: "glass" },
-  suggested: { label: "From your window", tone: "warn" },
-  unknown: { label: "Not taught", tone: "bad" },
+  observed: { label: "Shop practice", tone: "glass" },
+  suggested: { label: "Check once", tone: "warn" },
+  unknown: { label: "Not known yet", tone: "bad" },
 };
 
+/** Where a number came from, in a few words: the badge next to a rule. */
+export function evidenceBadge(status: EvidenceStatus, source = "", known = true): { label: string; tone: "good" | "glass" | "warn" | "bad" } {
+  if (!known || status === "unknown") return STATUS_TEXT.unknown;
+  if (status === "verified") return { label: "Checked on a window", tone: "good" };
+  if (status === "observed") return { label: /video/i.test(source) ? "From shop videos" : "Shop practice", tone: "glass" };
+  if (/^Your job/i.test(source)) return { label: "From your window · check once", tone: "warn" };
+  if (/drawing/i.test(source)) return { label: "From the drawings · check once", tone: "warn" };
+  return STATUS_TEXT.suggested;
+}
+
 export const SYSTEM_STATUS: Record<SystemStatus, { label: string; tone: "good" | "glass" | "warn" | "bad" }> = {
-  draft: { label: "Draft", tone: "bad" },
+  draft: { label: "Not checked yet", tone: "warn" },
   teaching: { label: "Learning", tone: "warn" },
   checked: { label: "Ready", tone: "good" },
   verified: { label: "Ready", tone: "good" },

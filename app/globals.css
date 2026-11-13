@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind 4 draws borders and dividers in the text colour by default; every
+   line in FabriQ is the soft --line grey unless a component says otherwise. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--line); }
+}
+
 /* ============================================================
    FabriQ — design tokens
    A plain workshop tool: white surfaces, grey hairlines, one

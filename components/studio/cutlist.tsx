@@ -8,7 +8,7 @@ import { getSection } from "../../lib/engine/sections";
 import type { StudioSystem } from "../../lib/studio/model";
 import { evaluate, StudioUnknownError, type StudioJob, type StudioResult } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, STATUS_TEXT, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, evidenceBadge, type StudioUnit } from "../../lib/studio/format";
 import { Badge, SectionTitle } from "../studio-ui";
 
 /** "4 × 16 ft + 6 ft piece" */
@@ -149,7 +149,7 @@ export function CutList({ sys, lib, unit, job, onFix }: {
               </div>
               <div className="mt-0.5 flex items-center justify-between gap-2 text-xs" style={{ color: "var(--ink-3)" }}>
                 <span className="mono">{s.formula.replace(/(\d+(?:\.\d+)?) mm/g, (_, n) => fmtLen(Math.round(parseFloat(n) * 1000), unit))}</span>
-                <Badge tone={STATUS_TEXT[s.status].tone}>{STATUS_TEXT[s.status].label}</Badge>
+                {(() => { const b = evidenceBadge(s.status, s.source ?? "", s.value !== null); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
               </div>
               {s.source && <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{s.source}</div>}
             </div>

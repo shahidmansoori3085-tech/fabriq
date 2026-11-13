@@ -358,8 +358,8 @@ export const DOMAL_35: StudioSystem = withAlternatives(base({
   switches: [{
     id: "track", label: "Track", default: "42",
     options: [
-      { value: "42", label: "42.6 mm with leg (BH 6701 / 6703)" },
-      { value: "48", label: "48 mm with 2 legs (BH 6702 / 6704)" },
+      { value: "42", label: "42.6 mm, one leg" },
+      { value: "48", label: "48 mm, two legs" },
     ],
   }],
   sizes: [
@@ -1133,8 +1133,8 @@ export const EURO_27: StudioSystem = withMeetChoice(base({
   switches: [{
     id: "track", label: "29 track", default: "47",
     options: [
-      { value: "47", label: "47.7 mm — Ample 914400 / 41052, Banu Hashim" },
-      { value: "48", label: "48.0 mm — Eleanor 2901 / 2902" },
+      { value: "47", label: "Ample / Banu Hashim · 47.7" },
+      { value: "48", label: "Eleanor · 48.0" },
     ],
   }],
   sizes: [

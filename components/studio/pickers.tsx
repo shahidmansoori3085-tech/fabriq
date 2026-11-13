@@ -156,18 +156,18 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         <Field label="Company"><input className="field px-3 py-2.5" value={maker} onChange={(e) => setMaker(e.target.value)} placeholder="Jindal" /></Field>
         <Field label="Code"><input className="field px-3 py-2.5" value={code} onChange={(e) => setCode(e.target.value)} placeholder="2051" /></Field>
       </div>
-      <div className="flex gap-3">
-        <div className="h-24 w-28 shrink-0 overflow-hidden rounded-lg border" style={{ borderColor: "var(--line)" }}>
-          <SectionSketch p={{ id: "x", name, kind, size, stockFt: [16], source: { status: "suggested", source: "" } }} />
-        </div>
-        <div className="flex flex-1 flex-col gap-3">
-          <Field label="Size (mm)" hint="Width × height, as the catalogue prints it"><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
-        </div>
-      </div>
+      <Field label="Size (mm)" hint="Width × height, as the catalogue prints it"><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
       <div className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
         <div className="flex items-center gap-3">
           <span className="h-20 w-24 shrink-0 overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)" }}>
-            <SectionSketch p={{ id: "x", name, kind, size, shape, stockFt: [16], source: { status: "suggested", source: "" } }} />
+            {shape || size.trim()
+              ? <SectionSketch p={{ id: "x", name, kind, size, shape, stockFt: [16], source: { status: "suggested", source: "" } }} />
+              : (
+                <svg viewBox="0 0 96 80" className="h-full w-full" aria-hidden>
+                  <path d="M48 50V26m0 0-9 9m9-9 9 9" fill="none" stroke="var(--ink-3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M30 52v6h36v-6" fill="none" stroke="var(--ink-3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold">Real drawing</div>

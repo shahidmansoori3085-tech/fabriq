@@ -2,7 +2,7 @@
 /** The cut rules of a system, in shop words, with an editor for experts. */
 import { useState } from "react";
 import type { SizeCase, StudioSystem } from "../../lib/studio/model";
-import { STATUS_TEXT, ruleText, whenText, lenToInput, readLen, fmtLen, UNIT_HINT, deltaUnit, type StudioUnit } from "../../lib/studio/format";
+import { evidenceBadge, ruleText, whenText, lenToInput, readLen, fmtLen, UNIT_HINT, deltaUnit, type StudioUnit } from "../../lib/studio/format";
 import { shutterHeightFromDrawing, applyShutterHeight, sameCut, DEFAULT_ROLLER_MM } from "../../lib/studio/derive";
 import { BUILT_IN_PROFILES } from "../../lib/studio/templates";
 import { Badge, Seg, Sheet, Field } from "../studio-ui";
@@ -43,7 +43,7 @@ export function CutsTab({ sys, unit, onChange }: { sys: StudioSystem; unit: Stud
           </div>
           <div className="mt-2 flex flex-col gap-2">
             {s.cases.map((c, i) => {
-              const st = c.add === null ? STATUS_TEXT.unknown : STATUS_TEXT[c.evidence.status];
+              const st = evidenceBadge(c.evidence.status, c.evidence.source, c.add !== null);
               return (
                 <button key={i} onClick={() => setEdit({ size: s.id, idx: i })} className="rounded-lg px-3 py-2 text-left" style={{ background: "var(--surface-2)" }}>
                   <div className="flex items-center justify-between gap-2">
