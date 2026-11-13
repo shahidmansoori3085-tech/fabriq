@@ -117,6 +117,26 @@ Gulf (founder): built like Euro; the left and right sides take a one-groove
 track in place of the Euro track (not an extra piece). The drawings agree: BH
 2550 / 2552 / 6500 and Alucoat AT-30001 have one groove; 2551 / 6501 have two.
 
+## Full window from the drawings (2026-11-13)
+`drawn()` in templates.ts; test `evals/studio/full-window.ts` (13 systems × 4 sizes).
+- Frame: 45° systems W × H; Gulf 90°: sides H, top/bottom W − 2 × side track
+  (BH 2550 24.8, 6500 32.8, 6400 33.1, Alucoat 30001 33). Shop may run top/bottom full.
+- Shutter width W/2 (observed shop way). Meeting pieces = shutter height.
+- Roller clip = clear width between side tips: Euro W − 89.9, Gulf 25 W − 49.6,
+  Gulf 35 W − 65.6, BH 31 W − 66.2, Ample 25 / 29 / 37 W − 80 / 95.4 / 99.4.
+- Glass: a 5 mm glass slid into each pocket; cut 3.9 mm short of where it stops
+  (3.9 makes OMEO Domal = shutter − 102 exactly; Normal 18 bearing gives H − 67.8 vs
+  the video rule − 66.7). Each shutter's own slim interlock sets its own glass width.
+  | System | Glass W | Glass H |
+  |---|---|---|
+  | Ample 27 | shutter − 103.8 | shutter − 103.8 |
+  | Eleanor 27 | − 105.4 | − 105.4 |
+  | Gulf 25 | − 65.8 (small slim) / − 65.6 (big) | − 88.4 |
+  | BH 31 | − 61.1 (6408) / − 60.5 (6409) | − 112.8 |
+  | Alucoat S-30 | − 110.2 | − 110.2 |
+  | Mini domal 22 / Euro 26 / Gulf 35 / Ample 29 / 37 | not known (meeting-side pocket not clear in the drawing) | − 94.8 / − 118.2 / − 93.6 / − 105.4 / − 127.0 |
+  | BH 27, Ample 25 | not known | not known |
+
 ## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
 - BH-6001 (Euro 3-track): table H 35.00, drawing 45 → **45** (trace 99.3%).
 - BH-6053 (Euro big slim interlock): table W 61.73, drawing 62.60 → 62.60.

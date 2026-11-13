@@ -866,6 +866,75 @@ export const BLANK_SLIDING: StudioSystem = {
   notes: ["Starts with standard handle, interlock, and bearing shutter pieces. Every section and rule can be customized after."],
 };
 
+/* ———————————————— cuts read off the drawings (window built from the sections) ———————————————— */
+// lib/studio/assemble.ts builds each window from its traced sections; scripts/
+// assemble-window.ts and evals/studio/assemble.ts show and check the numbers.
+//  • Glass: a 5 mm glass is slid into each shutter section's glass pocket until it
+//    stops; it is cut 3.9 mm short of that on every side — the gap that makes OMEO
+//    Domal's founder rule (shutter − 102) come out exactly. (Normal 18's bearing
+//    gives shutter H − 67.8 this way; the engine's video rule is − 66.7.)
+//  • Shutter width: every shutter half the window (W/2) — the shops' usual way.
+//  • Roller clip: runs the clear width between the side frames' running tips.
+//  • Gulf (90°): sides full height, top and bottom between the one-groove sides.
+// A meeting-side glass pocket that the drawing does not show clearly is left
+// unknown rather than guessed.
+
+const FROM_DRAWING = (t: string) => ev("suggested", `From the drawings (window built from the sections): ${t}. Check on one window.`);
+const HALF = rule("W", 0, ev("observed", "Every shutter half the window (W/2) — the usual shop way"), { den: 2 });
+const PICK = "pick_shutterMeet";
+
+type Drawn = Partial<Record<"frameW" | "frameH" | "clipW" | "shutterW" | "glassW" | "glassH", SizeCase[]>>;
+function drawn(sys: StudioSystem, d: Drawn): StudioSystem {
+  const sizes = sys.sizes.map((s) => (d[s.id as keyof Drawn] ? { ...s, cases: d[s.id as keyof Drawn]! } : s));
+  return Object.assign(sys, { sizes });
+}
+const glassBoth = (offset: number, src: string) => ({
+  glassW: [rule("shutterW", -mm(2 * offset), FROM_DRAWING(`${src}: glass stops ${offset} mm in from each shutter edge`))],
+  glassH: [rule("shutterH", -mm(2 * offset), FROM_DRAWING(`${src}: glass stops ${offset} mm in from each shutter edge`))],
+});
+const glassH = (offset: number, src: string) =>
+  [rule("shutterH", -mm(2 * offset), FROM_DRAWING(`${src}: glass stops ${offset} mm in from the top and bottom edges`))];
+/** glass width with a lock side and a meeting side chosen shutter by shutter */
+const glassW = (lock: number, lockSrc: string, meet: Record<string, [number, string]>) => [
+  ...Object.entries(meet).map(([id, [m, src]]) =>
+    rule("shutterW", -mm(Math.round((lock + m) * 10) / 10), FROM_DRAWING(`${lockSrc} ${lock} mm + ${src} ${m} mm`), { when: { [PICK]: id } })),
+  unknownFrom("shutterW"),
+];
+const clip = (take: number, src: string) => [rule("W", -mm(take), FROM_DRAWING(`clear width between the side tips: W − ${take} (${src})`))];
+const gulfFrame = (side: number, code: string) => ({
+  frameH: [rule("H", 0, ev("observed", "Gulf: sides run full height (90°)"))],
+  frameW: [rule("W", -mm(2 * side), FROM_DRAWING(`top and bottom fit between the ${code} sides (${side} mm each, 90°); if your shop runs them full width, set this to W`))],
+});
+
+// Domal 27 from other makers — their own glass pockets
+drawn(AMPLE_27, glassBoth(51.9, "Ample 214315 pocket"));
+drawn(ELEANOR_27, glassBoth(52.7, "Eleanor 2722 pocket"));
+drawn(BH_27, { shutterW: [HALF] });
+const MITRED = { frameW: [rule("W", 0, ev("observed", "45° frame goes round, full width"))], frameH: [rule("H", 0, ev("observed", "45° frame goes round, full height"))] };
+for (const sys of [AMPLE_22, AMPLE_25, AMPLE_26, AMPLE_29, AMPLE_37]) drawn(sys, MITRED);
+// Mini domal 22: one shutter profile on 3 sides
+drawn(AMPLE_22, { shutterW: [HALF], glassH: glassH(47.4, "Ample 41082 pocket") });
+// Euro 26
+drawn(EURO_26, { shutterW: [HALF], clipW: [rule("W", -mm(89.9), FROM_DRAWING("clear width between the side U tips (2 × 45.0)"))], glassH: glassH(59.1, "BH-6003 pocket") });
+// Gulf 25 / 35 and BH 31 — slim interlock small or big, shutter by shutter
+drawn(GULF_25, {
+  ...gulfFrame(24.8, "BH-2550"), shutterW: [HALF], clipW: clip(49.6, "BH-2550 sides"),
+  glassH: glassH(44.2, "BH-2554 pocket"),
+  glassW: glassW(54.1, "BH-2555 pocket", { bh_2556: [11.7, "slim 2556 pocket"], bh_2557: [11.5, "slim 2557 pocket"] }),
+});
+drawn(BH_35, { ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.8, "BH-6504 pocket") });
+drawn(BH_31, {
+  ...gulfFrame(33.1, "BH-6400"), shutterW: [HALF], clipW: clip(66.2, "BH-6400 sides"),
+  glassH: glassH(56.4, "BH-6404 pocket"),
+  glassW: glassW(49.8, "BH-6406 pocket", { bh31_slim: [11.3, "slim 6408 pocket"], bh31_spine: [10.7, "slim 6409 pocket"] }),
+});
+// Ample 25 / 29 / 37 — 45° frame, clip in the track
+drawn(AMPLE_25, { shutterW: [HALF], clipW: clip(80, "2 × 40.0") });
+drawn(AMPLE_29, { shutterW: [HALF], clipW: clip(95.4, "2 × 47.7"), glassH: glassH(52.7, "Ample 41055 pocket") });
+drawn(AMPLE_37, { shutterW: [HALF], clipW: clip(99.4, "2 × 49.7"), glassH: glassH(63.5, "Ample 41068 pocket") });
+// Alucoat S-30: one shutter profile on 4 sides, interlock clip at the meeting
+drawn(GULF_S30, { ...gulfFrame(33, "AT-30001"), shutterW: [HALF], ...glassBoth(55.1, "AT-30005 pocket") });
+
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,

@@ -70,8 +70,11 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
 // 6. A catalogue-only draft (Ample 22): fully taught from one window, then
 //    checked on a different width. Test numbers only — not real shop data.
 {
+  // a copy with every cut unknown (the shipped draft now carries drawing-derived rules)
+  const A22: StudioSystem = structuredClone(AMPLE_22);
+  for (const sz of A22.sizes) { const last = sz.cases[sz.cases.length - 1]; sz.cases = [{ ...last, when: undefined, add: null, evidence: { status: "unknown", source: "" } }]; }
   let threw = false;
-  try { evaluate(AMPLE_22, { id: "W1", W: 48 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG" }); }
+  try { evaluate(A22, { id: "W1", W: 48 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG" }); }
   catch (e) { threw = e instanceof StudioUnknownError && e.missing.length >= 4; }
   expect(threw, "Ample 22 draft must refuse to cut before it is taught");
 
@@ -80,7 +83,7 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
     shutterTop: Math.round(W / 2) - 4 * SUT, shutterLock: H - 20 * SUT,
   });
   const g = (W: number, H: number) => ({ w: Math.round(W / 2) - 4 * SUT - 28 * SUT, h: H - 20 * SUT - 28 * SUT });
-  const t = teach(AMPLE_22, job({ W: 48 * IN, H: 48 * IN, tracks: 2, mix: "GG", measured: cuts(48 * IN, 48 * IN), glass: g(48 * IN, 48 * IN) }));
+  const t = teach(A22, job({ W: 48 * IN, H: 48 * IN, tracks: 2, mix: "GG", measured: cuts(48 * IN, 48 * IN), glass: g(48 * IN, 48 * IN) }));
   expect(t.skipped.length === 0 && t.conflicts.length === 0, `22 mm teach skipped ${JSON.stringify(t.skipped)}`);
   const r = evaluate(t.system, { id: "W2", W: 60 * IN, H: 52 * IN, qty: 1, tracks: 2, mix: "GJ" });
   expect(r.pieces.length === 4 + 8 + 0, `22 mm GJ: 4 frame + 8 shutter pieces, no interlock — got ${r.pieces.length}`);

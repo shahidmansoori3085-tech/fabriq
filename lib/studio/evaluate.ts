@@ -165,10 +165,25 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     }
   }
 
+  // Panels: a shutter can carry its own section on one side (a small slim
+  // interlock on one, a big one on the next), so its glass is sized with its own picks.
   const panels: StudioResult["panels"] = [];
+  const sizeFor = (i: number) => {
+    const own = job.perShutter?.[i];
+    if (!own || !Object.keys(own).length) return { w: len(sys.infill.w), h: len(sys.infill.h) };
+    const v = computeSizes(sys, { ...job, switches: { ...(job.switches ?? {}), ...own } }).values;
+    return { w: v[sys.infill.w] ?? 0, h: v[sys.infill.h] ?? 0 };
+  };
   for (const kind of ["glass", "jali", "sheet"] as ShutterKind[]) {
-    const n = kinds.filter((k) => k === kind).length;
-    if (n) panels.push({ kind, w: len(sys.infill.w), h: len(sys.infill.h), count: n * job.qty });
+    const groups = new Map<string, { w: Um; h: Um; n: number }>();
+    kinds.forEach((k, i) => {
+      if (k !== kind) return;
+      const { w, h } = sizeFor(i);
+      const g = groups.get(`${w}x${h}`) ?? { w, h, n: 0 };
+      g.n++;
+      groups.set(`${w}x${h}`, g);
+    });
+    for (const g of groups.values()) panels.push({ kind, w: g.w, h: g.h, count: g.n * job.qty });
   }
 
   const hardware: StudioResult["hardware"] = [];
