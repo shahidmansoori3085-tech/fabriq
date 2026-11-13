@@ -149,7 +149,13 @@ export function runners(track: Solid, w: number, hFull: number) {
   const top = legs.map((g) => { let m = 0; for (let x = g.x0; x <= g.x1; x += 0.25) m = Math.max(m, tipAt(track, x, h + 5)); return Math.round(m * 2) / 2; });
   const count = (v: number) => top.filter((t) => t === v).length;
   const common = top.reduce((b, t) => (count(t) > count(b) ? t : b), top[0]);
-  return { kind: "leg" as const, at: legs.filter((_, i) => count(common) === 1 || top[i] === common).map((g) => (g.x0 + g.x1) / 2) };
+  const kept = legs.filter((_, i) => count(common) === 1 || top[i] === common);
+  // a thin outer wall next to wide hollow running legs is only design (founder): measure each
+  // leg's width a few mm below its tip and drop the ones much thinner than the widest
+  const span = (g: { x0: number; x1: number }) => { let n = 0; for (let x = g.x0 - 6; x <= g.x1 + 6; x += 0.25) if (tipAt(track, x, h + 5) > h - 6) n++; return n * 0.25; };
+  const spans = kept.map(span), widest = Math.max(...spans);
+  const running = kept.length >= 3 ? kept.filter((_, i) => spans[i] >= 0.4 * widest) : kept;
+  return { kind: "leg" as const, at: running.map((g) => (g.x0 + g.x1) / 2) };
 }
 
 /** The channel of a shutter member that faces the track: mouth at shape x = edge, going in along dir. */

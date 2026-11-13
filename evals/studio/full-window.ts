@@ -19,7 +19,7 @@ const SYSTEMS: [string, number, boolean, boolean][] = [
   ["domal-27", 0, true, true], ["ample-27", 0, true, true], ["eleanor-27", 0, true, true], ["bh-27", 0, false, false],
   ["ample-22", 0, true, true], ["euro-26", 0, true, true], ["ample-25", 0, true, true], ["ample-29", 0, true, true],
   ["ample-37", 0, true, true], ["gulf-25", 24.8, true, true], ["bh-35", 32.8, true, true], ["bh-31", 33.1, true, true],
-  ["gulf-s30", 33, true, true],
+  ["gulf-s30", 33, true, true], ["domal-35", 0, true, true], ["euro-35", 0, true, true],
 ];
 
 for (const [id, side, gw, gh] of SYSTEMS) {
@@ -39,7 +39,9 @@ for (const [id, side, gw, gh] of SYSTEMS) {
     } else {
       expect(frameTop.angle === 90 && frameSide.length === H && Math.abs(frameTop.length - (W - 2 * side * 1000)) <= 1, `${tag}: Gulf frame should be sides H, top W − ${2 * side}`);
     }
-    expect(st.length === Math.round(W / 2), `${tag}: shutter width should be W/2, is ${st.length}`);
+    // Domal 35 2-track: (W − ⅜″) ÷ 2 from the shop videos; every other system W/2
+    const half = id === "domal-35" ? Math.round((W - 9525) / 2) : Math.round(W / 2);
+    expect(st.length === half, `${tag}: shutter width should be ${half}, is ${st.length}`);
     expect(sh.length > 0 && sh.length < H - 20000, `${tag}: shutter height ${sh.length} looks wrong`);
     for (const m of at(/Interlock|Slim/)) expect(m.length === sh.length, `${tag}: ${m.role} should run the shutter height`);
     const clip = at(/Roller Clip/)[0];

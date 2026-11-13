@@ -91,19 +91,24 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
   expect(c.allOk, `22 mm check on a second width: ${JSON.stringify(c.rows.filter((x) => !x.ok))}`);
 }
 
-// 6b. Video-based drafts give the video numbers, labelled "observed".
+// 6b. Domal 35: sections from Banu Hashim / Eleanor (same sizes); 2-/3-track cuts from
+//     the drawings, 3+1 / 4+1 still from shop videos ("observed"), with no frame section.
 {
   const d35 = TEMPLATES.find((s) => s.id === "domal-35")!;
-  let noSection = false;
-  try { evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "2" } }); }
-  catch (e) { noSection = e instanceof StudioUnknownError && e.missing.every((m) => m.startsWith("Section for")); }
-  expect(noSection, "a draft with no sections chosen must ask for sections (and only that)");
-  const r = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "2" } }, { allowUnknown: true });
+  const r = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG" });
   const v = (id: string) => r.sizes.find((s) => s.id === id)!;
-  expect(Math.abs(v("shutterH").value! - 45 * IN) <= 1 && v("shutterH").status === "observed", "35×75 2″ track: H − 3″, observed");
+  expect(v("shutterH").value === 48 * IN - 61100 && v("shutterH").status === "suggested", "Domal 35 leg track 42.6: H − 61.1 from the drawing");
   expect(Math.abs(v("shutterW").value! - 29.8125 * IN) <= 1, "35×75 2-track width (W − ⅜″) ÷ 2");
+  expect(r.pieces.some((p) => p.sectionId === "d35_track_2t"), "2-track frame is the 42.6 leg track by default");
+  const r48 = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "48" } });
+  expect(r48.sizes.find((s) => s.id === "shutterH")!.value === 48 * IN - 71800, "48 track with 2 legs: H − 71.8");
+  let noSection = false;
+  try { evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" }); }
+  catch (e) { noSection = e instanceof StudioUnknownError && e.missing.every((m) => m.startsWith("Section for")); }
+  expect(noSection, "3+1 has no frame section: it must ask for one (and only that)");
   const r4 = evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" }, { allowUnknown: true });
-  expect(r4.pieces.filter((p) => /Interlock/.test(p.role)).length === 4, "3+1: 2 glass meetings × 2 patti");
+  expect(r4.sizes.find((s) => s.id === "shutterH")!.status === "observed", "3+1 height from the shop videos");
+  expect(r4.pieces.filter((p) => /Interlock/.test(p.role)).length === 4, "3+1: 2 glass meetings × 2 clips");
 }
 
 // 6c. One window, two slim interlocks: small on one shutter, big on the next.

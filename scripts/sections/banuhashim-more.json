@@ -1,0 +1,24 @@
+{
+  "style": "dark-fill",
+  "skipTop": 0.07,
+  "skipBottom": 0.9,
+  "scaleWhenOff": "max",
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf",
+  "out": "lib/studio/shapes/banuhashim-euro.json",
+  "maker": "Banu Hashim",
+  "note": "Domal 35×75 (pp.66–70) and single drawings cut out by region where the page has photos or a neighbour the tracer took by mistake.",
+  "pages": [
+    { "page": 69, "cells": [ { "code": "BH-6701", "w": 77.01, "h": 42.62 }, { "code": "BH-6702", "w": 95, "h": 48 }, { "code": "BH-6703", "w": 122, "h": 42.5 } ] },
+    { "page": 70, "cells": [ { "code": "BH-6704", "w": 139.8, "h": 47.85 }, { "code": "BH-6705", "w": 77.71, "h": 46.3 }, { "code": "BH-6706", "w": 124.09, "h": 46.3 } ] },
+    { "page": 71, "cells": [ { "code": "BH-6707", "w": 42.55, "h": 31 }, { "code": "BH-6708", "w": 42.55, "h": 31 }, { "code": "BH-6709", "w": 89.86, "h": 31.1 } ] },
+    { "page": 72, "cells": [ { "code": "BH-6710", "w": 89.86, "h": 31 }, { "code": "BH-6711", "w": 41, "h": 38.9 }, { "code": "BH-6712", "w": 75, "h": 35 } ] },
+    { "page": 73, "cells": [ { "code": "BH-6713", "w": 75, "h": 35 } ] },
+    { "page": 45, "region": [0.3, 0.07, 0.7, 0.3], "cells": [ { "code": "BH-2120", "w": 40, "h": 45 } ] },
+    { "page": 45, "region": [0.3, 0.38, 0.72, 0.56], "cells": [ { "code": "BH-2122", "w": 66, "h": 26 } ] },
+    { "page": 45, "region": [0.35, 0.65, 0.66, 0.83], "cells": [ { "code": "BH-2118", "w": 28.1, "h": 28.5 } ] },
+    { "page": 48, "region": [0.2, 0.07, 0.8, 0.3], "cells": [ { "code": "BH-6040", "w": 101.9, "h": 50 } ] },
+    { "page": 60, "region": [0.2, 0.07, 0.8, 0.28], "cells": [ { "code": "BH-6403", "w": 120.5, "h": 47.6 } ] },
+    { "page": 60, "region": [0.2, 0.66, 0.8, 0.83], "cells": [ { "code": "BH-6405", "w": 65.9, "h": 29 } ] },
+    { "page": 64, "region": [0.2, 0.66, 0.85, 0.83], "cells": [ { "code": "BH-6502", "w": 150, "h": 32.8 } ] }
+  ]
+}

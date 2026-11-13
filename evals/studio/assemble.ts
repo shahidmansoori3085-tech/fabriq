@@ -82,6 +82,13 @@ for (const [sys, tracks, st] of cases) {
   expect(Math.abs(ruleFor(sys, tracks) - r.takeOff) < 0.1, `${st.name}: template says H − ${ruleFor(sys, tracks)}, drawings H − ${r.takeOff.toFixed(2)}`);
 }
 
+// 3a. 35 mm: Domal (leg track 6701) and Euro (U track 6705 + clip 6513), shutter 6712
+for (const [st, want] of [[{ name: "d35", bottom: "BH-6701", top: "BH-6701", shutter: "BH-6712", mouth: "start" }, 61.1], [{ name: "e35", bottom: "BH-6705", top: "BH-6705", clip: "BH-6513", shutter: "BH-6712", mouth: "start" }, 72.6]] as const) {
+  const r = buildSliding(st as Stack, get);
+  console.log(`  35 mm ${st.name}: H − ${r.takeOff.toFixed(2)} mm`);
+  expect(r.clear && Math.abs(r.takeOff - want) < 0.1, `${st.name}: drawing H − ${r.takeOff.toFixed(2)}, template H − ${want}`);
+}
+
 // 3b. mini domal: runs on the pointed track, no clip
 {
   const r = buildSliding({ name: "mini", bottom: "41083", top: "41083", shutter: "41082", mouth: "start" }, get);

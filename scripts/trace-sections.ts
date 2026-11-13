@@ -33,7 +33,8 @@ interface Manifest {
   catalogue: string;          // PDF path
   out: string;                // JSON written here
   maker: string;
-  pages: { page: number; cells: (Cell | null)[] }[];
+  /** region: only this part of the page, as fractions [left, top, right, bottom] — to skip photos or a neighbouring drawing */
+  pages: { page: number; cells: (Cell | null)[]; region?: [number, number, number, number] }[];
 }
 export interface TracedShape { code: string; maker: string; w: number; h: number; paths: string[]; source: string; scaleCheck: number }
 
@@ -82,7 +83,7 @@ function renderColor(pdf: string, page: number, dpi: number) {
  * every narrow region enclosed by them (a wall drawn as two lines). Wide
  * enclosed regions are hollow chambers and stay empty.
  */
-function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" | "orange-fill" = "cad-red", skipTop = 0.16, skipBottom = 0.96) {
+function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" | "orange-fill" = "cad-red", skipTop = 0.16, skipBottom = 0.96, left = 0, right = 1) {
   const { w, h, rgb } = img;
   const ink = new Uint8Array(w * h);
   for (let p = 0; p < w * h; p++) {
@@ -121,7 +122,7 @@ function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "
   }
   // sections: pieces of one drawing (outline, fill, small islands) are joined when their boxes touch
   const M = Math.round(Math.min(w, h) * 0.012);
-  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * skipBottom && c.n > 40);
+  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * skipBottom && c.x0 >= w * left && c.x1 <= w * right && c.n > 40);
   let merged = true;
   while (merged) {
     merged = false;
@@ -351,7 +352,8 @@ function trace(m: Manifest) {
     }
     if (m.style === "cad-red" || m.style === "dark-fill" || m.style === "orange-fill") {
       // every drawing on the page is found (in reading order); null cells are skipped
-      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, m.skipTop ?? 0.16, m.skipBottom ?? 0.96);
+      const [l, t, r, b] = pg.region ?? [0, m.skipTop ?? 0.16, 1, m.skipBottom ?? 0.96];
+      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, t, b, l, r);
       pg.cells.forEach((c, i) => {
         if (!c) return;
         const r = found[i];

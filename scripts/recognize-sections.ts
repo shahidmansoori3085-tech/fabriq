@@ -8,7 +8,7 @@ import { recognize } from "../lib/studio/recognize";
 import { BUILT_IN_PROFILES } from "../lib/studio/templates";
 import { shapeOf } from "../lib/studio/shapes";
 
-const files = ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro", "banuhashim-27", "alucoat"];
+const files = ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro", "banuhashim-27", "alucoat"]; // banuhashim-euro also holds the 35×75 and cut-out traces
 const out: Record<string, { role: string; grooves?: number; why: string }> = {};
 for (const f of files) {
   const book = JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")) as Record<string, { w: number; h: number; paths: string[] }>;
@@ -16,7 +16,7 @@ for (const f of files) {
 }
 const KIND_ROLE: Record<string, string[]> = {
   shutter: ["glass-shutter", "double-glass-shutter"], handle: ["glass-shutter", "double-glass-shutter"], "mesh-shutter": ["mesh-shutter"],
-  track: ["track", "side-track"], frame: ["track"], "slim-interlock": ["slim-interlock"], rail: ["clip"],
+  track: ["track", "side-track"], frame: ["track"], "slim-interlock": ["slim-interlock"], rail: ["clip"], bead: ["bead"],
 };
 const rows: string[] = [], odd: string[] = [];
 for (const p of BUILT_IN_PROFILES) {

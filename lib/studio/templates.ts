@@ -54,6 +54,7 @@ const CATALOGUE = (s: string) => ev("verified", s);
 const DRAWING = (s: string) => ev("observed", `${s} — role read from drawing, confirm`);
 const FOUNDER = (s: string) => ev("verified", `Founder job: ${s}`);
 const VIDEO = (s: string) => ev("observed", `Shop videos: ${s}`);
+const FROM_DRAWING_35 = (t: string) => ev("suggested", `From the drawings (window built from the sections): ${t}. Check on one window.`);
 
 const L2 = (...mixes: string[]) => ({ tracks: 2, mixes: mixes.length ? mixes : ["GG", "GJ", "JJ"] });
 const L3 = (...mixes: string[]) => ({ tracks: 3, mixes: mixes.length ? mixes : ["GGJ", "GGG", "GJJ", "GG"] });
@@ -296,6 +297,7 @@ export const BH_27: StudioSystem = withAlternatives(base({
     size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Half the window, as Domal"), { den: 2 })),
     size("shutterH", "Shutter height",
       rule("H", -mm(73.7), ev("suggested", "From the drawings (window built from the sections): 2 × 48.9 leg − 24 roller. OMEO is H − 66.7: these legs stand 3.5 mm taller. Check on one window."), { when: { tracks: "2" } }),
+      rule("H", -mm(74.3), ev("suggested", "From the drawings (window built from the sections): 2 × 49.2 leg (BH-6040) − 24 roller. Check on one window."), { when: { tracks: "3" } }),
       unknownFrom("H")),
     size("glassW", "Glass width", unknownFrom("shutterW")),
     size("glassH", "Glass height", unknownFrom("shutterH")),
@@ -310,7 +312,7 @@ export const BH_27: StudioSystem = withAlternatives(base({
   ],
   notes: [
     "Banu Hashim's 27 mm domal legs stand 48.9 mm; OMEO, Ample and Eleanor stand 45. Do not use an OMEO cut list with these tracks: the shutter comes out about 7 mm too long.",
-    "3-track height not measured yet (the catalogue drawing of 6040 did not trace cleanly) — teach it from one window.",
+    "Glass not worked out yet: the shutter 2122 drawing shares its page with a photo and does not trace cleanly. Teach it from one window.",
   ],
 }), "interlock", ["bh27_clip", "bh27_interlock"]);
 
@@ -328,6 +330,8 @@ export const ELEANOR_27: StudioSystem = {
     prof("el_2720", "27 mm Shutter (light)", "shutter", { eleanor: "2720" }, "65×26", { value: 2.2, perFt: 12 }, DRAWING("Eleanor p.29")),
     prof("el_2719", "27 mm Shutter 66", "shutter", { eleanor: "2719" }, "66×27", { value: 2.7, perFt: 12 }, DRAWING("Eleanor p.29")),
     prof("el_2718", "27 mm Shutter (hook)", "shutter", { eleanor: "2718" }, "65×27", { value: 2.85, perFt: 12 }, DRAWING("Eleanor p.29")),
+    prof("el_2725", "27 mm Interlock Patti", "interlock-patti", { eleanor: "2725" }, "28.5×39", { value: 1.03, perFt: 12 }, DRAWING("Eleanor p.30 — same shape as OMEO 2091"), { faceMm: 10 }),
+    prof("el_2726", "27 mm Interlock Patti (B)", "interlock-patti", { eleanor: "2726" }, "27.9×39.5", { value: 1.0, perFt: 12 }, DRAWING("Eleanor p.30"), { faceMm: 10 }),
   ],
   parts: [
     ...domalFrame(byTracks("el_2701", "el_2702")),
@@ -335,47 +339,121 @@ export const ELEANOR_27: StudioSystem = {
     part("shutterBottom", "{s} Shutter Bottom{tag}", "el_2722", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLeft", "{s} Shutter Left{tag}", "el_2722", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterRight", "{s} Shutter Right{tag}", "el_2722", "shutter", "shutterH", 45, "sash-meet"),
-    part("interlock", "Interlock {k}", "", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+    part("interlock", "Interlock {k}", "el_2725", "meeting", "shutterH", 90, "meeting", { count: 2 }),
   ],
-  notes: ["Eleanor prints codes and sizes but not names — which section does which job is read from the drawings. Choose your interlock patti."],
+  notes: ["Eleanor prints codes and sizes but not names — which section does which job is read from the drawings. Interlock patti 2725 has the shape of OMEO 2091; 2726 is the other one on the page."],
 };
 
-export const DOMAL_35: StudioSystem = base({
+/**
+ * Domal 35×75 (founder: 35 mm comes as Domal, Euro and Gulf). Domal = the tracks
+ * with running legs: Banu Hashim 6701 / 6703 (42.6) and 6702 / 6704 (48, two legs).
+ * The 46.3 U-groove tracks (6705 / 6706 = Eleanor 3501 / 3502) are Euro 35.
+ * Cuts from the window built from the drawings (24 mm roller on the legs).
+ */
+export const DOMAL_35: StudioSystem = withAlternatives(base({
   id: "domal-35", name: "Domal 35×75", group: "domal",
   heightFrom: { kind: "domal-legs" },
-  blurb: "One 35×75 profile on all 4 sides + interlock patti; 2-track, 3+1 or 4+1. Choose your sections.",
-  layouts: [L2("GG", "GJ"), { tracks: 4, mixes: ["GGGJ"] }, { tracks: 5, mixes: ["GGGGJ"] }],
+  blurb: "One 75×35 shutter on all 4 sides + I/L clip; leg track 42.6 (BH 6701 / 6703) or 48 with 2 legs (6702 / 6704)",
+  layouts: [L2(), L3(), { tracks: 4, mixes: ["GGGJ"] }, { tracks: 5, mixes: ["GGGGJ"] }],
   switches: [{
-    id: "track", label: "Track width (2-track)", default: "1.75",
-    options: [{ value: "1.75", label: "1¾″ track" }, { value: "2", label: "2″ track" }],
+    id: "track", label: "Track", default: "42",
+    options: [
+      { value: "42", label: "42.6 mm with leg (BH 6701 / 6703)" },
+      { value: "48", label: "48 mm with 2 legs (BH 6702 / 6704)" },
+    ],
   }],
   sizes: [
-    size("frameW", "Frame top / bottom", rule("W", 0, VIDEO("45° frame, full width"))),
-    size("frameH", "Frame side", rule("H", 0, VIDEO("45° frame, full height"))),
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "45° frame goes round, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "45° frame goes round, full height"))),
     size("shutterW", "Shutter width",
       rule("W", 0, VIDEO("2-track: (W − ⅜″) ÷ 2"), { when: { tracks: "2" }, pre: -inches(0.375), den: 2 }),
       rule("W", 0, VIDEO("3+1: (W + 2⅞″) ÷ 3"), { when: { tracks: "4" }, pre: inches(2.875), den: 3 }),
-      rule("W", 0, VIDEO("4+1: (W + 5⅞″) ÷ 4"), { when: { tracks: "5" }, pre: inches(5.875), den: 4 })),
+      rule("W", 0, VIDEO("4+1: (W + 5⅞″) ÷ 4"), { when: { tracks: "5" }, pre: inches(5.875), den: 4 }),
+      rule("W", 0, ev("observed", "Every shutter half the window (W/2)"), { den: 2 })),
     size("shutterH", "Shutter height",
-      rule("H", -inches(2.375), VIDEO("2-track, 1¾″ track: H − 2⅜″"), { when: { tracks: "2", track: "1.75" } }),
-      rule("H", -inches(3), VIDEO("2-track, 2″ track: H − 3″"), { when: { tracks: "2", track: "2" } }),
+      rule("H", -mm(61.1), FROM_DRAWING_35("2 × 42.6 track − 24 roller; the 1¾″-track videos cut H − 2⅜″ (60.3), 0.8 mm apart"), { when: { tracks: "2", track: "42" } }),
+      rule("H", -mm(60.8), FROM_DRAWING_35("2 × 42.4 track − 24 roller"), { when: { tracks: "3", track: "42" } }),
+      rule("H", -mm(71.8), FROM_DRAWING_35("2 × 47.9 track − 24 roller"), { when: { tracks: ["2", "3"], track: "48" } }),
       rule("H", -inches(2.875), VIDEO("3+1 / 4+1: H − 2⅞″"))),
     size("glassW", "Glass width",
-      rule("shutterW", -inches(4.625), VIDEO("2-track: shutter − 4⅝″"), { when: { tracks: "2" } }),
+      rule("shutterW", -mm(118), FROM_DRAWING_35("glass stops 59 mm in from each shutter edge (BH-6712); the videos cut shutter − 4⅝″ (117.5)"), { when: { tracks: ["2", "3"] } }),
       rule("shutterW", -inches(5), VIDEO("3+1 / 4+1: shutter − 5″"))),
     size("glassH", "Glass height",
-      rule("shutterH", -inches(4.625), VIDEO("2-track: shutter − 4⅝″"), { when: { tracks: "2" } }),
+      rule("shutterH", -mm(118), FROM_DRAWING_35("glass stops 59 mm in from each shutter edge (BH-6712); the videos cut shutter − 4⅝″ (117.5)"), { when: { tracks: ["2", "3"] } }),
       rule("shutterH", -inches(5), VIDEO("3+1 / 4+1: shutter − 5″"))),
   ],
   profiles: [
-    prof("d35_track_2t", "Domal 35 2-Track Frame", "frame", { bh: "BH-6701" }, "77×42.6", { value: 4.85, perFt: 12 }, CATALOGUE("Banu Hashim BH-6701")),
-    prof("d35_track_3t", "Domal 35 3-Track Frame", "frame", { bh: "BH-6703" }, "122×42.5", { value: 7.8, perFt: 12 }, CATALOGUE("Banu Hashim BH-6703")),
-    prof("d35_shutter", "Domal 35 Shutter 35×75", "shutter", {}, "75×35", { value: 4.2, perFt: 12 }, CATALOGUE("Domal 35×75")),
-    prof("d35_interlock", "Domal 35 Interlock Patti", "interlock-patti", {}, "35×20", { value: 1.1, perFt: 12 }, CATALOGUE("Domal 35")),
+    prof("d35_track_2t", "Domal 35 2-Track with Leg", "frame", { bh: "BH-6701" }, "77.01×42.62", { value: 5.03, perFt: 12 }, CATALOGUE("Banu Hashim p.66")),
+    prof("d35_track_3t", "Domal 35 3-Track with Leg", "frame", { bh: "BH-6703" }, "122×42.5", { value: 7.9, perFt: 12 }, CATALOGUE("Banu Hashim p.66")),
+    prof("d35_t2_48", "Domal 35 2-Track with 2 Legs", "frame", { bh: "BH-6702" }, "95×48", { value: 6.5, perFt: 12 }, CATALOGUE("Banu Hashim p.66")),
+    prof("d35_t3_48", "Domal 35 3-Track with 2 Legs", "frame", { bh: "BH-6704" }, "139.8×47.85", { value: 8.7, perFt: 12 }, CATALOGUE("Banu Hashim p.67")),
+    prof("d35_shutter", "Domal 35 Shutter 75×35", "shutter", { bh: "BH-6712" }, "75×35", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.69")),
+    prof("d35_shutter_dgu", "Domal 35 Shutter 75×35 (double glass)", "shutter", { bh: "BH-6713" }, "75×35", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.70")),
+    prof("d35_clip", "Domal 35 I/L Clip", "interlock-patti", { bh: "BH-6711", eleanor: "3510" }, "41×38.9", { value: 1.5, perFt: 12 }, CATALOGUE("Banu Hashim p.69 / Eleanor p.35"), { faceMm: 12 }),
+    prof("d35_interlock", "Domal 35 Interlock", "interlock", { bh: "BH-6707", eleanor: "3506" }, "42.55×31", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.68 / Eleanor p.35")),
   ],
-  parts: DOMAL_27.parts.map((p) => ({ ...p, profile: [{ id: "" }], meshProfile: undefined })),
-  notes: ["The mesh shutter in 3+1 / 4+1 is taken as the same width as a glass shutter — check it on your first job."],
-});
+  parts: [
+    ...domalFrame([
+      { when: { tracks: "2", track: "42" }, id: "d35_track_2t" }, { when: { tracks: "3", track: "42" }, id: "d35_track_3t" },
+      { when: { tracks: "2", track: "48" }, id: "d35_t2_48" }, { when: { tracks: "3", track: "48" }, id: "d35_t3_48" },
+      { id: "" },
+    ]),
+    part("shutterTop", "{s} Shutter Top{tag}", "d35_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "d35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLeft", "{s} Shutter Left{tag}", "d35_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterRight", "{s} Shutter Right{tag}", "d35_shutter", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock {k}", "d35_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
+  notes: [
+    "35 mm comes as Domal (this), Euro (U-groove track with clip) and Gulf (one-groove sides). Banu Hashim and Eleanor print the same 35×75 shutter and clip.",
+    "4-track (3+1) and 5-track (4+1) have no section in the catalogues here — choose your frame; their cuts come from shop videos.",
+    "The mesh shutter is taken as the same width as a glass shutter — check it on your first job.",
+  ],
+}), "interlock", ["d35_clip", "d35_interlock"]);
+
+/**
+ * Euro 35 (founder: 35 mm comes as Domal, Euro and Gulf). Banu Hashim 6705 / 6706
+ * and Eleanor 3501 / 3502 print the same U-groove track (46.3); a roller clip sits
+ * in each groove. Shutter 75×35 on 3 sides; slim interlock small (6707) or big
+ * (6709), shutter by shutter. Built from the drawings.
+ */
+export const EURO_35: StudioSystem = withAlternatives(base({
+  id: "euro-35", name: "Euro 35 mm — Banu Hashim / Eleanor", group: "gulf", maker: "Banu Hashim",
+  blurb: "U-groove track 6705 / 6706 (= Eleanor 3501 / 3502) all round with roller clip; shutter 6712; slim interlock small (6707) or big (6709)",
+  layouts: [L2(), L3()],
+  profiles: [
+    prof("e35_t2", "Euro 35 2-Track", "frame", { bh: "BH-6705", eleanor: "3501" }, "77.71×46.3", { value: 4.58, perFt: 12 }, CATALOGUE("Banu Hashim p.67 / Eleanor p.35")),
+    prof("e35_t3", "Euro 35 3-Track", "frame", { bh: "BH-6706", eleanor: "3502" }, "124.09×46.3", { value: 6.9, perFt: 12 }, CATALOGUE("Banu Hashim p.67 / Eleanor p.35")),
+    prof("e35_clip", "Euro 35 Roller Clip (track rail)", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
+    prof("e35_shutter", "Euro 35 Shutter 75×35", "shutter", { bh: "BH-6712", eleanor: "3503" }, "75×35", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.69 / Eleanor p.35")),
+    prof("e35_slim", "Euro 35 Slim Interlock — small", "slim-interlock", { bh: "BH-6707", eleanor: "3506" }, "42.55×31", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.68"), { faceMm: 31 }),
+    prof("e35_big", "Euro 35 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6709" }, "89.86×31.1", { value: 5.0, perFt: 12 }, CATALOGUE("Banu Hashim p.68"), { faceMm: 31 }),
+  ],
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
+    size("clipW", "Roller clip", rule("W", -mm(92.6), FROM_DRAWING_35("clear width between the side U tips (2 × 46.3)"))),
+    size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Every shutter half the window (W/2)"), { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(72.6), FROM_DRAWING_35("2 × 46.3 track + 4.0 clip − 24 roller"))),
+    size("glassW", "Glass width",
+      rule("shutterW", -mm(73.1), FROM_DRAWING_35("shutter pocket 59.0 + slim 6707 pocket 14.1"), { when: { pick_shutterMeet: "e35_slim" } }),
+      rule("shutterW", -mm(73.6), FROM_DRAWING_35("shutter pocket 59.0 + slim 6709 pocket 14.6"), { when: { pick_shutterMeet: "e35_big" } }),
+      unknownFrom("shutterW")),
+    size("glassH", "Glass height", rule("shutterH", -mm(118), FROM_DRAWING_35("glass stops 59 mm in from the top and bottom edges (6712)"))),
+  ],
+  parts: [
+    ...domalFrame(byTracks("e35_t2", "e35_t3")),
+    part("trackClip", "{s} Roller Clip", "e35_clip", "shutter", "clipW", 90, "other"),
+    part("shutterTop", "{s} Shutter Top{tag}", "e35_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "e35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "e35_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "e35_slim", "shutter", "shutterH", 45, "sash-meet"),
+  ],
+  notes: [
+    "Euro: the same U-groove track on all four sides; the roller runs on a clip in the bottom track.",
+    "Banu Hashim and Eleanor print the same track, shutter and interlock sizes.",
+  ],
+}), "shutterMeet", ["e35_slim", "e35_big"]);
 
 export const MINI_DOMAL_20: StudioSystem = base({
   id: "mini-domal-20", name: "Mini domal 20×54", group: "domal",
@@ -944,7 +1022,7 @@ export const TEMPLATES: StudioSystem[] = [
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, BH_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37,
-  EURO_26, GULF_25, BH_31, BH_35, GULF_S30, GULF,
+  EURO_26, EURO_35, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];

@@ -1,0 +1,10 @@
+{
+  "style": "orange-fill",
+  "skipTop": 0.08,
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/DOC-20261002-WA0003.pdf",
+  "out": "lib/studio/shapes/eleanor.json",
+  "maker": "Eleanor",
+  "pages": [
+    { "page": 38, "region": [0, 0.08, 1, 0.3], "cells": [ { "code": "2725", "w": 28.5, "h": 39 }, { "code": "2726", "w": 27.9, "h": 39.5 }, null ] }
+  ]
+}

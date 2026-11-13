@@ -1,0 +1,10 @@
+{
+  "style": "cad-red",
+  "catalogue": "C:/Users/umarm/Downloads/Open omeo ctlogue.pdf",
+  "out": "lib/studio/shapes/omeo.json",
+  "maker": "OMEO",
+  "note": "Bombay 25 mm (2×1) pieces, p.49. The 25 mm track is not in this catalogue.",
+  "pages": [
+    { "page": 49, "cells": [ { "code": "2021", "w": 50, "h": 25 }, { "code": "2011", "w": 50, "h": 25 }, { "code": "2000", "w": 50, "h": 25 }, { "code": "2031", "w": 50, "h": 25 } ] }
+  ]
+}
