@@ -47,7 +47,7 @@ function fingerprint(type: OpeningType, w: number, h: number, known: Record<stri
     const pieces = r.pieces.map((p) => `cut ${p.sectionId} ${p.length} ${p.role}`);
     const pane = (kind: string) => (g: { width: number; height: number; count: number }) => `pane ${kind} ${g.width}x${g.height} x${g.count}`;
     const panes = [...r.glass.map(pane("glass")), ...r.mesh.panels.map(pane("mesh")), ...r.sheet.panels.map(pane("sheet"))];
-    const bars = r.sections.map((s) => `buy ${s.sectionId} full:${s.bars16} half:${s.bars8}`);
+    const bars = r.sections.map((s) => `buy ${s.sectionId} full:${s.bars16} piece:${s.stock.flatMap((g) => g.pieces).join("+") || 0}`);
     const hw = r.hardware.map((x) => `hardware ${x.name} ${x.qty} ${x.unit}`);
     return [...pieces, ...panes, ...bars, ...hw].sort();
   } catch (e) {

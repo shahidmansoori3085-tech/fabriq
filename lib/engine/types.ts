@@ -38,17 +38,25 @@ export interface CutPiece {
 export interface PackedBar {
   barNo: number;
   sectionId: string;
-  barLength: Um; // 16' or 8'
+  barLength: Um; // a full pipe, or the piece cut to the feet needed
   pieces: CutPiece[];
   waste: Um;
 }
+
+/** Pipes of one length, and the pieces cut to the feet needed (feet each). */
+export interface StockGroup { ft: number; full: number; pieces: number[] }
 
 export interface SectionSummary {
   sectionId: string;
   totalPieces: number;
   totalLength: Um;
+  /** full pipes / pieces cut to length (names kept for old screens) */
   bars16: number;
   bars8: number;
+  /** what to buy — "4 × 16' + 6' piece" */
+  stock: StockGroup[];
+  /** feet of bar bought */
+  boughtFt: number;
   waste: Um;
   wastePct: number;
 }

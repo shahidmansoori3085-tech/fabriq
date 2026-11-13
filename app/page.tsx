@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseSizeIn, formatSizeIn, type SizeUnit, type Um,
 } from "@/lib/engine/units";
-import { PieceTooLongError } from "@/lib/engine/cutting";
+import { PieceTooLongError, stockGroups } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
 import { systemOfItem, studioSystems, studioSystem, studioReady } from "@/lib/studio/runtime";
@@ -1911,41 +1911,40 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
  * 16' bar into one "pipes" figure gave the dealer a number he could not fill.
  */
 
-interface BarGroup { ft: number; full: number; half: number }
+/** Full pipes of one length, and the pieces cut to the feet needed. */
+interface BarGroup { ft: number; full: number; pieces: number[] }
 
 function barGroups(sections: MaterialList["sections"]): BarGroup[] {
   const m = new Map<number, BarGroup>();
-  for (const s of sections) {
-    const ft = getSection(s.sectionId).barLengthFt ?? 16;
-    const g = m.get(ft) ?? { ft, full: 0, half: 0 };
-    g.full += s.bars16;
-    g.half += s.bars8;
-    m.set(ft, g);
+  for (const s of sections) for (const x of s.stock) {
+    const g = m.get(x.ft) ?? { ft: x.ft, full: 0, pieces: [] };
+    g.full += x.full;
+    g.pieces.push(...x.pieces);
+    m.set(x.ft, g);
   }
   return [...m.values()].sort((a, b) => b.ft - a.ft);
 }
 
-/** "2 × 16' + 1 × 8'" — what the dealer actually hands over. */
-function barsText(ft: number, full: number, half: number): string {
-  return [full ? `${full} × ${ft}'` : "", half ? `${half} × ${Math.round(ft / 2)}'` : ""].filter(Boolean).join(" + ") || "—";
+/** "4 × 16' + 6' piece" — what the dealer actually hands over. */
+function barsText(g: BarGroup): string {
+  return [g.full ? `${g.full} × ${g.ft}'` : "", ...g.pieces.map((p) => `${p}' piece`)].filter(Boolean).join(" + ") || "—";
 }
 
 function groupsText(groups: BarGroup[]): string {
-  return groups.map((g) => barsText(g.ft, g.full, g.half)).join(" + ");
+  return groups.map(barsText).join(" + ");
 }
 
-/** Pipes as the dealer counts them: a half pipe is ½, not one more pipe —
- *  1 × 16' + 1 × 8' is "1½", where adding bars up said "2". */
-function pipeCount(full: number, half: number): string {
-  const whole = full + Math.floor(half / 2);
-  if (half % 2 === 0) return String(whole);
-  return whole ? `${whole}½` : "½";
+/** Pipes as the dealer counts them: full pipes, plus the pieces cut to length —
+ *  "4 + 1" with "pipes + piece" under it. */
+function pipeCount(full: number, pieces: number): string {
+  return full && pieces ? `${full} + ${pieces}` : String(full || pieces);
 }
-const pipeWord = (full: number, half: number) => (full * 2 + half > 2 ? "pipes" : "pipe");
+const pipeWord = (full: number, pieces: number) =>
+  [full ? (full > 1 ? "pipes" : "pipe") : "", pieces ? (pieces > 1 ? "pieces" : "piece") : ""].filter(Boolean).join(" + ") || "pipes";
 const groupsCount = (groups: BarGroup[]) =>
-  pipeCount(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.half, 0));
+  pipeCount(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.pieces.length, 0));
 const groupsWord = (groups: BarGroup[]) =>
-  pipeWord(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.half, 0));
+  pipeWord(groups.reduce((a, g) => a + g.full, 0), groups.reduce((a, g) => a + g.pieces.length, 0));
 
 /* —— material list —— */
 
@@ -1980,7 +1979,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
                 label: sec.label,
                 sub: sec.size ? `${sec.size} mm` : undefined,
                 qty: pipeCount(s.bars16, s.bars8),
-                qtySub: barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8),
+                qtySub: groupsText(s.stock),
               };
             })}
             totalLabel="Total" totalValue={`${total} ${groupsWord(groups)}`} totalSub={groupsText(groups)} />
@@ -2006,7 +2005,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
           <div className="min-w-0">
             <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Pipes to buy</div>
             {groups.map((g) => (
-              <div key={g.ft} className="mt-1 text-base font-semibold tabnum">{barsText(g.ft, g.full, g.half)}</div>
+              <div key={g.ft} className="mt-1 text-base font-semibold tabnum">{barsText(g)}</div>
             ))}
           </div>
           <div className="shrink-0 text-right">
@@ -2067,7 +2066,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold leading-tight">{sec.label}</div>
                 <div className="mt-0.5 text-xs tabnum" style={{ color: "var(--ink-3)" }}>
-                  {barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}
+                  {groupsText(s.stock)}
                 </div>
               </div>
               <div className="shrink-0 text-right">
@@ -2340,9 +2339,8 @@ function CuttingPanel({ list, shop, items, jobName }: {
 
       {sectionGroups.map(([sectionId, bars]) => {
         const sec = getSection(sectionId);
-        const fullFt = sec.barLengthFt ?? 16;
-        const full = bars.filter((b) => toFeet(b.barLength) >= fullFt - 0.5).length;
-        const half = bars.length - full;
+        const [st] = stockGroups(sectionId, bars);
+        const full = st.full, pieces = st.pieces.length;
         return (
           <div key={sectionId} className="card overflow-hidden">
             {/* one header: the section as he knows it (profile, name, size) and
@@ -2356,8 +2354,8 @@ function CuttingPanel({ list, shop, items, jobName }: {
                 {sec.size && <div className="mono mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</div>}
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-sm font-bold tabnum">{pipeCount(full, half)} {pipeWord(full, half)}</div>
-                <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(fullFt, full, half)}</div>
+                <div className="text-sm font-bold tabnum">{pipeCount(full, pieces)} {pipeWord(full, pieces)}</div>
+                <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(st)}</div>
               </div>
             </div>
             <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
@@ -2612,7 +2610,7 @@ function aluminiumWaText(list: MaterialList, shopName?: string, jobName?: string
   L.push("");
   for (const s of list.sections) {
     const sec = getSection(s.sectionId);
-    L.push(`• ${sec.label} — ${barsText(sec.barLengthFt ?? 16, s.bars16, s.bars8)}`);
+    L.push(`• ${sec.label} — ${groupsText(s.stock)}`);
   }
   const groups = barGroups(list.sections);
   L.push("", `*Total: ${groupsCount(groups)} ${groupsWord(groups)}* (${groupsText(groups)})`);

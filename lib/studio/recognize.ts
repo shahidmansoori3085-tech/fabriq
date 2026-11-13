@@ -15,7 +15,7 @@
  */
 import { solidOf, box, slideUntilTouch, rayToMaterial, place, runners, tipAt, inside, type Solid } from "./assemble";
 
-export type SectionRole = "glass-shutter" | "double-glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "bead" | "other";
+export type SectionRole = "glass-shutter" | "double-glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "interlock-clip" | "bead" | "other";
 
 export interface Recognized { role: SectionRole; grooves?: number; why: string }
 
@@ -124,6 +124,23 @@ export function recognize(shape: { w: number; h: number; paths: string[] }): Rec
     for (let x = r.at[0] + 3; x <= r.at[1] - 3; x += 0.5) low = Math.min(low, tipAt(t, x, h + 5));
     const valley = h - low;
     if (valley >= 12) return { role: "track", grooves: r.at.length, why: `${r.at.length} running legs` };
+  }
+
+  // interlock clip: thin walls, one side a straight wall the whole way, the opposite side open (it snaps on the shutter)
+  if (Math.max(w, h) <= 46 && Math.min(w, h) >= 24) {
+    let fill = 0, n = 0;
+    for (let x = 0.25; x < w; x += 0.5) for (let y = 0.25; y < h; y += 0.5) { n++; if (inside(so, x, y)) fill++; }
+    const cov = (horiz: boolean, near0: boolean) => {
+      const L = horiz ? w : h, D = horiz ? h : w; let hit = 0, m = 0;
+      for (let t = 0.5; t < L; t += 0.5) {
+        m++;
+        for (let k = 0.1; k < 3; k += 0.2) { const o = near0 ? k : D - k; if (horiz ? inside(so, t, o) : inside(so, o, t)) { hit++; break; } }
+      }
+      return hit / m;
+    };
+    const t = cov(true, true), b = cov(true, false), l = cov(false, true), rr = cov(false, false);
+    const wall = (t >= 0.9 && b <= 0.25) || (b >= 0.9 && t <= 0.25) || (l >= 0.9 && rr <= 0.25) || (rr >= 0.9 && l <= 0.25);
+    if (fill / n <= 0.15 && wall) return { role: "interlock-clip", why: "thin, one straight wall with the other side open — snaps on the shutter at the meeting" };
   }
   return { role: "other", why: "no shutter channel, glass slot or track grooves" };
 }

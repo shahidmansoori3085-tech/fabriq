@@ -185,7 +185,7 @@ export function summarizeMaterial(list: MaterialList): string {
   if (list.mesh.sqft > 0) lines.push(`- Mesh: ${list.mesh.sqft.toFixed(1)} sqft`);
   if (list.sheet.sqft > 0) lines.push(`- Sheet: ${list.sheet.sqft.toFixed(1)} sqft`);
   for (const h of list.hardware) lines.push(`- ${h.name}: ${h.qty} ${h.unit}`);
-  lines.push(`- Bars: ${list.totals.bars16} × 16ft, ${list.totals.bars8} × 8ft`);
+  lines.push(`- Pipes: ${list.totals.bars16} full, ${list.totals.bars8} cut pieces, ${list.totals.totalPipeFt} ft in all`);
   return lines.join("\n");
 }
 

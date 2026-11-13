@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Um } from "../../lib/engine/units";
 import { packAllSections, summarize } from "../../lib/engine/cutting";
+import type { StockGroup } from "../../lib/engine/types";
 import { getSection } from "../../lib/engine/sections";
 import type { StudioSystem } from "../../lib/studio/model";
 import { evaluate, StudioUnknownError, type StudioJob, type StudioResult } from "../../lib/studio/evaluate";
@@ -10,7 +11,8 @@ import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { fmtLen, STATUS_TEXT, type StudioUnit } from "../../lib/studio/format";
 import { Badge, SectionTitle } from "../studio-ui";
 
-const sectionFt = (id: string) => { try { return getSection(id).barLengthFt ?? 16; } catch { return 16; } };
+/** "4 × 16 ft + 6 ft piece" */
+const stockText = (st: StockGroup[]) => st.flatMap((g) => [g.full ? `${g.full} × ${g.ft} ft` : "", ...g.pieces.map((p) => `${p} ft piece`)]).filter(Boolean).join(" + ") || "—";
 const sectionName = (id: string) => { try { return getSection(id).name; } catch { return id; } };
 
 export function CutList({ sys, lib, unit, job, onFix }: {
@@ -75,7 +77,7 @@ export function CutList({ sys, lib, unit, job, onFix }: {
               return (
                 <div key={sec} className="border-t" style={{ borderColor: "var(--line)" }}>
                   <div className="px-3 pt-2 text-xs font-bold" style={{ color: "var(--accent)" }}>
-                    {pr?.name ?? sectionName(sec)}{pr?.codes ? ` · ${Object.values(pr.codes)[0]}` : ""}
+                    {pr?.name ?? sectionName(sec)}{pr?.codes && Object.values(pr.codes)[0] ? ` · ${Object.values(pr.codes)[0]}` : ""}
                   </div>
                   {groups.filter((g) => g.section === sec).map((g, i) => (
                     <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-1.5 text-sm">
@@ -108,15 +110,12 @@ export function CutList({ sys, lib, unit, job, onFix }: {
             <>
               <SectionTitle>Bars to buy</SectionTitle>
               <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
-                {bars.map((b) => {
-                  const ft = sectionFt(b.sectionId);
-                  return (
-                    <div key={b.sectionId} className="flex justify-between gap-3 px-3 py-2.5 text-sm">
-                      <span className="truncate">{findProfile(lib, b.sectionId)?.name ?? sectionName(b.sectionId)}</span>
-                      <span className="shrink-0 font-semibold">{b.bars16 ? `${b.bars16} × ${ft} ft` : ""}{b.bars16 && b.bars8 ? " + " : ""}{b.bars8 ? `${b.bars8} × ${ft / 2} ft` : ""}</span>
-                    </div>
-                  );
-                })}
+                {bars.map((b) => (
+                  <div key={b.sectionId} className="flex justify-between gap-3 px-3 py-2.5 text-sm">
+                    <span className="truncate">{findProfile(lib, b.sectionId)?.name ?? sectionName(b.sectionId)}</span>
+                    <span className="shrink-0 font-semibold">{stockText(b.stock)}</span>
+                  </div>
+                ))}
               </div>
             </>
           )}

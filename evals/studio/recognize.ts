@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { recognize, type SectionRole } from "../../lib/studio/recognize";
 
 const book: Record<string, { w: number; h: number; paths: string[] }> = {};
-for (const f of ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
+for (const f of ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro", "alucoat"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
 
 const KNOWN: [string, SectionRole, string][] = [
   ["2046", "glass-shutter", "OMEO domal glass shutter"],
@@ -24,6 +24,12 @@ const KNOWN: [string, SectionRole, string][] = [
   ["2901", "track", "Eleanor 29 2-track"],
   ["2902", "track", "Eleanor 29 3-track"],
   ["2917", "clip", "Eleanor 29 roller clip"],
+  ["41054", "interlock-clip", "Ample 29 interlock clip"],
+  ["2918", "interlock-clip", "Eleanor 29 interlock clip"],
+  ["2725", "interlock-clip", "Eleanor 27 interlock patti"],
+  ["BH-6711", "interlock-clip", "Domal 35 I/L clip"],
+  ["BH-6054", "interlock-clip", "Euro interlock clip"],
+  ["AT-30007", "interlock-clip", "Alucoat S-30 interlock clip"],
   ["2062", "track", "OMEO domal 3-track"],
   ["BH-6001", "track", "Euro 3-track (founder)"],
   ["BH-2551", "track", "Gulf 25 top / bottom"],

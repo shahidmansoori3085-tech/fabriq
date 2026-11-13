@@ -596,9 +596,9 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
  * shutter comes 0.7 mm shorter than Ample / BH 47.7 (built from the drawings).
  */
 const EL29 = (p: number) => CATALOGUE("Eleanor 29 mm p." + p);
-export const ELEANOR_29: StudioSystem = withAlternatives(base({
+export const ELEANOR_29: StudioSystem = base({
   id: "eleanor-29", name: "Euro 29 mm — Eleanor", group: "sleek", maker: "Eleanor",
-  blurb: "48 mm U track 2901 / 2902 with roller clip 2917; shutter 2903 on all sides (double glass 2909) + interlock clip 2918",
+  blurb: "48 mm U track 2901 / 2902 with roller clip 2917; shutter 2903 or 2906 on all sides (double glass 2909) + interlock clip 2918",
   profiles: [
     prof("el29_track_2t", "29 mm 2-Track", "track", { eleanor: "2901" }, "50×48", { value: 3.85, perFt: 12 }, EL29(32)),
     prof("el29_track_3t", "29 mm 3-Track", "track", { eleanor: "2902" }, "86.5×48", { value: 6.35, perFt: 12 }, EL29(32)),
@@ -630,9 +630,9 @@ export const ELEANOR_29: StudioSystem = withAlternatives(base({
   notes: [
     "The roller (24 mm) runs on clip 2917 snapped into the track.",
     "Track 2904 (48.1) is 0.1 mm taller and 2905 (48.6) 0.6 mm taller than 2901 / 2902: with 2905 the shutter is H − 75.7. Teach from one window if you use them.",
-    "2906 is a second shutter with the same outside size; with it the glass is shutter − 106.3. 2909 is the double-glass shutter (founder): choose Glass → Double glass.",
+    "Shutter choice (founder): 2903 or 2906 for single glass, 2909 for double glass. Glass: 2903 shutter − 108.7, 2906 / 2909 shutter − 106.3.",
   ],
-}), "shutterMeet", ["el29_shutter", "el29_shutter_b"]);
+});
 
 export const AMPLE_37: StudioSystem = withAlternatives(base({
   id: "ample-37", name: "37 mm sleek — Ample", group: "sleek", maker: "Ample",
@@ -1069,12 +1069,17 @@ const MEET_SWITCH = (def: "slim" | "clip") => ({
   id: "meet", label: "Meeting side", default: def,
   options: [{ value: "slim", label: "Slim interlock" }, { value: "clip", label: "Shutter + interlock clip" }],
 });
+/** An interlock clip of your series: cut to the shutter height, whatever its code (founder, 2026-11-13). */
+const ANY_CLIP: ProfileDef = { ...prof("interlock_clip", "Interlock Clip", "interlock-patti", {}, "", undefined,
+  ev("observed", "Founder: the interlock clip is cut to the shutter height. Choose your clip section to show its code."), { faceMm: 10 }), codes: undefined, size: undefined };
 function withMeetChoice(sys: StudioSystem, o: { lock: string; clip: string; glassW: number | null; src: string; def?: "slim" | "clip" }): StudioSystem {
   sys.switches = [...sys.switches.filter((s) => s.id !== "meet"), MEET_SWITCH(o.def ?? "slim")];
   // the meeting side is the slim interlock or the shutter itself: name it for both
   sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, role: "{s} Meeting Side{tag}", profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
   sys.parts = [...sys.parts.filter((p) => p.id !== "meetClip"),
-    part("meetClip", "Interlock Clip {k}", o.clip, "meeting", "shutterH", 90, "meeting", { count: 2, when: { meet: "clip" } })];
+    part("meetClip", "Interlock Clip {k}", o.clip || ANY_CLIP.id, "meeting", "shutterH", 90, "meeting", { count: 2, when: { meet: "clip" } })];
+  // no clip section known: it is still cut to the shutter height (founder) — never block the cut
+  if (!o.clip && !sys.profiles.some((p) => p.id === ANY_CLIP.id)) sys.profiles = [...sys.profiles, ANY_CLIP];
   sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" ? s : {
     ...s,
     cases: [o.glassW === null
@@ -1091,18 +1096,22 @@ withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "g
 withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
-withDoubleGlass(ELEANOR_29, { dgu: "el29_dgu", take: 106.3, src: "double-glass shutter 2909 (founder): glass stops 53.1 mm in from each shutter edge" });
+withShutterChoice(ELEANOR_29, [
+  { value: "2903", label: "2903 — single glass", id: "el29_shutter", take: 108.7, src: "shutter 2903: glass stops 54.3 mm in from each shutter edge" },
+  { value: "2906", label: "2906 — single glass", id: "el29_shutter_b", take: 106.3, src: "shutter 2906: glass stops 53.1 mm in from each shutter edge" },
+  { value: "2909", label: "2909 — double glass", id: "el29_dgu", take: 106.3, src: "double-glass shutter 2909 (founder): glass stops 53.1 mm in from each shutter edge" },
+]);
 
-/** Single or double glass: the double-glass shutter on every shutter side, with its own glass size. */
-function withDoubleGlass(sys: StudioSystem, o: { dgu: string; take: number; src: string }): StudioSystem {
-  sys.switches = [...sys.switches.filter((s) => s.id !== "glazing"), {
-    id: "glazing", label: "Glass", default: "single",
-    options: [{ value: "single", label: "Single glass" }, { value: "double", label: "Double glass" }],
+/** Which shutter section goes on all four sides (single glass, double glass…), each with its own glass size. First = default. */
+function withShutterChoice(sys: StudioSystem, opts: { value: string; label: string; id: string; take: number; src: string }[]): StudioSystem {
+  sys.switches = [...sys.switches.filter((s) => s.id !== "shutter"), {
+    id: "shutter", label: "Shutter", default: opts[0].value, options: opts.map((o) => ({ value: o.value, label: o.label })),
   }];
   const sides = ["shutterTop", "shutterBottom", "shutterLock", "shutterMeet"];
-  sys.parts = sys.parts.map((p) => (sides.includes(p.id) ? { ...p, profile: [{ when: { glazing: "double" }, id: o.dgu }, ...p.profile] } : p));
+  const rest = opts.slice(1);
+  sys.parts = sys.parts.map((p) => (sides.includes(p.id) ? { ...p, profile: [...rest.map((o) => ({ when: { shutter: o.value }, id: o.id })), ...p.profile] } : p));
   sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" && s.id !== "glassH" ? s : {
-    ...s, cases: [rule(s.id === "glassW" ? "shutterW" : "shutterH", -mm(o.take), FROM_DRAWING(o.src), { when: { glazing: "double" } }), ...s.cases],
+    ...s, cases: [...rest.map((o) => rule(s.id === "glassW" ? "shutterW" : "shutterH", -mm(o.take), FROM_DRAWING(o.src), { when: { shutter: o.value } })), ...s.cases],
   }));
   return sys;
 }

@@ -162,6 +162,11 @@ Ample / BH / Eleanor 2901 agree within 0.7 mm (under ½ sut). Eleanor 2905 is
 Euro 35 and Gulf 35: Banu Hashim = Eleanor within 0.3 mm (the two templates
 say "Banu Hashim / Eleanor").
 
+## Pipes to buy (founder, 2026-11-13)
+Full pipes of the section's pipe length, plus one piece cut to the whole feet
+still needed ("4 pipes + a 6 ft piece"). Replaces the half-bar rule.
+Interlock clip: cut to the shutter height, any section of the series.
+
 ## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
 - BH-6001 (Euro 3-track): table H 35.00, drawing 45 → **45** (trace 99.3%).
 - BH-6053 (Euro big slim interlock): table W 61.73, drawing 62.60 → 62.60.

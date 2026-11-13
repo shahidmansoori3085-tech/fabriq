@@ -277,6 +277,13 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
 - **Euro 27** has a "29 track" switch (Ample / BH 47.7 or Eleanor 48.0); **Euro 29 — Eleanor** is its own system. The Pieces list now picks each piece's section with the same matching as the cut list (tracks and every switch) — before, it looked only at the track count.
 - `scripts/audit-studio.ts` runs every system, layout and mix at 4 sizes and lists problems. Known and accepted: Ample 25 / 37 interlock clip has no section yet (shop chooses), Domal 35 4- / 5-track frame section, BH 6405 / 6502 / 6048 / 2118 untraced.
 
+**2026-11-13 (later) — founder decisions now in the app:**
+- **Pipes to buy = full pipes + one piece.** No half (8 ft) bars any more. Each section has ONE pipe length (the shop picks it in the section form; 16 ft by default). After the full pipes, the least-used bar is bought as one piece cut to the whole feet it needs: "4 × 16' + 6' piece". Glazing clip stays whole 12 ft bars (`sellsPiece: false`). Engine: `lib/engine/cutting.ts` (`buying`, `stockGroups`); `SectionSummary.stock` / `boughtFt`; `bars16` = full pipes, `bars8` = pieces. golden.json was updated for this (only the "buy" lines changed; every cut length is the same).
+- **Interlock clip is cut to the shutter height** whatever its code (founder). Systems with no clip section use the generic "Interlock Clip" piece (`ANY_CLIP`), so the cut is never blocked.
+- **Euro 29 — Eleanor shutter switch:** 2903 or 2906 (single glass), 2909 (double glass), all four sides, own glass size (`withShutterChoice`).
+- **Recogniser knows interlock clips** (thin, one straight wall, the other side open, 24–46 mm): 41054, 2918, 2725, 2726, BH-6711, BH-6054, AT-30007.
+- Dropped by the founder: Z 50 mm, Normal 25.
+
 ## 10. Backlog (highest value first)
 
 1. **Founder's review of the private preview.** Fix whatever he reports.

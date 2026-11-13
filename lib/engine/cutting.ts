@@ -1,14 +1,16 @@
 /**
  * FabriQ Cutting Brain — global 1D bin-packing across the whole job.
  * Many packings tried per section (first/best fit, longest first and
- * shuffled); the one buying the least stock wins (half bars where sold).
+ * shuffled); the one buying the least stock wins.
  * Rules (founder-verified):
- *  - Most sections sell as 16-foot bars; dealer also cuts 8-foot halves.
- *  - Glazing Clip sells as 12-foot bars only, no half option.
+ *  - Each section sells in the pipe length the shop chose (16 ft by default).
+ *  - What is left after the full pipes is bought as ONE piece cut to the
+ *    feet it needs: "4 pipes + a 6 ft piece" (founder, 2026-11-13 — no half bars).
+ *  - Glazing Clip sells as 12-foot bars only, no piece.
  *  - Pieces longer than the full bar MUST error — never silently split.
  */
 import { Um, feet, toFeet } from "./units";
-import type { CutPiece, PackedBar, SectionSummary } from "./types";
+import type { CutPiece, PackedBar, SectionSummary, StockGroup } from "./types";
 import { getSection } from "./sections";
 
 /** kerf/cut allowance per cut (µm) — blade width, default 5mm */
@@ -58,18 +60,30 @@ function fill(order: CutPiece[], cap: Um, best: boolean): OpenBar[] {
   return bars;
 }
 
-/** What a packing costs: the stock bought, each bar that fits a half counted as a half. */
-function stockOf(bars: OpenBar[], full: Um, half: Um, hasHalf: boolean): Um {
-  return bars.reduce((a, b) => a + (hasHalf && b.used <= half ? half : full), 0);
+const FOOT = feet(1);
+
+/** What each bar is bought as: full pipes, and the least-used bar as one piece
+ *  cut to the whole feet it needs (when the section is sold that way). */
+function buying(bars: OpenBar[], full: Um, piece: boolean): Um[] {
+  const len = bars.map(() => full);
+  if (piece && bars.length) {
+    let k = 0;
+    for (let i = 1; i < bars.length; i++) if (bars[i].used < bars[k].used) k = i;
+    len[k] = Math.min(full, Math.max(FOOT, Math.ceil(bars[k].used / FOOT) * FOOT));
+  }
+  return len;
+}
+
+/** What a packing costs: the stock bought. */
+function stockOf(bars: OpenBar[], full: Um, piece: boolean): Um {
+  return buying(bars, full, piece).reduce((a, l) => a + l, 0);
 }
 
 /** Of two packings with the same stock, the one whose leftover sits in fewer,
  *  longer pieces — a long offcut is used on the next job, crumbs are scrap. */
-function offcutScore(bars: OpenBar[], full: Um, half: Um, hasHalf: boolean): number {
-  return bars.reduce((a, b) => {
-    const left = (hasHalf && b.used <= half ? half : full) - b.used;
-    return a + (left / full) ** 2;
-  }, 0);
+function offcutScore(bars: OpenBar[], full: Um, piece: boolean): number {
+  const len = buying(bars, full, piece);
+  return bars.reduce((a, b, i) => a + ((len[i] - b.used) / full) ** 2, 0);
 }
 
 /** A fixed pseudo-random sequence per section, so the same job always cuts the same way. */
@@ -85,37 +99,36 @@ function seeded(key: string): () => number {
  *
  * First-fit on the longest pieces first is the classic quick answer, but it
  * leaves a few percent on the table: a job's pieces often fit one bar fewer,
- * or end on a half bar, when taken in another order. So many orders are
+ * or end on a shorter piece, when taken in another order. So many orders are
  * tried — longest-first with first fit and best fit, then the same with the
  * sizes nudged at random — and the packing that buys the least stock wins;
  * a tie goes to the one leaving its offcut in longer, reusable pieces. The
  * randomness is seeded by the pieces, so a job always cuts the same way.
- * A bar whose pieces fit half a bar is bought as a half (if the section sells halves).
+ * The least-used bar is bought as a piece of the feet it needs (if the section sells pieces).
  */
 export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] {
   const sec = getSection(sectionId);
   const barFull = feet(sec.barLengthFt ?? 16);
-  const barHalf = feet((sec.barLengthFt ?? 16) / 2);
-  const hasHalfBar = sec.hasHalfBar ?? true;
+  const piece = sec.sellsPiece ?? true;
   const cap = barFull + BAR_ALLOWANCE;
 
   const sorted = [...pieces].sort((a, b) => b.length - a.length);
   for (const p of sorted) if (p.length > barFull) throw new PieceTooLongError(p, barFull);
 
   let best: OpenBar[] = fill(sorted, cap, false);
-  let bestStock = stockOf(best, barFull, barHalf, hasHalfBar);
-  let bestScore = offcutScore(best, barFull, barHalf, hasHalfBar);
+  let bestStock = stockOf(best, barFull, piece);
+  let bestScore = offcutScore(best, barFull, piece);
   const consider = (bars: OpenBar[]) => {
-    const st = stockOf(bars, barFull, barHalf, hasHalfBar);
+    const st = stockOf(bars, barFull, piece);
     if (st > bestStock) return;
-    const sc = offcutScore(bars, barFull, barHalf, hasHalfBar);
+    const sc = offcutScore(bars, barFull, piece);
     if (st < bestStock || sc > bestScore + 1e-9) { best = bars; bestStock = st; bestScore = sc; }
   };
   consider(fill(sorted, cap, true));
 
   // Nothing to gain once the stock equals the plain floor of the lengths.
   const total = sorted.reduce((a, p) => a + p.length, 0);
-  const unit = hasHalfBar ? barHalf : barFull;
+  const unit = piece ? FOOT : barFull;
   const floor = Math.ceil(total / unit) * unit;
   if (bestStock > floor && sorted.length > 1) {
     const rnd = seeded(`${sectionId}:${sorted.map((p) => p.length).join(",")}`);
@@ -130,18 +143,18 @@ export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] 
     }
   }
 
-  // Longest pieces first on every bar, as the cutter takes them.
-  return best.map((b, i) => {
-    const fitsHalf = hasHalfBar && b.used <= barHalf;
-    const barLength = fitsHalf ? barHalf : barFull;
-    return {
+  // Longest pieces first on every bar, as the cutter takes them; the piece last.
+  const len = buying(best, barFull, piece);
+  return best
+    .map((b, i) => ({ b, barLength: len[i] }))
+    .sort((x, y) => (x.barLength === barFull ? 0 : 1) - (y.barLength === barFull ? 0 : 1))
+    .map(({ b, barLength }, i) => ({
       barNo: i + 1,
       sectionId,
       barLength,
       pieces: [...b.pieces].sort((x, y) => y.length - x.length),
       waste: Math.max(0, barLength - b.used),
-    };
-  });
+    }));
 }
 
 /** Pack every section in the job; bar numbers run globally for the cutter. */
@@ -162,28 +175,36 @@ export function packAllSections(pieces: CutPiece[]): PackedBar[] {
   return all;
 }
 
+/** What to buy for one section: full pipes, and the piece (feet) if any. */
+export function stockGroups(sectionId: string, bars: PackedBar[]): StockGroup[] {
+  const ft = getSection(sectionId).barLengthFt ?? 16;
+  const full = feet(ft);
+  const g: StockGroup = { ft, full: 0, pieces: [] };
+  for (const b of bars) {
+    if (b.barLength >= full) g.full++;
+    else g.pieces.push(Math.round(toFeet(b.barLength)));
+  }
+  return [g];
+}
+
 export function summarize(bars: PackedBar[]): SectionSummary[] {
   const map = new Map<string, SectionSummary>();
   for (const b of bars) {
     const s =
       map.get(b.sectionId) ??
-      { sectionId: b.sectionId, totalPieces: 0, totalLength: 0, bars16: 0, bars8: 0, waste: 0, wastePct: 0 };
+      { sectionId: b.sectionId, totalPieces: 0, totalLength: 0, bars16: 0, bars8: 0, stock: [], boughtFt: 0, waste: 0, wastePct: 0 };
     s.totalPieces += b.pieces.length;
     s.totalLength += b.pieces.reduce((a, p) => a + p.length, 0);
-    // bars16 = full-length bars, bars8 = half-length bars (field names kept
-    // for compatibility; actual length is per-section, see getSection().barLengthFt)
-    const sec = getSection(b.sectionId);
-    const fullBar = feet(sec.barLengthFt ?? 16);
-    if (b.barLength === fullBar) s.bars16++;
-    else s.bars8++;
     s.waste += b.waste;
     map.set(b.sectionId, s);
   }
   for (const s of map.values()) {
-    const sec = getSection(s.sectionId);
-    const full = sec.barLengthFt ?? 16;
-    const pipe = s.bars16 * full + s.bars8 * (full / 2);
-    s.wastePct = pipe > 0 ? Math.round((toFeet(s.waste) / pipe) * 1000) / 10 : 0;
+    s.stock = stockGroups(s.sectionId, bars.filter((b) => b.sectionId === s.sectionId));
+    // bars16 = full pipes, bars8 = pieces (field names kept for old screens)
+    s.bars16 = s.stock.reduce((a, g) => a + g.full, 0);
+    s.bars8 = s.stock.reduce((a, g) => a + g.pieces.length, 0);
+    s.boughtFt = s.stock.reduce((a, g) => a + g.full * g.ft + g.pieces.reduce((x, p) => x + p, 0), 0);
+    s.wastePct = s.boughtFt > 0 ? Math.round((toFeet(s.waste) / s.boughtFt) * 1000) / 10 : 0;
   }
   return [...map.values()];
 }

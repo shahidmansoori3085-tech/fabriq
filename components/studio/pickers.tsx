@@ -13,11 +13,11 @@ import { recognize, type Recognized, type SectionRole } from "../../lib/studio/r
 /** What the shape says a section is, in the form's own words. */
 const ROLE_KIND: Record<SectionRole, ProfileKind | null> = {
   "glass-shutter": "shutter", "double-glass-shutter": "shutter", "mesh-shutter": "mesh-shutter",
-  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", bead: "bead", other: null,
+  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", "interlock-clip": "interlock-patti", bead: "bead", other: null,
 };
 const ROLE_TEXT: Record<SectionRole, string> = {
   "glass-shutter": "a glass shutter", "double-glass-shutter": "a double-glass shutter", "mesh-shutter": "a mesh (jali) shutter",
-  track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", bead: "a glazing clip / patti", other: "",
+  track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", "interlock-clip": "an interlock clip", bead: "a glazing clip / patti", other: "",
 };
 
 /** Read a picture into a grey array, at most 1400 px on its long side. */
@@ -67,7 +67,7 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{p.name}</span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-                {[p.codes ? Object.entries(p.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", p.size, `${p.stockFt.join("/")} ft`].filter(Boolean).join(" · ")}
+                {[p.codes ? Object.entries(p.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", p.size, `${p.stockFt[0] ?? 16} ft pipe`].filter(Boolean).join(" · ")}
               </span>
             </span>
             {p.mine && <span className="badge" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Yours</span>}
@@ -126,10 +126,10 @@ export function ProfileForm({ initial, onSave, onCancel }: {
     setTraceMsg(t.scaleCheck > 4 ? `Traced, but its shape is ${t.scaleCheck}% off the size you typed — check the size, or crop closer.` : "Traced to your size.");
   };
 
-  const toggleStock = (ft: number) => setStock((s) => (s.includes(ft) ? (s.length > 1 ? s.filter((x) => x !== ft) : s) : [...s, ft]));
+  const pickStock = (ft: number) => { setStock([ft]); setOther(""); };
   const save = () => {
     const extra = parseFloat(other);
-    const stockFt = [...new Set([...stock, ...(extra > 0 && extra <= 30 ? [extra] : [])])];
+    const stockFt = extra > 0 && extra <= 30 ? [extra] : stock.slice(0, 1);
     onSave({
       id: initial.mine && initial.id ? initial.id : newId("my"),
       name: name.trim(), kind, mine: true,
@@ -219,11 +219,11 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         <Field label="Weight (kg)"><input className="field px-3 py-2.5" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="3.2" /></Field>
         <Field label="per (feet)" hint="The length the catalogue weight is for"><input className="field px-3 py-2.5" inputMode="decimal" value={kgPer} onChange={(e) => setKgPer(e.target.value)} /></Field>
       </div>
-      <Field label="Bar lengths you buy" hint="Tick every length your dealer sells for this section">
+      <Field label="Pipe length" hint="The length your dealer sells. What is left is bought as one piece cut to the feet needed.">
         <div className="flex flex-wrap items-center gap-2">
           {[12, 15, 16, 20].map((ft) => (
-            <button key={ft} type="button" onClick={() => toggleStock(ft)} aria-pressed={stock.includes(ft)}
-              className={`chip px-3 py-1.5 text-sm ${stock.includes(ft) ? "selected" : ""}`}>{ft} ft</button>
+            <button key={ft} type="button" onClick={() => pickStock(ft)} aria-pressed={!other && stock[0] === ft}
+              className={`chip px-3 py-1.5 text-sm ${!other && stock[0] === ft ? "selected" : ""}`}>{ft} ft</button>
           ))}
           <input className="field w-20 px-2 py-1.5 text-sm" inputMode="decimal" placeholder="Other" value={other} onChange={(e) => setOther(e.target.value)} />
         </div>

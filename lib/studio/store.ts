@@ -65,11 +65,12 @@ export function findProfile(lib: StudioLibrary, id: string): ProfileDef | undefi
   return allProfiles(lib).find((p) => p.id === id);
 }
 
-/** Make the shop's sections known to bar packing (stock length = first one listed). */
+/** Make the shop's sections known to bar packing: the pipe length the shop
+ *  buys for each section (the rest is bought as a piece cut to length). */
 export function registerProfiles(list: ProfileDef[]): void {
   registerCustomSections([...list, ...BUILT_IN_PROFILES].map((p): Section => ({
     id: p.id, name: p.name, label: p.name, size: p.size ?? "",
-    tier: "NEEDS_VERIFICATION", barLengthFt: p.stockFt[0] ?? 16,
+    tier: "NEEDS_VERIFICATION", barLengthFt: p.stockFt?.[0] ?? 16,
   })));
 }
 

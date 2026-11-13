@@ -7,7 +7,7 @@
  * catalogue weight of each profile, and price that.
  *
  * Model (fabricator-honest): whole bars are bought, so the cost is the FULL
- * length purchased (bars16 × full + bars8 × half), not just the feet that ended
+ * length purchased (full pipes + the piece), not just the feet that ended
  * up in a window. Scrap = bought − used, and it is charged at the same rate,
  * because the shop paid for that metal too.
  *
@@ -55,8 +55,7 @@ export function costJob(list: MaterialList, ratePerKg: number): JobCost {
   const rate = Math.max(0, ratePerKg || 0);
 
   const sections: SectionCost[] = list.sections.map((s) => {
-    const full = getSection(s.sectionId).barLengthFt ?? 16;
-    const boughtFt = s.bars16 * full + s.bars8 * (full / 2);
+    const boughtFt = s.boughtFt;
     const usedFt = toFeet(s.totalLength);
     const scrapFt = Math.max(0, boughtFt - usedFt);
     const w = getSectionWeight(s.sectionId);

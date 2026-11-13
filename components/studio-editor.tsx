@@ -309,7 +309,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
                     {[prof.codes ? Object.entries(prof.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", prof.size ? `${prof.size} mm` : ""].filter(Boolean).join(" · ")}
                   </span>
                   <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>
-                    {prof.kg ? `${prof.kg.value} kg / ${prof.kg.perFt === 3.2808 ? "m" : `${prof.kg.perFt} ft`} · ` : ""}{prof.stockFt.join(" / ")} ft bars
+                    {prof.kg ? `${prof.kg.value} kg / ${prof.kg.perFt === 3.2808 ? "m" : `${prof.kg.perFt} ft`} · ` : ""}{prof.stockFt[0] ?? 16} ft pipe
                   </span>
                   {prof.source.status === "observed" && <span className="mt-1 block text-[11px]" style={{ color: "var(--warn)" }}>{prof.source.source}</span>}
                 </>

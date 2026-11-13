@@ -30,10 +30,10 @@ export interface Section {
   size: string;
   /** Verification tier from doc 08 */
   tier: "VERIFIED" | "PROBABLE" | "NEEDS_VERIFICATION";
-  /** Stock bar length in feet — defaults to 16 (dealer standard) when unset */
+  /** Pipe length in feet — defaults to 16 (dealer standard) when unset */
   barLengthFt?: number;
-  /** Whether the dealer also sells this cut in half-length bars (default true) */
-  hasHalfBar?: boolean;
+  /** Whether the dealer cuts the last piece to the feet needed (default true) */
+  sellsPiece?: boolean;
 }
 
 export const SECTIONS: Record<string, Section> = {
@@ -157,12 +157,12 @@ export const SECTIONS: Record<string, Section> = {
   },
   // Glazing Clip — retains sheet/glass in the SP/DP groove. Runs alongside
   // EVERY SP/DP member that borders a panel (one clip piece per SP/DP piece,
-  // same length). Sold in 12ft bars (NOT 16ft like SP/DP) with no half-bar
-  // option (fabricator-confirmed 2026-07-28).
+  // same length). Sold in 12ft bars (NOT 16ft like SP/DP), whole bars only
+  // (fabricator-confirmed 2026-07-28).
   glazing_clip: {
     id: "glazing_clip", name: "Glazing Clip", label: "Glazing Clip",
     napl: "16000", size: "19.05×17.32", tier: "VERIFIED",
-    barLengthFt: 12, hasHalfBar: false,
+    barLengthFt: 12, sellsPiece: false,
   },
 
   // ---- Z-section (40mm Doomal series), founder-verified 2026-08-01/08-03 ----

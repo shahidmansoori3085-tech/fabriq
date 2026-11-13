@@ -1201,10 +1201,7 @@ export function estimate(items: JobItem[]): MaterialList {
   const bars8 = sections.reduce((a, s) => a + s.bars8, 0);
   // Sum the ACTUAL stock length of each section's bars (some sections — e.g.
   // the glazing clips — ship in 12' bars, not 16', so a flat 16/8 undercounts).
-  const totalPipeFt = sections.reduce((a, s) => {
-    const full = getSection(s.sectionId).barLengthFt ?? 16;
-    return a + s.bars16 * full + s.bars8 * (full / 2);
-  }, 0);
+  const totalPipeFt = sections.reduce((a, s) => a + s.boughtFt, 0);
   const wasteFt = sections.reduce((a, s) => a + toFeet(s.waste), 0);
   // A leftover of 2 ft or more is cut from on the next job; only the shorter
   // ends are truly lost. Telling the two apart is the difference between
