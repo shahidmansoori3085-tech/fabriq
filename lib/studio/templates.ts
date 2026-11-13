@@ -915,14 +915,18 @@ for (const sys of [AMPLE_22, AMPLE_25, AMPLE_26, AMPLE_29, AMPLE_37]) drawn(sys,
 // Mini domal 22: one shutter profile on 3 sides
 drawn(AMPLE_22, { shutterW: [HALF], glassH: glassH(47.4, "Ample 41082 pocket") });
 // Euro 26
-drawn(EURO_26, { shutterW: [HALF], clipW: [rule("W", -mm(89.9), FROM_DRAWING("clear width between the side U tips (2 × 45.0)"))], glassH: glassH(59.1, "BH-6003 pocket") });
+drawn(EURO_26, { shutterW: [HALF], clipW: [rule("W", -mm(89.9), FROM_DRAWING("clear width between the side U tips (2 × 45.0)"))], glassH: glassH(59.1, "BH-6003 pocket"),
+  glassW: glassW(59.1, "BH-6003 pocket", { bh_6052: [17.4, "slim 6052 pocket (glass enters its 10.2 mm top slot)"], bh_6053: [17.4, "slim 6053 pocket"] }) });
 // Gulf 25 / 35 and BH 31 — slim interlock small or big, shutter by shutter
 drawn(GULF_25, {
   ...gulfFrame(24.8, "BH-2550"), shutterW: [HALF], clipW: clip(49.6, "BH-2550 sides"),
   glassH: glassH(44.2, "BH-2554 pocket"),
   glassW: glassW(54.1, "BH-2555 pocket", { bh_2556: [11.7, "slim 2556 pocket"], bh_2557: [11.5, "slim 2557 pocket"] }),
 });
-drawn(BH_35, { ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.8, "BH-6504 pocket") });
+drawn(BH_35, {
+  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.8, "BH-6504 pocket"),
+  glassW: glassW(46.7, "BH-6510 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
+});
 drawn(BH_31, {
   ...gulfFrame(33.1, "BH-6400"), shutterW: [HALF], clipW: clip(66.2, "BH-6400 sides"),
   glassH: glassH(56.4, "BH-6404 pocket"),

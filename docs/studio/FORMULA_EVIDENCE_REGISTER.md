@@ -134,7 +134,9 @@ track in place of the Euro track (not an extra piece). The drawings agree: BH
   | Gulf 25 | − 65.8 (small slim) / − 65.6 (big) | − 88.4 |
   | BH 31 | − 61.1 (6408) / − 60.5 (6409) | − 112.8 |
   | Alucoat S-30 | − 110.2 | − 110.2 |
-  | Mini domal 22 / Euro 26 / Gulf 35 / Ample 29 / 37 | not known (meeting-side pocket not clear in the drawing) | − 94.8 / − 118.2 / − 93.6 / − 105.4 / − 127.0 |
+  | Euro 26 | − 76.5 (slim 6052 or 6053: glass enters its 10.2 mm top slot, stops 13.5 from the meeting edge) | − 118.2 |
+  | Gulf 35 | − 62.3 (slim 6506) / − 61.9 (6508): 15 mm top slot, stops 11.7 / 11.3 from the meeting edge | − 93.6 |
+  | Mini domal 22 / Ample 29 / 37 | not known: 41085, 41050, 41289 (both sides open, H-shape), 41074, 41310 — which side holds the glass is not clear | − 94.8 / − 105.4 / − 127.0 |
   | BH 27, Ample 25 | not known | not known |
 
 ## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
