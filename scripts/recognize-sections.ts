@@ -15,7 +15,7 @@ for (const f of files) {
   for (const [code, s] of Object.entries(book)) out[`${f}:${code}`] = recognize(s);
 }
 const KIND_ROLE: Record<string, string[]> = {
-  shutter: ["glass-shutter"], handle: ["glass-shutter"], "mesh-shutter": ["mesh-shutter"],
+  shutter: ["glass-shutter", "double-glass-shutter"], handle: ["glass-shutter", "double-glass-shutter"], "mesh-shutter": ["mesh-shutter"],
   track: ["track", "side-track"], frame: ["track"], "slim-interlock": ["slim-interlock"], rail: ["clip"],
 };
 const rows: string[] = [], odd: string[] = [];
@@ -23,9 +23,7 @@ for (const p of BUILT_IN_PROFILES) {
   const s = shapeOf(p); if (!s || !p.kind) continue;
   if (p.id.startsWith("z_") || ["handle_std", "interlock", "bearing"].includes(p.id)) continue; // casement and Bombay: not covered yet
   const r = recognize(s);
-  // a double-glass shutter has no single-glass pocket: it reads as mesh-or-double-glass
-  const dgu = /double glass|DGU/i.test(p.name) && r.role === "mesh-shutter";
-  const ok = dgu || (KIND_ROLE[p.kind] ?? []).includes(r.role);
+  const ok = (KIND_ROLE[p.kind] ?? []).includes(r.role);
   const line = `${ok ? "  " : "✗ "}${p.id.padEnd(18)} ${s.code.padEnd(10)} app: ${p.kind.padEnd(15)} shape: ${r.role}${r.grooves ? ` (${r.grooves})` : ""} — ${r.why}`;
   rows.push(line); if (!ok && KIND_ROLE[p.kind]) odd.push(line);
 }

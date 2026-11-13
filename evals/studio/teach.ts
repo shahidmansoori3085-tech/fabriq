@@ -106,12 +106,12 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
   expect(r4.pieces.filter((p) => /Interlock/.test(p.role)).length === 4, "3+1: 2 glass meetings × 2 patti");
 }
 
-// 6c. One window, two interlocks: small on one shutter, slim on the next.
+// 6c. One window, two slim interlocks: small on one shutter, big on the next.
 {
-  const a29 = TEMPLATES.find((t) => t.id === "ample-29")!;
-  const r = evaluate(a29, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", perShutter: [{}, { pick_shutterMeet: "a29_interlock_b" }] }, { allowUnknown: true });
+  const g25 = TEMPLATES.find((t) => t.id === "gulf-25")!;
+  const r = evaluate(g25, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", perShutter: [{}, { pick_shutterMeet: "bh_2557" }] }, { allowUnknown: true });
   const meet = r.pieces.filter((p) => /Interlock/.test(p.role)).map((p) => `${p.role}:${p.sectionId}`);
-  expect(meet.join(",") === "S1 Interlock:a29_slim,S2 Interlock:a29_interlock_b", `per-shutter interlock: ${meet.join(",")}`);
+  expect(meet.join(",") === "S1 Slim Interlock:bh_2556,S2 Slim Interlock:bh_2557", `per-shutter interlock: ${meet.join(",")}`);
 }
 
 // 7. Every template is well-formed: sizes only use W, H or an earlier size;

@@ -26,6 +26,8 @@ interface Manifest {
   grid?: { cols: number; rows: number; drawTop?: number; drawBottom?: number };
   /** part of the page height taken by the title band (skipped); default 0.16 */
   skipTop?: number;
+  /** leave out anything below this fraction of the page (page-number badges); default 0.96 */
+  skipBottom?: number;
   /** when the two printed sizes disagree, trust the larger scale (the size that spans the whole drawing) */
   scaleWhenOff?: "mean" | "max";
   catalogue: string;          // PDF path
@@ -80,7 +82,7 @@ function renderColor(pdf: string, page: number, dpi: number) {
  * every narrow region enclosed by them (a wall drawn as two lines). Wide
  * enclosed regions are hollow chambers and stay empty.
  */
-function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" | "orange-fill" = "cad-red", skipTop = 0.16) {
+function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "cad-red" | "dark-fill" | "orange-fill" = "cad-red", skipTop = 0.16, skipBottom = 0.96) {
   const { w, h, rgb } = img;
   const ink = new Uint8Array(w * h);
   for (let p = 0; p < w * h; p++) {
@@ -119,7 +121,7 @@ function cadSections(img: ReturnType<typeof renderColor>, want: number, style: "
   }
   // sections: pieces of one drawing (outline, fill, small islands) are joined when their boxes touch
   const M = Math.round(Math.min(w, h) * 0.012);
-  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * 0.96 && c.n > 40);
+  const live = comps.map((c, id) => ({ ...c, ids: [id] })).filter((c) => c.y0 > h * skipTop && c.y1 < h * skipBottom && c.n > 40);
   let merged = true;
   while (merged) {
     merged = false;
@@ -349,7 +351,7 @@ function trace(m: Manifest) {
     }
     if (m.style === "cad-red" || m.style === "dark-fill" || m.style === "orange-fill") {
       // every drawing on the page is found (in reading order); null cells are skipped
-      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, m.skipTop ?? 0.16);
+      const found = cadSections(renderColor(m.catalogue, pg.page, 300), pg.cells.length, m.style, m.skipTop ?? 0.16, m.skipBottom ?? 0.96);
       pg.cells.forEach((c, i) => {
         if (!c) return;
         const r = found[i];

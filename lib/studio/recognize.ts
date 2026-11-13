@@ -15,23 +15,22 @@
  */
 import { solidOf, box, slideUntilTouch, rayToMaterial, place, runners, type Solid } from "./assemble";
 
-export type SectionRole = "glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "other";
+export type SectionRole = "glass-shutter" | "double-glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "other";
 
 export interface Recognized { role: SectionRole; grooves?: number; why: string }
 
 const GLASS = 5;
 type Pocket = { travel: number; open: number };
-type Ends = { deep: Pocket; glass: Pocket };
+type Ends = { deep: Pocket; glass: Pocket; hits: number };
 
 /**
  * From one end along x (dir +1 from x = 0, −1 from x = w): the deepest channel a
  * roller / track could use (mouth ≤ 26, stops inside the section) and the deepest
- * single-glass pocket (mouth ≤ 16.5, 8–24 mm deep). A double-glass pocket is wider
- * and reads as "no glass pocket" — DGU shutters show as mesh-or-double-glass.
+ * glass pocket (8–24 mm deep; mouth up to ~16 single glass, wider = double glass).
  */
 function endPocket(so: Solid, w: number, h: number, dir: 1 | -1): Ends {
   const edge = dir === 1 ? 0 : w;
-  const best: Ends = { deep: { travel: 0, open: 0 }, glass: { travel: 0, open: 0 } };
+  const best: Ends = { deep: { travel: 0, open: 0 }, glass: { travel: 0, open: 0 }, hits: 0 };
   for (let y = 2; y <= h - 2; y += 0.5) {
     const x = edge + dir * 1.2;
     const up = rayToMaterial(so, x, y, 0, -1, 30), dn = rayToMaterial(so, x, y, 0, 1, 30), open = up + dn;
@@ -40,7 +39,9 @@ function endPocket(so: Solid, w: number, h: number, dir: 1 | -1): Ends {
     const t = slideUntilTouch(box(start, c - GLASS / 2, start + 10, c + GLASS / 2), so, dir, 0, w + 14).dist - 2;
     if (t >= w - 2) continue; // went right through: no channel here
     if (open <= 26 && t > best.deep.travel) best.deep = { travel: t, open };
-    if (open <= 16.5 && t >= 8 && t < 24 && t > best.glass.travel) best.glass = { travel: t, open };
+    // a glass pocket stops the glass 8–24 mm in; a real pocket shows over a few
+    // positions (a wide mouth = double glass, founder). A jali shutter's far side is open.
+    if (t >= 8 && t < 24) { best.hits++; if (t > best.glass.travel) best.glass = { travel: t, open }; }
   }
   return best;
 }
@@ -72,12 +73,15 @@ export function recognize(shape: { w: number; h: number; paths: string[] }): Rec
   // shutter: a deep channel at one end, and a glass pocket (or none) at the other
   const a = endPocket(so, w, h, 1), b = endPocket(so, w, h, -1);
   const deep = (e: Ends) => e.deep.travel >= 24;
-  const glass = (e: Ends) => e.glass.travel >= 8; // single glass ~10 mm mouth, DGU wider
-  if ((deep(a) && glass(b)) || (deep(b) && glass(a)))
+  const glass = (e: Ends) => e.hits >= 3;
+  if ((deep(a) && glass(b)) || (deep(b) && glass(a))) {
+    const p = (deep(a) && glass(b) ? b : a).glass;
+    if (p.open > 16.5) return { role: "double-glass-shutter", why: `track channel ${Math.max(a.deep.travel, b.deep.travel).toFixed(0)} mm deep; wide glass side (${p.open.toFixed(0)} mm) — double glass` };
     return { role: "glass-shutter", why: `track channel ${Math.max(a.deep.travel, b.deep.travel).toFixed(0)} mm deep; glass goes ${(deep(a) ? b : a).glass.travel.toFixed(0)} mm into the other side` };
+  }
   if ((deep(a) && !glass(b)) || (deep(b) && !glass(a))) {
     if (h >= 18 && w >= 40 && !(deep(a) && deep(b)))
-      return { role: "mesh-shutter", why: `track channel ${Math.max(a.deep.travel, b.deep.travel).toFixed(0)} mm deep; no single-glass pocket on the other side (mesh, or double glass)` };
+      return { role: "mesh-shutter", why: `track channel ${Math.max(a.deep.travel, b.deep.travel).toFixed(0)} mm deep; the other side is open, no glass pocket` };
   }
 
   // track: two or more U grooves / running legs standing up

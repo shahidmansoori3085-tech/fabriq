@@ -1,0 +1,52 @@
+{
+  "style": "dark-fill",
+  "skipTop": 0.07,
+  "scaleWhenOff": "max",
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf",
+  "out": "lib/studio/shapes/banuhashim-euro.json",
+  "maker": "Banu Hashim",
+  "note": "BH-6403, 6405 and 6502 do not trace cleanly (the tracer takes the next drawing); left without a drawing. 6404, 6500, 6501 retraced fine.",
+  "pages": [
+    {
+      "page": 60,
+      "cells": [
+        {
+          "code": "BH-6403",
+          "w": 120.5,
+          "h": 47.6
+        },
+        {
+          "code": "BH-6404",
+          "w": 65.9,
+          "h": 29
+        },
+        {
+          "code": "BH-6405",
+          "w": 65.9,
+          "h": 29
+        }
+      ]
+    },
+    {
+      "page": 64,
+      "cells": [
+        {
+          "code": "BH-6500",
+          "w": 100,
+          "h": 32.8
+        },
+        {
+          "code": "BH-6501",
+          "w": 95,
+          "h": 31.2
+        },
+        {
+          "code": "BH-6502",
+          "w": 150,
+          "h": 32.8
+        }
+      ]
+    }
+  ],
+  "skipBottom": 0.93
+}
