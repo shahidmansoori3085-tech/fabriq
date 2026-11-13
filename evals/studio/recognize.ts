@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { recognize, type SectionRole } from "../../lib/studio/recognize";
 
 const book: Record<string, { w: number; h: number; paths: string[] }> = {};
-for (const f of ["omeo", "ample", "banuhashim", "banuhashim-euro"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
+for (const f of ["omeo", "ample", "eleanor", "banuhashim", "banuhashim-euro"]) Object.assign(book, JSON.parse(readFileSync(`lib/studio/shapes/${f}.json`, "utf8")));
 
 const KNOWN: [string, SectionRole, string][] = [
   ["2046", "glass-shutter", "OMEO domal glass shutter"],
@@ -20,6 +20,10 @@ const KNOWN: [string, SectionRole, string][] = [
   ["214315", "glass-shutter", "Ample domal shutter"],
   ["41076", "double-glass-shutter", "Ample 37 double glass shutter (founder)"],
   ["BH-6407", "double-glass-shutter", "BH 31 double glass shutter"],
+  ["2909", "double-glass-shutter", "Eleanor 29 shutter with the wide glass pocket"],
+  ["2901", "track", "Eleanor 29 2-track"],
+  ["2902", "track", "Eleanor 29 3-track"],
+  ["2917", "clip", "Eleanor 29 roller clip"],
   ["2062", "track", "OMEO domal 3-track"],
   ["BH-6001", "track", "Euro 3-track (founder)"],
   ["BH-2551", "track", "Gulf 25 top / bottom"],

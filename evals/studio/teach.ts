@@ -115,8 +115,8 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
 {
   const g25 = TEMPLATES.find((t) => t.id === "gulf-25")!;
   const r = evaluate(g25, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", perShutter: [{}, { pick_shutterMeet: "bh_2557" }] }, { allowUnknown: true });
-  const meet = r.pieces.filter((p) => /Interlock/.test(p.role)).map((p) => `${p.role}:${p.sectionId}`);
-  expect(meet.join(",") === "S1 Slim Interlock:bh_2556,S2 Slim Interlock:bh_2557", `per-shutter interlock: ${meet.join(",")}`);
+  const meet = r.pieces.filter((p) => /Meeting Side/.test(p.role)).map((p) => `${p.role}:${p.sectionId}`);
+  expect(meet.join(",") === "S1 Meeting Side:bh_2556,S2 Meeting Side:bh_2557", `per-shutter interlock: ${meet.join(",")}`);
 }
 
 // 7. Every template is well-formed: sizes only use W, H or an earlier size;

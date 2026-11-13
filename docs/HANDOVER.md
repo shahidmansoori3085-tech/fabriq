@@ -225,6 +225,10 @@ profiles use (`codes: { maker: "code" }`).
 | `evals/studio/tracer.ts` | The photo tracer. |
 | `evals/studio/in-job.ts` | Studio systems through the real job path, and the frozen copy. |
 | `evals/studio/dxf.ts` | DXF import. |
+| `evals/studio/derive.ts` | Shutter height from the drawing = engine (Domal). |
+| `evals/studio/assemble.ts` | Windows built from the drawings: clip seat, shutter clears, rule = drawing (Euro, Gulf, Ample, Eleanor 29, Euro 27 on both tracks, 35 mm). |
+| `evals/studio/full-window.ts` | 17 systems × 4 sizes: frames, shutters, meeting pieces, clips, glass. |
+| `evals/studio/recognize.ts` | 21 known sections recognised by shape. |
 
 `evals/sheets/run.ts` (`npm run eval:sheets`) is the AI sheet-reading eval. It
 needs API keys. Run it before changing AI prompts or seeding.
@@ -264,6 +268,15 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
 
 **Windows built from the drawings** (`lib/studio/assemble.ts`, `scripts/assemble-window.ts`, test `evals/studio/assemble.ts`): sections become solids; clip, roller and shutter are slid into place by bisection. Gives Euro 26 H − 69.9 / 69.8, Gulf 25 H − 39.6, Gulf 35 H − 42.4, Ample 25 H − 58.4, mini domal 22 H − 46.0, BH Domal 27 H − 73.7 (suggested in the templates). Normal 18 (13 mm bearing roller, `buildBombay`) gives H − 40.3 vs engine H − 41.3 ✓. Clips seat on their head / wings (legs are springs). Track "legs" outside the running track are design only. Full list, maker differences and what is not done: docs/studio/FORMULA_EVIDENCE_REGISTER.md. Gulf = Euro with one-groove left/right tracks (founder; drawings agree).
 
+**2026-11-13 — what shops see (all on `claude/system-studio`, private preview):**
+- **New system** picker: type chips (Domal / Euro / Gulf / Normal / Casement), size chips, "Most used" (25 Euro & Gulf, 27 Euro & Domal, 29 Euro, 30 Gulf, 31 Gulf, 35 Domal / Euro / Gulf — founder), each card with its type, size and "Checked on real jobs". Names are "Euro 29 mm — Ample" style (`SERIES` in templates.ts).
+- **Meeting side choice** (`withMeetChoice`): slim interlock (small or big, shutter by shutter) or the shutter itself + interlock clip. The piece is called "Meeting Side" for both. Glass width follows the choice.
+- **Units**: feet (ft.in.sut, 4.6.2 = 4′ 6″ 2 sut), inch, mm. Add / take-off numbers are typed in inches in feet mode.
+- **Cut like your shop**: type window 1 (teaches), window 2 (checks); a failed check can "Learn from this one".
+- **Section recognition** in My sections → Add a section: a DXF or photo is read in a Web Worker (`lib/studio/recognize.worker.ts`) and the form says "Looks like a … shutter" and sets "What is it". Checked with the Ample 41050 jali DXF → Mesh shutter.
+- **Euro 27** has a "29 track" switch (Ample / BH 47.7 or Eleanor 48.0); **Euro 29 — Eleanor** is its own system. The Pieces list now picks each piece's section with the same matching as the cut list (tracks and every switch) — before, it looked only at the track count.
+- `scripts/audit-studio.ts` runs every system, layout and mix at 4 sizes and lists problems. Known and accepted: Ample 25 / 37 interlock clip has no section yet (shop chooses), Domal 35 4- / 5-track frame section, BH 6405 / 6502 / 6048 / 2118 untraced.
+
 ## 10. Backlog (highest value first)
 
 1. **Founder's review of the private preview.** Fix whatever he reports.
@@ -277,7 +290,7 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
    with a second.
 4. Stock lengths per profile in the optimiser: the Studio stores
    `stockFt[]`, but packing still uses only the first length.
-5. More catalogue pages: Eleanor 21–26 / 29 / 32 / 35, the Banu Hashim series,
+5. More catalogue pages: Eleanor 21–26 / 32, the Banu Hashim series,
    the Ample 30 / 32 / 40 / 50 casement pages.
 6. Studio: fixed-top band (the engine has it, the Studio does not), openable
    doors and partitions in the Studio, glass bead / rubber in 3D.

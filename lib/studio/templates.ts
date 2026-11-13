@@ -591,6 +591,49 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
   ],
 }), "shutterMeet", ["a29_handle", "a29_interlock_b"]);
 
+/**
+ * Euro 29 — Eleanor (catalogue pages 32–33). Track 48.0 mm (2901 / 2902), so the
+ * shutter comes 0.7 mm shorter than Ample / BH 47.7 (built from the drawings).
+ */
+const EL29 = (p: number) => CATALOGUE("Eleanor 29 mm p." + p);
+export const ELEANOR_29: StudioSystem = withAlternatives(base({
+  id: "eleanor-29", name: "Euro 29 mm — Eleanor", group: "sleek", maker: "Eleanor",
+  blurb: "48 mm U track 2901 / 2902 with roller clip 2917; shutter 2903 on all sides + interlock clip 2918",
+  profiles: [
+    prof("el29_track_2t", "29 mm 2-Track", "track", { eleanor: "2901" }, "50×48", { value: 3.85, perFt: 12 }, EL29(32)),
+    prof("el29_track_3t", "29 mm 3-Track", "track", { eleanor: "2902" }, "86.5×48", { value: 6.35, perFt: 12 }, EL29(32)),
+    prof("el29_track_2t_b", "29 mm 2-Track (48.1)", "track", { eleanor: "2904" }, "50.1×48.1", { value: 3.9, perFt: 12 }, EL29(32)),
+    prof("el29_track_3t_b", "29 mm 3-Track (48.6)", "track", { eleanor: "2905" }, "86.9×48.6", { value: 6.15, perFt: 12 }, EL29(32)),
+    prof("el29_clip", "29 mm Roller Clip", "rail", { eleanor: "2917" }, "13×16", { value: 0.6, perFt: 12 }, EL29(33)),
+    prof("el29_shutter", "29 mm Shutter", "shutter", { eleanor: "2903" }, "65×29", { value: 3.25, perFt: 12 }, EL29(32)),
+    prof("el29_shutter_b", "29 mm Shutter (2906)", "shutter", { eleanor: "2906" }, "65×29", { value: 3.2, perFt: 12 }, EL29(32)),
+    prof("el29_dgu", "29 mm Shutter (double glass)", "shutter", { eleanor: "2909" }, "65×29", { value: 2.9, perFt: 12 }, DRAWING("Eleanor 29 mm p.32 — wide glass pocket")),
+    prof("el29_patti", "29 mm Interlock Clip", "interlock-patti", { eleanor: "2918" }, "32.5×38.5", { value: 1.15, perFt: 12 }, DRAWING("Eleanor 29 mm p.33"), { faceMm: 10 }),
+  ],
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "45° frame goes round, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "45° frame goes round, full height"))),
+    size("clipW", "Roller clip", rule("W", -mm(96), FROM_DRAWING_35("clear width between the side U tips (2 × 48.0)"))),
+    size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Every shutter half the window (W/2) — the usual shop way"), { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(74.5), FROM_DRAWING_35("2 × 48.0 track + 2.5 clip − 24 roller (Ample / BH 47.7 track: H − 73.8)"))),
+    size("glassW", "Glass width", rule("shutterW", -mm(108.7), FROM_DRAWING_35("glass stops 54.3 mm in from each shutter edge (2903)"))),
+    size("glassH", "Glass height", rule("shutterH", -mm(108.7), FROM_DRAWING_35("glass stops 54.3 mm in from each shutter edge (2903)"))),
+  ],
+  parts: [
+    ...domalFrame(byTracks("el29_track_2t", "el29_track_3t")),
+    part("trackClip", "{s} Roller Clip", "el29_clip", "shutter", "clipW", 90, "other"),
+    part("shutterTop", "{s} Shutter Top{tag}", "el29_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "el29_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-meet"),
+  ],
+  notes: [
+    "The roller (24 mm) runs on clip 2917 snapped into the track.",
+    "Track 2904 (48.1) is 0.1 mm taller and 2905 (48.6) 0.6 mm taller than 2901 / 2902: with 2905 the shutter is H − 75.7. Teach from one window if you use them.",
+    "2906 is a second shutter with the same outside size; with it the glass is shutter − 106.3. 2909 has the wide glass pocket (double glass).",
+  ],
+}), "shutterMeet", ["el29_shutter", "el29_shutter_b"]);
+
 export const AMPLE_37: StudioSystem = withAlternatives(base({
   id: "ample-37", name: "37 mm sleek — Ample", group: "sleek", maker: "Ample",
   blurb: "Track 41015 / 41014 with round roller clip 41310; shutter 41068 on all sides; double glass 41076; jali 41074",
@@ -1028,7 +1071,8 @@ const MEET_SWITCH = (def: "slim" | "clip") => ({
 });
 function withMeetChoice(sys: StudioSystem, o: { lock: string; clip: string; glassW: number | null; src: string; def?: "slim" | "clip" }): StudioSystem {
   sys.switches = [...sys.switches.filter((s) => s.id !== "meet"), MEET_SWITCH(o.def ?? "slim")];
-  sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
+  // the meeting side is the slim interlock or the shutter itself: name it for both
+  sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, role: "{s} Meeting Side{tag}", profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
   sys.parts = [...sys.parts.filter((p) => p.id !== "meetClip"),
     part("meetClip", "Interlock Clip {k}", o.clip, "meeting", "shutterH", 90, "meeting", { count: 2, when: { meet: "clip" } })];
   sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" ? s : {
@@ -1046,6 +1090,7 @@ withMeetChoice(GULF_25, { lock: "bh_2555", clip: "", glassW: 108.2, src: "glass 
 withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
 withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
+withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
 withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
 withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
 
@@ -1058,28 +1103,42 @@ withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glas
 const pick = (from: StudioSystem[], ids: string[]) => ids.map((id) => from.flatMap((s) => s.profiles).find((p) => p.id === id)!);
 export const EURO_27: StudioSystem = withMeetChoice(base({
   id: "euro-27", name: "Euro 27 mm", group: "gulf",
-  blurb: "Euro 29 track (914400 / 41052) with roller clip 914401; 27 mm shutter on all sides; interlock clip, or slim interlock",
+  blurb: "Euro 29 track (Ample 914400 / 41052 or Eleanor 2901 / 2902) with its roller clip; 27 mm shutter on all sides; interlock clip, or slim interlock",
   layouts: [L2(), L3()],
-  profiles: pick([AMPLE_29, DOMAL_27], ["a29_track_2t", "a29_track_3t", "a29_clip", "domal_glass_shutter", "domal_jali_shutter", "domal_interlock"]),
+  profiles: pick([AMPLE_29, ELEANOR_29, DOMAL_27], ["a29_track_2t", "a29_track_3t", "a29_clip", "el29_track_2t", "el29_track_3t", "el29_clip", "domal_glass_shutter", "domal_jali_shutter", "domal_interlock"]),
+  switches: [{
+    id: "track", label: "29 track", default: "47",
+    options: [
+      { value: "47", label: "47.7 mm — Ample 914400 / 41052, Banu Hashim" },
+      { value: "48", label: "48.0 mm — Eleanor 2901 / 2902" },
+    ],
+  }],
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
-    size("clipW", "Roller clip", rule("W", -mm(95.4), FROM_DRAWING("clear width between the side U tips (2 × 47.7)"))),
+    size("clipW", "Roller clip",
+      rule("W", -mm(96), FROM_DRAWING("clear width between the side U tips (2 × 48.0, Eleanor)"), { when: { track: "48" } }),
+      rule("W", -mm(95.4), FROM_DRAWING("clear width between the side U tips (2 × 47.7)"))),
     size("shutterW", "Shutter width", HALF),
-    size("shutterH", "Shutter height", rule("H", -mm(73.8), FROM_DRAWING("2 × 47.7 track + 2.4 clip − 24 roller; the 27 mm shutter runs clear"))),
+    size("shutterH", "Shutter height",
+      rule("H", -mm(74.5), FROM_DRAWING("2 × 48.0 Eleanor track + 2.5 clip 2917 − 24 roller; the 27 mm shutter runs clear"), { when: { track: "48" } }),
+      rule("H", -mm(73.8), FROM_DRAWING("2 × 47.7 track + 2.4 clip − 24 roller; the 27 mm shutter runs clear"))),
     size("glassW", "Glass width", unknownFrom("shutterW")),
     size("glassH", "Glass height", rule("shutterH", -mm(102), ev("observed", "27 mm shutter pocket (OMEO 2046): shutter − 102, as Domal 27"))),
   ],
   parts: [
-    ...domalFrame(byTracks("a29_track_2t", "a29_track_3t")),
-    part("trackClip", "{s} Roller Clip", "a29_clip", "shutter", "clipW", 90, "other"),
+    ...domalFrame([
+      { when: { tracks: ["1", "2"], track: "48" }, id: "el29_track_2t" }, { when: { track: "48" }, id: "el29_track_3t" },
+      { when: { tracks: ["1", "2"] }, id: "a29_track_2t" }, { id: "a29_track_3t" },
+    ]),
+    part("trackClip", "{s} Roller Clip", [{ when: { track: "48" }, id: "el29_clip" }, { id: "a29_clip" }], "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-top", { meshProfile: "domal_jali_shutter" }),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "domal_jali_shutter" }),
     part("shutterLock", "{s} Handle Side{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "domal_jali_shutter" }),
     part("shutterMeet", "{s} Slim Interlock{tag}", "", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
   ],
   notes: [
-    "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder).",
+    "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder). Choose whose 29 track you use: Eleanor's is 0.3 mm taller, so its shutter is 0.7 mm shorter.",
     "Meeting side: the shutter itself with the interlock patti on it, or your slim interlock (choose its section).",
   ],
 }), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });
@@ -1088,7 +1147,7 @@ export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, BH_27, EURO_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
-  AMPLE_29, AMPLE_37,
+  AMPLE_29, ELEANOR_29, AMPLE_37,
   EURO_26, EURO_35, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
@@ -1113,6 +1172,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "ample-26": [26, "euro", "Euro 26 mm — Ample"],
   "euro-27": [27, "euro", "Euro 27 mm", true],
   "ample-29": [29, "euro", "Euro 29 mm — Ample", true],
+  "eleanor-29": [29, "euro", "Euro 29 mm — Eleanor"],
   "euro-35": [35, "euro", "Euro 35 mm — Banu Hashim / Eleanor", true],
   "ample-37": [37, "euro", "Euro 37 mm — Ample"],
   "gulf-25": [25, "gulf", "Gulf 25 mm — Banu Hashim", true],

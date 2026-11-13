@@ -139,6 +139,28 @@ track in place of the Euro track (not an extra piece). The drawings agree: BH
   | Mini domal 22 / Ample 29 / 37 | not known: 41085, 41050, 41289 (both sides open, H-shape), 41074, 41310 — which side holds the glass is not clear | − 94.8 / − 105.4 / − 127.0 |
   | BH 27, Ample 25 | not known | not known |
 
+## 29 mm track across makers (2026-11-13)
+Founder: 27 mm Euro uses the 29 mm Euro track; everything else is the same.
+Built from the drawings (`evals/studio/assemble.ts` §3):
+| Track | Height | Clip | Shutter height |
+|---|---|---|---|
+| Ample 914400 / 41052 | 47.7 | 914401 (stands 2.4) | H − 73.8 |
+| Banu Hashim 29 | 47.8 | — | ≈ H − 74.0 (printed height only) |
+| Eleanor 2901 / 2902 | 48.0 | 2917 (stands 2.5) | H − 74.5 |
+| Eleanor 2904 | 48.1 | 2917 | H − 74.7 |
+| Eleanor 2905 (3-track) | 48.6 | 2917 | H − 75.7 |
+Ample / BH / Eleanor 2901 agree within 0.7 mm (under ½ sut). Eleanor 2905 is
+1.9 mm off, so the Euro 29 Eleanor system names it and asks to teach.
+- Euro 29 — Eleanor (`eleanor-29`): shutter 2903 on all sides; glass stops 54.3
+  in → glass − 108.7 (2906 / 2909: − 106.3). 2909 has the wide (26 mm) pocket =
+  double glass. Interlock clip 2918. Roller clip W − 96.0.
+- Euro 27: switch "29 track" — 47.7 (Ample / BH) H − 73.8, clip W − 95.4; 48.0
+  (Eleanor) H − 74.5, clip W − 96.0 with clip 2917.
+
+## 35 mm across makers
+Euro 35 and Gulf 35: Banu Hashim = Eleanor within 0.3 mm (the two templates
+say "Banu Hashim / Eleanor").
+
 ## Banu Hashim catalogue misprints (drawing wins; trace scale agrees)
 - BH-6001 (Euro 3-track): table H 35.00, drawing 45 → **45** (trace 99.3%).
 - BH-6053 (Euro big slim interlock): table W 61.73, drawing 62.60 → 62.60.

@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { inches, type Um } from "../lib/engine/units";
 import type { PartDef, PartScope, ProfileDef, ProfileKind, StudioSystem, Place } from "../lib/studio/model";
-import { evaluate, computeSizes, type StudioJob } from "../lib/studio/evaluate";
+import { evaluate, computeSizes, jobVars, matches, type StudioJob } from "../lib/studio/evaluate";
 import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
@@ -99,6 +99,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   const find = (id: string) => findProfile(lib, id);
   const geo = useMemo(() => windowGeometry(sys, job, (id) => findProfile(lib, id)), [sys, job, lib]);
   const values = useMemo(() => computeSizes(sys, job).values, [sys, job]);
+  const vars = useMemo(() => jobVars(sys, job), [sys, job]);
   const step = useMemo(() => nextStep(sys), [sys]);
 
   const setPart = (id: string, patch: Partial<PartDef>) =>
@@ -168,7 +169,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
       </div>
 
       {pickedPart && (
-        <PartPanel key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} values={values} tracks={tracks}
+        <PartPanel key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} values={values} tracks={tracks} vars={vars}
           onPatch={(patch) => setPart(pickedPart.id, patch)} onSys={onChange}
           onPickSection={(slot, idx) => setPicker({ partId: pickedPart.id, slot, idx })}
           onClose={() => setPick(null)}
@@ -194,7 +195,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
         </div>
       </div>
 
-      {tab === "pieces" && <PiecesList sys={sys} lib={lib} unit={unit} values={values} tracks={tracks} onChange={onChange} onSelect={selectPart} />}
+      {tab === "pieces" && <PiecesList sys={sys} lib={lib} unit={unit} values={values} tracks={tracks} vars={vars} onChange={onChange} onSelect={selectPart} />}
       {tab === "cut" && <CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => setTab(w)} />}
       {tab === "teach" && <TeachPanel sys={sys} lib={lib} unit={unit} job={job} onChange={onChange} />}
       {tab === "rules" && <CutsTab sys={sys} unit={unit} onChange={onChange} />}
@@ -264,18 +265,18 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
 
 /* ———————————————— a tapped piece ———————————————— */
 
-function PartPanel({ sys, lib, unit, part: p, values, tracks, onPatch, onSys, onPickSection, onClose, onDelete }: {
-  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; part: PartDef; values: Record<string, Um | null>; tracks: number;
+function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onSys, onPickSection, onClose, onDelete }: {
+  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; part: PartDef; values: Record<string, Um | null>; tracks: number; vars: Record<string, string>;
   onPatch: (patch: Partial<PartDef>) => void; onSys: (s: StudioSystem) => void;
   onPickSection: (slot: "main" | "mesh" | "alt", idx?: number) => void; onClose: () => void; onDelete: () => void;
 }) {
   const on = p.enabled !== false;
   const alts = alternativesOf(sys, p);
   const byTrack = !alts && p.profile.length > 1;
-  const current = p.profile.find((c) => c.when?.tracks === String(tracks) || (Array.isArray(c.when?.tracks) && c.when.tracks.includes(String(tracks)))) ?? p.profile[p.profile.length - 1];
+  const current = p.profile.find((c) => matches(c.when, vars)) ?? p.profile[p.profile.length - 1];
   const prof = findProfile(lib, alts ? alts[0] : current?.id ?? "");
   const size = sys.sizes.find((s) => s.id === p.length);
-  const rule = size?.cases.find((c) => c.when?.tracks === String(tracks)) ?? size?.cases[size.cases.length - 1];
+  const rule = size?.cases.find((c) => matches(c.when, vars)) ?? size?.cases[size.cases.length - 1];
   const len = values[p.length];
   const st = rule ? (rule.add === null ? STATUS_TEXT.unknown : STATUS_TEXT[rule.evidence.status]) : STATUS_TEXT.unknown;
   const per = p.scope === "window" ? "per window" : p.scope === "shutter" ? "per shutter" : "per meeting";
@@ -488,8 +489,8 @@ function ShutterPanel({ sys, lib, unit, index, mix, values, perShutter, meetClip
 
 /* ———————————————— all pieces ———————————————— */
 
-function PiecesList({ sys, lib, unit, values, tracks, onChange, onSelect }: {
-  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; values: Record<string, Um | null>; tracks: number;
+function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }: {
+  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; values: Record<string, Um | null>; tracks: number; vars: Record<string, string>;
   onChange: (s: StudioSystem) => void; onSelect: (id: string) => void;
 }) {
   const tracksOn = new Set(sys.layouts.map((l) => l.tracks));
@@ -518,7 +519,7 @@ function PiecesList({ sys, lib, unit, values, tracks, onChange, onSelect }: {
             <div className="card divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
               {list.map((p) => {
                 const alts = alternativesOf(sys, p);
-                const c = p.profile.find((x) => x.when?.tracks === String(tracks) || (Array.isArray(x.when?.tracks) && x.when.tracks.includes(String(tracks)))) ?? p.profile[p.profile.length - 1];
+                const c = p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1];
                 const pr = findProfile(lib, alts ? alts[0] : c?.id ?? "");
                 const on = p.enabled !== false;
                 const len = values[p.length];

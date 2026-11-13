@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { solidOf, box, slideUntilTouch, place, runners, buildSliding, buildBombay, type Stack } from "../../lib/studio/assemble";
-import { EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
+import { ELEANOR_29, EURO_27, EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
 const fails: string[] = [];
@@ -72,6 +72,7 @@ const cases: [StudioSystem, string, Stack][] = [
   [AMPLE_37, "2", { name: "Ample 37 2T", bottom: "41015", top: "41015", clip: "41310-cap", shutter: "41068", mouth: "end" }],
   [AMPLE_37, "3", { name: "Ample 37 3T", bottom: "41014", top: "41014", clip: "41310-cap", shutter: "41068", mouth: "end" }],
   [BH_31, "2", { name: "BH 31 2T", bottom: "BH-6401", top: "BH-6401", clip: "BH-2559", shutter: "BH-6404", mouth: "start" }],
+  [ELEANOR_29, "2", { name: "Eleanor 29 2T", bottom: "2901", top: "2901", clip: "2917", shutter: "2903", mouth: "start" }],
 ];
 for (const [sys, tracks, st] of cases) {
   const r = buildSliding(st, get);
@@ -80,6 +81,16 @@ for (const [sys, tracks, st] of cases) {
   expect(r.clear, `${st.name}: shutter should go over the track and clip without hitting`);
   expect(r.topGap >= r.wheel, `${st.name}: shutter must lift out (needs ${r.wheel.toFixed(1)}, has ${r.topGap.toFixed(1)})`);
   expect(Math.abs(ruleFor(sys, tracks) - r.takeOff) < 0.1, `${st.name}: template says H − ${ruleFor(sys, tracks)}, drawings H − ${r.takeOff.toFixed(2)}`);
+}
+
+// 3. 29 mm across makers: Eleanor 48.0 track vs Ample / BH 47.7 — Euro 27 follows the chosen track
+{
+  const el = buildSliding({ name: "e27 eleanor", bottom: "2901", top: "2901", clip: "2917", shutter: "2046", mouth: "end" }, get);
+  const am = buildSliding({ name: "e27 ample", bottom: "914400", top: "914400", clip: "914401", shutter: "2046", mouth: "end" }, get);
+  const rule27 = (track: string) => -(EURO_27.sizes.find((s) => s.id === "shutterH")!.cases.find((c) => (c.when?.track ?? "47") === track)!.add ?? NaN) / 1000;
+  console.log(`  Euro 27: Eleanor track H − ${el.takeOff.toFixed(2)}, Ample track H − ${am.takeOff.toFixed(2)}`);
+  expect(el.clear && Math.abs(el.takeOff - rule27("48")) < 0.1, `Euro 27 Eleanor track: drawing H − ${el.takeOff.toFixed(2)}, template H − ${rule27("48")}`);
+  expect(am.clear && Math.abs(am.takeOff - rule27("47")) < 0.1, `Euro 27 Ample track: drawing H − ${am.takeOff.toFixed(2)}, template H − ${rule27("47")}`);
 }
 
 // 3a. 35 mm: Domal (leg track 6701) and Euro (U track 6705 + clip 6513), shutter 6712
