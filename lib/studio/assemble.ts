@@ -109,12 +109,23 @@ const asBottom = (get: Get, code: string) => { const s = get(code); return { ...
 export const tipAt = (track: Solid, x: number, from: number) => from - rayToMaterial(track, x, from, 0, -1, from);
 
 /** Where the shutters run: single legs (Domal) or U channels (two legs ~11 mm apart). */
-export function runners(track: Solid, w: number, h: number) {
-  const legs: { x0: number; x1: number }[] = [];
-  for (let x = 0.25; x < w; x += 0.25) {
-    if (tipAt(track, x, h + 5) < h - 2) continue;
-    const g = legs[legs.length - 1];
-    if (g && x - g.x1 <= 0.6) g.x1 = x; else legs.push({ x0: x, x1: x });
+export function runners(track: Solid, w: number, hFull: number) {
+  const xs: number[] = [], tips: number[] = [];
+  for (let x = 0.25; x < w; x += 0.25) { xs.push(x); tips.push(tipAt(track, x, hFull + 5)); }
+  const group = (h: number) => {
+    const g: { x0: number; x1: number }[] = [];
+    xs.forEach((x, i) => { if (tips[i] < h - 2) return; const l = g[g.length - 1]; if (l && x - l.x1 <= 0.6) l.x1 = x; else g.push({ x0: x, x1: x }); });
+    return g;
+  };
+  // An outer leg that stands taller than everything else is only design (founder):
+  // leave it out and look for the running track below it.
+  let h = hFull, legs = group(h);
+  for (let pass = 0; pass < 2 && legs.length === 1; pass++) {
+    const d = legs[0];
+    xs.forEach((x, i) => { if (x >= d.x0 - 0.5 && x <= d.x1 + 0.5) tips[i] = 0; });
+    const next = Math.max(...tips);
+    if (next < hFull * 0.5) break;
+    h = next; legs = group(h);
   }
   const mids = legs.map((g) => (g.x0 + g.x1) / 2);
   const us: number[] = [];

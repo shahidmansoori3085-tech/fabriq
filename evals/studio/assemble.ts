@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { solidOf, box, slideUntilTouch, place, runners, buildSliding, buildBombay, type Stack } from "../../lib/studio/assemble";
-import { EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22 } from "../../lib/studio/templates";
+import { EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
 const fails: string[] = [];
@@ -67,6 +67,11 @@ const cases: [StudioSystem, string, Stack][] = [
   [GULF_25, "2", { name: "Gulf 25 2T", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2554", mouth: "start" }],
   [BH_35, "2", { name: "Gulf 35 2T", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6504", mouth: "start" }],
   [AMPLE_25, "2", { name: "Ample 25 2T", bottom: "955388", top: "955388", clip: "914401", shutter: "914744", mouth: "end" }],
+  [AMPLE_29, "3", { name: "Ample 29 3T", bottom: "41052", top: "41052", clip: "914401", shutter: "41055", mouth: "end" }],
+  [AMPLE_29, "2", { name: "Ample 29 2T", bottom: "914400", top: "914400", clip: "914401", shutter: "41055", mouth: "end" }],
+  [AMPLE_37, "2", { name: "Ample 37 2T", bottom: "41015", top: "41015", clip: "41310-cap", shutter: "41068", mouth: "end" }],
+  [AMPLE_37, "3", { name: "Ample 37 3T", bottom: "41014", top: "41014", clip: "41310-cap", shutter: "41068", mouth: "end" }],
+  [BH_31, "2", { name: "BH 31 2T", bottom: "BH-6401", top: "BH-6401", clip: "BH-2559", shutter: "BH-6404", mouth: "start" }],
 ];
 for (const [sys, tracks, st] of cases) {
   const r = buildSliding(st, get);

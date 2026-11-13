@@ -75,6 +75,11 @@ Rule (checked on Domal): shutter = H − top tip − bottom tip − clip + 24.
 | Gulf 35 BH (6501 / 6503 + 6513) | 31.21 | 4.0 | H − 42.4 | suggested |
 | Ample 25 (955388 / 955389 + clip 914401) | 40.0 | 2.4 | H − 58.4 | suggested |
 | Mini domal Ample 22 (41083 / 41084, no clip) | 35.0 | — | H − 46.0 | suggested |
+| Ample 29 sleek (914400 / 41052 + clip 914401, shutter 41055) | 47.7 | 2.4 | H − 73.8 | suggested |
+| Ample 37 sleek (41015 / 41014 + round clip 41310, shutter 41068) | 49.7 | 3.8 | H − 79.1 | suggested |
+| BH 31 Gulf 2T (6401 top/bottom + clip 2559; sides 6400 one groove) | 42.7 | 3.9 | H − 65.3 | suggested |
+| Alucoat S-30 Gulf (Bottom Gulf 30002 top+bottom, solid rail 30101 on the U floor) | 42.5 (runs at 39.5) | — | H − 58.0 (H − 53.3 if top is AT-30016) | suggested |
+| Ample 26 (955388 + clip 914401, shutter 992265) | 40.0 | 2.4 | not set | shutter channel 15 mm deep, 24 mm roller does not go in — ask how it is fitted |
 | Domal 27 Ample 3T / 2T (214313 / 214314) | 45.51 / 45.01 | — | H − 67.0 / 66.0 | same cut as OMEO ✓ |
 | Domal 27 Eleanor (2702 / 2701) | 45.0 | — | H − 66.0 | same cut as OMEO ✓ |
 | **Domal 27 Banu Hashim 2T / 4T (6032 / 6045)** | **48.9 / 49.0** | — | **H − 73.7 / 74.0** | **~7 mm shorter than OMEO** |
@@ -100,10 +105,11 @@ Rule (checked on Domal): shutter = H − top tip − bottom tip − clip + 24.
   Open question: lifting the shutter out over the 32 mm walls needs ~4 mm, the top
   leaves ~1 mm — how do shops fit the shutter?
 - Normal 25 / 5-track: no traced sections yet.
-- Ample 26 / 29 / 37 sleek: the 24 mm roller does not fit their shutter channel —
-  roller goes in a separate bottom rail. Needs the roller detail.
-- BH 31, Alucoat S-30: which track is top / bottom / side and which clip is not
-  clear from the drawings.
+- Founder 2026-11-13: Ample 29 / 37 run a 24 mm roller on a clip in the track; BH 31
+  and Alucoat S-30 are Gulf (one-groove sides, clip in the top/bottom track). The
+  roller never goes on the glass side. If one clip does not sit, try the other
+  clips on the catalogue page. Antigravity's "rail" roles for 41010 / 41300 / 41069
+  were wrong: 41010 is a track with leg.
 - Domal 35×75, Mini domal 20×54: no section codes / drawings in the app yet.
 - Z casement: no roller; engine rules are founder-checked already.
 
