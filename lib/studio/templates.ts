@@ -598,7 +598,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
 const EL29 = (p: number) => CATALOGUE("Eleanor 29 mm p." + p);
 export const ELEANOR_29: StudioSystem = withAlternatives(base({
   id: "eleanor-29", name: "Euro 29 mm — Eleanor", group: "sleek", maker: "Eleanor",
-  blurb: "48 mm U track 2901 / 2902 with roller clip 2917; shutter 2903 on all sides + interlock clip 2918",
+  blurb: "48 mm U track 2901 / 2902 with roller clip 2917; shutter 2903 on all sides (double glass 2909) + interlock clip 2918",
   profiles: [
     prof("el29_track_2t", "29 mm 2-Track", "track", { eleanor: "2901" }, "50×48", { value: 3.85, perFt: 12 }, EL29(32)),
     prof("el29_track_3t", "29 mm 3-Track", "track", { eleanor: "2902" }, "86.5×48", { value: 6.35, perFt: 12 }, EL29(32)),
@@ -607,7 +607,7 @@ export const ELEANOR_29: StudioSystem = withAlternatives(base({
     prof("el29_clip", "29 mm Roller Clip", "rail", { eleanor: "2917" }, "13×16", { value: 0.6, perFt: 12 }, EL29(33)),
     prof("el29_shutter", "29 mm Shutter", "shutter", { eleanor: "2903" }, "65×29", { value: 3.25, perFt: 12 }, EL29(32)),
     prof("el29_shutter_b", "29 mm Shutter (2906)", "shutter", { eleanor: "2906" }, "65×29", { value: 3.2, perFt: 12 }, EL29(32)),
-    prof("el29_dgu", "29 mm Shutter (double glass)", "shutter", { eleanor: "2909" }, "65×29", { value: 2.9, perFt: 12 }, DRAWING("Eleanor 29 mm p.32 — wide glass pocket")),
+    prof("el29_dgu", "29 mm Shutter (double glass)", "shutter", { eleanor: "2909" }, "65×29", { value: 2.9, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.32 — double glass (founder)")),
     prof("el29_patti", "29 mm Interlock Clip", "interlock-patti", { eleanor: "2918" }, "32.5×38.5", { value: 1.15, perFt: 12 }, DRAWING("Eleanor 29 mm p.33"), { faceMm: 10 }),
   ],
   sizes: [
@@ -630,7 +630,7 @@ export const ELEANOR_29: StudioSystem = withAlternatives(base({
   notes: [
     "The roller (24 mm) runs on clip 2917 snapped into the track.",
     "Track 2904 (48.1) is 0.1 mm taller and 2905 (48.6) 0.6 mm taller than 2901 / 2902: with 2905 the shutter is H − 75.7. Teach from one window if you use them.",
-    "2906 is a second shutter with the same outside size; with it the glass is shutter − 106.3. 2909 has the wide glass pocket (double glass).",
+    "2906 is a second shutter with the same outside size; with it the glass is shutter − 106.3. 2909 is the double-glass shutter (founder): choose Glass → Double glass.",
   ],
 }), "shutterMeet", ["el29_shutter", "el29_shutter_b"]);
 
@@ -1091,6 +1091,21 @@ withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "g
 withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
+withDoubleGlass(ELEANOR_29, { dgu: "el29_dgu", take: 106.3, src: "double-glass shutter 2909 (founder): glass stops 53.1 mm in from each shutter edge" });
+
+/** Single or double glass: the double-glass shutter on every shutter side, with its own glass size. */
+function withDoubleGlass(sys: StudioSystem, o: { dgu: string; take: number; src: string }): StudioSystem {
+  sys.switches = [...sys.switches.filter((s) => s.id !== "glazing"), {
+    id: "glazing", label: "Glass", default: "single",
+    options: [{ value: "single", label: "Single glass" }, { value: "double", label: "Double glass" }],
+  }];
+  const sides = ["shutterTop", "shutterBottom", "shutterLock", "shutterMeet"];
+  sys.parts = sys.parts.map((p) => (sides.includes(p.id) ? { ...p, profile: [{ when: { glazing: "double" }, id: o.dgu }, ...p.profile] } : p));
+  sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" && s.id !== "glassH" ? s : {
+    ...s, cases: [rule(s.id === "glassW" ? "shutterW" : "shutterH", -mm(o.take), FROM_DRAWING(o.src), { when: { glazing: "double" } }), ...s.cases],
+  }));
+  return sys;
+}
 withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
 withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
 

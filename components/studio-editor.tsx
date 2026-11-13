@@ -274,7 +274,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
   const alts = alternativesOf(sys, p);
   const byTrack = !alts && p.profile.length > 1;
   const current = p.profile.find((c) => matches(c.when, vars)) ?? p.profile[p.profile.length - 1];
-  const prof = findProfile(lib, alts ? alts[0] : current?.id ?? "");
+  const prof = findProfile(lib, alts && !(current && !alts.includes(current.id)) ? alts[0] : current?.id ?? "");
   const size = sys.sizes.find((s) => s.id === p.length);
   const rule = size?.cases.find((c) => matches(c.when, vars)) ?? size?.cases[size.cases.length - 1];
   const len = values[p.length];
@@ -520,7 +520,7 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
               {list.map((p) => {
                 const alts = alternativesOf(sys, p);
                 const c = p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1];
-                const pr = findProfile(lib, alts ? alts[0] : c?.id ?? "");
+                const pr = findProfile(lib, alts && !(c && !alts.includes(c.id)) ? alts[0] : c?.id ?? "");
                 const on = p.enabled !== false;
                 const len = values[p.length];
                 return (

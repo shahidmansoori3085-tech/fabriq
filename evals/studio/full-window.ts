@@ -60,4 +60,17 @@ for (const [id, side, gw, gh] of SYSTEMS) {
 }
 
 if (fails.length) { console.error(`\nfull-window: ${fails.length} failed\n - ` + fails.join("\n - ")); process.exit(1); }
+// double glass (Eleanor 2909, founder): every shutter side is 2909, glass shutter − 106.3
+{
+  const el = TEMPLATES.find((t) => t.id === "eleanor-29")!;
+  for (const glazing of ["single", "double"]) {
+    const r = evaluate(el, { id: "W", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { glazing } }, { allowUnknown: true });
+    const sh = r.pieces.filter((p) => /Shutter|Handle|Meeting Side/.test(p.role));
+    const want = glazing === "double" ? "el29_dgu" : "el29_shutter";
+    expect(sh.length === 8 && sh.every((p) => p.sectionId === want), `eleanor-29 ${glazing}: shutter sides ${sh.map((p) => p.sectionId).join(",")}`);
+    const sw = r.sizes.find((x) => x.id === "shutterW")!.value!, g = r.panels[0];
+    expect(Math.abs(sw - g.w - (glazing === "double" ? 106300 : 108700)) < 2, `eleanor-29 ${glazing}: glass width shutter − ${(sw - g.w) / 1000}`);
+  }
+}
+
 console.log(`full-window: ${SYSTEMS.length} systems × 4 sizes — frames, shutters, meeting pieces, clips and glass hold ✓`);

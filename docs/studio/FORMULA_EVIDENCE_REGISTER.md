@@ -152,7 +152,8 @@ Built from the drawings (`evals/studio/assemble.ts` §3):
 Ample / BH / Eleanor 2901 agree within 0.7 mm (under ½ sut). Eleanor 2905 is
 1.9 mm off, so the Euro 29 Eleanor system names it and asks to teach.
 - Euro 29 — Eleanor (`eleanor-29`): shutter 2903 on all sides; glass stops 54.3
-  in → glass − 108.7 (2906 / 2909: − 106.3). 2909 has the wide (26 mm) pocket =
+  in → glass − 108.7 (2906 / 2909: − 106.3). 2909 = double glass (founder, 2026-11-13;
+  switch Glass → Double glass puts 2909 on all 4 sides, glass − 106.3). Its 26 mm pocket =
   double glass. Interlock clip 2918. Roller clip W − 96.0.
 - Euro 27: switch "29 track" — 47.7 (Ample / BH) H − 73.8, clip W − 95.4; 48.0
   (Eleanor) H − 74.5, clip W − 96.0 with clip 2917.
