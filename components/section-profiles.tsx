@@ -331,12 +331,13 @@ export function SectionProfile({ sectionId, w = 46, h = 30 }: { sectionId: strin
   if (hasImage(sectionId)) {
     return (
       <span className="grid place-items-center overflow-hidden"
-        style={{ width: w + 8, height: h + 6, background: "#fff" }}>
+        style={{ width: w + 8, height: h + 6 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageSrc(sectionId)} alt={`${sec.label} cross-section`}
           // the whole drawing, always: fill the box and fit inside it — a
           // max-size plus padding let tall sections spill out of the bottom
-          style={{ width: w + 8, height: h + 6, objectFit: "contain", padding: 3, boxSizing: "border-box" }} />
+          // multiply: the photo's white paper takes the colour of the card it sits on
+          style={{ width: w + 8, height: h + 6, objectFit: "contain", padding: 3, boxSizing: "border-box", mixBlendMode: "multiply" }} />
       </span>
     );
   }

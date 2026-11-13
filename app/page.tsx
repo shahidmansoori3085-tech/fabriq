@@ -116,7 +116,7 @@ const Z_DIR_NAME: Record<string, string> = {
 const PALLA: Opt[] = [["60", "63 × 25"], ["75", "75 × 25"], ["50", "50 × 25"]];
 const CHOKHAT: Opt[] = [["needed", "Frame + Shutter"], ["existing", "Shutter only"]];
 /** Center rails across a door shutter; panels = rails + 1. */
-const DOOR_CENTERS: Opt[] = [["0", "No Center"], ["1", "1 Center"], ["2", "2 Center"], ["3", "3 Center"], ["4", "4 Center"]];
+const DOOR_CENTERS: Opt[] = [["0", "None"], ["1", "1 rail"], ["2", "2 rails"], ["3", "3 rails"], ["4", "4 rails"]];
 
 /** The door's panels, top to bottom. What fills them does not change the
  *  aluminium, so it is not asked: every panel is sheet (founder, 2026-10-30 —
@@ -209,7 +209,7 @@ function itemLabel(it: JobItem): string {
   if (it.type === "door") {
     const scope = m.chokhat === "existing" ? " · shutter only" : " + frame";
     const centers = Math.max(0, (m.zonemix?.length ?? 3) - 1);
-    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${centers ? `${centers} center${centers === 1 ? "" : "s"}` : "no center"}`;
+    return `Door · ${labelOf(PALLA, m.palla)} shutter${scope} · ${centers ? `${centers} center rail${centers === 1 ? "" : "s"}` : "no center rail"}`;
   }
   if (it.type === "partition") {
     // What gets built — panels across × panels high — not the gap rule behind it.
@@ -1391,13 +1391,15 @@ function JobScreen({
             Fabri<span style={{ color: "var(--accent)" }}>Q</span>
           </div>
           <div className="truncate text-xs" style={{ color: "var(--ink-3)" }}>
-            {shopName || "Material list & cutting sheet"}
+            {shopName || "Material & cutting"}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <InstallButton />
-          <a href="/studio" className="btn-ghost px-3 py-2 text-sm">My systems</a>
-          <button onClick={onSettings} className="btn-ghost px-3 py-2 text-sm">Settings</button>
+          <a href="/studio" className="btn-ghost px-2.5 py-2 text-sm">My systems</a>
+          <button onClick={onSettings} className="btn-ghost grid h-9 w-9 place-items-center" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+          </button>
         </div>
       </div>
 
@@ -1934,6 +1936,16 @@ function groupsText(groups: BarGroup[]): string {
   return groups.map(barsText).join(" + ");
 }
 
+/** The job total in short lines: full pipes per length, then all cut pieces as one line —
+ *  each section's own row says which piece is which. */
+function totalLines(groups: BarGroup[]): string[] {
+  const pieces = groups.flatMap((g) => g.pieces);
+  return [
+    ...groups.filter((g) => g.full).map((g) => `${g.full} × ${g.ft}'`),
+    ...(pieces.length ? [`${plural(pieces.length, "cut piece")} · ${pieces.reduce((a, p) => a + p, 0)} ft`] : []),
+  ];
+}
+
 /** Pipes as the dealer counts them: full pipes, plus the pieces cut to length —
  *  "4 + 1" with "pipes + piece" under it. */
 function pipeCount(full: number, pieces: number): string {
@@ -1982,7 +1994,7 @@ function MaterialPanel({ list, shop, items, jobName }: {
                 qtySub: groupsText(s.stock),
               };
             })}
-            totalLabel="Total" totalValue={`${total} ${groupsWord(groups)}`} totalSub={groupsText(groups)} />
+            totalLabel="Total" totalValue={`${total} ${groupsWord(groups)}`} totalSub={totalLines(groups).join(" + ")} />
         </div>
         {panels.length > 0 && (
           <div ref={glassDocRef} style={{ marginTop: 16 }}>
@@ -2004,8 +2016,8 @@ function MaterialPanel({ list, shop, items, jobName }: {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Pipes to buy</div>
-            {groups.map((g) => (
-              <div key={g.ft} className="mt-1 text-base font-semibold tabnum">{barsText(g)}</div>
+            {totalLines(groups).map((t) => (
+              <div key={t} className="mt-1 text-base font-semibold tabnum">{t}</div>
             ))}
           </div>
           <div className="shrink-0 text-right">
@@ -2382,13 +2394,13 @@ function CuttingPanel({ list, shop, items, jobName }: {
                 {bars.map((bar, bi) => (
                   <div key={bi} className="flex flex-wrap items-baseline gap-x-2 text-xs">
                     <span className="font-bold" style={{ color: "var(--ink-2)" }}>
-                      Pipe {bi + 1} ({Math.round(toFeet(bar.barLength))}&apos;)
+                      {toFeet(bar.barLength) < (sec.barLengthFt ?? 16) - 0.01 ? "Piece" : `Pipe ${bi + 1}`} ({Math.round(toFeet(bar.barLength))}&apos;)
                     </span>
                     <span className="mono">{packLine(bar.pieces)}</span>
-                    {bar.waste > 0 && (
+                    {bar.waste > 0 && shortLen(bar.waste) !== '0"' && (
                       bar.waste >= KEEP_OFFCUT
-                        ? <span className="mono font-semibold" style={{ color: "var(--good)" }}>· keep {formatFtInSut(bar.waste)}</span>
-                        : <span className="mono" style={{ color: "var(--ink-3)" }}>· {formatFtInSut(bar.waste)} scrap</span>
+                        ? <span className="mono font-semibold" style={{ color: "var(--good)" }}>· keep {shortLen(bar.waste)}</span>
+                        : <span className="mono" style={{ color: "var(--ink-3)" }}>· {shortLen(bar.waste)} scrap</span>
                     )}
                   </div>
                 ))}
@@ -2592,6 +2604,12 @@ function pdfName(jobName: string, kind: string): string {
 }
 
 /** "1 size" / "3 sizes" / "2 pcs". */
+/** A short leftover: 3s, not 0"3s. */
+function shortLen(um: number): string {
+  const t = formatFtInSut(um);
+  return t.startsWith('0"') && t.length > 2 ? t.slice(2) : t;
+}
+
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
@@ -2613,7 +2631,7 @@ function aluminiumWaText(list: MaterialList, shopName?: string, jobName?: string
     L.push(`• ${sec.label} — ${groupsText(s.stock)}`);
   }
   const groups = barGroups(list.sections);
-  L.push("", `*Total: ${groupsCount(groups)} ${groupsWord(groups)}* (${groupsText(groups)})`);
+  L.push("", `*Total: ${groupsCount(groups)} ${groupsWord(groups)}* (${totalLines(groups).join(" + ")})`);
   return withBrand(L).join("\n");
 }
 
