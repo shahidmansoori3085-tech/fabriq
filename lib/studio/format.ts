@@ -122,3 +122,13 @@ export function whenText(sys: StudioSystem, when: SizeCase["when"]): string {
 export const layoutLabel = (sys: StudioSystem, n: number) => (sys.family === "casement" ? `${n} sash${n > 1 ? "es" : ""}` : `${n}-track`);
 
 export const inchOf = (um: Um) => um / UM_PER_INCH;
+
+/** Text without company names (founder, 2026-11-13): "Ample 914400" → "914400", "BH-6001" → "6001". */
+export function noMaker(t: string): string {
+  return t
+    .replace(/\b(Ample|Banu Hashim|Eleanor|OMEO|Alucoat|Jindal|ALPRO)\b\s*/g, "")
+    .replace(/\bBH[- ]?(?=\d)/g, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}

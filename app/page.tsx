@@ -20,7 +20,8 @@ import {
 import { PieceTooLongError, stockGroups } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
-import { systemOfItem, studioSystems, studioSystem, studioReady } from "@/lib/studio/runtime";
+import { systemOfItem, studioSystems, studioSystem, studioReady, systemForWindow, WINDOW_SYSTEMS } from "@/lib/studio/runtime";
+import type { StudioSystem } from "@/lib/studio/model";
 import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
 import StudioThumb from "@/components/studio-thumb";
@@ -53,6 +54,8 @@ type WinSys = "normal" | "domal" | "z_section" | `studio:${string}`;
 /** Everything the add-item form can ask. Kept between adds on purpose: a job
  *  is usually ten windows of the same kind, so only the size changes. */
 interface Opts {
+  /** Window kind picked first: bombay (Normal), domal, euro, gulf, casement, or mine. */
+  kind: string;
   sys: WinSys;
   tracks: string;
   mix: string;
@@ -84,7 +87,7 @@ interface Opts {
 }
 
 const DEFAULT_OPTS: Opts = {
-  sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
+  kind: "bombay", sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
@@ -94,7 +97,6 @@ const DEFAULT_OPTS: Opts = {
 type Opt = [value: string, label: string];
 
 const TYPES: Opt[] = [["window", "Window"], ["door", "Door"], ["partition", "Partition"]];
-const SYSTEMS: Opt[] = [["normal", "Normal Sliding"], ["domal", "Domal"], ["z_section", "Z-Section"]];
 // No 4 Track: the catalogue has no 4-track frame, and building one on a
 // 2-track frame orders a frame its four shutters cannot fit in.
 const TRACKS: Opt[] = [["2", "2 Track"], ["3", "3 Track"]];
@@ -167,6 +169,47 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
   return m;
 }
 
+/* —— window kinds: Normal, Domal, Euro, Gulf, Casement — then the size ——
+ * Every built-in system sits here without a company name (founder,
+ * 2026-11-13). A system the shop changed in Settings is used in place of
+ * the built-in one; Normal 18, Domal 27 and Z run on the checked engine
+ * until then. */
+const KINDS: [string, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["euro", "Euro"], ["gulf", "Gulf"], ["casement", "Casement (Z)"], ["mine", "My own"]];
+interface WinChoice { sys: WinSys; title: string; sub: string; pic: StudioSystem | undefined }
+function windowChoices(kind: string): WinChoice[] {
+  const own = studioSystems();
+  const out: WinChoice[] = [];
+  if (kind !== "mine") for (const w of WINDOW_SYSTEMS.filter((x) => x.kind === kind)) {
+    const sys = systemForWindow(w.id);
+    const changed = !!sys && sys.id !== w.id;
+    out.push({ sys: changed ? `studio:${sys!.id}` : w.engine ?? `studio:${w.id}`, title: sys?.name ?? w.id, sub: changed ? "Your settings" : "", pic: sys });
+  }
+  // the shop's own systems that are not one of the above: under their kind, or under "My own"
+  const offered = new Set(WINDOW_SYSTEMS.map((w) => w.id));
+  for (const s of own) {
+    if (s.basedOn && offered.has(s.basedOn.id)) continue;
+    const k = s.series && s.series.type !== "other" && KINDS.some(([v]) => v === s.series!.type) ? s.series.type : "mine";
+    if (k === kind) out.push({ sys: `studio:${s.id}`, title: s.name, sub: "Your system", pic: s });
+  }
+  return out;
+}
+function kindOfSys(sys: WinSys): string {
+  if (sys === "normal") return "bombay";
+  if (sys === "domal") return "domal";
+  if (sys === "z_section") return "casement";
+  const s = studioSystem(sys.slice(7));
+  const t = s?.basedOn ? WINDOW_SYSTEMS.find((w) => w.id === s.basedOn!.id) : WINDOW_SYSTEMS.find((w) => w.id === s?.id);
+  return t?.kind ?? (s?.series && s.series.type !== "other" ? s.series.type : "mine");
+}
+/** The choices a picked system sets: its first layout for a Studio system. */
+function sysPatch(sys: WinSys): Partial<Opts> {
+  if (sys.startsWith("studio:")) {
+    const l = studioSystem(sys.slice(7))?.layouts[0];
+    return { sys, tracks: String(l?.tracks ?? 2), mix: l?.mixes[0] ?? "GG" };
+  }
+  return sys === "z_section" ? { sys } : { sys, tracks: "2", mix: "GG" };
+}
+
 /** A built item back into the form's choices — used to edit it. */
 function optsFromItem(it: JobItem): Opts {
   const m = it.meta;
@@ -191,6 +234,7 @@ function optsFromItem(it: JobItem): Opts {
     o.sys = it.system === "domal" ? "domal" : "normal";
     pick("tracks", m.tracks); pick("mix", m.mix); pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
   }
+  o.kind = kindOfSys(o.sys);
   return o;
 }
 
@@ -602,7 +646,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "system" | "tracks" | "mix" | "domalFix"
+  | "type" | "kind" | "system" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -617,10 +661,11 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const kind: StepId[] = o.partSys === "z" ? ["zProfile", ...door] : door;
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
-  if (o.sys.startsWith("studio:")) return ["type", "system", "tracks", "mix", "size"];
+  const head: StepId[] = ["type", "kind", ...(windowChoices(o.kind).length > 1 ? ["system" as const] : [])];
+  if (o.sys.startsWith("studio:")) return [...head, "tracks", "mix", "size"];
   if (o.sys === "z_section") {
     return [
-      "type", "system", "zType",
+      ...head, "zType",
       ...(o.zType === "combo" ? ["zDir" as const] : []),
       ...(o.zType === "openable" || o.zType === "combo" ? ["zSash" as const] : []),
       // a Z door is always the big section — nothing to ask
@@ -630,12 +675,13 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   }
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
-  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
+  return [...head, "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
-  system: "Which window system?",
+  kind: "Which window?",
+  system: "Which size?",
   tracks: "How many tracks?",
   mix: "Which shutters?",
   domalFix: "Fixed glass on top?",
@@ -677,11 +723,6 @@ function sample(type: OpeningType, o: Opts): JobItem {
   return buildJobItem(1, type, feet(w), feet(h), 1, metaFor(type, o));
 }
 
-const SYSTEM_INFO: Record<WinSys, { img: string; sub: string }> = {
-  normal: { img: imageSrc("2t_top"), sub: "18 mm · most common" },
-  domal: { img: imageSrc("domal_frame"), sub: "27 mm · premium" },
-  z_section: { img: imageSrc("z_outer_40"), sub: "Hinged, opens out" },
-};
 
 /** One line of the size list: width, height and how many of that size —
  *  and, for a partition, its own divider gaps (each partition is drawn and
@@ -1069,27 +1110,35 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "system" && (
-          <div className="flex flex-col gap-2">
-            {studioSystems().map((s) => {
-              // a system with sections or cuts still missing cannot cut yet — send the shop to finish it
-              const ready = studioReady(s);
+        {flow.step === "kind" && (
+          <div className="grid grid-cols-2 gap-2">
+            {KINDS.map(([k, label]) => {
+              const ch = windowChoices(k);
+              if (!ch.length) return null;
+              const sizes = WINDOW_SYSTEMS.filter((w) => w.kind === k).map((w) => w.mm);
               return (
-                <Choice key={s.id} wide selected={o.sys === `studio:${s.id}`}
-                  onClick={() => {
-                    if (!ready) { window.location.href = "/studio"; return; }
-                    const l = s.layouts[0]; choose({ sys: `studio:${s.id}`, tracks: String(l?.tracks ?? 2), mix: l?.mixes[0] ?? "GG" });
-                  }}
-                  title={s.name} sub={ready ? "My system" : "Not ready yet — finish it in My systems"}
-                  picture={<span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={s} /></span>} />
+                <Choice key={k} selected={o.kind === k}
+                  onClick={() => (ch.length === 1 ? choose({ kind: k, ...sysPatch(ch[0].sys) }) : choose({ kind: k }))}
+                  title={label} sub={sizes.length ? `${sizes.join(" · ")} mm` : `${ch.length} saved`}
+                  picture={ch[0].pic ? <span className="block w-28"><StudioThumb sys={ch[0].pic} withTrack /></span> : undefined} />
               );
             })}
-            {SYSTEMS.map(([v, label]) => (
-              <Choice key={v} wide selected={o.sys === v} onClick={() => choose({ sys: v as WinSys })}
-                title={label} sub={SYSTEM_INFO[v as WinSys].sub}
-                // eslint-disable-next-line @next/next/no-img-element
-                picture={<img src={SYSTEM_INFO[v as WinSys].img} alt="" style={{ maxHeight: 64, maxWidth: 96, objectFit: "contain", mixBlendMode: "multiply" }} />} />
-            ))}
+          </div>
+        )}
+
+        {flow.step === "system" && (
+          <div className="grid grid-cols-2 gap-2">
+            {windowChoices(o.kind).map((c) => {
+              // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
+              const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
+              const ready = !st || studioReady(st);
+              return (
+                <Choice key={c.sys} selected={o.sys === c.sys}
+                  onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose(sysPatch(c.sys)); }}
+                  title={c.title} sub={ready ? c.sub : "Not ready yet — finish it in Settings"}
+                  picture={c.pic ? <span className="block w-28" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
+              );
+            })}
           </div>
         )}
 
@@ -1396,7 +1445,6 @@ function JobScreen({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <InstallButton />
-          <a href="/studio" className="btn-ghost px-2.5 py-2 text-sm">My systems</a>
           <button onClick={onSettings} className="btn-ghost grid h-9 w-9 place-items-center" aria-label="Settings" title="Settings">
             <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
           </button>
@@ -2583,6 +2631,14 @@ function SettingsModal({ shop, onSave, onClose }: {
             })}
           </div>
         </div>
+
+        <a href="/studio" className="card mt-5 flex items-center justify-between gap-3 p-3">
+          <span className="min-w-0">
+            <span className="block text-sm font-bold">Window systems</span>
+            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Change the sections, cuts, glass and pipe length of any window.</span>
+          </span>
+          <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
+        </a>
 
         <button onClick={() => onSave({ ...s, name: s.name.trim() })} className="btn-primary mt-6 w-full py-3.5">
           Save

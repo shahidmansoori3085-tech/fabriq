@@ -12,7 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
-import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, noMaker, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -127,7 +127,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← My systems</button>
+        <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
         <div className="relative">
           <button onClick={() => setMenu((m) => !m)} className="btn-ghost px-3 py-1.5 text-sm" aria-haspopup="menu">More</button>
           {menu && (
@@ -142,7 +142,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
 
       <input value={sys.name} onChange={(e) => onChange({ ...sys, name: e.target.value })} aria-label="System name"
         className="mt-3 w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
-      <p className="text-sm" style={{ color: "var(--ink-3)" }}>{sys.blurb}</p>
+      <p className="text-sm" style={{ color: "var(--ink-3)" }}>{noMaker(sys.blurb)}</p>
 
       <button onClick={() => setTab(step.tab)} className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold"
         style={{ background: toneBg, color: tone }}>

@@ -7,19 +7,15 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileDef, StudioSystem, SeriesType } from "../../lib/studio/model";
 import { PROFILE_KINDS } from "../../lib/studio/model";
-import { TEMPLATES, BUILT_IN_PROFILES } from "../../lib/studio/templates";
+import { TEMPLATES, BUILT_IN_PROFILES, WINDOW_SYSTEMS, OFFERED } from "../../lib/studio/templates";
 import {
   loadLibrary, saveLibrary, copyTemplate, newId, exportLibrary, importLibrary, type StudioLibrary,
 } from "../../lib/studio/store";
-import { SYSTEM_STATUS, type StudioUnit } from "../../lib/studio/format";
+import { SYSTEM_STATUS, noMaker, type StudioUnit } from "../../lib/studio/format";
 import StudioEditor, { nextStep, ProfileForm } from "../../components/studio-editor";
 import { Badge, Seg, Sheet, SectionTitle } from "../../components/studio-ui";
-import WindowDrawing from "../../components/studio-drawing";
-import { windowGeometry } from "../../lib/studio/geometry";
 import { findProfile } from "../../lib/studio/store";
-import { jobVars, matches } from "../../lib/studio/evaluate";
-import { shapeOf, type Shape } from "../../lib/studio/shapes";
-import { inches } from "../../lib/engine/units";
+import StudioThumb from "../../components/studio-thumb";
 
 type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string } | { kind: "sections" };
 const UNIT_KEY = "fabriq_studio_unit";
@@ -27,34 +23,7 @@ const UNIT_KEY = "fabriq_studio_unit";
 
 /** A small, real drawing of a system (first layout, 5′ × 4′). */
 function Thumb({ sys, lib }: { sys: StudioSystem; lib: StudioLibrary }) {
-  const lay = sys.layouts[0];
-  const job = { id: "T", W: inches(60), H: inches(48), qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" };
-  const g = windowGeometry(sys, job, (id) => findProfile(lib, id));
-  // the window from the front looks alike for every sliding system: the bottom
-  // track's real section, in the corner, is what tells Domal, Euro, Gulf apart
-  const vars = jobVars(sys, job);
-  const bottom = sys.parts.find((p) => p.place === "frame-bottom" && p.enabled !== false);
-  const shape = shapeOf(findProfile(lib, bottom?.profile.find((c) => matches(c.when, vars))?.id ?? ""));
-  return (
-    <span className="relative block">
-      <WindowDrawing g={g} unit="in" pick={null} compact />
-      {shape && (
-        <span className="absolute bottom-0 right-0 flex h-[46%] w-[40%] items-center justify-center rounded-md border bg-white p-1 shadow-sm">
-          <MiniSection s={shape} />
-        </span>
-      )}
-    </span>
-  );
-}
-
-/** A section's real outline, filled, no dimensions: small enough for a card. */
-function MiniSection({ s }: { s: Shape }) {
-  const pad = Math.max(s.w, s.h) * 0.06;
-  return (
-    <svg viewBox={`${-pad} ${-pad} ${s.w + 2 * pad} ${s.h + 2 * pad}`} className="h-full w-full" role="img" aria-label={`Section ${s.code}`}>
-      <path d={s.paths.join(" ")} fill="#94a3b8" fillRule="evenodd" stroke="#475569" strokeWidth={Math.max(s.w, s.h) / 160} />
-    </svg>
-  );
+  return <StudioThumb sys={sys} find={(id) => findProfile(lib, id)} withTrack />;
 }
 
 export default function StudioPage() {
@@ -122,43 +91,68 @@ export default function StudioPage() {
             <Link href="/" className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← FabriQ</Link>
             <Seg small value={unit} onChange={changeUnit} options={[{ value: "ft", label: "feet" }, { value: "in", label: "inch" }, { value: "mm", label: "mm" }]} />
           </header>
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">My systems</h1>
+          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Window systems</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
-            Your sections, your pieces, your cuts. Saved on this phone, only for your shop.
+            Every window in the app. Tap one to change its sections, cuts, glass and pipe length. Saved on this phone.
           </p>
 
-          <button onClick={() => setView({ kind: "new" })} className="btn-primary mt-5 w-full py-3.5 text-base">+ New system</button>
+          {KIND_ORDER.map(([kind, label]) => {
+            const rows = WINDOW_SYSTEMS.filter((w) => w.kind === kind);
+            return (
+              <div key={kind}>
+                <SectionTitle>{label}</SectionTitle>
+                <div className="card divide-y overflow-hidden">
+                  {rows.map((w) => {
+                    // the shop's own changed copy, if it made one (Window uses the newest)
+                    const mine = lib.systems.filter((x) => x.basedOn?.id === w.id).at(-1);
+                    const t = TEMPLATES.find((x) => x.id === w.id)!;
+                    return (
+                      <button key={w.id} onClick={() => { if (mine) { setView({ kind: "system", id: mine.id }); window.scrollTo({ top: 0 }); } else create(w.id); }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
+                        <span className="w-[72px] shrink-0"><Thumb sys={mine ?? t} lib={lib} /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-bold">{t.name}</span>
+                          <span className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>
+                            {mine ? "Your settings" : "Built-in · tap to change"}
+                            {mine?.jobs.length ? ` · learned from ${mine.jobs.length} window${mine.jobs.length > 1 ? "s" : ""}` : ""}
+                          </span>
+                        </span>
+                        {mine && <Badge tone={SYSTEM_STATUS[mine.status].tone}>{SYSTEM_STATUS[mine.status].label}</Badge>}
+                        <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
-          <SectionTitle>{lib.systems.length ? "Your systems" : "No systems yet"}</SectionTitle>
-          {lib.systems.length === 0 && (
-            <div className="card p-4 text-sm" style={{ color: "var(--ink-2)" }}>
-              Start from a ready system like Domal 27, then change the sections and cuts to how your shop works.
-            </div>
-          )}
-          <div className="flex flex-col gap-2">
-            {lib.systems.map((s) => {
-              const st = SYSTEM_STATUS[s.status];
-              const n = nextStep(s);
-              return (
-                <button key={s.id} onClick={() => { setView({ kind: "system", id: s.id }); window.scrollTo({ top: 0 }); }}
-                  className="card flex items-center gap-3 p-3 text-left">
-                  <span className="w-[76px] shrink-0"><Thumb sys={s} lib={lib} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-bold">{s.name}</span>
-                    <span className="mt-1 flex min-w-0 items-center gap-2">
-                      <Badge tone={n.tone === "good" ? st.tone : n.tone === "warn" ? "warn" : "bad"}>{n.tone === "good" ? st.label : n.tone === "warn" ? "Learning" : "Set up"}</Badge>
-                      <span className="truncate text-xs" style={{ color: "var(--ink-3)" }}>{n.text}</span>
-                    </span>
-                    <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>
-                      {s.layouts.map((l) => `${l.tracks}T`).join(" · ")} · {s.parts.filter((p) => p.enabled !== false).length} pieces
-                      {s.jobs.length ? ` · learned from ${s.jobs.length} window${s.jobs.length > 1 ? "s" : ""}` : ""}
-                    </span>
-                  </span>
-                  <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* the shop's own systems that are not one of the above */}
+          {(() => {
+            const offered = new Set(WINDOW_SYSTEMS.map((w) => w.id));
+            const own = lib.systems.filter((x) => !x.basedOn || !offered.has(x.basedOn.id));
+            return (
+              <>
+                <SectionTitle>Your own systems</SectionTitle>
+                {own.length > 0 && (
+                  <div className="card mb-2 divide-y overflow-hidden">
+                    {own.map((x) => (
+                      <button key={x.id} onClick={() => { setView({ kind: "system", id: x.id }); window.scrollTo({ top: 0 }); }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
+                        <span className="w-[72px] shrink-0"><Thumb sys={x} lib={lib} /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-bold">{x.name}</span>
+                          <span className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>{nextStep(x).text}</span>
+                        </span>
+                        <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setView({ kind: "new" })} className="btn-ghost w-full py-3 text-sm">+ Make a new system</button>
+              </>
+            );
+          })()}
 
           <SectionTitle>Library</SectionTitle>
           <button onClick={() => setView({ kind: "sections" })} className="card flex w-full items-center justify-between p-3 text-left">
@@ -214,18 +208,17 @@ function SystemCard({ t, lib, onPick }: { t: StudioSystem; lib: StudioLibrary; o
       </span>
       {/* the badge already says the kind and size: the title is the maker */}
       <span className="block text-sm font-bold leading-tight">{t.series && t.series.type !== "other" ? (t.name.split(" — ")[1] ?? "Any maker").replace(/^./, (c) => c.toUpperCase()) : t.name}</span>
-      <span className="line-clamp-2 text-[11px] leading-snug" style={{ color: "var(--ink-3)" }}>{t.blurb}</span>
+      <span className="line-clamp-2 text-[11px] leading-snug" style={{ color: "var(--ink-3)" }}>{noMaker(t.blurb)}</span>
     </button>
   );
 }
 
-/** Systems the founder set aside (2026-11-13): kept in the code, not offered. */
-const DROPPED = new Set(["normal-5t", "mini-domal-20", "normal-25"]);
+const KIND_ORDER: [SeriesType, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["euro", "Euro"], ["gulf", "Gulf"], ["casement", "Casement (Z)"]];
 
 function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: string) => void; onBack: () => void }) {
   const [type, setType] = useState<SeriesType | "all">("all");
   const [size, setSize] = useState<number | "all">("all");
-  const real = TEMPLATES.filter((t) => t.series && t.series.type !== "other" && !DROPPED.has(t.id));
+  const real = TEMPLATES.filter((t) => t.series && t.series.type !== "other" && OFFERED.has(t.id));
   const ofType = real.filter((t) => type === "all" || t.series!.type === type);
   const sizes = [...new Set(ofType.map((t) => t.series!.mm).filter((m) => m > 0))].sort((a, b) => a - b);
   const shown = ofType.filter((t) => size === "all" || t.series!.mm === size)
@@ -236,7 +229,7 @@ function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: s
 
   return (
     <>
-      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← My systems</button>
+      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
       <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">New system</h1>
       <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Pick your window. Sections, pieces, angles and cuts can all be changed after.</p>
 
@@ -293,7 +286,7 @@ function Sections({ lib, onSave, onRemove, onBack }: {
   );
   return (
     <>
-      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← My systems</button>
+      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
       <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">My sections</h1>
       <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Every section you buy: its code, size and the bar lengths your dealer sells.</p>
       <button className="btn-primary mt-5 w-full py-3.5" onClick={() => setEdit({})}>+ Add a section</button>

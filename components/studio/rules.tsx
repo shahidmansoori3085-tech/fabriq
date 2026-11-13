@@ -2,7 +2,7 @@
 /** The cut rules of a system, in shop words, with an editor for experts. */
 import { useState } from "react";
 import type { SizeCase, StudioSystem } from "../../lib/studio/model";
-import { evidenceBadge, ruleText, whenText, lenToInput, readLen, fmtLen, UNIT_HINT, deltaUnit, type StudioUnit } from "../../lib/studio/format";
+import { evidenceBadge, noMaker, ruleText, whenText, lenToInput, readLen, fmtLen, UNIT_HINT, deltaUnit, type StudioUnit } from "../../lib/studio/format";
 import { shutterHeightFromDrawing, applyShutterHeight, sameCut, DEFAULT_ROLLER_MM } from "../../lib/studio/derive";
 import { BUILT_IN_PROFILES } from "../../lib/studio/templates";
 import { Badge, Seg, Sheet, Field } from "../studio-ui";
@@ -51,7 +51,7 @@ export function CutsTab({ sys, unit, onChange }: { sys: StudioSystem; unit: Stud
                     <Badge tone={st.tone}>{st.label}</Badge>
                   </div>
                   <div className="mono mt-1 text-[15px] font-semibold">{ruleText(c, SIZE_BASE_LABEL(sys, c.base), unit)}</div>
-                  {c.evidence.source && <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{c.evidence.source}</div>}
+                  {c.evidence.source && <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{noMaker(c.evidence.source)}</div>}
                 </button>
               );
             })}

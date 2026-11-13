@@ -589,7 +589,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     "The roller (24 mm) runs on clip 914401 snapped into the track. Any outer leg on a track is only design.",
     "41010 and 41330 are tracks with a leg, not shutter rails.",
   ],
-}), "shutterMeet", ["a29_handle", "a29_interlock_b"]);
+}), "shutterMeet", ["a29_slim_40"]);
 
 /**
  * Euro 29 — Eleanor (catalogue pages 32–33). Track 48.0 mm (2901 / 2902), so the
@@ -1102,6 +1102,8 @@ withShutterChoice(ELEANOR_29, [
   { value: "2909", label: "2909 — double glass", id: "el29_dgu", take: 106.3, src: "double-glass shutter 2909 (founder): glass stops 53.1 mm in from each shutter edge" },
 ]);
 
+slimSide(ELEANOR_29, "");
+
 /** Which shutter section goes on all four sides (single glass, double glass…), each with its own glass size. First = default. */
 function withShutterChoice(sys: StudioSystem, opts: { value: string; label: string; id: string; take: number; src: string }[]): StudioSystem {
   sys.switches = [...sys.switches.filter((s) => s.id !== "shutter"), {
@@ -1109,14 +1111,27 @@ function withShutterChoice(sys: StudioSystem, opts: { value: string; label: stri
   }];
   const sides = ["shutterTop", "shutterBottom", "shutterLock", "shutterMeet"];
   const rest = opts.slice(1);
-  sys.parts = sys.parts.map((p) => (sides.includes(p.id) ? { ...p, profile: [...rest.map((o) => ({ when: { shutter: o.value }, id: o.id })), ...p.profile] } : p));
+  const meets = sys.switches.some((w) => w.id === "meet");
+  const whenFor = (v: string, meetSide: boolean): Record<string, string> => (meetSide && meets ? { shutter: v, meet: "clip" } : { shutter: v });
+  sys.parts = sys.parts.map((p) => (sides.includes(p.id) ? { ...p, profile: [...rest.map((o) => ({ when: whenFor(o.value, p.id === "shutterMeet"), id: o.id })), ...p.profile] } : p));
   sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" && s.id !== "glassH" ? s : {
-    ...s, cases: [...rest.map((o) => rule(s.id === "glassW" ? "shutterW" : "shutterH", -mm(o.take), FROM_DRAWING(o.src), { when: { shutter: o.value } })), ...s.cases],
+    ...s, cases: [...rest.map((o) => rule(s.id === "glassW" ? "shutterW" : "shutterH", -mm(o.take), FROM_DRAWING(o.src), { when: whenFor(o.value, s.id === "glassW") })), ...s.cases],
   }));
   return sys;
 }
 withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
 withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
+
+/** With a slim interlock the meeting side is the slim, never the shutter: where the
+ *  slim's section is not known the shop chooses it, and its glass width is not guessed. */
+function slimSide(sys: StudioSystem, slim: string): StudioSystem {
+  sys.parts = sys.parts.map((p) => (p.id !== "shutterMeet" ? p : { ...p, profile: [...p.profile.filter((c) => c.when), { id: slim }] }));
+  sys.sizes = sys.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [...x.cases.filter((c) => c.when), unknownFrom("shutterW")] }));
+  return sys;
+}
+slimSide(AMPLE_25, "");
+slimSide(AMPLE_37, "");
+slimSide(AMPLE_29, "a29_slim_40");
 
 /* ———————————————— Euro 27 ———————————————— */
 /**
@@ -1133,8 +1148,8 @@ export const EURO_27: StudioSystem = withMeetChoice(base({
   switches: [{
     id: "track", label: "29 track", default: "47",
     options: [
-      { value: "47", label: "Ample / Banu Hashim · 47.7" },
-      { value: "48", label: "Eleanor · 48.0" },
+      { value: "47", label: "47.7 mm track" },
+      { value: "48", label: "48.0 mm track" },
     ],
   }],
   sizes: [
@@ -1181,40 +1196,54 @@ export const TEMPLATES: StudioSystem[] = [
 // Size in mm + kind, and the ones most shops run (founder, 2026-11-13): 25 Euro and
 // Gulf, 27 Euro and Domal, 29 Euro, 30 Gulf, 31 Gulf, 35 Domal, Euro and Gulf.
 const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
-  "normal-18": [18, "bombay", "Normal 18 mm — OMEO", true],
-  "normal-25": [25, "bombay", "Normal 25 mm (1″ × 2″)"],
-  "normal-5t": [50, "bombay", "Normal 5-track 50 mm"],
-  "domal-27": [27, "domal", "Domal 27 mm — OMEO", true],
-  "ample-27": [27, "domal", "Domal 27 mm — Ample"],
-  "eleanor-27": [27, "domal", "Domal 27 mm — Eleanor"],
-  "bh-27": [27, "domal", "Domal 27 mm — Banu Hashim"],
-  "domal-35": [35, "domal", "Domal 35 mm — Banu Hashim", true],
-  "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
-  "ample-22": [22, "domal", "Mini domal 22 mm — Ample"],
-  "ample-25": [25, "euro", "Euro 25 mm — Ample", true],
-  "euro-26": [26, "euro", "Euro 26 mm — Banu Hashim"],
-  "ample-26": [26, "euro", "Euro 26 mm — Ample"],
+  // shown in Window and in Settings → Window systems: one per kind and size, no company (founder, 2026-11-13)
+  "normal-18": [18, "bombay", "Normal 18 mm", true],
+  "domal-27": [27, "domal", "Domal 27 mm", true],
+  "ample-22": [22, "domal", "Mini domal 22 mm"],
+  "domal-35": [35, "domal", "Domal 35 mm", true],
+  "ample-25": [25, "euro", "Euro 25 mm", true],
+  "euro-26": [26, "euro", "Euro 26 mm"],
   "euro-27": [27, "euro", "Euro 27 mm", true],
-  "ample-29": [29, "euro", "Euro 29 mm — Ample", true],
-  "eleanor-29": [29, "euro", "Euro 29 mm — Eleanor"],
-  "euro-35": [35, "euro", "Euro 35 mm — Banu Hashim / Eleanor", true],
-  "ample-37": [37, "euro", "Euro 37 mm — Ample"],
-  "gulf-25": [25, "gulf", "Gulf 25 mm — Banu Hashim", true],
-  "gulf-s30": [30, "gulf", "Gulf 30 mm — Alucoat", true],
-  "bh-31": [31, "gulf", "Gulf 31 mm — Banu Hashim", true],
-  "bh-35": [35, "gulf", "Gulf 35 mm — Banu Hashim / Eleanor", true],
-  "gulf": [0, "gulf", "Gulf — any size"],
-  "z-40": [40, "casement", "Casement Z 40 mm — OMEO", true],
-  "z-55": [55, "casement", "Casement Z 55 mm (heavy)"],
+  "ample-29": [29, "euro", "Euro 29 mm", true],
+  "euro-35": [35, "euro", "Euro 35 mm", true],
+  "ample-37": [37, "euro", "Euro 37 mm"],
+  "gulf-25": [25, "gulf", "Gulf 25 mm", true],
+  "gulf-s30": [30, "gulf", "Gulf 30 mm", true],
+  "bh-31": [31, "gulf", "Gulf 31 mm", true],
+  "bh-35": [35, "gulf", "Gulf 35 mm", true],
+  "z-40": [40, "casement", "Casement Z 40 mm", true],
+  "z-55": [55, "casement", "Casement Z 55 mm"],
   "blank-domal-type": [0, "other", "New — one shutter section on 4 sides"],
   "blank-sliding": [0, "other", "New — handle, interlock, bearing"],
+  // kept for the drawings and tests, not offered: another maker's version of a size above, or set aside by the founder
+  "normal-25": [25, "bombay", "Normal 25 mm (1″ × 2″)"],
+  "normal-5t": [50, "bombay", "Normal 5-track 50 mm"],
+  "ample-27": [27, "domal", "Domal 27 mm (shutter 214315)"],
+  "eleanor-27": [27, "domal", "Domal 27 mm (shutter 2722)"],
+  "bh-27": [27, "domal", "Domal 27 mm (track 45.5)"],
+  "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
+  "ample-26": [26, "euro", "Euro 26 mm (shutter 41300)"],
+  "eleanor-29": [29, "euro", "Euro 29 mm (track 48.0)"],
+  "gulf": [0, "gulf", "Gulf — any size"],
 };
+/** What Window offers: one system per kind and size. Normal 18, Domal 27 and Z run on the
+ *  checked engine until the shop changes them in Settings. */
+export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section" }[] = [
+  { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" },
+  { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
+  { id: "ample-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
+  { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 }, { id: "ample-37", kind: "euro", mm: 37 },
+  { id: "gulf-25", kind: "gulf", mm: 25 }, { id: "gulf-s30", kind: "gulf", mm: 30 }, { id: "bh-31", kind: "gulf", mm: 31 }, { id: "bh-35", kind: "gulf", mm: 35 },
+  { id: "z-40", kind: "casement", mm: 40, engine: "z_section" },
+];
+/** Shown in Settings → New system (the window ones, Z 55 and the blanks). */
+export const OFFERED = new Set([...WINDOW_SYSTEMS.map((w) => w.id), "z-55", "blank-domal-type", "blank-sliding"]);
 for (const t of TEMPLATES) {
-  const s = SERIES[t.id];
-  if (!s) continue;
-  t.series = { mm: s[0], type: s[1] };
-  t.name = s[2];
-  t.popular = !!s[3];
+  const x = SERIES[t.id];
+  if (!x) continue;
+  t.series = { mm: x[0], type: x[1] };
+  t.name = x[2];
+  t.popular = !!x[3];
 }
 
 /** The kind of section each part takes (for blanks and drafts with no sections yet). */

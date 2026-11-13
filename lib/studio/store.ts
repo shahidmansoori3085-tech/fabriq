@@ -40,8 +40,10 @@ export function loadLibrary(): StudioLibrary {
 
 /** Systems saved before pieces had a place in the drawing get one from their template. */
 function migrate(sys: StudioSystem): StudioSystem {
-  if (sys.parts.every((p) => p.place)) return sys;
   const tpl = TEMPLATES.find((t) => t.id === sys.basedOn?.id);
+  // names carry no company any more (founder, 2026-11-13): "Euro 25 mm — Ample" → "Euro 25 mm"
+  if (tpl && sys.name.includes(" — ") && sys.name.split(" — ")[0] === tpl.name.split(" (")[0]) sys = { ...sys, name: tpl.name };
+  if (sys.parts.every((p) => p.place)) return sys;
   return {
     ...sys,
     parts: sys.parts.map((p) => (p.place ? p : { ...p, place: tpl?.parts.find((x) => x.id === p.id)?.place ?? "other" })),

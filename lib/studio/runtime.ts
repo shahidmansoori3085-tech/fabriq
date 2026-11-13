@@ -6,6 +6,7 @@
 import type { ProfileDef, StudioSystem } from "./model";
 import type { JobItem } from "../engine/types";
 import { evaluate, type StudioJob } from "./evaluate";
+import { TEMPLATES, WINDOW_SYSTEMS } from "./templates";
 
 let systems: StudioSystem[] = [];
 let shopProfiles: ProfileDef[] = [];
@@ -16,7 +17,16 @@ export function shopProfile(id: string): ProfileDef | undefined { return shopPro
 
 export function registerStudioSystems(list: StudioSystem[]): void { systems = list; }
 export function studioSystems(): StudioSystem[] { return systems; }
-export function studioSystem(id: string): StudioSystem | undefined { return systems.find((s) => s.id === id); }
+/** The shop's system, else a built-in one by its id (Window offers built-ins directly). */
+export function studioSystem(id: string): StudioSystem | undefined { return systems.find((s) => s.id === id) ?? TEMPLATES.find((t) => t.id === id); }
+
+/** The system Window uses for a built-in: the shop's own changed copy if it made one (newest), else the built-in. */
+export function systemForWindow(templateId: string): StudioSystem | undefined {
+  const own = systems.filter((s) => s.basedOn?.id === templateId);
+  return own[own.length - 1] ?? TEMPLATES.find((t) => t.id === templateId);
+}
+
+export { WINDOW_SYSTEMS };
 
 /** The system an item was built with: its frozen copy, else the live one. */
 export function systemOfItem(item: JobItem): StudioSystem | undefined {
