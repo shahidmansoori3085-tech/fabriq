@@ -14,7 +14,7 @@
  */
 import { mm, inches } from "../engine/units";
 import type {
-  StudioSystem, SizeDef, SizeCase, PartDef, ProfileDef, Evidence, ExtraDef, Cond, ProfileKind, Place,
+  StudioSystem, SizeDef, SizeCase, PartDef, ProfileDef, Evidence, ExtraDef, Cond, ProfileKind, Place, SeriesType,
 } from "./model";
 import { withAlternatives } from "./edit";
 
@@ -478,7 +478,7 @@ export const MINI_DOMAL_20: StudioSystem = base({
 /** Ample 22 mm — light domal-type: shutter on 3 sides, interlock profile on the meeting side. */
 export const AMPLE_22: StudioSystem = base({
   id: "ample-22", name: "22 mm mini domal — Ample", group: "domal", maker: "Ample",
-  blurb: "35 mm track (41083 / 41084); shutter 41082 with interlock 41085 on the meeting side",
+  blurb: "35 mm track (41083 / 41084), no clip; shutter 41082 on all sides; jali shutter 41085",
   profiles: [
     prof("a22_track_2t", "22 mm 2-Track", "track", { ample: "41083" }, "53.9×35", perM(0.8), CATALOGUE("Ample 22 mm p.2")),
     prof("a22_track_3t", "22 mm 3-Track", "track", { ample: "41084" }, "83.9×35", perM(1.13), CATALOGUE("Ample 22 mm p.2")),
@@ -501,7 +501,7 @@ export const AMPLE_22: StudioSystem = base({
 
 export const AMPLE_25: StudioSystem = base({
   id: "ample-25", name: "25 mm sliding — Ample", group: "domal", maker: "Ample",
-  blurb: "40 mm track (955388 / 955389); shutter 914744 with interlock 41323",
+  blurb: "40 mm U track (955388 / 955389) with roller clip 914401; shutter 41323 on all sides; interlock clip or slim interlock",
   profiles: [
     prof("a25_track_2t", "25 mm 2-Track", "track", { ample: "955388" }, "50×40", perM(0.795), CATALOGUE("Ample 25 mm p.2")),
     prof("a25_track_3t", "25 mm 3-Track", "track", { ample: "955389" }, "85.8×40", perM(1.24), CATALOGUE("Ample 25 mm p.2")),
@@ -550,7 +550,7 @@ export const AMPLE_26: StudioSystem = base({
 
 export const AMPLE_29: StudioSystem = withAlternatives(base({
   id: "ample-29", name: "29 mm sleek — Ample", group: "sleek", maker: "Ample",
-  blurb: "47.7 mm track with roller clip 914401; shutter 41055; interlock or slim interlock shutter by shutter",
+  blurb: "47.7 mm U track with roller clip 914401; shutter 41055 on all sides + interlock clip 41054, or slim interlock; jali 41050",
   profiles: [
     prof("a29_track_2t", "29 mm 2-Track", "track", { ample: "914400" }, "50×47.69", perM(1.1), CATALOGUE("Ample 29 mm p.2")),
     prof("a29_track_2t_b", "29 mm 2-Track (light)", "track", { ample: "914643" }, "50×47.7", perM(0.865), CATALOGUE("Ample 29 mm p.2")),
@@ -593,7 +593,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
 
 export const AMPLE_37: StudioSystem = withAlternatives(base({
   id: "ample-37", name: "37 mm sleek — Ample", group: "sleek", maker: "Ample",
-  blurb: "Track 41015 / 41014 with roller clip 41310; shutter 41068; interlock or slim interlock shutter by shutter",
+  blurb: "Track 41015 / 41014 with round roller clip 41310; shutter 41068 on all sides; double glass 41076; jali 41074",
   profiles: [
     prof("a37_track_2t", "37 mm 2-Track", "track", { ample: "41015" }, "90×53", perM(1.822), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_track_3t", "37 mm 3-Track", "track", { ample: "41014" }, "140×53", perM(2.688), CATALOGUE("Ample 37 mm p.2")),
@@ -1017,15 +1017,121 @@ drawn(AMPLE_37, { shutterW: [HALF], clipW: clip(99.4, "2 × 49.7"), ...glassBoth
 // Alucoat S-30: one shutter profile on 4 sides, interlock clip at the meeting
 drawn(GULF_S30, { ...gulfFrame(33, "AT-30001"), shutterW: [HALF], ...glassBoth(55.1, "AT-30005 pocket") });
 
+/* ———————————————— meeting side: slim interlock, or shutter + interlock clip ———————————————— */
+// Founder (2026-11-13): the slim interlock is a choice. Many shops put the glass
+// shutter on all four sides and an interlock clip on top of it at the meeting;
+// others fit a slim interlock — both small, or one small and one big. Any
+// Domal / Euro / Gulf of 25–31 mm can be made either way.
+const MEET_SWITCH = (def: "slim" | "clip") => ({
+  id: "meet", label: "Meeting side", default: def,
+  options: [{ value: "slim", label: "Slim interlock" }, { value: "clip", label: "Shutter + interlock clip" }],
+});
+function withMeetChoice(sys: StudioSystem, o: { lock: string; clip: string; glassW: number | null; src: string; def?: "slim" | "clip" }): StudioSystem {
+  sys.switches = [...sys.switches.filter((s) => s.id !== "meet"), MEET_SWITCH(o.def ?? "slim")];
+  sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
+  sys.parts = [...sys.parts.filter((p) => p.id !== "meetClip"),
+    part("meetClip", "Interlock Clip {k}", o.clip, "meeting", "shutterH", 90, "meeting", { count: 2, when: { meet: "clip" } })];
+  sys.sizes = sys.sizes.map((s) => (s.id !== "glassW" ? s : {
+    ...s,
+    cases: [o.glassW === null
+      ? unknownFrom("shutterW", { when: { meet: "clip" } })
+      : rule("shutterW", -mm(o.glassW), FROM_DRAWING(`${o.src} — the same shutter on both sides`), { when: { meet: "clip" } }), ...s.cases],
+  }));
+  return sys;
+}
+
+withMeetChoice(EURO_26, { lock: "bh_6003", clip: "bh_6054", glassW: 118.2, src: "glass stops 59.1 mm in (BH-6003)" });
+withMeetChoice(EURO_35, { lock: "e35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
+withMeetChoice(GULF_25, { lock: "bh_2555", clip: "", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
+withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
+withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
+withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
+withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
+withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
+
+/* ———————————————— Euro 27 ———————————————— */
+/**
+ * Euro 27 (founder): the Euro 29 track (Ample 914400 / 41052) with its roller
+ * clip 914401, and a 27 mm glass shutter. Built from the drawings: the 27 mm
+ * shutter (OMEO 2046) runs clear over the 29 track and clip.
+ */
+const pick = (from: StudioSystem[], ids: string[]) => ids.map((id) => from.flatMap((s) => s.profiles).find((p) => p.id === id)!);
+export const EURO_27: StudioSystem = withMeetChoice(base({
+  id: "euro-27", name: "Euro 27 mm", group: "gulf",
+  blurb: "Euro 29 track (914400 / 41052) with roller clip 914401; 27 mm shutter on all sides; interlock clip, or slim interlock",
+  layouts: [L2(), L3()],
+  profiles: pick([AMPLE_29, DOMAL_27], ["a29_track_2t", "a29_track_3t", "a29_clip", "domal_glass_shutter", "domal_jali_shutter", "domal_interlock"]),
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
+    size("clipW", "Roller clip", rule("W", -mm(95.4), FROM_DRAWING("clear width between the side U tips (2 × 47.7)"))),
+    size("shutterW", "Shutter width", HALF),
+    size("shutterH", "Shutter height", rule("H", -mm(73.8), FROM_DRAWING("2 × 47.7 track + 2.4 clip − 24 roller; the 27 mm shutter runs clear"))),
+    size("glassW", "Glass width", unknownFrom("shutterW")),
+    size("glassH", "Glass height", rule("shutterH", -mm(102), ev("observed", "27 mm shutter pocket (OMEO 2046): shutter − 102, as Domal 27"))),
+  ],
+  parts: [
+    ...domalFrame(byTracks("a29_track_2t", "a29_track_3t")),
+    part("trackClip", "{s} Roller Clip", "a29_clip", "shutter", "clipW", 90, "other"),
+    part("shutterTop", "{s} Shutter Top{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-top", { meshProfile: "domal_jali_shutter" }),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "domal_jali_shutter" }),
+    part("shutterLock", "{s} Handle Side{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "domal_jali_shutter" }),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
+  ],
+  notes: [
+    "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder).",
+    "Meeting side: the shutter itself with the interlock patti on it, or your slim interlock (choose its section).",
+  ],
+}), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });
+
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
-  AMPLE_27, ELEANOR_27, BH_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
+  AMPLE_27, ELEANOR_27, BH_27, EURO_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, AMPLE_37,
   EURO_26, EURO_35, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
+
+/* ———————————————— what shops call each system ———————————————— */
+// Size in mm + kind, and the ones most shops run (founder, 2026-11-13): 25 Euro and
+// Gulf, 27 Euro and Domal, 29 Euro, 30 Gulf, 31 Gulf, 35 Domal, Euro and Gulf.
+const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
+  "normal-18": [18, "bombay", "Normal 18 mm — OMEO", true],
+  "normal-25": [25, "bombay", "Normal 25 mm (1″ × 2″)"],
+  "normal-5t": [50, "bombay", "Normal 5-track 50 mm"],
+  "domal-27": [27, "domal", "Domal 27 mm — OMEO", true],
+  "ample-27": [27, "domal", "Domal 27 mm — Ample"],
+  "eleanor-27": [27, "domal", "Domal 27 mm — Eleanor"],
+  "bh-27": [27, "domal", "Domal 27 mm — Banu Hashim"],
+  "domal-35": [35, "domal", "Domal 35 mm — Banu Hashim", true],
+  "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
+  "ample-22": [22, "domal", "Mini domal 22 mm — Ample"],
+  "ample-25": [25, "euro", "Euro 25 mm — Ample", true],
+  "euro-26": [26, "euro", "Euro 26 mm — Banu Hashim"],
+  "ample-26": [26, "euro", "Euro 26 mm — Ample"],
+  "euro-27": [27, "euro", "Euro 27 mm", true],
+  "ample-29": [29, "euro", "Euro 29 mm — Ample", true],
+  "euro-35": [35, "euro", "Euro 35 mm — Banu Hashim / Eleanor", true],
+  "ample-37": [37, "euro", "Euro 37 mm — Ample"],
+  "gulf-25": [25, "gulf", "Gulf 25 mm — Banu Hashim", true],
+  "gulf-s30": [30, "gulf", "Gulf 30 mm — Alucoat", true],
+  "bh-31": [31, "gulf", "Gulf 31 mm — Banu Hashim", true],
+  "bh-35": [35, "gulf", "Gulf 35 mm — Banu Hashim / Eleanor", true],
+  "gulf": [0, "gulf", "Gulf — any size"],
+  "z-40": [40, "casement", "Casement Z 40 mm — OMEO", true],
+  "z-55": [55, "casement", "Casement Z 55 mm (heavy)"],
+  "blank-domal-type": [0, "other", "New — one shutter section on 4 sides"],
+  "blank-sliding": [0, "other", "New — handle, interlock, bearing"],
+};
+for (const t of TEMPLATES) {
+  const s = SERIES[t.id];
+  if (!s) continue;
+  t.series = { mm: s[0], type: s[1] };
+  t.name = s[2];
+  t.popular = !!s[3];
+}
 
 /** The kind of section each part takes (for blanks and drafts with no sections yet). */
 export const PART_KIND: Record<string, ProfileKind> = {
@@ -1033,7 +1139,7 @@ export const PART_KIND: Record<string, ProfileKind> = {
   handle: "handle", interlock: "interlock", bearingTop: "bearing", bearingBottom: "bearing",
   frameTop: "frame", frameLeft: "frame", frameRight: "frame", frameBottom: "frame",
   shutterTop: "shutter", shutterBottom: "shutter", shutterLeft: "shutter", shutterRight: "shutter",
-  shutterLock: "shutter", shutterMeet: "interlock", interlockSpine: "interlock", trackClip: "rail",
+  shutterLock: "shutter", shutterMeet: "interlock", interlockSpine: "interlock", trackClip: "rail", meetClip: "interlock-patti",
   outerTop: "frame", outerBottom: "frame", outerLeft: "frame", outerRight: "frame", mullion: "mullion",
   sashTop: "shutter", sashBottom: "shutter", sashLeft: "shutter", sashRight: "shutter",
   clipTop: "bead", clipBottom: "bead", clipLeft: "bead", clipRight: "bead",

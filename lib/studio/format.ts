@@ -1,9 +1,20 @@
 /** Small display helpers for the Studio screens. */
 import type { Um } from "../engine/units";
-import { UM_PER_INCH, UM_PER_SUT, parseSizeIn } from "../engine/units";
+import { UM_PER_INCH, UM_PER_SUT, parseSizeIn, formatTradeSize } from "../engine/units";
 import type { EvidenceStatus, SizeCase, StudioSystem, SystemStatus } from "./model";
 
-export type StudioUnit = "in" | "mm";
+/** ft = feet.inch.sut (4.6.2), in = inch.sut (58.3), mm */
+export type StudioUnit = "ft" | "in" | "mm";
+
+/** How a length is typed in this unit, for labels. */
+export const UNIT_HINT: Record<StudioUnit, string> = {
+  ft: "feet.inch.sut — 4.6.2 = 4′ 6″ 2 sut",
+  in: "inch.sut — 58.3 = 58″ 3 sut",
+  mm: "mm",
+};
+export const UNIT_SHORT: Record<StudioUnit, string> = { ft: "ft.in.sut", in: "inch.sut", mm: "mm" };
+/** Small amounts (add / take off) are typed in inches even when sizes are in feet. */
+export const deltaUnit = (u: StudioUnit): StudioUnit => (u === "ft" ? "in" : u);
 
 /** 58″3s — the way the shop tape reads (inch + sut), or mm. */
 export function fmtLen(um: Um, unit: StudioUnit): string {
@@ -12,6 +23,10 @@ export function fmtLen(um: Um, unit: StudioUnit): string {
   const total = Math.round(Math.abs(um) / UM_PER_SUT);
   const inch = Math.floor(total / 8), sut = total % 8;
   const off = Math.abs(Math.abs(um) - total * UM_PER_SUT) > 400 ? "~" : "";
+  if (unit === "ft" && inch >= 12) {
+    const ft = Math.floor(inch / 12), rest = inch % 12;
+    return `${neg ? "−" : ""}${off}${ft}′ ${rest}″${sut ? ` ${sut}s` : ""}`;
+  }
   return `${neg ? "−" : ""}${off}${inch}″${sut ? ` ${sut}s` : ""}`;
 }
 
@@ -31,6 +46,7 @@ export function readLen(raw: string, unit: StudioUnit): Um | null {
 /** A typed length back into the box. */
 export function lenToInput(um: Um, unit: StudioUnit): string {
   if (unit === "mm") return String(Math.round(um / 100) / 10);
+  if (unit === "ft") return formatTradeSize(Math.abs(um));
   const total = Math.round(Math.abs(um) / UM_PER_SUT);
   return `${Math.floor(total / 8)}${total % 8 ? `.${total % 8}` : ""}`;
 }

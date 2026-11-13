@@ -8,6 +8,17 @@ import { Sheet, Field } from "../studio-ui";
 import SectionSketch from "../section-sketch";
 import { traceImage } from "../../lib/studio/tracer";
 import { readDxf } from "../../lib/studio/dxf";
+import { recognize, type Recognized, type SectionRole } from "../../lib/studio/recognize";
+
+/** What the shape says a section is, in the form's own words. */
+const ROLE_KIND: Record<SectionRole, ProfileKind | null> = {
+  "glass-shutter": "shutter", "double-glass-shutter": "shutter", "mesh-shutter": "mesh-shutter",
+  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", bead: "bead", other: null,
+};
+const ROLE_TEXT: Record<SectionRole, string> = {
+  "glass-shutter": "a glass shutter", "double-glass-shutter": "a double-glass shutter", "mesh-shutter": "a mesh (jali) shutter",
+  track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", bead: "a glazing clip / patti", other: "",
+};
 
 /** Read a picture into a grey array, at most 1400 px on its long side. */
 async function grayFromFile(file: File): Promise<{ g: Uint8Array; w: number; h: number }> {
@@ -86,6 +97,24 @@ export function ProfileForm({ initial, onSave, onCancel }: {
   const [pic, setPic] = useState<{ g: Uint8Array; w: number; h: number } | null>(null);
   const [invert, setInvert] = useState(false);
   const [traceMsg, setTraceMsg] = useState("");
+  const [seen, setSeen] = useState<Recognized | null>(null);
+  // read the section's job off its drawing (a few seconds on a phone); set it unless the shop already chose
+  const look = (sh: NonNullable<typeof shape>) => {
+    setSeen(null);
+    const done = (r: Recognized | null) => {
+      if (!r) return;
+      setSeen(r);
+      const k = ROLE_KIND[r.role];
+      if (k) setKind((cur) => (cur === "other" ? k : cur));
+    };
+    // measure off the screen thread when the browser can; otherwise right here
+    try {
+      const w = new Worker(new URL("../../lib/studio/recognize.worker.ts", import.meta.url));
+      w.onmessage = (e: MessageEvent<{ result: Recognized | null }>) => { done(e.data.result); w.terminate(); };
+      w.onerror = () => { w.terminate(); done(recognize(sh)); };
+      w.postMessage({ id: 1, shape: sh });
+    } catch { setTimeout(() => done(recognize(sh)), 30); }
+  };
   const dims = size.split(/[×x*]/).map((v) => parseFloat(v)).filter((v) => v > 0);
   const runTrace = (p: { g: Uint8Array; w: number; h: number } | null, inv: boolean) => {
     if (!p) return;
@@ -93,6 +122,7 @@ export function ProfileForm({ initial, onSave, onCancel }: {
     const t = traceImage(p.g, p.w, p.h, dims[0], dims[1], inv);
     if (!t) { setTraceMsg("No section found in this picture. Try a closer, straight photo."); return; }
     setShape(t);
+    look(t);
     setTraceMsg(t.scaleCheck > 4 ? `Traced, but its shape is ${t.scaleCheck}% off the size you typed — check the size, or crop closer.` : "Traced to your size.");
   };
 
@@ -150,7 +180,7 @@ export function ProfileForm({ initial, onSave, onCancel }: {
                   // a CAD drawing is exact: its own size is the section's size
                   const d = readDxf(await f.text());
                   if (!d) { setTraceMsg("No closed section found in this DXF."); return; }
-                  setShape(d); setPic(null);
+                  setShape(d); setPic(null); look(d);
                   if (!size.trim()) setSize(`${d.w}×${d.h}`);
                   setTraceMsg(`From the DXF: ${d.w} × ${d.h} mm.`);
                   return;
@@ -168,7 +198,19 @@ export function ProfileForm({ initial, onSave, onCancel }: {
             <button type="button" style={{ color: "var(--accent)" }} onClick={() => { setInvert(!invert); runTrace(pic, !invert); }}>Light drawing on dark</button>
           </div>
         )}
-        {shape && <button type="button" className="mt-2 text-xs font-semibold" style={{ color: "var(--bad)" }} onClick={() => { setShape(undefined); setPic(null); setTraceMsg(""); }}>Remove drawing</button>}
+        {shape && seen && seen.role !== "other" && (
+          <div className="mt-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--surface)" }}>
+            <div><b>Looks like {ROLE_TEXT[seen.role]}</b>{seen.grooves ? ` · ${seen.grooves} grooves` : ""}</div>
+            <div style={{ color: "var(--ink-3)" }}>{seen.why}</div>
+            {ROLE_KIND[seen.role] && ROLE_KIND[seen.role] !== kind && (
+              <button type="button" className="mt-1 font-semibold" style={{ color: "var(--accent)" }} onClick={() => setKind(ROLE_KIND[seen.role]!)}>
+                Set “What is it” to {PROFILE_KINDS.find((k) => k.id === ROLE_KIND[seen.role])?.label}
+              </button>
+            )}
+          </div>
+        )}
+        {shape && !seen && <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Reading the shape…</p>}
+        {shape && <button type="button" className="mt-2 text-xs font-semibold" style={{ color: "var(--bad)" }} onClick={() => { setShape(undefined); setPic(null); setTraceMsg(""); setSeen(null); }}>Remove drawing</button>}
       </div>
       <Field label="Width seen from the front (mm)" hint="Optional. Used for the drawing. Empty = taken from the size.">
         <input className="field px-3 py-2.5" inputMode="decimal" value={face} onChange={(e) => setFace(e.target.value)} placeholder="auto" />

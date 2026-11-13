@@ -4,7 +4,7 @@
  *   npx tsx scripts/audit-studio.ts
  */
 import { TEMPLATES, BUILT_IN_PROFILES, PART_KIND } from "../lib/studio/templates";
-import { evaluate, computeSizes } from "../lib/studio/evaluate";
+import { evaluate, computeSizes, jobVars, matches } from "../lib/studio/evaluate";
 import { shapeOf } from "../lib/studio/shapes";
 import { pickSwitchId } from "../lib/studio/edit";
 
@@ -61,9 +61,12 @@ for (const sys of TEMPLATES) {
     const frames = r.pieces.filter((p) => /^(Frame|Top|Bottom|Left|Right|Outer)/.test(p.role) && p.itemId === "A.1");
     if (sys.family !== "casement" && frames.length && frames.length !== 4) say(sys.id, `${tag}: ${frames.length} frame pieces, expected 4`);
     const sh = mix.length;
-    const meets = r.pieces.filter((p) => /^Interlock \d/.test(p.role) && p.itemId === "A.1").length;
-    const glassN = [...mix].filter((c) => c !== "J").length;
-    if (sys.parts.some((p) => p.scope === "meeting") && meets !== 2 * Math.max(0, glassN - 1) * (sys.parts.find((p) => p.scope === "meeting")!.count / 2)) say(sys.id, `${tag}: ${meets} meeting pieces for ${glassN} glass shutters`);
+    // meeting pieces: 2 per glass–glass meeting for each meeting part in use (its 'when' matches)
+    const vars = jobVars(sys, { id: "A", W, H, qty: 1, tracks: lay.tracks, mix });
+    const meetParts = sys.parts.filter((p) => p.scope === "meeting" && p.enabled !== false && matches(p.when, vars));
+    const want = meetParts.reduce((n, p) => n + p.count * Math.max(0, [...mix].filter((c) => c !== "J").length - 1), 0);
+    const got = r.pieces.filter((p) => p.itemId === "A.1" && meetParts.some((m) => p.role.startsWith(m.role.split(" {k}")[0]))).length;
+    if (got !== want) say(sys.id, `${tag}: ${got} meeting pieces, expected ${want}`);
     void sh;
   }
   // per-shutter picks exist

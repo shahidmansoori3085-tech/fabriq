@@ -12,7 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
-import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -176,6 +176,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
       )}
       {pick?.type === "shutter" && (
         <ShutterPanel sys={sys} lib={lib} unit={unit} index={pick.index} mix={mix} values={values} perShutter={perShutter}
+          meetClip={(switches.meet ?? sys.switches.find((x) => x.id === "meet")?.default) === "clip"}
           onKind={(k) => setMix((m) => m.slice(0, pick.index) + k + m.slice(pick.index + 1))}
           onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
           onSelectPart={selectPart} onClose={() => setPick(null)} />
@@ -229,12 +230,12 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
   return (
     <div className="border-t px-3 py-3" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
       <div className="flex items-end gap-2">
-        <Field label={`Width (${unit === "mm" ? "mm" : "inch.sut"})`}>
+        <Field label={`Width (${UNIT_SHORT[unit]})`}>
           <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={w}
             onChange={(e) => { setW(e.target.value); commit(e.target.value, h); }} />
         </Field>
         <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
-        <Field label={`Height (${unit === "mm" ? "mm" : "inch.sut"})`}>
+        <Field label={`Height (${UNIT_SHORT[unit]})`}>
           <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={h}
             onChange={(e) => { setH(e.target.value); commit(w, e.target.value); }} />
         </Field>
@@ -253,6 +254,7 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
       </div>
       {sys.switches.filter((s) => !s.id.startsWith("pick_")).map((sw) => (
         <div key={sw.id} className="mt-3">
+          <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{sw.label}</div>
           <Seg small value={switches[sw.id] ?? sw.default} onChange={(v) => onSwitch(sw.id, v)} options={sw.options.map((o) => ({ value: o.value, label: o.label }))} />
         </div>
       ))}
@@ -419,13 +421,14 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, onPatch, onSys, on
 
 /* ———————————————— a tapped shutter ———————————————— */
 
-function ShutterPanel({ sys, lib, unit, index, mix, values, perShutter, onKind, onChoice, onSelectPart, onClose }: {
+function ShutterPanel({ sys, lib, unit, index, mix, values, perShutter, meetClip, onKind, onChoice, onSelectPart, onClose }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; index: number; mix: string; values: Record<string, Um | null>;
-  perShutter: Record<string, string>[];
+  perShutter: Record<string, string>[]; meetClip: boolean;
   onKind: (k: "G" | "J" | "S") => void; onChoice: (swId: string, v: string) => void; onSelectPart: (id: string) => void; onClose: () => void;
 }) {
   const kind = (mix[index] ?? "G") as "G" | "J" | "S";
-  const choiceParts = sys.parts.filter((p) => p.scope === "shutter" && p.enabled !== false && alternativesOf(sys, p));
+  // with "shutter + interlock clip" the meeting side is the shutter itself: no slim to choose
+  const choiceParts = sys.parts.filter((p) => p.scope === "shutter" && p.enabled !== false && alternativesOf(sys, p) && !(meetClip && p.id === "shutterMeet"));
   const v = (id: string) => values[id];
   return (
     <div className="card mt-3 p-4" style={{ borderColor: "var(--accent)", borderWidth: 1.5 }}>

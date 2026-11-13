@@ -149,6 +149,9 @@ export interface SwitchDef {
   default: string;
 }
 
+/** Kinds of window the shops name: Domal, Euro, Gulf, Bombay (normal), Sleek, Casement. */
+export type SeriesType = "domal" | "euro" | "gulf" | "bombay" | "sleek" | "casement" | "other";
+
 export type SystemFamily = "sliding" | "domal-type" | "casement";
 export type SystemStatus = "draft" | "teaching" | "checked" | "verified";
 
@@ -160,6 +163,10 @@ export interface StudioSystem {
   blurb: string;
   /** where the New-system screen lists it */
   group?: "ready" | "bombay" | "domal" | "sleek" | "gulf" | "casement" | "special" | "blank";
+  /** what the shop calls it: the series size in mm and the kind of window (for the New-system picker) */
+  series?: { mm: number; type: SeriesType };
+  /** one of the systems most shops use */
+  popular?: boolean;
   /** maker of the sections in this draft, when it is one catalogue's set */
   maker?: string;
   /**

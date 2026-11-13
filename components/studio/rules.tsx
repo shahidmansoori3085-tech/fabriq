@@ -2,7 +2,7 @@
 /** The cut rules of a system, in shop words, with an editor for experts. */
 import { useState } from "react";
 import type { SizeCase, StudioSystem } from "../../lib/studio/model";
-import { STATUS_TEXT, ruleText, whenText, lenToInput, readLen, fmtLen, type StudioUnit } from "../../lib/studio/format";
+import { STATUS_TEXT, ruleText, whenText, lenToInput, readLen, fmtLen, UNIT_HINT, deltaUnit, type StudioUnit } from "../../lib/studio/format";
 import { shutterHeightFromDrawing, applyShutterHeight, sameCut, DEFAULT_ROLLER_MM } from "../../lib/studio/derive";
 import { BUILT_IN_PROFILES } from "../../lib/studio/templates";
 import { Badge, Seg, Sheet, Field } from "../studio-ui";
@@ -80,16 +80,17 @@ function RuleEditor({ sys, unit, sizeId, c, canRemove, onSave, onRemove, onClose
   sys: StudioSystem; unit: StudioUnit; sizeId: string; c: SizeCase; canRemove: boolean;
   onSave: (c: SizeCase) => void; onRemove: () => void; onClose: () => void;
 }) {
+  const du = deltaUnit(unit); // add / take off is typed in inches when sizes are in feet
   const idx = sys.sizes.findIndex((s) => s.id === sizeId);
   const bases = ["W", "H", ...sys.sizes.slice(0, idx).map((s) => s.id)];
   const [base, setBase] = useState(c.base);
   const [den, setDen] = useState(c.den ?? 1);
   const [preSign, setPreSign] = useState<1 | -1>((c.pre ?? 0) < 0 ? -1 : 1);
-  const [pre, setPre] = useState(c.pre ? lenToInput(Math.abs(c.pre), unit) : "");
+  const [pre, setPre] = useState(c.pre ? lenToInput(Math.abs(c.pre), du) : "");
   const [addSign, setAddSign] = useState<1 | -1>((c.add ?? -1) < 0 ? -1 : 1);
-  const [add, setAdd] = useState(c.add !== null && c.add !== 0 ? lenToInput(Math.abs(c.add), unit) : c.add === 0 ? "0" : "");
-  const preV = pre.trim() ? readLen(pre, unit) : 0;
-  const addV = add.trim() === "0" ? 0 : add.trim() ? readLen(add, unit) : null;
+  const [add, setAdd] = useState(c.add !== null && c.add !== 0 ? lenToInput(Math.abs(c.add), du) : c.add === 0 ? "0" : "");
+  const preV = pre.trim() ? readLen(pre, du) : 0;
+  const addV = add.trim() === "0" ? 0 : add.trim() ? readLen(add, du) : null;
   const label = sys.sizes[idx]?.label ?? sizeId;
   const draft: SizeCase = {
     ...c, base, den: den === 1 ? undefined : den, pre: preV ? preSign * preV : undefined,
@@ -97,7 +98,7 @@ function RuleEditor({ sys, unit, sizeId, c, canRemove, onSave, onRemove, onClose
   };
 
   return (
-    <Sheet title={label} sub={`${whenText(sys, c.when)} · lengths in ${unit === "in" ? "inch.sut (58.3 = 58″ 3 sut)" : "mm"}`} onClose={onClose}>
+    <Sheet title={label} sub={`${whenText(sys, c.when)} · lengths in ${UNIT_HINT[deltaUnit(unit)]}`} onClose={onClose}>
       <div className="rounded-xl px-3 py-3 text-center" style={{ background: "var(--surface-2)" }}>
         <div className="mono text-lg font-bold">{ruleText(draft, SIZE_BASE_LABEL(sys, base), unit)}</div>
       </div>
