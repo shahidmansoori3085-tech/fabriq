@@ -126,7 +126,8 @@ export function recognize(shape: { w: number; h: number; paths: string[] }): Rec
     if (valley >= 12) return { role: "track", grooves: r.at.length, why: `${r.at.length} running legs` };
   }
 
-  // interlock clip: thin walls, one side a straight wall the whole way, the opposite side open (it snaps on the shutter)
+  // interlock clip: thin walls, one side a straight wall the whole way, the opposite side open (it snaps on the shutter).
+  // Below 4.5 % metal it is only an outline drawing (e.g. a CAD trace), not a solid section.
   if (Math.max(w, h) <= 46 && Math.min(w, h) >= 24) {
     let fill = 0, n = 0;
     for (let x = 0.25; x < w; x += 0.5) for (let y = 0.25; y < h; y += 0.5) { n++; if (inside(so, x, y)) fill++; }
@@ -140,7 +141,7 @@ export function recognize(shape: { w: number; h: number; paths: string[] }): Rec
     };
     const t = cov(true, true), b = cov(true, false), l = cov(false, true), rr = cov(false, false);
     const wall = (t >= 0.9 && b <= 0.25) || (b >= 0.9 && t <= 0.25) || (l >= 0.9 && rr <= 0.25) || (rr >= 0.9 && l <= 0.25);
-    if (fill / n <= 0.15 && wall) return { role: "interlock-clip", why: "thin, one straight wall with the other side open — snaps on the shutter at the meeting" };
+    if (fill / n >= 0.045 && fill / n <= 0.15 && wall) return { role: "interlock-clip", why: "thin, one straight wall with the other side open — snaps on the shutter at the meeting" };
   }
   return { role: "other", why: "no shutter channel, glass slot or track grooves" };
 }
