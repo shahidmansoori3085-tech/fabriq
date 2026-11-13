@@ -221,3 +221,41 @@ export function buildSliding(st: Stack, get: Get): Result {
   };
 }
 
+
+/* ———————————————— Bombay / Normal: roller in the bearing pocket, on a round rail ———————————————— */
+// Founder (2026-11-13): the Normal bearing roller is 13 mm high and fits inside
+// the bearing shutter's pocket. The shutter rides on the rail of the bottom track
+// and reaches up into the top track's channel.
+export const BOMBAY_ROLLER = 13;
+
+export interface BombayResult { rail: number; topFloor: number; rollerIn: number; wheel: number; shutterBottom: number; takeOff: number; walls: number; clear: boolean }
+
+/**
+ * bottom / top: track codes (tips up / down); bearing: the shutter's bearing
+ * section, pocket opening at shape x = 0. takeOff = H − shutter height when the
+ * shutter top reaches the top channel floor.
+ */
+export function buildBombay(bottom: string, top: string, bearing: string, get: Get, roller = BOMBAY_ROLLER): BombayResult {
+  const B = asBottom(get, bottom), T = asBottom(get, top);
+  // the rail: highest point inside the first channel, between its walls
+  const walls = Math.max(tipAt(B.solid, 1, B.h + 5), tipAt(B.solid, 2, B.h + 5));
+  let rail = 0, railX = 0;
+  for (let x = 5; x < Math.min(B.w, 30); x += 0.1) { const y = tipAt(B.solid, x, B.h + 5); if (y < walls - 3 && y > rail) { rail = y; railX = x; } }
+  // floor of the top track's channel, measured from its outer edge (most common height)
+  const fl: number[] = [];
+  for (let x = 6; x < Math.min(T.w, 26); x += 0.5) { const y = tipAt(T.solid, x, T.h + 5); if (y > 1 && y < T.h - 3) fl.push(Math.round(y * 10) / 10); }
+  fl.sort((p, q) => p - q);
+  const topFloor = fl[Math.floor(fl.length / 2)];
+  // slide the roller into the bearing pocket until it stops
+  const be = get(bearing);
+  const mid = be.h / 2;
+  const up = rayToMaterial(be.solid, 1.5, mid, 0, -1, 20), dn = rayToMaterial(be.solid, 1.5, mid, 0, 1, 20);
+  const centre = mid + (dn - up) / 2, w = Math.min(up + dn - 0.6, 10);
+  const start = -2 - roller;
+  const go = slideUntilTouch(box(start, centre - w / 2, start + roller, centre + w / 2), be.solid, 1, 0, 40).dist;
+  const rollerIn = start + roller + go;
+  const wheel = roller - rollerIn;
+  const shutterBottom = rail + wheel;
+  const placed = place(be.solid, 0, 1, railX - centre, 1, 0, shutterBottom);
+  return { rail, topFloor, rollerIn, wheel, shutterBottom, takeOff: topFloor + shutterBottom, walls, clear: !touches(placed, B.solid) };
+}

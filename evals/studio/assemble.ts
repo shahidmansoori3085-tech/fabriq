@@ -10,7 +10,7 @@
  * 4. Gulf side tracks have one groove; top / bottom tracks one per shutter.
  */
 import { readFileSync } from "node:fs";
-import { solidOf, box, slideUntilTouch, place, runners, buildSliding, type Stack } from "../../lib/studio/assemble";
+import { solidOf, box, slideUntilTouch, place, runners, buildSliding, buildBombay, type Stack } from "../../lib/studio/assemble";
 import { EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
@@ -33,6 +33,15 @@ for (const code of ["2062", "2051"]) {
   console.log(`  Domal ${code}: H − ${r.takeOff.toFixed(2)} mm (engine H − 66.7)`);
   expect(r.clear, `Domal ${code}: shutter should clear the track`);
   expect(Math.abs(r.takeOff - 66.7) <= HALF_SUT, `Domal ${code}: drawing gives H − ${r.takeOff.toFixed(2)}, engine H − 66.7`);
+}
+
+// 2a. Normal 18 (Bombay): 13 mm bearing roller in the 1051 pocket, on the rail —
+//     the shutter up to the top channel floor = engine H − 41.3 within ½ sut.
+for (const [bot, top] of [["1011", "1000"], ["1031", "1021"]]) {
+  const r = buildBombay(bot, top, "1051", get);
+  console.log(`  Normal ${bot}/${top}: rail ${r.rail.toFixed(2)}, wheel ${r.wheel.toFixed(2)} below the bearing → H − ${r.takeOff.toFixed(2)} (engine H − 41.3)`);
+  expect(r.clear, `Normal ${bot}: bearing should clear the track`);
+  expect(Math.abs(r.takeOff - 41.3) <= HALF_SUT, `Normal ${bot}/${top}: drawing gives H − ${r.takeOff.toFixed(2)}, engine H − 41.3`);
 }
 
 // 2b. Same 27×65 domal, other makers: Ample and Eleanor cut the same as OMEO;

@@ -92,9 +92,14 @@ Rule (checked on Domal): shutter = H − top tip − bottom tip − clip + 24.
   Not put in the templates yet — check on one window per maker.
 
 **Not built from drawings (and why):**
-- Normal / Bombay 18, 25, 5-track: roller sits in the bearing's 9 mm pocket on a
-  round rail; the 24 mm roller does not fit (founder: 18 mm window takes no 24 mm
-  bearing). Needs the bearing roller size. Normal 18 stays on the founder job rule.
+- Normal / Bombay 18: CHECKED (2026-11-13). Founder: the Normal bearing roller is
+  13 mm and fits in the bearing shutter's pocket. Built from the drawings
+  (`buildBombay`): rail top 23.1, roller goes 7.9 into the 1051 pocket, wheel 5.1
+  below → shutter up to the top channel floor = H − 40.3 (2T) / H − 40.0 (3T).
+  Engine (founder job) H − 41.3: 1.0 / 1.3 mm apart ✓ (that is the top clearance).
+  Open question: lifting the shutter out over the 32 mm walls needs ~4 mm, the top
+  leaves ~1 mm — how do shops fit the shutter?
+- Normal 25 / 5-track: no traced sections yet.
 - Ample 26 / 29 / 37 sleek: the 24 mm roller does not fit their shutter channel —
   roller goes in a separate bottom rail. Needs the roller detail.
 - BH 31, Alucoat S-30: which track is top / bottom / side and which clip is not
