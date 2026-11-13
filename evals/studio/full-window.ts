@@ -17,7 +17,7 @@ const expect = (ok: boolean, msg: string) => { if (!ok) fails.push(msg); };
 // [id, gulf side mm or 0 for 45°, glass width known, glass height known]
 const SYSTEMS: [string, number, boolean, boolean][] = [
   ["domal-27", 0, true, true], ["ample-27", 0, true, true], ["eleanor-27", 0, true, true], ["bh-27", 0, false, false],
-  ["ample-22", 0, false, true], ["euro-26", 0, true, true], ["ample-25", 0, false, false], ["ample-29", 0, false, true],
+  ["ample-22", 0, true, true], ["euro-26", 0, true, true], ["ample-25", 0, true, true], ["ample-29", 0, false, true],
   ["ample-37", 0, false, true], ["gulf-25", 24.8, true, true], ["bh-35", 32.8, true, true], ["bh-31", 33.1, true, true],
   ["gulf-s30", 33, true, true],
 ];

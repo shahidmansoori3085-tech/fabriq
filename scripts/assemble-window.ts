@@ -32,8 +32,8 @@ const STACKS: Stack[] = [
   { name: "Domal 27 Banu Hashim, 2-track with leg", bottom: "BH-6032", top: "BH-6032", shutter: "BH-6050", mouth: "start", engine: 66.7 },
   { name: "Domal 27 Banu Hashim, 4-track with leg", bottom: "BH-6045", top: "BH-6045", shutter: "BH-6050", mouth: "start", engine: 66.7 },
   // Ample 25: Euro build — the roller runs on clip 914401 in the track (founder; clip on catalogue p.3)
-  { name: "25 mm Ample, 2-track (clip 914401)", bottom: "955388", top: "955388", clip: "914401", shutter: "914744", mouth: "end" },
-  { name: "25 mm Ample, 3-track (clip 914401)", bottom: "955389", top: "955389", clip: "914401", shutter: "914744", mouth: "end" },
+  { name: "25 mm Ample, 2-track (clip 914401)", bottom: "955388", top: "955388", clip: "914401", shutter: "41323", mouth: "end" },
+  { name: "25 mm Ample, 3-track (clip 914401)", bottom: "955389", top: "955389", clip: "914401", shutter: "41323", mouth: "end" },
   // Ample 22 mini domal: runs on the pointed hook track; the tall C wall outside is only design; no clip (founder)
   { name: "Mini domal 22 Ample, 2-track", bottom: "41083", top: "41083", shutter: "41082", mouth: "start" },
   { name: "Euro 26 BH, 3-track", bottom: "BH-6001", top: "BH-6001", clip: "BH-2559", shutter: "BH-6003", mouth: "start" },

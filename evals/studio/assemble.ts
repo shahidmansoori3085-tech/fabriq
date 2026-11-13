@@ -66,7 +66,7 @@ const cases: [StudioSystem, string, Stack][] = [
   [EURO_26, "2", { name: "Euro 2T", bottom: "BH-6000", top: "BH-6000", clip: "BH-2559", shutter: "BH-6003", mouth: "start" }],
   [GULF_25, "2", { name: "Gulf 25 2T", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2554", mouth: "start" }],
   [BH_35, "2", { name: "Gulf 35 2T", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6504", mouth: "start" }],
-  [AMPLE_25, "2", { name: "Ample 25 2T", bottom: "955388", top: "955388", clip: "914401", shutter: "914744", mouth: "end" }],
+  [AMPLE_25, "2", { name: "Ample 25 2T", bottom: "955388", top: "955388", clip: "914401", shutter: "41323", mouth: "end" }],
   [AMPLE_29, "3", { name: "Ample 29 3T", bottom: "41052", top: "41052", clip: "914401", shutter: "41055", mouth: "end" }],
   [AMPLE_29, "2", { name: "Ample 29 2T", bottom: "914400", top: "914400", clip: "914401", shutter: "41055", mouth: "end" }],
   [AMPLE_37, "2", { name: "Ample 37 2T", bottom: "41015", top: "41015", clip: "41310-cap", shutter: "41068", mouth: "end" }],

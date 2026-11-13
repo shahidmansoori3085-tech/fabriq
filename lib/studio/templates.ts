@@ -405,7 +405,7 @@ export const AMPLE_22: StudioSystem = base({
     prof("a22_track_2t", "22 mm 2-Track", "track", { ample: "41083" }, "53.9×35", perM(0.8), CATALOGUE("Ample 22 mm p.2")),
     prof("a22_track_3t", "22 mm 3-Track", "track", { ample: "41084" }, "83.9×35", perM(1.13), CATALOGUE("Ample 22 mm p.2")),
     prof("a22_shutter", "22 mm Shutter", "shutter", { ample: "41082" }, "55.8×22", perM(0.606), CATALOGUE("Ample 22 mm p.2")),
-    prof("a22_interlock", "22 mm Interlock", "interlock", { ample: "41085" }, "65×22", perM(0.251),
+    prof("a22_interlock", "22 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "41085" }, "65×22", perM(0.251),
       CATALOGUE("Ample 22 mm p.2 (the code is also printed on a 30.9×26.2 cap — confirm with dealer)")),
     prof("a22_clip", "22 mm Glazing Clip", "bead", { ample: "992134" }, "16.2×12.9", perM(0.117), CATALOGUE("Ample 22 mm p.2")),
   ],
@@ -414,7 +414,7 @@ export const AMPLE_22: StudioSystem = base({
     size("shutterH", "Shutter height", rule("H", -mm(46), ev("suggested", "From the drawings (window built from the sections): 2 × 35.0 track − 24 roller; roller on the pointed track, no clip. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
-  parts: [...domalFrame(byTracks("a22_track_2t", "a22_track_3t")), ...stileShutter("a22_shutter", "a22_interlock")],
+  parts: [...domalFrame(byTracks("a22_track_2t", "a22_track_3t")), ...stileShutter("a22_shutter", "a22_shutter", "Shutter Meeting Side").map((p) => ({ ...p, meshProfile: "a22_interlock" }))],
   notes: [
     "The shutter runs on the pointed track; the tall hooked wall on the outside is only design. No clip in the track.",
     "Catalogue gives sizes only. Teach every other cut from one window you have made.",
@@ -429,8 +429,8 @@ export const AMPLE_25: StudioSystem = base({
     prof("a25_track_3t", "25 mm 3-Track", "track", { ample: "955389" }, "85.8×40", perM(1.24), CATALOGUE("Ample 25 mm p.2")),
     prof("a25_track_2t_leg", "25 mm 2-Track with leg", "track", { ample: "992012" }, "65.2×42.5", perM(1.015), DRAWING("Ample 25 mm p.2")),
     prof("a25_track_3t_leg", "25 mm 3-Track with leg", "track", { ample: "41021" }, "101×42.5", perM(1.45), DRAWING("Ample 25 mm p.2")),
-    prof("a25_shutter", "25 mm Shutter", "shutter", { ample: "914744" }, "54.9×25.52", perM(0.635), DRAWING("Ample 25 mm p.2")),
-    prof("a25_interlock", "25 mm Interlock", "interlock", { ample: "41323" }, "63×25.52", perM(0.75), DRAWING("Ample 25 mm p.2")),
+    prof("a25_shutter", "25 mm Shutter", "shutter", { ample: "41323" }, "63×25.52", perM(0.75), DRAWING("Ample 25 mm p.2 — glass pocket on one side, track channel on the other")),
+    prof("a25_interlock", "25 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "914744" }, "54.9×25.52", perM(0.635), DRAWING("Ample 25 mm p.2 — track channel, no glass pocket")),
     prof("a25_clip", "25 mm Roller Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 25 mm p.3; drawing traced from the 29 mm catalogue p.5")),
   ],
   sizes: [
@@ -442,7 +442,7 @@ export const AMPLE_25: StudioSystem = base({
   parts: [
     ...domalFrame(byTracks("a25_track_2t", "a25_track_3t")),
     part("trackClip", "{s} Roller Clip", "a25_clip", "shutter", "clipW", 90, "other"),
-    ...stileShutter("a25_shutter", "a25_interlock"),
+    ...stileShutter("a25_shutter", "a25_shutter", "Shutter Meeting Side").map((p) => ({ ...p, meshProfile: "a25_interlock" })),
   ],
   notes: ["The roller runs on clip 914401 snapped into the track, like Euro. Any outer leg on the track is only design."],
 });
@@ -485,8 +485,8 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     prof("a29_cap", "29 mm Track Cap", "rail", { ample: "914565" }, "14.49×11.65", perM(0.093), CATALOGUE("Ample 29 mm p.5")),
     prof("a29_handle", "29 mm Shutter", "shutter", { ample: "41055" }, "65×29", perM(0.89), CATALOGUE("Ample 29 mm p.3")),
     prof("a29_shutter_b", "29 mm Shutter (light)", "shutter", { ample: "914900" }, "65×29", perM(0.705), CATALOGUE("Ample 29 mm p.3")),
-    prof("a29_shutter_54", "29 mm Shutter 54", "shutter", { ample: "914698" }, "54×29", perM(0.617), CATALOGUE("Ample 29 mm p.3")),
-    prof("a29_interlock", "29 mm Interlock", "interlock", { ample: "41050" }, "65×29", perM(0.816), CATALOGUE("Ample 29 mm p.3")),
+    prof("a29_shutter_54", "29 mm Mesh (Jali) Shutter 54", "mesh-shutter", { ample: "914698" }, "54×29", perM(0.617), CATALOGUE("Ample 29 mm p.3")),
+    prof("a29_mesh", "29 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "41050" }, "65×29", perM(0.816), CATALOGUE("Ample 29 mm p.3 — jali shutter (founder)")),
     prof("a29_interlock_b", "29 mm Interlock (heavy)", "interlock", { ample: "992325" }, "65×29", perM(0.865), DRAWING("Ample 29 mm p.7")),
     prof("a29_slim_40", "29 mm Slim Interlock 40", "slim-interlock", { ample: "41289" }, "40×29", perM(0.672), CATALOGUE("Ample 29 mm p.5"), { faceMm: 40 }),
     prof("a29_slim", "29 mm Slim Interlock 37", "slim-interlock", { ample: "992328" }, "37×29", perM(0.595), DRAWING("Ample 29 mm p.7"), { faceMm: 37 }),
@@ -502,16 +502,16 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
   parts: [
     ...domalFrame(byTracks("a29_track_2t", "a29_track_3t")),
     part("trackClip", "{s} Roller Clip", "a29_clip", "shutter", "clipW", 90, "other"),
-    part("shutterTop", "{s} Shutter Top{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterMeet", "{s} Interlock{tag}", "a29_interlock", "shutter", "shutterH", 45, "sash-meet"),
+    part("shutterTop", "{s} Shutter Top{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-top", { meshProfile: "a29_mesh" }),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "a29_mesh" }),
+    part("shutterLock", "{s} Handle Side{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a29_mesh" }),
+    part("shutterMeet", "{s} Interlock{tag}", "a29_slim", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a29_mesh" }),
   ],
   notes: [
     "The roller (24 mm) runs on clip 914401 snapped into the track. Any outer leg on a track is only design.",
     "41010 and 41330 are tracks with a leg, not shutter rails.",
   ],
-}), "shutterMeet", ["a29_interlock", "a29_slim", "a29_slim_40", "a29_interlock_b"]);
+}), "shutterMeet", ["a29_slim", "a29_interlock_b"]);
 
 export const AMPLE_37: StudioSystem = withAlternatives(base({
   id: "ample-37", name: "37 mm sleek — Ample", group: "sleek", maker: "Ample",
@@ -524,7 +524,7 @@ export const AMPLE_37: StudioSystem = withAlternatives(base({
     prof("a37_cap", "37 mm Track Cap", "rail", { ample: "41083" }, "15.77×16.49", perM(0.8), CATALOGUE("Ample 37 mm p.3"), { shapeKey: "41083-37cap" }),
     prof("a37_handle", "37 mm Shutter", "shutter", { ample: "41068" }, "82.7×37.01", perM(1.335), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_handle_b", "37 mm Shutter (light)", "shutter", { ample: "41076" }, "82.7×37.01", perM(1.274), CATALOGUE("Ample 37 mm p.2")),
-    prof("a37_interlock", "37 mm Interlock", "interlock", { ample: "41074" }, "82.7×37.01", perM(1.397), CATALOGUE("Ample 37 mm p.2")),
+    prof("a37_interlock", "37 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "41074" }, "82.7×37.01", perM(1.397), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_slim", "37 mm Slim Interlock", "slim-interlock", { ample: "41310" }, "82.7×37.01", perM(1.35), DRAWING("Ample 37 mm p.3"), { faceMm: 37, shapeKey: "41310-37" }),
     prof("a37_spine", "37 mm Reinforcement", "interlock", { ample: "914806" }, "45×50.61", perM(1.104), CATALOGUE("Ample 29 mm p.5")),
     prof("a37_frame_a", "37 mm Section 41300", "frame", { ample: "41300" }, "52.2×57.1", perM(1.055), CATALOGUE("Ample 37 mm p.3")),
@@ -539,16 +539,16 @@ export const AMPLE_37: StudioSystem = withAlternatives(base({
   parts: [
     ...domalFrame(byTracks("a37_track_2t", "a37_track_3t")),
     part("trackClip", "{s} Roller Clip", "a37_clip", "shutter", "clipW", 90, "other"),
-    part("shutterTop", "{s} Shutter Top{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterMeet", "{s} Interlock{tag}", "a37_interlock", "shutter", "shutterH", 45, "sash-meet"),
+    part("shutterTop", "{s} Shutter Top{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-top", { meshProfile: "a37_interlock" }),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "a37_interlock" }),
+    part("shutterLock", "{s} Handle Side{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a37_interlock" }),
+    part("shutterMeet", "{s} Interlock{tag}", "a37_slim", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a37_interlock" }),
   ],
   notes: [
     "The roller (24 mm) runs on the round clip 41310 (13 × 17.09) snapped into the track. The outer leg on the track is only design.",
     "What 41300 and 41069 are used for is not clear from the catalogue — they are kept in the section list only.",
   ],
-}), "shutterMeet", ["a37_interlock", "a37_slim"]);
+}), "shutterMeet", ["a37_slim"]);
 
 export const BH_31: StudioSystem = withAlternatives(base({
   id: "bh-31", name: "31 mm slim — Banu Hashim", group: "gulf", maker: "Banu Hashim",
@@ -913,7 +913,7 @@ drawn(BH_27, { shutterW: [HALF] });
 const MITRED = { frameW: [rule("W", 0, ev("observed", "45° frame goes round, full width"))], frameH: [rule("H", 0, ev("observed", "45° frame goes round, full height"))] };
 for (const sys of [AMPLE_22, AMPLE_25, AMPLE_26, AMPLE_29, AMPLE_37]) drawn(sys, MITRED);
 // Mini domal 22: one shutter profile on 3 sides
-drawn(AMPLE_22, { shutterW: [HALF], glassH: glassH(47.4, "Ample 41082 pocket") });
+drawn(AMPLE_22, { shutterW: [HALF], ...glassBoth(47.4, "Ample 41082 pocket (shutter on all 4 sides)") });
 // Euro 26
 drawn(EURO_26, { shutterW: [HALF], clipW: [rule("W", -mm(89.9), FROM_DRAWING("clear width between the side U tips (2 × 45.0)"))], glassH: glassH(59.1, "BH-6003 pocket"),
   glassW: glassW(59.1, "BH-6003 pocket", { bh_6052: [17.4, "slim 6052 pocket (glass enters its 10.2 mm top slot)"], bh_6053: [17.4, "slim 6053 pocket"] }) });
@@ -933,7 +933,7 @@ drawn(BH_31, {
   glassW: glassW(49.8, "BH-6406 pocket", { bh31_slim: [11.3, "slim 6408 pocket"], bh31_spine: [10.7, "slim 6409 pocket"] }),
 });
 // Ample 25 / 29 / 37 — 45° frame, clip in the track
-drawn(AMPLE_25, { shutterW: [HALF], clipW: clip(80, "2 × 40.0") });
+drawn(AMPLE_25, { shutterW: [HALF], clipW: clip(80, "2 × 40.0"), ...glassBoth(54.3, "Ample 41323 pocket (shutter on all 4 sides)") });
 drawn(AMPLE_29, { shutterW: [HALF], clipW: clip(95.4, "2 × 47.7"), glassH: glassH(52.7, "Ample 41055 pocket") });
 drawn(AMPLE_37, { shutterW: [HALF], clipW: clip(99.4, "2 × 49.7"), glassH: glassH(63.5, "Ample 41068 pocket") });
 // Alucoat S-30: one shutter profile on 4 sides, interlock clip at the meeting
