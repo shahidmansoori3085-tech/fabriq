@@ -50,3 +50,14 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # One fixed link for the founder that always opens the newest preview
+      # (still private: Vercel login of the "Indian steels" team needed).
+      - name: Fixed preview link
+        continue-on-error: true
+        run: |
+          npx vercel alias set "${{ steps.deploy.outputs.url }}" fabriq-studio-preview.vercel.app --token="${{ secrets.VERCEL_TOKEN }}" --scope indian-steels
+          echo "### Fixed link: https://fabriq-studio-preview.vercel.app/studio" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

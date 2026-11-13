@@ -17,6 +17,8 @@ import { Badge, Seg, Sheet, SectionTitle } from "../../components/studio-ui";
 import WindowDrawing from "../../components/studio-drawing";
 import { windowGeometry } from "../../lib/studio/geometry";
 import { findProfile } from "../../lib/studio/store";
+import { jobVars, matches } from "../../lib/studio/evaluate";
+import { shapeOf, type Shape } from "../../lib/studio/shapes";
 import { inches } from "../../lib/engine/units";
 
 type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string } | { kind: "sections" };
@@ -26,8 +28,33 @@ const UNIT_KEY = "fabriq_studio_unit";
 /** A small, real drawing of a system (first layout, 5′ × 4′). */
 function Thumb({ sys, lib }: { sys: StudioSystem; lib: StudioLibrary }) {
   const lay = sys.layouts[0];
-  const g = windowGeometry(sys, { id: "T", W: inches(60), H: inches(48), qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" }, (id) => findProfile(lib, id));
-  return <WindowDrawing g={g} unit="in" pick={null} compact />;
+  const job = { id: "T", W: inches(60), H: inches(48), qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" };
+  const g = windowGeometry(sys, job, (id) => findProfile(lib, id));
+  // the window from the front looks alike for every sliding system: the bottom
+  // track's real section, in the corner, is what tells Domal, Euro, Gulf apart
+  const vars = jobVars(sys, job);
+  const bottom = sys.parts.find((p) => p.place === "frame-bottom" && p.enabled !== false);
+  const shape = shapeOf(findProfile(lib, bottom?.profile.find((c) => matches(c.when, vars))?.id ?? ""));
+  return (
+    <span className="relative block">
+      <WindowDrawing g={g} unit="in" pick={null} compact />
+      {shape && (
+        <span className="absolute bottom-0 right-0 flex h-[46%] w-[40%] items-center justify-center rounded-md border bg-white p-1 shadow-sm">
+          <MiniSection s={shape} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** A section's real outline, filled, no dimensions: small enough for a card. */
+function MiniSection({ s }: { s: Shape }) {
+  const pad = Math.max(s.w, s.h) * 0.06;
+  return (
+    <svg viewBox={`${-pad} ${-pad} ${s.w + 2 * pad} ${s.h + 2 * pad}`} className="h-full w-full" role="img" aria-label={`Section ${s.code}`}>
+      <path d={s.paths.join(" ")} fill="#94a3b8" fillRule="evenodd" stroke="#475569" strokeWidth={Math.max(s.w, s.h) / 160} />
+    </svg>
+  );
 }
 
 export default function StudioPage() {
