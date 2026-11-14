@@ -1147,11 +1147,17 @@ AMPLE_29.sizes = AMPLE_29.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, case
  * shutter (OMEO 2046) runs clear over the 29 track and clip.
  */
 const pick = (from: StudioSystem[], ids: string[]) => ids.map((id) => from.flatMap((s) => s.profiles).find((p) => p.id === id)!);
-export const EURO_27: StudioSystem = withMeetChoice(base({
+export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
   id: "euro-27", name: "Euro 27 mm", group: "gulf",
   blurb: "Euro 29 track (Ample 914400 / 41052 or Eleanor 2901 / 2902) with its roller clip; 27 mm shutter on all sides; interlock clip, or slim interlock",
   layouts: [L2(), L3()],
-  profiles: pick([AMPLE_29, ELEANOR_29, DOMAL_27], ["a29_track_2t", "a29_track_3t", "a29_clip", "el29_track_2t", "el29_track_3t", "el29_clip", "domal_glass_shutter", "domal_jali_shutter", "domal_interlock"]),
+  profiles: [
+    ...pick([AMPLE_29, ELEANOR_29, DOMAL_27], ["a29_track_2t", "a29_track_3t", "a29_clip", "el29_track_2t", "el29_track_3t", "el29_clip", "domal_glass_shutter", "domal_jali_shutter", "domal_interlock"]),
+    // slim interlocks of the 27 mm series (founder, 2026-11-14): 2728 small, 2729 big, 2730 double glass
+    prof("el27_slim", "27 mm Slim Interlock — small", "slim-interlock", { eleanor: "2728" }, "35.2×22.7", { value: 2.3, perFt: 12 }, CATALOGUE("Eleanor 27 mm p.30 — small slim (founder)")),
+    prof("el27_slim_big", "27 mm Slim Interlock — big", "slim-interlock", { eleanor: "2729" }, "85.2×22.7", { value: 4.1, perFt: 12 }, CATALOGUE("Eleanor 27 mm p.30 — big slim (founder)")),
+    prof("el27_slim_dgu", "27 mm Slim Interlock — double glass", "slim-interlock", { eleanor: "2730" }, "32.3×22.7", { value: 2.1, perFt: 12 }, CATALOGUE("Eleanor 27 mm p.30 — double glass slim (founder)")),
+  ],
   switches: [{
     id: "track", label: "29 track", default: "47",
     options: [
@@ -1187,7 +1193,15 @@ export const EURO_27: StudioSystem = withMeetChoice(base({
     "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder). Choose whose 29 track you use: Eleanor's is 0.3 mm taller, so its shutter is 0.7 mm shorter.",
     "Meeting side: the shutter itself with the interlock patti on it, or your slim interlock (choose its section).",
   ],
-}), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });
+}), "shutterMeet", ["el27_slim", "el27_slim_big", "el27_slim_dgu"]), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });
+// glass with each slim: shutter pocket 51.0 (2046) + where the glass stops in the slim's top slot (measured on the drawing, + 3.9)
+EURO_27.sizes = EURO_27.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
+  ...x.cases.filter((c) => c.when),
+  rule("shutterW", -mm(63.0), FROM_DRAWING("2046 pocket 51.0 + small slim 2728 12.0 (glass goes 14.6 mm into its top slot)"), { when: { meet: "slim", pick_shutterMeet: "el27_slim" } }),
+  rule("shutterW", -mm(58.7), FROM_DRAWING("2046 pocket 51.0 + big slim 2729 7.7 (glass goes 19.0 mm into its top slot)"), { when: { meet: "slim", pick_shutterMeet: "el27_slim_big" } }),
+  rule("shutterW", -mm(63.1), FROM_DRAWING("2046 pocket 51.0 + double-glass slim 2730 12.1"), { when: { meet: "slim", pick_shutterMeet: "el27_slim_dgu" } }),
+  unknownFrom("shutterW"),
+] }));
 
 /** Euro 25 (founder, 2026-11-14): Banu Hashim's 25 mm series — BH-2551 / 2553 on all
  *  four sides at 45°, roller clip 2559, shutter 2554 / 2555, slim interlock small 2556 or

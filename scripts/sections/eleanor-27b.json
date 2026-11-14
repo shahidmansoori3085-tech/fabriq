@@ -1,0 +1,6 @@
+{ "style": "orange-fill", "skipTop": 0.11, "scaleWhenOff": "max", "catalogue": "E:/alu-tool/research/catalogue/new-series/DOC-20261002-WA0003.pdf", "out": "lib/studio/shapes/eleanor.json", "maker": "Eleanor", "pages": [
+ { "page": 38, "cells": [
+  {"code":"2725","w":28.5,"h":39},{"code":"2726","w":27.9,"h":39.5},{"code":"2727","w":35.2,"h":22.7},
+  {"code":"2728","w":35.2,"h":22.7},{"code":"2729","w":85.2,"h":22.7},{"code":"2730","w":32.3,"h":22.7},
+  {"code":"2731","w":30.91,"h":38.5},{"code":"2732","w":81.65,"h":31.3},{"code":"2733","w":34.8,"h":31.3},
+  {"code":"2734","w":30,"h":25},{"code":"2735","w":8.7,"h":8.7},{"code":"2736","w":11.6,"h":10.3} ] } ] }
