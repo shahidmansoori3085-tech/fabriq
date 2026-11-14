@@ -26,20 +26,20 @@ function message(): string {
   ].join("\n");
 }
 
-export async function shareApp(): Promise<void> {
+export async function shareApp(place: "banner" | "card" | "home"): Promise<void> {
   const text = message();
   // the phone's own share menu: WhatsApp, Telegram, Instagram… (the link goes
   // inside the text — some apps drop the text when a separate url is given)
   if (typeof navigator.share === "function") {
     try {
       await navigator.share({ text });
-      markStep("shared-app");
+      markStep(`shared-app/${place}`);
     } catch {
       /* closed the menu — nothing sent */
     }
     return;
   }
-  markStep("shared-app");
+  markStep(`shared-app/${place}`);
   window.open(whatsAppLink(text), "_blank", "noopener,noreferrer");
 }
 
@@ -64,7 +64,7 @@ export function ShareAppCard() {
         <div className="text-[15px] font-bold leading-tight">{q}?</div>
         <div className="text-xs" style={{ color: "var(--ink-2)" }}>{rest}</div>
       </div>
-      <button onClick={shareApp} className="btn-primary flex shrink-0 items-center gap-1.5 px-3.5 py-2.5 text-sm">
+      <button onClick={() => shareApp("card")} className="btn-primary flex shrink-0 items-center gap-1.5 px-3.5 py-2.5 text-sm">
         <ShareIcon size={16} />
         Share
       </button>
@@ -75,7 +75,7 @@ export function ShareAppCard() {
 /** First screen, for someone who has made a job before: one quiet row. */
 export function ShareAppRow() {
   return (
-    <button onClick={shareApp} className="card flex items-center gap-3 px-4 py-3 text-left">
+    <button onClick={() => shareApp("home")} className="card flex items-center gap-3 px-4 py-3 text-left">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
         <ShareIcon />
       </span>
@@ -89,7 +89,7 @@ export function ShareAppRow() {
 /** Top of the material list: the banner itself is the button. */
 export function ShareAppBanner({ src = "/banners/share-orange.webp" }: { src?: string }) {
   return (
-    <button onClick={shareApp} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
+    <button onClick={() => shareApp("banner")} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
       className="no-print block w-full overflow-hidden rounded-[var(--radius)]" style={{ border: "1px solid var(--line)" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 3:1 banner */}
       <img src={src} alt="" width={1200} height={400} className="block h-auto w-full" />
