@@ -14,14 +14,11 @@ const LINE = "FabriQ achha laga? To apne fabricator dost ko bhi share kijiye";
 function message(): string {
   const link = `${window.location.origin}/?utm_source=friend_share`;
   return [
-    "*FabriQ – Aluminium Fabricators ke liye*",
+    "*FabriQ* – Aluminium Fabricators ka Smart App 🔧",
     "",
-    "Window, door aur partition ka naap daalein. Poori *material list* aur *cutting sheet* turant tayyar.",
+    "Naap daalo ➜ *Material List + Cutting Sheet* turant ✅",
     "",
-    "✔ Sahi hisaab, kam wastage",
-    "✔ Order seedha WhatsApp par",
-    "",
-    "Main apne kaam mein FabriQ use karta hoon. Aap bhi dekhein 👇",
+    "Main roz use karta hoon, aap bhi try karo 👇",
     link,
   ].join("\n");
 }
