@@ -489,12 +489,11 @@ export const MINI_DOMAL_20: StudioSystem = base({
     part("shutterTop", "{s} Shutter Top{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-meet"),
-    part("interlock", "Interlock Clip {k}", "md20_patti", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+    part("shutterMeet", "{s} Slim Interlock{tag}", "md20_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
     "Domal 20 = a small domal (founder): the shutter runs on the track itself, the 24 mm roller in its channel. A leg on a track is design only.",
-    "Slim interlock 2503: its drawing has a size mark inside the glass slot, so its glass is not worked out yet — teach it from one window.",
+    "Slim 2503: glass slot 10.1 mm wide, 10.3 mm deep to the middle wall (measured by hand on the drawing; the T size mark sits on that wall) → glass edge 18.6 mm from the meeting edge.",
   ],
 });
 
@@ -1144,6 +1143,12 @@ function withShutterChoice(sys: StudioSystem, opts: { value: string; label: stri
   return sys;
 }
 AMPLE_25.profiles.push(prof("a25_patti", "25 mm Interlock Clip", "interlock-patti", { ample: "955391" }, "35.54×39.8", perM(0.37), CATALOGUE("Ample 25 mm p.3"), { faceMm: 10 }));
+withMeetChoice(MINI_DOMAL_20, { lock: "md20_shutter", clip: "md20_patti", glassW: 95.0, src: "glass stops 47.5 mm in (2507)", def: "clip" });
+MINI_DOMAL_20.sizes = MINI_DOMAL_20.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
+  ...x.cases.filter((c) => c.when),
+  rule("shutterW", -mm(66.1), FROM_DRAWING("2507 pocket 47.5 + slim 2503 18.6 (glass slot 10.3 mm deep, measured on the drawing)"), { when: { meet: "slim" } }),
+  unknownFrom("shutterW"),
+] }));
 withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "a25_patti", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
 withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
 
