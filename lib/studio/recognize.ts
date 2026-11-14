@@ -13,9 +13,9 @@
  * Checked against sections whose role the founder or the catalogue gives
  * (evals/studio/recognize.ts).
  */
-import { solidOf, box, slideUntilTouch, rayToMaterial, place, runners, tipAt, inside, type Solid } from "./assemble";
+import { solidOf, box, slideUntilTouch, rayToMaterial, place, runners, tipAt, inside, bounds, type Solid } from "./assemble";
 
-export type SectionRole = "glass-shutter" | "double-glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "interlock-clip" | "bead" | "other";
+export type SectionRole = "glass-shutter" | "double-glass-shutter" | "mesh-shutter" | "track" | "side-track" | "slim-interlock" | "clip" | "interlock-clip" | "interlock" | "bead" | "other";
 
 export interface Recognized { role: SectionRole; grooves?: number; why: string }
 
@@ -28,16 +28,20 @@ type Ends = { deep: Pocket; glass: Pocket; hits: number };
  * roller / track could use (mouth ≤ 26, stops inside the section) and the deepest
  * glass pocket (8–24 mm deep; mouth up to ~16 single glass, wider = double glass).
  */
-function endPocket(so: Solid, w: number, h: number, dir: 1 | -1): Ends {
-  const edge = dir === 1 ? 0 : w;
+function endPocket(so: Solid, w: number, h: number, dir: 1 | -1, inset = 1.2): Ends {
+  // the drawn end, not the printed width (a trace can stop a little short of it)
+  const bb = bounds(so);
+  const edge = dir === 1 ? Math.max(0, bb.x0) : Math.min(w, bb.x1);
   const best: Ends = { deep: { travel: 0, open: 0 }, glass: { travel: 0, open: 0 }, hits: 0 };
+  let through = false, far = 0;
   for (let y = 2; y <= h - 2; y += 0.5) {
-    const x = edge + dir * 1.2;
+    const x = edge + dir * inset;
     const up = rayToMaterial(so, x, y, 0, -1, 30), dn = rayToMaterial(so, x, y, 0, 1, 30), open = up + dn;
     if (open < GLASS + 0.5 || open > 34) continue;
     const c = y + (dn - up) / 2, start = dir === 1 ? -12 : w + 2;
     const t = slideUntilTouch(box(start, c - GLASS / 2, start + 10, c + GLASS / 2), so, dir, 0, w + 14).dist - 2;
-    if (t >= w - 2) continue; // went right through: no channel here
+    far = Math.max(far, t);
+    if (t >= w - 2) { through = true; continue; } // went right through: no channel here
     if (open <= 26 && t > best.deep.travel) best.deep = { travel: t, open };
     // a glass pocket stops the glass 8–24 mm in; a real pocket shows over a few
     // positions (a wide mouth = double glass, founder). A jali shutter's far side is open.
@@ -54,6 +58,8 @@ function endPocket(so: Solid, w: number, h: number, dir: 1 | -1): Ends {
       }
     }
   }
+  // every probe stopped at once on a lip (glazing hooks right at the edge): look again a little deeper
+  if (!through && far < 4 && inset < 2.5) return endPocket(so, w, h, dir, 2.5);
   return best;
 }
 
@@ -123,6 +129,12 @@ export function recognize(shape: { w: number; h: number; paths: string[] }): Rec
     let low = h;
     for (let x = r.at[0] + 3; x <= r.at[1] - 3; x += 0.5) low = Math.min(low, tipAt(t, x, h + 5));
     const valley = h - low;
+    // a heavy interlock also has two arms: a Domal 35-type is one deep U (the channel runs ~the
+    // whole height) gripping the shutter; a reinforcement is a tall tube with a shallow channel on top
+    if (r.at.length === 2 && r.at[1] - r.at[0] <= 33 && h <= 35 && valley / h >= 0.94)
+      return { role: "interlock", why: "one deep channel the full height — grips the shutter at the meeting" };
+    if (r.at.length === 2 && w < h && valley / h < 0.4)
+      return { role: "interlock", why: "tall tube with a shallow channel on top — reinforcement at the meeting" };
     if (valley >= 12) return { role: "track", grooves: r.at.length, why: `${r.at.length} running legs` };
   }
 

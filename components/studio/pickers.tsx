@@ -13,11 +13,11 @@ import { recognize, type Recognized, type SectionRole } from "../../lib/studio/r
 /** What the shape says a section is, in the form's own words. */
 const ROLE_KIND: Record<SectionRole, ProfileKind | null> = {
   "glass-shutter": "shutter", "double-glass-shutter": "shutter", "mesh-shutter": "mesh-shutter",
-  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", "interlock-clip": "interlock-patti", bead: "bead", other: null,
+  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", "interlock-clip": "interlock-patti", interlock: "interlock", bead: "bead", other: null,
 };
 const ROLE_TEXT: Record<SectionRole, string> = {
   "glass-shutter": "a glass shutter", "double-glass-shutter": "a double-glass shutter", "mesh-shutter": "a mesh (jali) shutter",
-  track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", "interlock-clip": "an interlock clip", bead: "a glazing clip / patti", other: "",
+  track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", "interlock-clip": "an interlock clip", interlock: "a heavy interlock", bead: "a glazing clip / patti", other: "",
 };
 
 /** Read a picture into a grey array, at most 1400 px on its long side. */

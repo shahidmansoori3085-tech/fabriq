@@ -455,23 +455,46 @@ export const EURO_35: StudioSystem = withAlternatives(base({
   ],
 }), "shutterMeet", ["e35_slim", "e35_big"]);
 
+/**
+ * Domal 20 — Banu Hashim Mini Domal 20 × 54 (catalogue pp.32–34, founder 2026-11-14).
+ * Built from the drawings: the shutter 2507 runs on the track's U tops (2504 / 2505,
+ * 31.4 high) with the 24 mm roller in its 30 mm channel → H − 38.8; its glass pocket
+ * takes the glass 10.8 mm in → glass = shutter − 95.0 (Ample's 22 mm gives − 94.8).
+ */
+const BH20 = (p: number) => CATALOGUE("Banu Hashim Mini Domal p." + p);
 export const MINI_DOMAL_20: StudioSystem = base({
-  id: "mini-domal-20", name: "Mini domal 20×54", group: "domal",
-  blurb: "Light domal: one 20×54 profile on 4 sides + interlock patti. Choose your sections.",
-  sizes: UNKNOWN_SIZES(),
+  id: "mini-domal-20", name: "Domal 20 mm", group: "domal", maker: "Banu Hashim",
+  heightFrom: { kind: "domal-legs" },
+  blurb: "Track 2504 / 2505, shutter 2507 on all 4 sides, interlock clip 2509 (slim 2503)",
   profiles: [
-    prof("md20_track_2t", "Mini Domal 2-Track Frame", "frame", {}, "54×20", { value: 2.1, perFt: 12 }, CATALOGUE("Mini Domal")),
-    prof("md20_track_3t", "Mini Domal 3-Track Frame", "frame", {}, "84×20", { value: 3.2, perFt: 12 }, CATALOGUE("Mini Domal")),
-    prof("md20_shutter", "Mini Domal Shutter 20×54", "shutter", {}, "54×20", { value: 2.4, perFt: 12 }, CATALOGUE("Mini Domal")),
-    prof("md20_patti", "Mini Domal Interlock Patti", "interlock-patti", {}, "20×15", { value: 0.7, perFt: 12 }, CATALOGUE("Mini Domal")),
+    prof("md20_track_2t", "20 mm 2-Track", "track", { bh: "BH-2504" }, "56.3×31.4", { value: 2.1, perFt: 12 }, BH20(33)),
+    prof("md20_track_3t", "20 mm 3-Track", "track", { bh: "BH-2505" }, "86.8×31.4", { value: 3.05, perFt: 12 }, BH20(33)),
+    prof("md20_track_2t_leg", "20 mm 2-Track with leg", "track", { bh: "BH-2500" }, "56.5×36", { value: 2.6, perFt: 12 }, BH20(32)),
+    prof("md20_track_3t_leg", "20 mm 3-Track with leg", "track", { bh: "BH-2501" }, "87×36", { value: 3.8, perFt: 12 }, BH20(32)),
+    prof("md20_shutter", "20 mm Shutter", "shutter", { bh: "BH-2507" }, "54.4×20.7", { value: 2.3, perFt: 12 }, BH20(34)),
+    prof("md20_shutter_b", "20 mm Shutter (light)", "shutter", { bh: "BH-2508" }, "54.4×20.7", { value: 1.9, perFt: 12 }, BH20(34), { shapeKey: "BH-2507" }),
+    prof("md20_slim", "20 mm Slim Interlock", "slim-interlock", { bh: "BH-2503" }, "27.4×25", { value: 1.55, perFt: 12 }, BH20(33)),
+    prof("md20_patti", "20 mm Interlock Clip (mini clip)", "interlock-patti", { bh: "BH-2509" }, "34×24.5", { value: 0.85, perFt: 12 }, BH20(34), { faceMm: 10 }),
+  ],
+  sizes: [
+    size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "45° frame goes round, full width"))),
+    size("frameH", "Frame side", rule("H", 0, ev("observed", "45° frame goes round, full height"))),
+    size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Every shutter half the window (W/2) — the usual shop way"), { den: 2 })),
+    size("shutterH", "Shutter height", rule("H", -mm(38.8), FROM_DRAWING_35("2 × 31.4 track (2504 / 2505) − 24 roller; shutter 2507 runs on the U tops"))),
+    size("glassW", "Glass width", rule("shutterW", -mm(95.0), FROM_DRAWING_35("glass goes 10.8 mm into the 2507 pocket: stops 47.5 mm in from each shutter edge"))),
+    size("glassH", "Glass height", rule("shutterH", -mm(95.0), FROM_DRAWING_35("glass goes 10.8 mm into the 2507 pocket: stops 47.5 mm in from each shutter edge"))),
   ],
   parts: [
     ...domalFrame(byTracks("md20_track_2t", "md20_track_3t")),
     part("shutterTop", "{s} Shutter Top{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLeft", "{s} Shutter Left{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterRight", "{s} Shutter Right{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-meet"),
-    part("interlock", "Interlock {k}", "md20_patti", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+    part("shutterLock", "{s} Handle Side{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-meet"),
+    part("interlock", "Interlock Clip {k}", "md20_patti", "meeting", "shutterH", 90, "meeting", { count: 2 }),
+  ],
+  notes: [
+    "Domal 20 = a small domal (founder): the shutter runs on the track itself, the 24 mm roller in its channel. A leg on a track is design only.",
+    "Slim interlock 2503: its drawing has a size mark inside the glass slot, so its glass is not worked out yet — teach it from one window.",
   ],
 });
 
@@ -1237,6 +1260,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   // shown in Window and in Settings → Window systems: one per kind and size, no company (founder, 2026-11-13)
   "normal-18": [18, "bombay", "Normal 18 mm", true],
   "domal-27": [27, "domal", "Domal 27 mm", true],
+  "mini-domal-20": [20, "domal", "Domal 20 mm"],
   "ample-22": [22, "domal", "Mini domal 22 mm"],
   "domal-35": [35, "domal", "Domal 35 mm", true],
   "euro-25": [25, "euro", "Euro 25 mm", true],
@@ -1258,7 +1282,6 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "ample-27": [27, "domal", "Domal 27 mm (shutter 214315)"],
   "eleanor-27": [27, "domal", "Domal 27 mm (shutter 2722)"],
   "bh-27": [27, "domal", "Domal 27 mm (track 45.5)"],
-  "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
   "ample-26": [26, "euro", "Euro 26 mm (shutter 41300)"],
   "ample-25": [25, "euro", "Euro 25 mm (track 40, clip only)"],
   "ample-37": [37, "euro", "Euro 37 mm"], // founder 2026-11-14: 37 mm taken out of the app
@@ -1269,7 +1292,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
  *  checked engine until the shop changes them in Settings. */
 export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section" }[] = [
   { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" },
-  { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
+  { id: "mini-domal-20", kind: "domal", mm: 20 }, { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
   { id: "euro-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
   { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 },
   { id: "gulf-25", kind: "gulf", mm: 25 }, { id: "gulf-s30", kind: "gulf", mm: 30 }, { id: "bh-31", kind: "gulf", mm: 31 }, { id: "bh-35", kind: "gulf", mm: 35 },

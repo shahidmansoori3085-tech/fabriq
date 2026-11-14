@@ -1,0 +1,14 @@
+{ "style": "dark-fill", "skipTop": 0.07, "skipBottom": 0.9, "scaleWhenOff": "max",
+  "catalogue": "E:/alu-tool/research/catalogue/new-series/BANUHASHIM READY.pdf", "out": "lib/studio/shapes/banuhashim-euro.json", "maker": "Banu Hashim",
+  "note": "Mini Domal 20×54 (pp.32–34): each drawing cut out by region, the pages carry photos.",
+  "pages": [
+    { "page": 35, "region": [0.3, 0.1, 0.66, 0.27], "cells": [ { "code": "BH-2500", "w": 56.5, "h": 36 } ] },
+    { "page": 35, "region": [0.3, 0.4, 0.7, 0.55], "cells": [ { "code": "BH-2501", "w": 87, "h": 36 } ] },
+    { "page": 35, "region": [0.3, 0.68, 0.73, 0.83], "cells": [ { "code": "BH-2502", "w": 116.5, "h": 36 } ] },
+    { "page": 36, "region": [0.3, 0.1, 0.66, 0.27], "cells": [ { "code": "BH-2503", "w": 27.4, "h": 25 } ] },
+    { "page": 36, "region": [0.3, 0.4, 0.66, 0.55], "cells": [ { "code": "BH-2504", "w": 56.3, "h": 31.4 } ] },
+    { "page": 36, "region": [0.3, 0.68, 0.7, 0.83], "cells": [ { "code": "BH-2505", "w": 86.8, "h": 31.4 } ] },
+    { "page": 37, "region": [0.3, 0.12, 0.73, 0.26], "cells": [ { "code": "BH-2506", "w": 116.3, "h": 31.4 } ] },
+    { "page": 37, "region": [0.33, 0.4, 0.7, 0.55], "cells": [ { "code": "BH-2507", "w": 54.4, "h": 20.7 } ] },
+    { "page": 37, "region": [0.35, 0.67, 0.66, 0.8], "cells": [ { "code": "BH-2509", "w": 34, "h": 24.5 } ] }
+  ] }

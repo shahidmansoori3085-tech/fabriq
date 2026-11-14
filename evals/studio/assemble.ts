@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { solidOf, box, slideUntilTouch, place, runners, buildSliding, buildBombay, type Stack } from "../../lib/studio/assemble";
-import { EURO_25, ELEANOR_29, EURO_27, EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
+import { MINI_DOMAL_20, EURO_25, ELEANOR_29, EURO_27, EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
 const fails: string[] = [];
@@ -93,6 +93,14 @@ for (const [sys, tracks, st] of cases) {
   console.log(`  Euro 27: Eleanor track H − ${el.takeOff.toFixed(2)}, Ample track H − ${am.takeOff.toFixed(2)}`);
   expect(el.clear && Math.abs(el.takeOff - rule27("48")) < 0.1, `Euro 27 Eleanor track: drawing H − ${el.takeOff.toFixed(2)}, template H − ${rule27("48")}`);
   expect(am.clear && Math.abs(am.takeOff - rule27("47")) < 0.1, `Euro 27 Ample track: drawing H − ${am.takeOff.toFixed(2)}, template H − ${rule27("47")}`);
+}
+
+// 3c. Domal 20 (Banu Hashim mini domal): shutter 2507 on the 2504 U tops, roller in its channel
+{
+  const r = buildSliding({ name: "d20", bottom: "BH-2504", top: "BH-2504", shutter: "BH-2507", mouth: "start" }, get);
+  const want = -(MINI_DOMAL_20.sizes.find((x) => x.id === "shutterH")!.cases[0].add ?? NaN) / 1000;
+  console.log(`  Domal 20: H − ${r.takeOff.toFixed(2)} mm`);
+  expect(r.clear && r.topGap >= r.wheel && Math.abs(r.takeOff - want) < 0.1, `Domal 20: drawing H − ${r.takeOff.toFixed(2)}, template H − ${want}`);
 }
 
 // 3a. 35 mm: Domal (leg track 6701) and Euro (U track 6705 + clip 6513), shutter 6712
