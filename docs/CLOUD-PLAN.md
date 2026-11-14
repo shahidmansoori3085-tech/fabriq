@@ -5,10 +5,10 @@ Founder chose **free login: Continue with Google, then shop name + mobile + addr
 
 ## Setup still to do
 
-1. Supabase project  (free plan, Mumbai) — created by Claude after the founder's yes; run .
+1. Supabase project `fabriq` (free plan, Mumbai) — created by Claude after the founder's yes; run `docs/supabase/001_cloud.sql`.
 2. Google login: in Google Cloud console the founder makes an OAuth client (Web) with the Supabase callback address as redirect; he pastes its Client ID and secret into Supabase → Authentication → Providers → Google himself.
 3. Supabase → Authentication → URL configuration: add the preview and live addresses.
-4.  and  (public values) for the **preview** build only; live only on "sabke liye live".
+4. `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public values) for the **preview** build only; live only on "sabke liye live".
 
 ## Why
 
