@@ -7,15 +7,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileDef, StudioSystem, SeriesType } from "../../lib/studio/model";
 import { PROFILE_KINDS } from "../../lib/studio/model";
-import { TEMPLATES, BUILT_IN_PROFILES, WINDOW_SYSTEMS, OFFERED } from "../../lib/studio/templates";
+import { TEMPLATES, LIBRARY_PROFILES, WINDOW_SYSTEMS, OFFERED } from "../../lib/studio/templates";
 import {
   loadLibrary, saveLibrary, copyTemplate, newId, exportLibrary, importLibrary, type StudioLibrary,
 } from "../../lib/studio/store";
-import { SYSTEM_STATUS, noMaker, type StudioUnit } from "../../lib/studio/format";
+import { SYSTEM_STATUS, noMaker, sectionTitle, type StudioUnit } from "../../lib/studio/format";
 import StudioEditor, { nextStep, ProfileForm } from "../../components/studio-editor";
 import { Badge, Seg, Sheet, SectionTitle } from "../../components/studio-ui";
 import { findProfile } from "../../lib/studio/store";
 import StudioThumb from "../../components/studio-thumb";
+import SectionSketch from "../../components/section-sketch";
 
 type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string } | { kind: "sections" };
 const UNIT_KEY = "fabriq_studio_unit";
@@ -159,7 +160,7 @@ export default function StudioPage() {
             <span>
               <span className="block font-bold">My sections</span>
               <span className="block text-xs" style={{ color: "var(--ink-3)" }}>
-                {lib.profiles.length} of yours · {BUILT_IN_PROFILES.length} built-in · sizes, codes, bar lengths
+                {lib.profiles.length} of yours · {LIBRARY_PROFILES.length} built-in · sizes, codes, bar lengths
               </span>
             </span>
             <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
@@ -275,10 +276,11 @@ function Sections({ lib, onSave, onRemove, onBack }: {
   const row = (p: ProfileDef, mine: boolean) => (
     <button key={p.id} onClick={() => setEdit(mine ? p : { ...p, id: undefined, mine: false, name: `${p.name}` })}
       className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left">
-      <span className="min-w-0">
-        <span className="block truncate font-semibold">{p.name}</span>
+      <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md" style={{ background: "#fff", border: "1px solid var(--line)" }}><SectionSketch p={p} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">{sectionTitle(p.name)}</span>
         <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-          {[PROFILE_KINDS.find((k) => k.id === p.kind)?.label, p.codes ? Object.entries(p.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", p.size, `${p.stockFt.join("/")} ft`].filter(Boolean).join(" · ")}
+          {[PROFILE_KINDS.find((k) => k.id === p.kind)?.label, p.codes ? [...new Set(Object.values(p.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", p.size, `${p.stockFt.join("/")} ft`].filter(Boolean).join(" · ")}
         </span>
       </span>
       <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{mine ? "Edit" : "Copy"}</span>
@@ -297,7 +299,7 @@ function Sections({ lib, onSave, onRemove, onBack }: {
         {lib.profiles.length === 0 && <div className="px-3 py-3 text-sm" style={{ color: "var(--ink-3)" }}>None yet. Add one, or copy a built-in one to change it.</div>}
       </div>
       <SectionTitle>Built-in</SectionTitle>
-      <div className="card divide-y" style={{ borderColor: "var(--line)" }}>{BUILT_IN_PROFILES.filter(match).map((p) => row(p, false))}</div>
+      <div className="card divide-y" style={{ borderColor: "var(--line)" }}>{LIBRARY_PROFILES.filter(match).map((p) => row(p, false))}</div>
       {edit && (
         <Sheet title={edit.mine ? "Edit section" : edit.name ? "Your copy of this section" : "New section"}
           sub={edit.mine || !edit.name ? "Only the name is needed." : "Built-in sections stay as they are. Your copy can have your own bar lengths and code."}

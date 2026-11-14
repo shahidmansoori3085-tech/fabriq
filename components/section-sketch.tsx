@@ -26,11 +26,6 @@ export default function SectionSketch({ p, tracks = 2 }: { p: ProfileDef | undef
           className="h-full w-full object-contain"
           loading="lazy"
         />
-        {p.size && (
-          <span className="absolute bottom-0.5 right-1 rounded bg-black/60 px-1 py-0.2 text-[9px] font-semibold text-white backdrop-blur-sm pointer-events-none">
-            {p.size}
-          </span>
-        )}
       </div>
     );
   }
@@ -52,11 +47,14 @@ function RealSection({ s }: { s: Shape }) {
   const pad = big * 0.12;
   const fs = big / 9;
   const lw = Math.max(0.7, big / 110);
-  const check = s.scaleCheck > 4;
+  // room for the size numbers below and to the right, so nothing is cut off
+  const x0 = -pad * 0.5, y0 = -pad * 0.5;
+  const vw = w + pad * 0.35 + fs * 1.05 + fs * 0.95 - x0;
+  const vh = h + pad * 0.35 + fs * 1.05 + fs * 0.4 - y0;
 
   return (
     <svg
-      viewBox={`${-pad * 0.5} ${-pad * 0.5} ${w + pad * 1.8} ${h + pad * 1.8}`}
+      viewBox={`${x0} ${y0} ${vw} ${vh}`}
       className="h-full w-full bg-white"
       role="img"
       aria-label={`Section ${s.code}, ${w} by ${h} mm`}
@@ -71,10 +69,10 @@ function RealSection({ s }: { s: Shape }) {
 
       {/* Grid background subtle */}
       <rect
-        x={-pad * 0.5}
-        y={-pad * 0.5}
-        width={w + pad * 1.8}
-        height={h + pad * 1.8}
+        x={x0}
+        y={y0}
+        width={vw}
+        height={vh}
         fill="#f8fafc"
       />
 
@@ -118,11 +116,6 @@ function RealSection({ s }: { s: Shape }) {
         </text>
       </g>
 
-      {check && (
-        <text x={0} y={-pad * 0.1} fontSize={fs * 0.75} fill="#b45309" fontWeight={700}>
-          check size
-        </text>
-      )}
     </svg>
   );
 }

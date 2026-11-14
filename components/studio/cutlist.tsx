@@ -8,7 +8,7 @@ import { getSection } from "../../lib/engine/sections";
 import type { StudioSystem } from "../../lib/studio/model";
 import { evaluate, StudioUnknownError, type StudioJob, type StudioResult } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, evidenceBadge, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, evidenceBadge, noMaker, sectionTitle, type StudioUnit } from "../../lib/studio/format";
 import { Badge, SectionTitle } from "../studio-ui";
 
 /** "4 × 16 ft + 6 ft piece" */
@@ -77,7 +77,7 @@ export function CutList({ sys, lib, unit, job, onFix }: {
               return (
                 <div key={sec} className="border-t" style={{ borderColor: "var(--line)" }}>
                   <div className="px-3 pt-2 text-xs font-bold" style={{ color: "var(--accent)" }}>
-                    {pr?.name ?? sectionName(sec)}{pr?.codes && Object.values(pr.codes)[0] ? ` · ${Object.values(pr.codes)[0]}` : ""}
+                    {pr ? sectionTitle(pr.name) : sectionName(sec)}{pr?.codes && Object.values(pr.codes)[0] ? ` · ${noMaker(Object.values(pr.codes)[0])}` : ""}
                   </div>
                   {groups.filter((g) => g.section === sec).map((g, i) => (
                     <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-1.5 text-sm">

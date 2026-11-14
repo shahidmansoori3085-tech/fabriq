@@ -132,3 +132,14 @@ export function noMaker(t: string): string {
     .replace(/\s{2,}/g, " ")
     .trim();
 }
+
+/** A section's name without a mm size in it ("Interlock Stile 40×18" → "Interlock Stile"):
+ *  the size is shown on its own line, small (founder, 2026-11-14). Inch names stay. */
+export function noSize(t: string): string {
+  return t
+    .replace(/\s*\(?\b\d+(\.\d+)?\s*[×x]\s*\d+(\.\d+)?\b(?![″"'.\d])\)?/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+/** How a section's name is shown: no company, no mm size. */
+export const sectionTitle = (t: string) => noSize(noMaker(t));

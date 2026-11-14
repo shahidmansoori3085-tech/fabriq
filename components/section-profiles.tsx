@@ -12,6 +12,17 @@
  *                       3D isometric extrusion + section code.
  */
 import { getSection } from "@/lib/engine/sections";
+import SectionSketch from "./section-sketch";
+import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
+import { shopProfile } from "@/lib/studio/runtime";
+import { shapeOf } from "@/lib/studio/shapes";
+import type { ProfileDef } from "@/lib/studio/model";
+
+/** A section with its own drawing traced from the maker's catalogue (or the shop's photo). */
+function traced(sectionId: string): ProfileDef | undefined {
+  const p = shopProfile(sectionId) ?? BUILT_IN_PROFILES.find((x) => x.id === sectionId);
+  return p && shapeOf(p) ? p : undefined;
+}
 
 /* ————————————————— geometry model ————————————————— */
 
@@ -288,24 +299,9 @@ const IMAGE_OF: Record<string, string> = {
   door_center_60: "door_center_75",
   door_center_50: "door_center_75",
   domal_frame_2t: "domal_frame",
-  // 25 mm Bombay sliding
-  "2t_top_25": "2t_top",
-  "2t_bottom_25": "2t_bottom",
-  "3t_top_25": "3t_top",
-  "3t_bottom_25": "3t_bottom",
-  handle_25: "handle_std",
-  interlock_25: "interlock",
-  bearing_25: "bearing",
-  // Domal 35 mm
-  d35_track_2t: "domal_frame",
-  d35_track_3t: "domal_frame",
-  d35_shutter: "domal_glass_shutter",
-  d35_interlock: "domal_interlock",
-  // Mini Domal 20 mm
-  md20_track_2t: "domal_frame",
-  md20_track_3t: "domal_frame",
-  md20_shutter: "domal_glass_shutter",
-  md20_patti: "domal_interlock",
+  // (25 mm Bombay, Domal 35 and Domal 20 used to borrow the 18 mm / OMEO Domal
+  // photos here — a different section's picture. They show their own traced
+  // drawing now.)
 };
 
 export function hasImage(sectionId: string): boolean {
@@ -315,7 +311,7 @@ export function hasImage(sectionId: string): boolean {
 
 /** Raise whenever a drawing in /public/sections changes — phones keep the
  *  pictures offline, and a new version is a new URL they have not cached. */
-const DRAWINGS_VERSION = 11;
+const DRAWINGS_VERSION = 12;
 
 /** The picture file for a section. */
 export function imageSrc(sectionId: string): string {
@@ -338,6 +334,15 @@ export function SectionProfile({ sectionId, w = 46, h = 30 }: { sectionId: strin
           // max-size plus padding let tall sections spill out of the bottom
           // multiply: the photo's white paper takes the colour of the card it sits on
           style={{ width: w + 8, height: h + 6, objectFit: "contain", padding: 3, boxSizing: "border-box", mixBlendMode: "multiply" }} />
+      </span>
+    );
+  }
+  // its own drawing from the catalogue, when traced
+  const tp = traced(sectionId);
+  if (tp) {
+    return (
+      <span className="block overflow-hidden" style={{ width: w + 8, height: h + 6, mixBlendMode: "multiply" }}>
+        <SectionSketch p={tp} />
       </span>
     );
   }
@@ -373,6 +378,21 @@ export function SectionDrawing({ sectionId }: { sectionId: string }) {
             name and the size used to crush into one broken-up column. */}
         <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2"
           style={{ background: "#fff" }}>
+          <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
+          <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
+        </figcaption>
+      </figure>
+    );
+  }
+
+  const tp = traced(sectionId);
+  if (tp) {
+    return (
+      <figure className="overflow-hidden" style={{ background: "#fff" }}>
+        <div className="mx-auto px-3 py-3" style={{ height: 190, maxWidth: 320 }}>
+          <SectionSketch p={tp} />
+        </div>
+        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 px-3 py-2" style={{ background: "#fff" }}>
           <span className="text-xs font-bold" style={{ color: "var(--ink)" }}>{sec.label}</span>
           <span className="mono whitespace-nowrap text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</span>
         </figcaption>

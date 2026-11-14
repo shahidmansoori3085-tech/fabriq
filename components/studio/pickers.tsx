@@ -5,6 +5,7 @@ import type { ProfileDef, ProfileKind } from "../../lib/studio/model";
 import { PROFILE_KINDS } from "../../lib/studio/model";
 import { allProfiles, newId, type StudioLibrary } from "../../lib/studio/store";
 import { Sheet, Field } from "../studio-ui";
+import { noMaker, sectionTitle } from "../../lib/studio/format";
 import SectionSketch from "../section-sketch";
 import { traceImage } from "../../lib/studio/tracer";
 import { readDxf } from "../../lib/studio/dxf";
@@ -65,9 +66,9 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
           <button key={p.id} onClick={() => onPick(p.id)} className="card flex items-center justify-between gap-3 px-3 py-2.5 text-left">
             <span className="h-11 w-14 shrink-0 overflow-hidden rounded-md"><SectionSketch p={p} /></span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{p.name}</span>
+              <span className="block truncate font-semibold">{sectionTitle(p.name)}</span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-                {[p.codes ? Object.entries(p.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", p.size, `${p.stockFt[0] ?? 16} ft pipe`].filter(Boolean).join(" · ")}
+                {[p.codes ? [...new Set(Object.values(p.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", p.size, `${p.stockFt[0] ?? 16} ft pipe`].filter(Boolean).join(" · ")}
               </span>
             </span>
             {p.mine && <span className="badge" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Yours</span>}

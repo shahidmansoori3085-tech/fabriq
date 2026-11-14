@@ -165,7 +165,7 @@ function FromDrawing({ sys, unit, onChange }: { sys: StudioSystem; unit: StudioU
           <div key={x.tracks} className="rounded-lg px-3 py-2" style={{ background: "var(--surface-2)" }}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
-                {x.tracks}-track · {Object.values(x.frame.codes ?? {})[0] ?? x.frame.name} frame {x.frameMm} mm
+                {x.tracks}-track · {noMaker(Object.values(x.frame.codes ?? {})[0] ?? x.frame.name)} frame {x.frameMm} mm
               </span>
               {x.diff === null ? <Badge tone="warn">New</Badge> : sameCut(x.diff) ? <Badge tone="good">Same cut</Badge> : <Badge tone="bad">Differs</Badge>}
             </div>

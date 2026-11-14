@@ -73,6 +73,8 @@ function lockOffset(s: NonNullable<ReturnType<typeof shape>>): number | null {
   return g ? s.w - g + CLEAR : null;
 }
 /** slims whose trace cannot be probed, measured by hand on the drawing (offset from the meeting edge) */
+/** systems whose glass is the checked engine set's, widened (see below) */
+const FROM_CHECKED_SET = new Set(["normal-18-60"]);
 const BY_HAND: Record<string, number> = { "BH-2503": 18.6 /* a T size mark sits on its middle wall */ };
 
 const check = (sys: string, what: string, app: number | null, drawn: number | null, note = "") => {
@@ -127,13 +129,18 @@ for (const w of WINDOW_SYSTEMS) {
   const topSh = shape(sys, top) ?? sh;
   const topOff = lockOffset(topSh);
   const meet = sys.switches.find((x) => x.id === "meet");
-  const engine = !!w.engine;
+  // Normal 18 · 2½″ is the 1½″ set (glass from real jobs) with each piece 20 mm wider —
+  // the same section shapes widened, so its glass follows the 1½″ jobs + 40, not the probe.
+  const engine = !!w.engine || FROM_CHECKED_SET.has(w.id);
   if (topOff !== null && v.glassH !== null && v.glassH !== undefined) {
     const app = (v.shutterH! - v.glassH) / 1000, dr = 2 * topOff;
     if (engine) rows.push([name, "glass height shutter −", app.toFixed(1), dr.toFixed(1), "(from real jobs)"]); else check(name, "glass height shutter −", app, dr, `pocket ${topSh.code}`);
   }
-  for (const m of meet ? meet.options.map((o) => o.value) : ["-"]) {
-    const sw: Record<string, string> = m === "-" ? {} : { meet: m };
+  // every slim the shop can pick, not only the first
+  const slims = sys.switches.find((x) => x.id === "pick_shutterMeet")?.options.map((o) => o.value) ?? [""];
+  const cases = (meet ? meet.options.map((o) => o.value) : ["-"]).flatMap((m) => (m === "slim" ? slims.map((p) => [m, p]) : [[m, ""]]));
+  for (const [m, slimPick] of cases) {
+    const sw: Record<string, string> = m === "-" ? {} : { meet: m, ...(slimPick ? { pick_shutterMeet: slimPick } : {}) };
     const vv = computeSizes(sys, job(sw)).values;
     if (vv.glassW === null || vv.glassW === undefined || lockOff === null) continue;
     const app = (vv.shutterW! - vv.glassW) / 1000;

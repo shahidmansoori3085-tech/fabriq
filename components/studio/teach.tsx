@@ -11,7 +11,7 @@ import { jobVars, matches, type StudioJob } from "../../lib/studio/evaluate";
 import { teach, check, type TeachResult, type CheckRow } from "../../lib/studio/teach";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { partLabel } from "../../lib/studio/edit";
-import { fmtLen, fmtDelta, readLen, lenToInput, mixText, layoutLabel, UNIT_HINT, UNIT_SHORT, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, fmtDelta, readLen, lenToInput, mixText, layoutLabel, sectionTitle, UNIT_HINT, UNIT_SHORT, type StudioUnit } from "../../lib/studio/format";
 import { Badge, Field, SectionTitle } from "../studio-ui";
 
 export function TeachPanel({ sys, lib, unit, job, onChange }: {
@@ -160,7 +160,7 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
                   <span className="block text-sm font-semibold">{r.size.label}</span>
                   <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
                     {r.parts.map((p) => partLabel(p)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}
-                    {(() => { const vars = jobVars(sys, win); const spec = r.parts[0].profile.find((x) => matches(x.when, vars)); const pr = findProfile(lib, spec?.id ?? ""); return pr ? ` · ${pr.name}` : ""; })()}
+                    {(() => { const vars = jobVars(sys, win); const spec = r.parts[0].profile.find((x) => matches(x.when, vars)); const pr = findProfile(lib, spec?.id ?? ""); return pr ? ` · ${sectionTitle(pr.name)}` : ""; })()}
                   </span>
                 </span>
                 <input className="field w-28 px-3 py-2 text-right font-semibold" inputMode="decimal" value={vals[r.size.id] ?? ""}

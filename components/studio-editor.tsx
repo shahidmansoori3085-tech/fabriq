@@ -12,7 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
-import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, noMaker, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, noMaker, sectionTitle, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -306,7 +306,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
                 <>
                   <span className="block font-bold leading-tight">{prof.name}</span>
                   <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-2)" }}>
-                    {[prof.codes ? Object.entries(prof.codes).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ") : "", prof.size ? `${prof.size} mm` : ""].filter(Boolean).join(" · ")}
+                    {[prof.codes ? [...new Set(Object.values(prof.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", prof.size ? `${prof.size} mm` : ""].filter(Boolean).join(" · ")}
                   </span>
                   <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>
                     {prof.kg ? `${prof.kg.value} kg / ${prof.kg.perFt === 3.2808 ? "m" : `${prof.kg.perFt} ft`} · ` : ""}{prof.stockFt[0] ?? 16} ft pipe
@@ -329,7 +329,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
                   <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md"><SectionSketch p={pr} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{c.when ? whenText(sys, c.when) : "Other track counts"}</span>
-                    <span className="block truncate text-sm font-bold">{pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${Object.values(pr.codes)[0]} · ` : ""}${pr.name}` : "Choose a section"}</span>
+                    <span className="block truncate text-sm font-bold">{pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${noMaker(Object.values(pr.codes)[0])} · ` : ""}${sectionTitle(pr.name)}` : "Choose a section"}</span>
                   </span>
                   <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
                 </button>
@@ -350,8 +350,8 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
                   <button onClick={() => onPickSection("main", i)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md"><SectionSketch p={pr} /></span>
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-bold">{pr?.name ?? "Choose a section"}</span>
-                      <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{pr?.codes ? Object.values(pr.codes)[0] : ""}{pr?.size ? ` · ${pr.size} mm` : ""}{i === 0 ? " · default" : ""}</span>
+                      <span className="block truncate text-sm font-bold">{pr ? sectionTitle(pr.name) : "Choose a section"}</span>
+                      <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{pr?.codes ? noMaker(Object.values(pr.codes)[0] ?? "") : ""}{pr?.size ? ` · ${pr.size} mm` : ""}{i === 0 ? " · default" : ""}</span>
                     </span>
                   </button>
                   <button aria-label="Remove this choice" className="px-2 text-lg" style={{ color: "var(--ink-3)" }}
@@ -458,7 +458,7 @@ function ShutterPanel({ sys, lib, unit, index, mix, values, perShutter, meetClip
                   <button key={id} onClick={() => onChoice(swId, id)} aria-pressed={cur === id}
                     className={`chip flex flex-col items-center gap-1 p-2 ${cur === id ? "selected" : ""}`}>
                     <span className="h-12 w-full"><SectionSketch p={pr} /></span>
-                    <span className="text-xs leading-tight">{pr?.name ?? id}</span>
+                    <span className="text-xs leading-tight">{pr ? sectionTitle(pr.name) : id}</span>
                   </button>
                 );
               })}
@@ -535,7 +535,7 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
                           {p.count > 1 && <span className="text-xs font-bold" style={{ color: "var(--ink-3)" }}>×{p.count}</span>}
                         </span>
                         <span className="block truncate text-xs" style={{ color: pr ? "var(--ink-3)" : "var(--bad)" }}>
-                          {pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${Object.values(pr.codes)[0]} · ` : ""}${pr.name}${alts && alts.length > 1 ? ` · +${alts.length - 1} choice` : ""}` : "Choose a section"}
+                          {pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${noMaker(Object.values(pr.codes)[0])} · ` : ""}${sectionTitle(pr.name)}${alts && alts.length > 1 ? ` · +${alts.length - 1} choice` : ""}` : "Choose a section"}
                         </span>
                       </span>
                       <span className="shrink-0 text-right">

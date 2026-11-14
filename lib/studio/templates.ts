@@ -799,7 +799,7 @@ export const EURO_26: StudioSystem = withAlternatives(base({
     prof("bh_6053", "Euro Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6053" }, "62.6×23.7", { value: 2.6, perFt: 12 },
       CATALOGUE("Banu Hashim p.40 — table prints W 61.73; the drawing says 62.6"), { faceMm: 23.7 }),
     prof("bh_6050", "Domal Shutter 66×26", "shutter", { bh: "BH-6050" }, "66×26", { value: 2.35, perFt: 12 }, CATALOGUE("Banu Hashim p.40")),
-    prof("bh_6054", "Domal Clip", "interlock-patti", { bh: "BH-6054" }, "38×30.3", { value: 1.1, perFt: 12 }, CATALOGUE("Banu Hashim p.41")),
+    prof("bh_6054", "Interlock Clip", "interlock-patti", { bh: "BH-6054" }, "38×30.3", { value: 1.1, perFt: 12 }, CATALOGUE("Banu Hashim p.41")),
   ],
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full width"))),
@@ -1116,7 +1116,11 @@ function withMeetChoice(sys: StudioSystem, o: { lock: string; clip: string; glas
 }
 
 withMeetChoice(EURO_26, { lock: "bh_6003", clip: "bh_6054", glassW: 118.2, src: "glass stops 59.1 mm in (BH-6003)" });
+// the 6712 shutter is the Domal 35 one, so its 6711 I/L clip fits
+EURO_35.profiles.push(DOMAL_35.profiles.find((p) => p.id === "d35_clip")!);
+BH_35.profiles.push(DOMAL_35.profiles.find((p) => p.id === "d35_clip")!);
 withMeetChoice(EURO_35, { lock: "e35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
+// Gulf series: the catalogue has no interlock clip (slim interlocks only) — the shop picks its own.
 withMeetChoice(GULF_25, { lock: "bh_2555", clip: "", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
 withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
 withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
@@ -1229,7 +1233,7 @@ export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
 EURO_27.sizes = EURO_27.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
   ...x.cases.filter((c) => c.when),
   rule("shutterW", -mm(63.0), FROM_DRAWING("2046 pocket 51.0 + small slim 2728 12.0 (glass goes 14.6 mm into its top slot)"), { when: { meet: "slim", pick_shutterMeet: "el27_slim" } }),
-  rule("shutterW", -mm(58.7), FROM_DRAWING("2046 pocket 51.0 + big slim 2729 7.7 (glass goes 19.0 mm into its top slot)"), { when: { meet: "slim", pick_shutterMeet: "el27_slim_big" } }),
+  rule("shutterW", -mm(62.9), FROM_DRAWING("2046 pocket 51.0 + big slim 2729 11.9 (its drawing is not to scale: measured on the 27.00 slot and 22.70 height)"), { when: { meet: "slim", pick_shutterMeet: "el27_slim_big" } }),
   rule("shutterW", -mm(63.1), FROM_DRAWING("2046 pocket 51.0 + double-glass slim 2730 12.1"), { when: { meet: "slim", pick_shutterMeet: "el27_slim_dgu" } }),
   unknownFrom("shutterW"),
 ] }));
@@ -1267,9 +1271,9 @@ export const NORMAL_18_60: StudioSystem = (() => {
   n.blurb = "Same tracks as Normal 18; handle, interlock and bearing 2½″ × ¾″ (60 × 19)";
   n.profiles = [
     ...n.profiles.filter((p) => !["handle_std", "interlock", "bearing"].includes(p.id)),
-    prof("handle_60", 'Handle 2½″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)")),
-    prof("interlock_60", "Interlock 2½″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35 }),
-    prof("bearing_60", "Bearing 2½″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60 }),
+    prof("handle_60", 'Handle 2½″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)"), { shapeKey: "60x19-handle" }),
+    prof("interlock_60", "Interlock 2½″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35, shapeKey: "60x19-interlock" }),
+    prof("bearing_60", "Bearing 2½″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60, shapeKey: "60x19-bearing" }),
   ];
   const swap: Record<string, string> = { handle_std: "handle_60", interlock: "interlock_60", bearing: "bearing_60" };
   n.parts = n.parts.map((p) => ({ ...p, profile: p.profile.map((c) => ({ ...c, id: swap[c.id] ?? c.id })) }));
@@ -1361,9 +1365,21 @@ export const PART_KIND: Record<string, ProfileKind> = {
   clipTop: "bead", clipBottom: "bead", clipLeft: "bead", clipRight: "bead",
 };
 
+/** Systems the founder took out of the app (Normal 25 mm and the 5-track built on it;
+ *  37 mm — 2026-11-14). Kept for the drawing checks only: their own sections are
+ *  not in the shop's library. */
+export const TAKEN_OUT = new Set(["normal-25", "normal-5t", "ample-37"]);
+
 /** Every built-in section, once — the starting section library. */
 export const BUILT_IN_PROFILES: ProfileDef[] = (() => {
   const seen = new Map<string, ProfileDef>();
   for (const t of TEMPLATES) for (const p of t.profiles) if (!seen.has(p.id)) seen.set(p.id, p);
   return [...seen.values()];
+})();
+
+/** The sections the shop sees in its library and pickers: not the taken-out systems'
+ *  own (they stay known above, so an old job or copy still draws and packs). */
+export const LIBRARY_PROFILES: ProfileDef[] = (() => {
+  const keep = new Set(TEMPLATES.filter((t) => !TAKEN_OUT.has(t.id)).flatMap((t) => t.profiles.map((p) => p.id)));
+  return BUILT_IN_PROFILES.filter((p) => keep.has(p.id));
 })();

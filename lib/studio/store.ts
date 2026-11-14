@@ -6,7 +6,7 @@
  */
 import { registerCustomSections, type Section } from "../engine/sections";
 import type { ProfileDef, StudioSystem } from "./model";
-import { BUILT_IN_PROFILES, TEMPLATES } from "./templates";
+import { BUILT_IN_PROFILES, LIBRARY_PROFILES, TEMPLATES } from "./templates";
 import { registerStudioSystems, registerShopProfiles } from "./runtime";
 
 const KEY = "fabriq_studio_v1";
@@ -60,11 +60,11 @@ export function saveLibrary(lib: StudioLibrary): void {
 /** All sections the picker offers: the shop's own first, then built-ins. */
 export function allProfiles(lib: StudioLibrary): ProfileDef[] {
   const mine = new Set(lib.profiles.map((p) => p.id));
-  return [...lib.profiles, ...BUILT_IN_PROFILES.filter((p) => !mine.has(p.id))];
+  return [...lib.profiles, ...LIBRARY_PROFILES.filter((p) => !mine.has(p.id))];
 }
 
 export function findProfile(lib: StudioLibrary, id: string): ProfileDef | undefined {
-  return allProfiles(lib).find((p) => p.id === id);
+  return lib.profiles.find((p) => p.id === id) ?? BUILT_IN_PROFILES.find((p) => p.id === id);
 }
 
 /** Make the shop's sections known to bar packing: the pipe length the shop
