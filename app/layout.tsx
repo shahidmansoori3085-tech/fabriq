@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import { CloudAutoSync } from "@/components/cloud";
 
 const DESCRIPTION =
   "Enter window, door and partition sizes — get the pipes to buy, glass sizes and a cutting sheet instantly.";
@@ -36,6 +37,8 @@ export default function RootLayout({
         {children}
         {/* visitor counts in Vercel → Analytics (no cookies, nothing personal) */}
         <Analytics />
+        {/* save online in the background once the shop has logged in (off until cloud is set up) */}
+        <CloudAutoSync />
       </body>
     </html>
   );

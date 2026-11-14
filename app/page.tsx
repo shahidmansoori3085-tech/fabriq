@@ -25,6 +25,7 @@ import type { StudioSystem } from "@/lib/studio/model";
 import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
 import StudioThumb, { MiniSection } from "@/components/studio-thumb";
+import { CloudCard } from "@/components/cloud";
 import { shapeOf } from "@/lib/studio/shapes";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import { evaluate } from "@/lib/studio/evaluate";
@@ -2736,6 +2737,8 @@ function SettingsModal({ shop, onSave, onClose }: {
             })}
           </div>
         </div>
+
+        <CloudCard />
 
         <a href="/studio" className="card mt-5 flex items-center justify-between gap-3 p-3">
           <span className="min-w-0">

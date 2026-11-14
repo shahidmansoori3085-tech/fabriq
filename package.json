@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts && tsx evals/engine/normal-fix-top.ts && tsx evals/engine/z-middle-fix.ts && tsx evals/engine/golden.ts && tsx evals/studio/parity.ts && tsx evals/studio/teach.ts && tsx evals/studio/z-parity.ts && tsx evals/studio/tracer.ts && tsx evals/studio/in-job.ts && tsx evals/studio/dxf.ts && tsx evals/studio/derive.ts && tsx evals/studio/assemble.ts && tsx evals/studio/full-window.ts && tsx evals/studio/recognize.ts",
+    "test": "tsx evals/units/parse.ts && tsx evals/engine/invariants.ts && tsx evals/engine/options.ts && tsx evals/engine/z-door-partition.ts && tsx evals/engine/normal-fix-top.ts && tsx evals/engine/z-middle-fix.ts && tsx evals/engine/golden.ts && tsx evals/studio/parity.ts && tsx evals/studio/teach.ts && tsx evals/studio/z-parity.ts && tsx evals/studio/tracer.ts && tsx evals/studio/in-job.ts && tsx evals/studio/dxf.ts && tsx evals/studio/derive.ts && tsx evals/studio/assemble.ts && tsx evals/studio/full-window.ts && tsx evals/studio/recognize.ts && tsx evals/cloud/sync.ts",
     "eval:sheets": "tsx evals/sheets/run.ts"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "@anthropic-ai/sdk": "^0.115.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.7.0",
+    "@supabase/supabase-js": "^2.119.0",
     "@types/qrcode": "^1.5.6",
     "@types/three": "^0.185.4",
     "@vercel/analytics": "^1.5.0",
