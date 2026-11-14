@@ -1251,8 +1251,40 @@ export const EURO_25: StudioSystem = (() => {
   return g;
 })();
 
+/**
+ * Normal 18 mm with the 3″ × ¾″ shutter (OMEO p.43, 60 × 19 — founder, 2026-11-14).
+ * Same tracks and roller as the 1½″ set; handle, interlock and bearing are 60 wide
+ * instead of 40. Worked out from the checked 1½″ set: the bearing fits between
+ * handle and interlock (shutter − 60 − 60), the glass goes into each as deep as in
+ * the 1½″ set (bearing + 15.9), and each bearing is 20 mm wider (glass height
+ * shutter − 106.7). The catalogue sketch has no scale and no section numbers —
+ * check once on a window.
+ */
+export const NORMAL_18_60: StudioSystem = (() => {
+  const n: StudioSystem = structuredClone(NORMAL_18);
+  const P60 = (t: string) => ev("suggested", `From the 1½″ set, 20 mm wider pieces (OMEO p.43): ${t}. Check on one window.`);
+  n.id = "normal-18-60"; n.name = "Normal 18 mm · 3″ shutter"; n.status = "draft";
+  n.blurb = "Same tracks as Normal 18; handle, interlock and bearing 3″ × ¾″ (60 × 19)";
+  n.profiles = [
+    ...n.profiles.filter((p) => !["handle_std", "interlock", "bearing"].includes(p.id)),
+    prof("handle_60", 'Handle 3″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)")),
+    prof("interlock_60", "Interlock 3″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35 }),
+    prof("bearing_60", "Bearing 3″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60 }),
+  ];
+  const swap: Record<string, string> = { handle_std: "handle_60", interlock: "interlock_60", bearing: "bearing_60" };
+  n.parts = n.parts.map((p) => ({ ...p, profile: p.profile.map((c) => ({ ...c, id: swap[c.id] ?? c.id })) }));
+  n.sizes = n.sizes.map((x) =>
+    x.id === "bearing" ? { ...x, cases: [rule("shutterW", -mm(120), P60("shutter width − handle 60 − interlock 60"))] }
+    : x.id === "glassW" ? { ...x, cases: [rule("shutterW", -mm(104.1), P60("bearing + 15.9, as the 1½″ set (bearing + 5 sut)"))] }
+    : x.id === "glassH" ? { ...x, cases: [rule("shutterH", -mm(106.7), P60("two bearings 20 mm wider each than the 1½″ set (shutter − 66.7)"))] }
+    : x.id === "shutterW" ? { ...x, cases: x.cases.map((c) => (c.add === mm(80) ? { ...c, add: mm(120), evidence: P60("shares the width, + 120 mm handle and interlock") } : c)) }
+    : x);
+  n.notes = ["3″ × ¾″ shutter: the 1½″ set's tracks and roller; the shutter height is the same."];
+  return n;
+})();
+
 export const TEMPLATES: StudioSystem[] = [
-  NORMAL_18, DOMAL_27,
+  NORMAL_18, NORMAL_18_60, DOMAL_27,
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, BH_27, EURO_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, ELEANOR_29, AMPLE_37,
@@ -1267,6 +1299,7 @@ export const TEMPLATES: StudioSystem[] = [
 const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   // shown in Window and in Settings → Window systems: one per kind and size, no company (founder, 2026-11-13)
   "normal-18": [18, "bombay", "Normal 18 mm", true],
+  "normal-18-60": [18, "bombay", "Normal 18 mm · 3″ shutter"],
   "domal-27": [27, "domal", "Domal 27 mm", true],
   "mini-domal-20": [20, "domal", "Domal 20 mm"],
   "ample-22": [22, "domal", "Mini domal 22 mm"],
@@ -1299,7 +1332,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
 /** What Window offers: one system per kind and size. Normal 18, Domal 27 and Z run on the
  *  checked engine until the shop changes them in Settings. */
 export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section" }[] = [
-  { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" },
+  { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" }, { id: "normal-18-60", kind: "bombay", mm: 18 },
   { id: "mini-domal-20", kind: "domal", mm: 20 }, { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
   { id: "euro-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
   { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 },

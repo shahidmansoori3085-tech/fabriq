@@ -22,7 +22,7 @@ for (const sys of TEMPLATES) {
     if (pids.has(p.id)) say(sys.id, `profile ${p.id} listed twice`); pids.add(p.id);
     if (!p.size && p.codes && Object.keys(p.codes).length) say(sys.id, `profile ${p.id} has no size`);
     if (p.kg && (!(p.kg.value > 0) || !(p.kg.perFt > 0))) say(sys.id, `profile ${p.id} weight looks wrong`);
-    if (p.codes && Object.keys(p.codes).length && !shapeOf(p)) say(sys.id, `profile ${p.id} (${Object.values(p.codes).join("/")}) has no traced drawing`);
+    if (p.codes && Object.values(p.codes).some(Boolean) && !shapeOf(p)) say(sys.id, `profile ${p.id} (${Object.values(p.codes).join("/")}) has no traced drawing`);
   }
   // parts → sections exist
   for (const part of sys.parts) {
