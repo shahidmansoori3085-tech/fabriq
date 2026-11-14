@@ -20,6 +20,8 @@ function message(): string {
     "",
     "Main roz use karta hoon, aap bhi try karo 👇",
     link,
+    "",
+    "FabriQ achha lage to apne fabricator dost ko bhi share kijiye 🤝",
   ].join("\n");
 }
 
