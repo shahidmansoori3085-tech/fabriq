@@ -886,10 +886,11 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     prof("at_dgu", "DGU Shutter", "shutter", { alucoat: "AT-30006" }, "67.4×30", { value: 4.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
     prof("at_clip", "Interlock Clip", "interlock-patti", { alucoat: "AT-30007" }, "37.1×35.1", { value: 1.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20"), { faceMm: 12 }),
     prof("at_dbl", "Double Interlock", "interlock", { alucoat: "AT-30008" }, "37.1×41.62", { value: 2.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    prof("at_rail", "Track Rail (solid)", "rail", { alucoat: "AT-30101" }, "5×10.5", { value: 0.4, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20 — the roller runs on it")),
   ],
   sizes: [
     ...UNKNOWN_SIZES().slice(0, 3),
-    size("shutterH", "Shutter height", rule("H", -mm(58.0), ev("suggested", "From the drawings: Bottom Gulf on top and bottom (tip 42.5), solid rail AT-30101 (10.5) on the U floor → runs at 39.5; 42.5 + 39.5 − 24 roller. If your top is the 2-Track AT-30016 it is H − 53.3. Check on one window."))),
+    size("shutterH", "Shutter height", rule("H", -mm(57.6), ev("suggested", "From the drawings: Bottom Gulf on top and bottom (tip 42.5), solid rail AT-30101 (10.5) on the U floor (28.6) → runs at 39.1; 42.5 + 39.1 − 24 roller. If your top is the 2-Track AT-30016 it is H − 53.3. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
@@ -897,6 +898,8 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
     part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
+    // the roller runs on a solid rail set in the bottom track, one per shutter, the bottom track's length
+    part("trackClip", "{s} Track Rail", "at_rail", "shutter", "frameW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLeft", "{s} Shutter Left{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-lock"),
