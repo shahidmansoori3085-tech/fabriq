@@ -19,7 +19,7 @@ const SYSTEMS: [string, number, boolean, boolean][] = [
   ["domal-27", 0, true, true], ["ample-27", 0, true, true], ["eleanor-27", 0, true, true], ["bh-27", 0, false, false],
   ["ample-22", 0, true, true], ["euro-26", 0, true, true], ["ample-25", 0, true, true], ["ample-29", 0, true, true],
   ["ample-37", 0, true, true], ["gulf-25", 24.8, true, true], ["bh-35", 32.8, true, true], ["bh-31", 33.1, true, true],
-  ["gulf-s30", 33, true, true], ["domal-35", 0, true, true], ["euro-35", 0, true, true], ["euro-27", 0, true, true], ["eleanor-29", 0, true, true],
+  ["gulf-s30", 33, true, true], ["domal-35", 0, true, true], ["euro-35", 0, true, true], ["euro-27", 0, true, true], ["eleanor-29", 0, true, true], ["euro-25", 0, true, true],
 ];
 
 for (const [id, side, gw, gh] of SYSTEMS) {

@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { solidOf, box, slideUntilTouch, place, runners, buildSliding, buildBombay, type Stack } from "../../lib/studio/assemble";
-import { ELEANOR_29, EURO_27, EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
+import { EURO_25, ELEANOR_29, EURO_27, EURO_26, GULF_25, BH_35, BH_27, AMPLE_25, AMPLE_22, AMPLE_29, AMPLE_37, BH_31 } from "../../lib/studio/templates";
 import type { StudioSystem } from "../../lib/studio/model";
 
 const fails: string[] = [];
@@ -64,6 +64,8 @@ const ruleFor = (sys: StudioSystem, tracks: string) => {
 const cases: [StudioSystem, string, Stack][] = [
   [EURO_26, "3", { name: "Euro 3T", bottom: "BH-6001", top: "BH-6001", clip: "BH-2559", shutter: "BH-6003", mouth: "start" }],
   [EURO_26, "2", { name: "Euro 2T", bottom: "BH-6000", top: "BH-6000", clip: "BH-2559", shutter: "BH-6003", mouth: "start" }],
+  [EURO_25, "2", { name: "Euro 25 2T (BH 25, track all round)", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2554", mouth: "start" }],
+  [BH_31, "3", { name: "BH 31 3T", bottom: "BH-6403", top: "BH-6403", clip: "BH-2559", shutter: "BH-6404", mouth: "start" }],
   [GULF_25, "2", { name: "Gulf 25 2T", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2554", mouth: "start" }],
   [BH_35, "2", { name: "Gulf 35 2T", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6504", mouth: "start" }],
   [AMPLE_25, "2", { name: "Ample 25 2T", bottom: "955388", top: "955388", clip: "914401", shutter: "41323", mouth: "end" }],

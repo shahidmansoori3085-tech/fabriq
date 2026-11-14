@@ -694,6 +694,7 @@ export const BH_31: StudioSystem = withAlternatives(base({
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", 
       rule("H", -mm(65.3), ev("suggested", "From the drawings (window built from the sections): 2 × 42.7 track + 3.9 clip − 24 roller. Check on one window."), { when: { tracks: "2" } }),
+      rule("H", -mm(65.9), ev("suggested", "From the drawings: 3-track BH-6403 with clip 2559 and shutter 6404 — shutter runs H − 65.9. Check on one window."), { when: { tracks: "3" } }),
       unknownFrom("H")),
     ...UNKNOWN_SIZES().slice(4),
   ],
@@ -1119,7 +1120,8 @@ function withShutterChoice(sys: StudioSystem, opts: { value: string; label: stri
   }));
   return sys;
 }
-withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
+AMPLE_25.profiles.push(prof("a25_patti", "25 mm Interlock Clip", "interlock-patti", { ample: "955391" }, "35.54×39.8", perM(0.37), CATALOGUE("Ample 25 mm p.3"), { faceMm: 10 }));
+withMeetChoice(AMPLE_25, { lock: "a25_shutter", clip: "a25_patti", glassW: 108.6, src: "glass stops 54.3 mm in (Ample 41323)", def: "clip" });
 withMeetChoice(AMPLE_37, { lock: "a37_handle", clip: "", glassW: 127, src: "glass stops 63.5 mm in (Ample 41068)", def: "clip" });
 
 /** With a slim interlock the meeting side is the slim, never the shutter: where the
@@ -1132,6 +1134,11 @@ function slimSide(sys: StudioSystem, slim: string): StudioSystem {
 slimSide(AMPLE_25, "");
 slimSide(AMPLE_37, "");
 slimSide(AMPLE_29, "a29_slim_40");
+AMPLE_29.sizes = AMPLE_29.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
+  ...x.cases.filter((c) => c.when),
+  rule("shutterW", -mm(83.6), FROM_DRAWING("41055 pocket 52.7 mm + slim 41289 pocket 30.9 mm (glass goes 13.0 mm into the slim)"), { when: { meet: "slim" } }),
+  unknownFrom("shutterW"),
+] }));
 
 /* ———————————————— Euro 27 ———————————————— */
 /**
@@ -1182,12 +1189,29 @@ export const EURO_27: StudioSystem = withMeetChoice(base({
   ],
 }), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });
 
+/** Euro 25 (founder, 2026-11-14): Banu Hashim's 25 mm series — BH-2551 / 2553 on all
+ *  four sides at 45°, roller clip 2559, shutter 2554 / 2555, slim interlock small 2556 or
+ *  big 2557 (or the shutter with an interlock clip). Built from the drawings: H − 39.5
+ *  (the Gulf 25 height), clip between the side U tips 2 × 29.8. */
+export const EURO_25: StudioSystem = (() => {
+  const g: StudioSystem = structuredClone(GULF_25);
+  g.id = "euro-25"; g.name = "Euro 25 mm"; g.group = "gulf";
+  g.blurb = "BH-2551 / 2553 track on all 4 sides at 45°, roller clip 2559; slim interlock small (2556) or big (2557), or interlock clip";
+  g.profiles = g.profiles.filter((p) => p.id !== "bh_2550" && p.id !== "bh_2552");
+  g.parts = [...domalFrame(byTracks("bh_2551", "bh_2553")), ...g.parts.filter((p) => !/^frame/.test(p.id))];
+  g.sizes = g.sizes.map((x) => x.id === "frameW" ? { ...x, cases: [rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))] }
+    : x.id === "frameH" ? { ...x, cases: [rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))] }
+    : x.id === "clipW" ? { ...x, cases: clip(59.6, "2 × 29.8, BH-2551 on the sides") } : x);
+  g.notes = ["Euro 25: the same track all round (founder). The Gulf 25 has one-groove 2550 / 2552 on the sides instead."];
+  return g;
+})();
+
 export const TEMPLATES: StudioSystem[] = [
   NORMAL_18, DOMAL_27,
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, BH_27, EURO_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, ELEANOR_29, AMPLE_37,
-  EURO_26, EURO_35, GULF_25, BH_31, BH_35, GULF_S30, GULF,
+  EURO_25, EURO_26, EURO_35, GULF_25, BH_31, BH_35, GULF_S30, GULF,
   Z_40, Z_55,
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
@@ -1201,7 +1225,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "domal-27": [27, "domal", "Domal 27 mm", true],
   "ample-22": [22, "domal", "Mini domal 22 mm"],
   "domal-35": [35, "domal", "Domal 35 mm", true],
-  "ample-25": [25, "euro", "Euro 25 mm", true],
+  "euro-25": [25, "euro", "Euro 25 mm", true],
   "euro-26": [26, "euro", "Euro 26 mm"],
   "euro-27": [27, "euro", "Euro 27 mm", true],
   "ample-29": [29, "euro", "Euro 29 mm", true],
@@ -1223,6 +1247,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "bh-27": [27, "domal", "Domal 27 mm (track 45.5)"],
   "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
   "ample-26": [26, "euro", "Euro 26 mm (shutter 41300)"],
+  "ample-25": [25, "euro", "Euro 25 mm (track 40, clip only)"],
   "eleanor-29": [29, "euro", "Euro 29 mm (track 48.0)"],
   "gulf": [0, "gulf", "Gulf — any size"],
 };
@@ -1231,7 +1256,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
 export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section" }[] = [
   { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" },
   { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
-  { id: "ample-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
+  { id: "euro-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
   { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 }, { id: "ample-37", kind: "euro", mm: 37 },
   { id: "gulf-25", kind: "gulf", mm: 25 }, { id: "gulf-s30", kind: "gulf", mm: 30 }, { id: "bh-31", kind: "gulf", mm: 31 }, { id: "bh-35", kind: "gulf", mm: 35 },
   { id: "z-40", kind: "casement", mm: 40, engine: "z_section" },
