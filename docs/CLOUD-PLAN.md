@@ -67,6 +67,19 @@ needs **DLT registration** of the sender and the message template — done by th
 business in its own name; it takes a few days. Until then: test numbers in
 Supabase, or email login as a stop-gap.
 
+### OTP fills itself (founder, 2026-11-14)
+
+The shop types the number once; the code fills in and login goes through by itself:
+
+- **Android (Chrome):** Web OTP API (`navigator.credentials.get({ otp })`) reads the
+  SMS. Chrome shows one "Allow" sheet; the code fills and the form submits itself.
+  The SMS must end with the line `@<app domain> #<code>` — put it in the DLT template.
+- **iPhone (Safari):** the code field uses `autocomplete="one-time-code"`; iOS shows the
+  code above the keyboard, one tap fills it, and the form submits itself at 6 digits.
+- Fully zero-tap needs a Play Store app (SMS Retriever) — not on the web, by the
+  phone's own security rule.
+- The phone stays logged in (long session), so OTP is only for a new phone.
+
 ### Tests
 
 - `evals/cloud/sync.ts`: merge rules (newer wins, tombstones, first-login upload,
