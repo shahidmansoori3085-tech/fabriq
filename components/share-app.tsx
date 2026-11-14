@@ -87,7 +87,7 @@ export function ShareAppRow() {
 }
 
 /** Top of the material list: the banner itself is the button. */
-export function ShareAppBanner({ src = "/banners/share-green.webp" }: { src?: string }) {
+export function ShareAppBanner({ src = "/banners/share-orange.webp" }: { src?: string }) {
   return (
     <button onClick={shareApp} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
       className="no-print block w-full overflow-hidden rounded-[var(--radius)]" style={{ border: "1px solid var(--line)" }}>
