@@ -288,6 +288,7 @@ Prefer letting GitHub run them (`check.yml` runs on every non-main branch push).
 - Window asks: kind (Normal / Domal / Euro / Gulf / Casement, plus "My own" when the shop has extra systems) → size in mm → tracks → shutters → sizes. `WINDOW_SYSTEMS` in templates.ts is the list (one system per kind and size). Normal 18, Domal 27 and Z run on the checked engine until the shop changes them; every other size runs the Studio built-in directly (`studioSystem()` falls back to TEMPLATES) — no copy is needed to use it.
 - Settings → **Window systems** (/studio) lists every window by kind. Tapping a built-in makes the shop's copy; Window then uses that copy (`systemForWindow`, newest wins). "My systems" button removed from the header.
 - No company names on screen: template names are kind + size; other makers' versions (Ample/Eleanor/BH Domal 27, Eleanor 29, Ample 26, Gulf any) are kept in code, not offered (`OFFERED`). Old saved copies drop the " — Maker" part on load. Descriptions and rule sources pass through `noMaker()`.
+- 37 mm taken out of the app (founder, 2026-11-14): Ample 37 stays in code, not offered.
 - Slim interlock never adds an interlock clip (checked on every system). With "slim", the meeting side is the slim: Ample 29 → 41289; Ample 25 / 37 and Eleanor 29 ask for the slim section and do not guess its glass width.
 
 ## 10. Backlog (highest value first)

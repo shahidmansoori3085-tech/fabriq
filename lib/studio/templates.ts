@@ -1230,7 +1230,6 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "euro-27": [27, "euro", "Euro 27 mm", true],
   "ample-29": [29, "euro", "Euro 29 mm", true],
   "euro-35": [35, "euro", "Euro 35 mm", true],
-  "ample-37": [37, "euro", "Euro 37 mm"],
   "gulf-25": [25, "gulf", "Gulf 25 mm", true],
   "gulf-s30": [30, "gulf", "Gulf 30 mm", true],
   "bh-31": [31, "gulf", "Gulf 31 mm", true],
@@ -1248,6 +1247,7 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   "mini-domal-20": [20, "domal", "Mini domal 20 mm"],
   "ample-26": [26, "euro", "Euro 26 mm (shutter 41300)"],
   "ample-25": [25, "euro", "Euro 25 mm (track 40, clip only)"],
+  "ample-37": [37, "euro", "Euro 37 mm"], // founder 2026-11-14: 37 mm taken out of the app
   "eleanor-29": [29, "euro", "Euro 29 mm (track 48.0)"],
   "gulf": [0, "gulf", "Gulf — any size"],
 };
@@ -1257,7 +1257,7 @@ export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?
   { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" },
   { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
   { id: "euro-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
-  { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 }, { id: "ample-37", kind: "euro", mm: 37 },
+  { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 },
   { id: "gulf-25", kind: "gulf", mm: 25 }, { id: "gulf-s30", kind: "gulf", mm: 30 }, { id: "bh-31", kind: "gulf", mm: 31 }, { id: "bh-35", kind: "gulf", mm: 35 },
   { id: "z-40", kind: "casement", mm: 40, engine: "z_section" },
 ];
