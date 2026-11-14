@@ -12,14 +12,32 @@ export type Step =
   | "sent/aluminium-order"
   | "sent/glass-order"
   | "sent/cutting-sheet"
-  | "shared-app";
+  | `shared-app/${"banner" | "card" | "home"}`;
 
-export function markStep(step: Step): void {
+/**
+ * Where this phone first came from (a QR, a friend's share, Instagram…),
+ * kept for good. Every step is then counted a second time under
+ * "/via/<source>/<step>", so a report can follow each source all the way:
+ * how many came, how many made a material list, sent an order, installed,
+ * came back. Nothing about the person or the job is sent.
+ */
+const VIA_KEY = "fabriq.via";
+function via(): string | null {
+  try { return localStorage.getItem(VIA_KEY); } catch { return null; }
+}
+
+function view(path: string): void {
   try {
-    pageview({ route: `/done/${step}`, path: `/done/${step}` });
+    pageview({ route: path, path });
   } catch {
     /* analytics blocked or not loaded — the app works the same */
   }
+}
+
+export function markStep(step: Step): void {
+  view(`/done/${step}`);
+  const v = via();
+  if (v) view(`/via/${v}/${step}`);
 }
 
 /**
@@ -35,6 +53,8 @@ export function markSource(): void {
     const src = clean(q.get("utm_source"));
     if (!src) return;
     const camp = clean(q.get("utm_campaign"));
+    // first source wins: the jump on to Chrome is not a source of its own
+    if (src !== "open-in-chrome" && !localStorage.getItem(VIA_KEY)) localStorage.setItem(VIA_KEY, src);
     const path = `/from/${src}${camp ? `/${camp}` : ""}`;
     if (sessionStorage.getItem("fabriq.from") === path) return; // a reload is not a new visit
     // <Analytics> sets up window.va a moment after the page mounts: wait for
@@ -75,11 +95,17 @@ function sendWhenReady(path: string, onSent?: () => void): void {
  */
 export function markInstalls(): void {
   try {
-    window.addEventListener("appinstalled", () => sendWhenReady("/done/installed"), { once: true });
+    window.addEventListener("appinstalled", () => {
+      sendWhenReady("/done/installed");
+      const v = via();
+      if (v) sendWhenReady(`/via/${v}/installed`);
+    }, { once: true });
     const standalone = window.matchMedia?.("(display-mode: standalone)").matches
       || (navigator as unknown as { standalone?: boolean }).standalone === true;
     if (!standalone || sessionStorage.getItem("fabriq.home") === "1") return;
     sendWhenReady("/from/home-screen", () => sessionStorage.setItem("fabriq.home", "1"));
+    const v = via();
+    if (v) sendWhenReady(`/via/${v}/home-screen`);
   } catch {
     /* storage or analytics blocked — the app works the same */
   }
