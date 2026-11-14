@@ -1263,13 +1263,13 @@ export const EURO_25: StudioSystem = (() => {
 export const NORMAL_18_60: StudioSystem = (() => {
   const n: StudioSystem = structuredClone(NORMAL_18);
   const P60 = (t: string) => ev("suggested", `From the 1½″ set, 20 mm wider pieces (OMEO p.43): ${t}. Check on one window.`);
-  n.id = "normal-18-60"; n.name = "Normal 18 mm · 3″ shutter"; n.status = "draft";
-  n.blurb = "Same tracks as Normal 18; handle, interlock and bearing 3″ × ¾″ (60 × 19)";
+  n.id = "normal-18-60"; n.name = "Normal 18 mm · 2½″ shutter"; n.status = "draft";
+  n.blurb = "Same tracks as Normal 18; handle, interlock and bearing 2½″ × ¾″ (60 × 19)";
   n.profiles = [
     ...n.profiles.filter((p) => !["handle_std", "interlock", "bearing"].includes(p.id)),
-    prof("handle_60", 'Handle 3″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)")),
-    prof("interlock_60", "Interlock 3″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35 }),
-    prof("bearing_60", "Bearing 3″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60 }),
+    prof("handle_60", 'Handle 2½″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)")),
+    prof("interlock_60", "Interlock 2½″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35 }),
+    prof("bearing_60", "Bearing 2½″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60 }),
   ];
   const swap: Record<string, string> = { handle_std: "handle_60", interlock: "interlock_60", bearing: "bearing_60" };
   n.parts = n.parts.map((p) => ({ ...p, profile: p.profile.map((c) => ({ ...c, id: swap[c.id] ?? c.id })) }));
@@ -1279,7 +1279,7 @@ export const NORMAL_18_60: StudioSystem = (() => {
     : x.id === "glassH" ? { ...x, cases: [rule("shutterH", -mm(106.7), P60("two bearings 20 mm wider each than the 1½″ set (shutter − 66.7)"))] }
     : x.id === "shutterW" ? { ...x, cases: x.cases.map((c) => (c.add === mm(80) ? { ...c, add: mm(120), evidence: P60("shares the width, + 120 mm handle and interlock") } : c)) }
     : x);
-  n.notes = ["3″ × ¾″ shutter: the 1½″ set's tracks and roller; the shutter height is the same."];
+  n.notes = ["2½″ × ¾″ shutter (catalogue: 3×¾″ handle, 60 × 19): the 1½″ set's tracks and roller; the shutter height is the same."];
   return n;
 })();
 
@@ -1299,7 +1299,7 @@ export const TEMPLATES: StudioSystem[] = [
 const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
   // shown in Window and in Settings → Window systems: one per kind and size, no company (founder, 2026-11-13)
   "normal-18": [18, "bombay", "Normal 18 mm", true],
-  "normal-18-60": [18, "bombay", "Normal 18 mm · 3″ shutter"],
+  "normal-18-60": [18, "bombay", "Normal 18 mm · 2½″ shutter"],
   "domal-27": [27, "domal", "Domal 27 mm", true],
   "mini-domal-20": [20, "domal", "Domal 20 mm"],
   "ample-22": [22, "domal", "Mini domal 22 mm"],

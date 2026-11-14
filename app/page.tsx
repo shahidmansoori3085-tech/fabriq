@@ -188,13 +188,19 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
  * until then. */
 const KINDS: [string, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["euro", "Euro"], ["gulf", "Gulf"], ["casement", "Casement (Z)"], ["mine", "My own"]];
 interface WinChoice { sys: WinSys; title: string; sub: string; pic: StudioSystem | undefined }
+/** Normal 18 comes in two shutter sections (founder): the choice is named by its section. */
+const SHUTTER_SECTION: Record<string, [string, string]> = {
+  "normal-18": ["1½″ × ¾″", "Normal 18 mm · 40 × 18"],
+  "normal-18-60": ["2½″ × ¾″", "Normal 18 mm · 60 × 19"],
+};
 function windowChoices(kind: string): WinChoice[] {
   const own = studioSystems();
   const out: WinChoice[] = [];
   if (kind !== "mine") for (const w of WINDOW_SYSTEMS.filter((x) => x.kind === kind)) {
     const sys = systemForWindow(w.id);
     const changed = !!sys && sys.id !== w.id;
-    out.push({ sys: changed ? `studio:${sys!.id}` : w.engine ?? `studio:${w.id}`, title: sys?.name ?? w.id, sub: changed ? "Your settings" : "", pic: sys });
+    const sec = SHUTTER_SECTION[w.id];
+    out.push({ sys: changed ? `studio:${sys!.id}` : w.engine ?? `studio:${w.id}`, title: sec?.[0] ?? sys?.name ?? w.id, sub: changed ? "Your settings" : sec?.[1] ?? "", pic: sys });
   }
   // the shop's own systems that are not one of the above: under their kind, or under "My own"
   const offered = new Set(WINDOW_SYSTEMS.map((w) => w.id));
@@ -1156,7 +1162,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
             </div>
-            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : STEP_TITLE[flow.step]}</h1>
+            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : flow.step === "system" && o.kind === "bombay" ? "Shutter section?" : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
