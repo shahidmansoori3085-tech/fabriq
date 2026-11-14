@@ -41,7 +41,7 @@ import {
 } from "@/lib/projects";
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
-import { ShareAppCard, ShareAppRow } from "@/components/share-app";
+import { ShareAppBanner, ShareAppCard, ShareAppRow } from "@/components/share-app";
 
 /* ————————————————— item options ————————————————— */
 
@@ -1835,6 +1835,8 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
           ))}
         </div>
       </div>
+
+      {tab === "material" && <ShareAppBanner />}
 
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />

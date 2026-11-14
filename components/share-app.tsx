@@ -26,7 +26,7 @@ function message(): string {
   ].join("\n");
 }
 
-async function shareApp(): Promise<void> {
+export async function shareApp(): Promise<void> {
   const text = message();
   // the phone's own share menu: WhatsApp, Telegram, Instagram… (the link goes
   // inside the text — some apps drop the text when a separate url is given)
@@ -82,6 +82,17 @@ export function ShareAppRow() {
       <span className="min-w-0 flex-1 text-sm font-semibold">{LINE}</span>
       <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
         strokeLinecap="round" strokeLinejoin="round" className="shrink-0" style={{ color: "var(--ink-3)" }}><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+  );
+}
+
+/** Top of the material list: the banner itself is the button. */
+export function ShareAppBanner({ src = "/banners/share-green.webp" }: { src?: string }) {
+  return (
+    <button onClick={shareApp} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
+      className="no-print block w-full overflow-hidden rounded-[var(--radius)]" style={{ border: "1px solid var(--line)" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 3:1 banner */}
+      <img src={src} alt="" width={1200} height={400} className="block h-auto w-full" />
     </button>
   );
 }
