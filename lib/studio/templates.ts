@@ -1377,9 +1377,25 @@ export const BUILT_IN_PROFILES: ProfileDef[] = (() => {
   return [...seen.values()];
 })();
 
-/** The sections the shop sees in its library and pickers: not the taken-out systems'
- *  own (they stay known above, so an old job or copy still draws and packs). */
+/** The sections the shop sees in its library and pickers: only those a system in the
+ *  app cuts, each once (one code and size = one section). Every other built-in section
+ *  stays known above, so an old job or copy still draws and packs (founder, 2026-11-14). */
 export const LIBRARY_PROFILES: ProfileDef[] = (() => {
-  const keep = new Set(TEMPLATES.filter((t) => !TAKEN_OUT.has(t.id)).flatMap((t) => t.profiles.map((p) => p.id)));
-  return BUILT_IN_PROFILES.filter((p) => keep.has(p.id));
+  const used = new Set<string>();
+  for (const t of TEMPLATES) {
+    if (!OFFERED.has(t.id)) continue;
+    for (const p of t.parts) {
+      for (const c of p.profile) if (c.id) used.add(c.id);
+      if (p.meshProfile) used.add(p.meshProfile);
+    }
+  }
+  const seen = new Set<string>();
+  return BUILT_IN_PROFILES.filter((p) => {
+    if (!used.has(p.id) || !p.size) return false; // no size: a "pick your own" place, not a section
+    const code = String(Object.values(p.codes ?? {})[0] ?? "");
+    const key = code ? `${code}|${p.size}` : p.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 })();
