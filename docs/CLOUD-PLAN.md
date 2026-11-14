@@ -1,6 +1,14 @@
 # Login and cloud save — plan
 
-Status: plan only (2026-11-14). Nothing built yet. Founder said "Haan, plan banao".
+Status (2026-11-14): code built and tested, **off** until the Supabase keys are set.
+Founder chose **free login: Continue with Google, then shop name + mobile + address typed once** (no SMS, no DLT). The OTP sections below are kept for later.
+
+## Setup still to do
+
+1. Supabase project  (free plan, Mumbai) — created by Claude after the founder's yes; run .
+2. Google login: in Google Cloud console the founder makes an OAuth client (Web) with the Supabase callback address as redirect; he pastes its Client ID and secret into Supabase → Authentication → Providers → Google himself.
+3. Supabase → Authentication → URL configuration: add the preview and live addresses.
+4.  and  (public values) for the **preview** build only; live only on "sabke liye live".
 
 ## Why
 
