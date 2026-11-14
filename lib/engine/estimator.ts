@@ -488,11 +488,25 @@ export function expandItem(item: JobItem): CutPiece[] {
   return expandNormalItem(item);
 }
 
+/** Normal 18 shutter set: 1½″ × ¾″ (40 × 18, default) or 2½″ × ¾″ (60 × 19). The
+ *  2½″ pieces are 20 mm wider each: the bearing fits between a 60 handle and a 60
+ *  interlock, and the glass loses 20 mm more on each side (founder 2026-11-14). */
+export function normalSet(item: JobItem) {
+  const big = item.meta.shutterSection === "60";
+  return {
+    handle: big ? "handle_60" : "handle_std",
+    interlock: big ? "interlock_60" : "interlock",
+    bearing: big ? "bearing_60" : "bearing",
+    extra: big ? mm(40) : 0,
+  };
+}
+
 function expandNormalItem(item: JobItem): CutPiece[] {
   const pieces: CutPiece[] = [];
   const { top, bottom } = frameSections(item);
   const { shutterW, shutterH } = shutterSize(item, DEFAULTS);
-  const bearingLen = shutterW - DEFAULTS.bearingDeduction;
+  const set = normalSet(item);
+  const bearingLen = shutterW - DEFAULTS.bearingDeduction - set.extra;
 
   for (let q = 0; q < item.qty; q++) {
     const wId = `${item.id}${item.qty > 1 ? `.${q + 1}` : ""}`;
@@ -528,10 +542,10 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     item.shutters.forEach((sh, i) => {
       const sn = `S${i + 1}`;
       const tag = sh.kind === "jali" ? " (Mesh)" : "";
-      push("handle_std", shutterH, `${sn} Handle${tag}`);
-      push("interlock", shutterH, `${sn} Interlock${tag}`);
-      push("bearing", bearingLen, `${sn} Bearing Top${tag}`);
-      push("bearing", bearingLen, `${sn} Bearing Bottom${tag}`);
+      push(set.handle, shutterH, `${sn} Handle${tag}`);
+      push(set.interlock, shutterH, `${sn} Interlock${tag}`);
+      push(set.bearing, bearingLen, `${sn} Bearing Top${tag}`);
+      push(set.bearing, bearingLen, `${sn} Bearing Bottom${tag}`);
     });
   }
   return pieces;
@@ -1057,8 +1071,9 @@ export function estimate(items: JobItem[]): MaterialList {
     const d = DEFAULTS;
     const n = item.shutters.length;
     const { shutterW, shutterH } = shutterSize(item, d);
-    const gW = shutterW - d.glassDeductionW;
-    const gH = shutterH - d.glassDeductionH;
+    const extra = normalSet(item).extra;
+    const gW = shutterW - d.glassDeductionW - extra;
+    const gH = shutterH - d.glassDeductionH - extra;
 
     const glassShutters = item.shutters.filter((s) => s.kind === "glass").length;
     const jaliShutters = item.shutters.filter((s) => s.kind === "jali").length;

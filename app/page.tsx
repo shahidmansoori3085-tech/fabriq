@@ -50,6 +50,8 @@ type WinSys = "normal" | "domal" | "z_section";
  *  is usually ten windows of the same kind, so only the size changes. */
 interface Opts {
   sys: WinSys;
+  /** Normal Sliding shutter set: "40" = 1½″ × ¾″, "60" = 2½″ × ¾″ */
+  normalSection: string;
   tracks: string;
   mix: string;
   domalFix: string;
@@ -80,7 +82,7 @@ interface Opts {
 }
 
 const DEFAULT_OPTS: Opts = {
-  sys: "normal", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
+  sys: "normal", normalSection: "40", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
@@ -157,6 +159,7 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
+  if (o.sys === "normal" && o.normalSection === "60") m.shutterSection = "60";
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
   return m;
@@ -182,6 +185,7 @@ function optsFromItem(it: JobItem): Opts {
   } else {
     o.sys = it.system === "domal" ? "domal" : "normal";
     pick("tracks", m.tracks); pick("mix", m.mix); pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
+    o.normalSection = m.shutterSection === "60" ? "60" : "40";
   }
   return o;
 }
@@ -217,7 +221,7 @@ function itemLabel(it: JobItem): string {
       ? `${base} (${formatFtIn(feet(parseFloat(m.zFixedFt ?? "2") || 2))} fixed, ${labelOf(Z_DIRS, m.zComboDir).toLowerCase()})${sashes}`
       : `${base}${sashes}`;
   }
-  const name = it.system === "domal" ? "Domal" : "Normal Sliding";
+  const name = it.system === "domal" ? "Domal" : m.shutterSection === "60" ? 'Normal Sliding 2½"' : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   return `${name} ${m.tracks} Track · ${mix}${fix}`;
@@ -579,7 +583,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "system" | "tracks" | "mix" | "domalFix"
+  | "type" | "system" | "normalSection" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -606,12 +610,13 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   }
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
-  return ["type", "system", "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
+  return ["type", "system", ...(o.sys === "normal" ? ["normalSection" as const] : []), "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
   system: "Which window system?",
+  normalSection: "Shutter section?",
   tracks: "How many tracks?",
   mix: "Which shutters?",
   domalFix: "Fixed glass on top?",
@@ -1052,6 +1057,22 @@ function JobScreen({
                 title={label} sub={SYSTEM_INFO[v as WinSys].sub}
                 // eslint-disable-next-line @next/next/no-img-element
                 picture={<img src={SYSTEM_INFO[v as WinSys].img} alt="" style={{ maxHeight: 64, maxWidth: 96, objectFit: "contain", mixBlendMode: "multiply" }} />} />
+            ))}
+          </div>
+        )}
+
+        {flow.step === "normalSection" && (
+          <div className="flex flex-col gap-2">
+            {([["40", "1½″ × ¾″", "Handle, interlock and bearing 40 × 18 mm"], ["60", "2½″ × ¾″", "Handle, interlock and bearing 60 × 19 mm"]] as const).map(([v, title, sub]) => (
+              <button key={v} type="button" onClick={() => choose({ normalSection: v })} aria-pressed={o.normalSection === v}
+                className="card flex w-full items-center justify-between gap-3 p-4 text-left"
+                style={{ borderColor: o.normalSection === v ? "var(--accent)" : "var(--line)", borderWidth: o.normalSection === v ? 2 : 1, background: o.normalSection === v ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}>
+                <span>
+                  <span className="block text-lg font-bold">{title}</span>
+                  <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+                </span>
+                <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
+              </button>
             ))}
           </div>
         )}
@@ -2203,7 +2224,7 @@ function packLine(pieces: CutPiece[]) {
 }
 
 /** Sliding-window sections — the only ones the parts guide describes. */
-const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing"]);
+const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing", "handle_60", "interlock_60", "bearing_60"]);
 
 function CuttingPanel({ list, shop, items, jobName }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;
