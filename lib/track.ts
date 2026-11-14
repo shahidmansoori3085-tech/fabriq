@@ -11,7 +11,8 @@ export type Step =
   | "cutting-sheet"
   | "sent/aluminium-order"
   | "sent/glass-order"
-  | "sent/cutting-sheet";
+  | "sent/cutting-sheet"
+  | "shared-app";
 
 export function markStep(step: Step): void {
   try {

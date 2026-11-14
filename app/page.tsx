@@ -41,6 +41,7 @@ import {
 } from "@/lib/projects";
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
+import { ShareAppCard, ShareAppRow } from "@/components/share-app";
 
 /* ————————————————— item options ————————————————— */
 
@@ -1465,6 +1466,9 @@ function JobScreen({
         </div>
       )}
 
+      {/* someone with a job behind them: pass FabriQ on */}
+      {items.length === 0 && recent.length > 0 && <ShareAppRow />}
+
       {/* the how-to video: its own quiet row on the first screen, after the work */}
       {items.length === 0 && (
         <button onClick={onDemo} className="card flex items-center gap-3 px-4 py-3 text-left">
@@ -1835,6 +1839,8 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
+
+      <ShareAppCard />
 
       {/* starting over is the last thing on the page, never one slip away at the top */}
       <button onClick={onNew} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
