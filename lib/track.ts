@@ -5,6 +5,7 @@
  * about the job or the shop is sent: only the step's name.
  */
 import { pageview } from "@vercel/analytics";
+import { loadProjects } from "@/lib/projects";
 
 export type Step =
   | "material-list"
@@ -38,6 +39,9 @@ export function markStep(step: Step): void {
   view(`/done/${step}`);
   const v = via();
   if (v) view(`/via/${v}/${step}`);
+  // per phone, for the "who comes back" report: lists made and orders sent
+  const u = uid();
+  if (u && (step === "material-list" || step.startsWith("sent/"))) view(`/u/${u}/${step}`);
 }
 
 /**
@@ -144,4 +148,54 @@ export function markMade(items: MadeItem[], unit: string): void {
   const bucket = pcs <= 1 ? "1" : pcs <= 3 ? "2-3" : pcs <= 5 ? "4-5" : pcs <= 10 ? "6-10" : pcs <= 20 ? "11-20" : "21+";
   view(`/job/pcs/${bucket}`);
   view(`/job/unit/${slug(unit)}`);
+}
+
+/* —— the same person, day after day ——
+ * Vercel forgets a visitor after a day, so "14 people today" cannot say how
+ * many came yesterday too. Each phone gets a short random code of its own
+ * (no name, no number — the code is all the report ever sees), and once a
+ * day the app says: this code is here, new or returning, since when, and on
+ * how many days so far.
+ */
+const UID_KEY = "fabriq.uid";
+function uid(): string | null {
+  try { return localStorage.getItem(UID_KEY); } catch { return null; }
+}
+/** today in India, YYYY-MM-DD */
+const istDay = (t: number) => new Date(t + 5.5 * 3600_000).toISOString().slice(0, 10);
+
+export function markVisitor(): void {
+  try {
+    const today = istDay(Date.now());
+    if (localStorage.getItem("fabriq.seen") === today) return; // counted today already
+    let id = localStorage.getItem(UID_KEY);
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 8);
+      localStorage.setItem(UID_KEY, id);
+    }
+    // first day: kept from the first visit after this change; for a phone that
+    // was here before, its oldest saved job says when it started
+    let first = localStorage.getItem("fabriq.first");
+    let isNew = false;
+    if (!first) {
+      const oldest = loadProjects().reduce((m, p) => Math.min(m, p.created || Infinity), Infinity);
+      first = Number.isFinite(oldest) ? istDay(oldest) : today;
+      isNew = !Number.isFinite(oldest);
+      localStorage.setItem("fabriq.first", first);
+    }
+    const days: string[] = JSON.parse(localStorage.getItem("fabriq.days") || "[]");
+    if (!days.includes(today)) days.push(today);
+    localStorage.setItem("fabriq.days", JSON.stringify(days.slice(-120)));
+    const since = Math.round((Date.parse(today) - Date.parse(first)) / 86400_000);
+    const sinceB = since === 0 ? "0" : since <= 3 ? "1-3" : since <= 7 ? "4-7" : since <= 14 ? "8-14" : since <= 30 ? "15-30" : "31+";
+    const n = days.length;
+    const daysB = n === 1 ? "1" : n === 2 ? "2" : n <= 4 ? "3-4" : n <= 7 ? "5-7" : n <= 14 ? "8-14" : "15+";
+    const done = () => localStorage.setItem("fabriq.seen", today);
+    sendWhenReady(`/u/${id}`, done);
+    sendWhenReady(isNew ? "/active/new" : "/active/returning");
+    sendWhenReady(`/active/since/${sinceB}`);
+    sendWhenReady(`/active/days/${daysB}`);
+  } catch {
+    /* storage blocked — nothing to count */
+  }
 }
