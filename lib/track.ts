@@ -110,3 +110,38 @@ export function markInstalls(): void {
     /* storage or analytics blocked — the app works the same */
   }
 }
+
+/** One opening as the report needs it: what kind, which system, how built, how big. */
+export interface MadeItem { type: string; system: string; label: string; wFt: number; hFt: number; qty: number }
+
+const slug = (v: string) => v.replace(/undefined|null/g, "").toLowerCase().replace(/×/g, "x").replace(/[^a-z0-9.x]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+const half = (ft: number) => (Math.round(ft * 2) / 2).toString();
+
+/**
+ * What the material list was made for — counted as views of made-up paths so
+ * the report can say what fabricators build most:
+ *   /made/<type>/<system>/<how it is built>   once per opening, weighted by qty
+ *   /size/<type>/<w>x<h>                      size to the nearest half foot
+ *   /job/pcs/<n>, /job/unit/<ft|in|mm>        size of the job, unit typed in
+ * No customer name, shop or price leaves the phone. The same job shown again
+ * in the same visit is not counted twice.
+ */
+export function markMade(items: MadeItem[], unit: string): void {
+  if (!items.length) return;
+  try {
+    const key = JSON.stringify(items);
+    if (sessionStorage.getItem("fabriq.made") === key) return;
+    sessionStorage.setItem("fabriq.made", key);
+  } catch { /* storage blocked — count it anyway */ }
+  let pcs = 0;
+  for (const it of items) {
+    const n = Math.min(Math.max(1, it.qty), 50);
+    pcs += it.qty;
+    const made = `/made/${slug(it.type)}/${slug(it.system)}/${slug(it.label)}`;
+    const size = `/size/${slug(it.type)}/${half(it.wFt)}x${half(it.hFt)}`;
+    for (let i = 0; i < n; i++) { view(made); view(size); }
+  }
+  const bucket = pcs <= 1 ? "1" : pcs <= 3 ? "2-3" : pcs <= 5 ? "4-5" : pcs <= 10 ? "6-10" : pcs <= 20 ? "11-20" : "21+";
+  view(`/job/pcs/${bucket}`);
+  view(`/job/unit/${slug(unit)}`);
+}
