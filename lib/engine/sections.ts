@@ -63,6 +63,11 @@ export const SECTIONS: Record<string, Section> = {
     // 2"×1" = 50×25 — the same OMEO 2000 die listed as door_palla_50 below.
     omeo: "2000", size: "50×25", tier: "VERIFIED",
   },
+  // Normal 18 with the 2½″ × ¾″ shutter (founder 2026-11-14): OMEO p.43 "3×¾″ handle"
+  // family, 60 × 19 — the catalogue prints no section numbers.
+  handle_60: { id: "handle_60", name: 'Handle 2½"×¾"', label: 'Handle 2½"', size: "60×19", tier: "NEEDS_VERIFICATION" },
+  interlock_60: { id: "interlock_60", name: 'Interlock 2½"×¾"', label: 'Interlock 2½"', size: "60×19", tier: "NEEDS_VERIFICATION" },
+  bearing_60: { id: "bearing_60", name: 'Bearing 2½"×¾"', label: 'Bearing 2½"', size: "60×19", tier: "NEEDS_VERIFICATION" },
   interlock: {
     id: "interlock", name: "Interlock", label: "Interlock",
     omeo: "1081", alpro: "1861", size: "40×18", tier: "VERIFIED",

@@ -9,7 +9,7 @@ import { chromeLink, inAppBrowser, isAndroid, type CarriedJob, type InApp } from
 import { loadProjects } from "@/lib/projects";
 
 /** The job being edited right now, as autosave last wrote it. */
-function openJob(): CarriedJob | null {
+export function openJob(): CarriedJob | null {
   try {
     const id = localStorage.getItem("fabriq.openJob");
     const p = loadProjects().find((x) => x.id === id);

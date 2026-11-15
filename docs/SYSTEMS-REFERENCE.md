@@ -92,8 +92,8 @@ Size rules:
 |---|---|---|---|---|
 | Top / bottom track (`trackW`) | always | W − 19.1 | verified | Founder job: 90° frame, track sits between the sides (W − 6 sut) |
 | Frame side (`sideH`) | always | H | verified | Founder job: sides run full height |
-| Shutter width (`shutterW`) | mode=equal, glass=3 | (W − 190.5) ÷ 3 + 120 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): shares the width, + 120 mm handle and interlock. Check on one window. |
-| Shutter width (`shutterW`) | mode=equal, glass=4 | (W − 279.4) ÷ 4 + 120 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): shares the width, + 120 mm handle and interlock. Check on one window. |
+| Shutter width (`shutterW`) | mode=equal, glass=3 | (W − 190.5) ÷ 3 + 80 | observed | Shop videos: 3 glass share: (W − 7½″) ÷ 3, + 80 mm handle/interlock |
+| Shutter width (`shutterW`) | mode=equal, glass=4 | (W − 279.4) ÷ 4 + 80 | observed | Shop videos: 4 glass share: (W − 11″) ÷ 4, + 80 mm |
 | Shutter width (`shutterW`) | always | W ÷ 2 | verified | Founder job: every shutter is half the window |
 | Shutter height (handle, interlock) (`shutterH`) | always | H − 41.3 | verified | Founder job: 72×60 3-track, handle 58⅜″ |
 | Bearing (top & bottom) (`bearing`) | always | shutterW − 120 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): shutter width − handle 60 − interlock 60. Check on one window. |

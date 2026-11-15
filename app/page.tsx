@@ -29,7 +29,7 @@ import { CloudCard } from "@/components/cloud";
 import { shapeOf } from "@/lib/studio/shapes";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import { evaluate } from "@/lib/studio/evaluate";
-import { markInstalls, markSource, markStep } from "@/lib/track";
+import { markInstalls, markMade, markSource, markStep, markVisitor } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
 import {
@@ -50,6 +50,7 @@ import {
 } from "@/lib/projects";
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
+import { ShareAppBanner, ShareAppCard, ShareAppRow } from "@/components/share-app";
 
 /* ————————————————— item options ————————————————— */
 
@@ -64,6 +65,8 @@ interface Opts {
   /** a Studio system's own choices (meeting side, track…) as JSON, and each shutter's own pick */
   studioSw: string;
   studioPer: string;
+  /** Normal Sliding shutter set: "40" = 1½″ × ¾″, "60" = 2½″ × ¾″ */
+  normalSection: string;
   tracks: string;
   mix: string;
   domalFix: string;
@@ -94,7 +97,7 @@ interface Opts {
 }
 
 const DEFAULT_OPTS: Opts = {
-  kind: "bombay", sys: "normal", studioSw: "{}", studioPer: "[]", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
+  kind: "bombay", sys: "normal", studioSw: "{}", studioPer: "[]", normalSection: "40", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
@@ -176,6 +179,7 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
+  if (o.sys === "normal" && o.normalSection === "60") m.shutterSection = "60";
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
   return m;
@@ -297,6 +301,7 @@ function optsFromItem(it: JobItem): Opts {
   } else {
     o.sys = it.system === "domal" ? "domal" : "normal";
     pick("tracks", m.tracks); pick("mix", m.mix); pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
+    o.normalSection = m.shutterSection === "60" ? "60" : "40";
   }
   o.kind = kindOfSys(o.sys);
   return o;
@@ -338,7 +343,7 @@ function itemLabel(it: JobItem): string {
     const n = parseInt(m.tracks ?? "", 10) || it.shutters.length;
     return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}`;
   }
-  const name = it.system === "domal" ? "Domal" : "Normal Sliding";
+  const name = it.system === "domal" ? "Domal" : m.shutterSection === "60" ? 'Normal Sliding 2½"' : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   // Shown only where it changes the cut: 3 or more glass shutters.
@@ -419,6 +424,8 @@ export default function FabriQ() {
     setRecent(saved);
     // Count where this visit came from (WhatsApp link, Diwali box QR…).
     markSource();
+    // the same phone, day after day (a short random code, nothing personal)
+    markVisitor();
     // Arrived from a link (QR, Instagram, WhatsApp, the jump to Chrome):
     // start on the first screen, not on whatever job this browser had open
     // last time (that job stays under Recent jobs). The link's tags are then
@@ -519,8 +526,12 @@ export default function FabriQ() {
     if (window.history.state?.fabriq === "settings") window.history.back();
     else setShowSettings(false);
   };
-  const showResult = () => {
+  const showResult = (job: JobItem[] = items) => {
     markStep("material-list");
+    markMade(job.map((it) => ({
+      type: it.type, system: it.system, label: typeLabel(it),
+      wFt: it.width / 304800, hFt: it.height / 304800, qty: it.qty,
+    })), readUnit());
     window.history.pushState({ fabriq: "result" }, "");
     setView("result");
     window.scrollTo({ top: 0 });
@@ -626,7 +637,7 @@ export default function FabriQ() {
     lastSaved.current = JSON.stringify([p.items, p.customer ?? ""]);
     setItems(p.items);
     setJobName(p.customer ?? "");
-    showResult();
+    showResult(p.items);
   };
 
   return (
@@ -640,7 +651,7 @@ export default function FabriQ() {
           onAdd={addItem}
           onReplace={replaceItem}
           onRemove={removeItem}
-          onDone={showResult}
+          onDone={() => showResult()}
           onSettings={openSettings}
           onDemo={openDemo}
           recent={recent}
@@ -710,7 +721,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "kind" | "system" | "studioOpts" | "meet" | "tracks" | "mix" | "domalFix"
+  | "type" | "kind" | "system" | "normalSection" | "studioOpts" | "meet" | "tracks" | "mix" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -753,6 +764,7 @@ const STEP_TITLE: Record<StepId, string> = {
   studioOpts: "Sections",
   meet: "Meeting side",
   system: "Which series?",
+  normalSection: "Shutter section",
   tracks: "Number of tracks",
   mix: "Shutter types",
   domalFix: "Fixed glass on top?",
@@ -1279,6 +1291,22 @@ function JobScreen({
           );
         })()}
 
+        {flow.step === "normalSection" && (
+          <div className="flex flex-col gap-2">
+            {([["40", "1½″ × ¾″", "Handle, interlock and bearing 40 × 18 mm"], ["60", "2½″ × ¾″", "Handle, interlock and bearing 60 × 19 mm"]] as const).map(([v, title, sub]) => (
+              <button key={v} type="button" onClick={() => choose({ normalSection: v })} aria-pressed={o.normalSection === v}
+                className="card flex w-full items-center justify-between gap-3 p-4 text-left"
+                style={{ borderColor: o.normalSection === v ? "var(--accent)" : "var(--line)", borderWidth: o.normalSection === v ? 2 : 1, background: o.normalSection === v ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}>
+                <span>
+                  <span className="block text-lg font-bold">{title}</span>
+                  <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+                </span>
+                <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {flow.step === "tracks" && !o.sys.startsWith("studio:") && (
           <div className="grid grid-cols-2 gap-2">
             {TRACKS.map(([v, label]) => (
@@ -1690,6 +1718,9 @@ function JobScreen({
         </div>
       )}
 
+      {/* someone with a job behind them: pass FabriQ on */}
+      {items.length === 0 && recent.length > 0 && <ShareAppRow />}
+
       {/* the how-to video: its own quiet row on the first screen, after the work */}
       {items.length === 0 && (
         <button onClick={onDemo} className="card flex items-center gap-3 px-4 py-3 text-left">
@@ -2057,9 +2088,13 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
         </div>
       </div>
 
+      {tab === "material" && <ShareAppBanner />}
+
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
+
+      <ShareAppCard />
 
       {/* starting over is the last thing on the page, never one slip away at the top */}
       <button onClick={onNew} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
@@ -2437,7 +2472,7 @@ function packLine(pieces: CutPiece[]) {
 }
 
 /** Sliding-window sections — the only ones the parts guide describes. */
-const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing"]);
+const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing", "handle_60", "interlock_60", "bearing_60"]);
 
 function CuttingPanel({ list, shop, items, jobName }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;

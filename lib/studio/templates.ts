@@ -1295,7 +1295,7 @@ export const EURO_25: StudioSystem = (() => {
  * instead of 40. Worked out from the checked 1½″ set: the bearing fits between
  * handle and interlock (shutter − 60 − 60), the glass goes into each as deep as in
  * the 1½″ set (bearing + 15.9), and each bearing is 20 mm wider (glass height
- * shutter − 106.7). The catalogue sketch has no scale and no section numbers —
+ * shutter − 106.7); the shutter width stays as the 1½″ set (founder 2026-11-14). The catalogue sketch has no scale and no section numbers —
  * check once on a window.
  */
 export const NORMAL_18_60: StudioSystem = (() => {
@@ -1315,7 +1315,6 @@ export const NORMAL_18_60: StudioSystem = (() => {
     x.id === "bearing" ? { ...x, cases: [rule("shutterW", -mm(120), P60("shutter width − handle 60 − interlock 60"))] }
     : x.id === "glassW" ? { ...x, cases: [rule("shutterW", -mm(104.1), P60("bearing + 15.9, as the 1½″ set (bearing + 5 sut)"))] }
     : x.id === "glassH" ? { ...x, cases: [rule("shutterH", -mm(106.7), P60("two bearings 20 mm wider each than the 1½″ set (shutter − 66.7)"))] }
-    : x.id === "shutterW" ? { ...x, cases: x.cases.map((c) => (c.add === mm(80) ? { ...c, add: mm(120), evidence: P60("shares the width, + 120 mm handle and interlock") } : c)) }
     : x);
   n.notes = ["2½″ × ¾″ shutter (catalogue: 3×¾″ handle, 60 × 19): the 1½″ set's tracks and roller; the shutter height is the same."];
   return n;
