@@ -552,7 +552,7 @@ export default function Window3D({
                 : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
             }`}
           >
-            <span>🏗️</span> Patio Cut (Reynaers)
+            <span>🏗️</span> Patio Cut
           </button>
           <button
             type="button"
@@ -636,19 +636,16 @@ export default function Window3D({
             })}
 
             {/* Stainless Steel Track Rail (SS Patri) along bottom frame */}
-            <mesh position={[cornerData.cornerLength / 2, cornerData.trackFloorY, cornerData.trackCenterZ]} material={steelMat}>
+            <mesh position={[cornerData.cornerLength / 2, cornerData.trackFloorY, cornerData.trackCenterZ]} rotation={[0, 0, Math.PI / 2]} material={steelMat}>
               <cylinderGeometry args={[2.2, 2.2, cornerData.cornerLength, 24]} />
-              <primitive object={new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)} attach="quaternion" />
             </mesh>
 
             {/* Brass / Nylon Tandem Roller Wheels inside bottom sash roller pocket */}
-            <mesh position={[cornerData.sashStartX + 45, cornerData.trackFloorY + 1.2, cornerData.trackCenterZ]} material={steelMat}>
+            <mesh position={[cornerData.sashStartX + 45, cornerData.trackFloorY + 1.2, cornerData.trackCenterZ]} rotation={[Math.PI / 2, 0, 0]} material={steelMat}>
               <cylinderGeometry args={[7, 7, 6, 24]} />
-              <primitive object={new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)} attach="quaternion" />
             </mesh>
-            <mesh position={[cornerData.sashLength - 45, cornerData.trackFloorY + 1.2, cornerData.trackCenterZ]} material={steelMat}>
+            <mesh position={[cornerData.sashLength - 45, cornerData.trackFloorY + 1.2, cornerData.trackCenterZ]} rotation={[Math.PI / 2, 0, 0]} material={steelMat}>
               <cylinderGeometry args={[7, 7, 6, 24]} />
-              <primitive object={new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)} attach="quaternion" />
             </mesh>
 
             {/* DGU Outer Glass Pane (4mm) */}
@@ -798,7 +795,7 @@ export default function Window3D({
               {mode === "corner"
                 ? "360° Architectural Corner Cutaway • Drag to rotate • Scroll to zoom"
                 : mode === "sliding"
-                ? "Reynaers CP 130 / ConceptPatio 45Pa Cutaway • Sill track, runner rail, rollers & DGU glazing"
+                ? "Patio cutaway • Sill track, runner rail, rollers & double glazing"
                 : mode === "cutface"
                 ? "Cutface Inspection: Exposed internal extrusion chambers & hollows"
                 : "Full window 3D • Tap any piece to inspect section"}
