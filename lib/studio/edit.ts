@@ -35,4 +35,4 @@ export function alternativesOf(sys: StudioSystem, part: PartDef): string[] | nul
 
 /** A piece's name as the shop reads it (no {s} / {tag} / {k} placeholders). */
 export const partLabel = (p: PartDef) =>
-  p.role.replace(/\{s\}\s*/g, "").replace(/\{tag\}/g, "").replace(/\s*\{k\}/g, "").trim();
+  p.role.replace(/\{s\}\s*/g, "").replace(/\{lr\}/g, "Left / Right").replace(/\{tag\}/g, "").replace(/\s*\{k\}/g, "").trim();

@@ -187,11 +187,11 @@ Pieces:
 | Frame Left | window | 1 | frameH | 45° | tracks=1/2, track=48: 29 mm 2-Track — code 2901 — 50×48 mm — track<br>track=48: 29 mm 3-Track — code 2902 — 86.5×48 mm — track<br>tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2, track=48: 29 mm 2-Track — code 2901 — 50×48 mm — track<br>track=48: 29 mm 3-Track — code 2902 — 86.5×48 mm — track<br>tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2, track=48: 29 mm 2-Track — code 2901 — 50×48 mm — track<br>track=48: 29 mm 3-Track — code 2902 — 86.5×48 mm — track<br>tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | track=48: 29 mm Roller Clip — code 2917 — 13×16 mm — rail<br>always: 29 mm Roller Clip — code 914401 — 12.99×16.09 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | track=48: 29 mm Track Clip — code 2917 — 13×16 mm — rail<br>always: 29 mm Track Clip — code 914401 — 12.99×16.09 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter<br>pick_shutterMeet=el27_slim: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_big: 27 mm Slim Interlock — big — code 2729 — 85.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_dgu: 27 mm Slim Interlock — double glass — code 2730 — 32.3×22.7 mm — slim-interlock<br>always: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter<br>pick_shutterMeet=el27_slim: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_big: 27 mm Slim Interlock — big — code 2729 — 85.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_dgu: 27 mm Slim Interlock — double glass — code 2730 — 32.3×22.7 mm — slim-interlock<br>always: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal Interlock Patti 39×28 — code 2091 — 39.4×28 mm — interlock-patti |
 
 Size rules:
@@ -200,8 +200,8 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W | observed | Euro track goes round at 45°, full width |
 | Frame side (`frameH`) | always | H | observed | Euro track goes round at 45°, full height |
-| Roller clip (`clipW`) | track=48 | W − 96 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 48.0, Eleanor). Check on one window. |
-| Roller clip (`clipW`) | always | W − 95.4 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 47.7). Check on one window. |
+| Track clip (`clipW`) | track=48 | W − 96 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 48.0, Eleanor). Check on one window. |
+| Track clip (`clipW`) | always | W − 95.4 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 47.7). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | track=48 | H − 74.5 | suggested | From the drawings (window built from the sections): 2 × 48.0 Eleanor track + 2.5 clip 2917 − 24 roller; the 27 mm shutter runs clear. Check on one window. |
 | Shutter height (`shutterH`) | always | H − 73.8 | suggested | From the drawings (window built from the sections): 2 × 47.7 track + 2.4 clip − 24 roller; the 27 mm shutter runs clear. Check on one window. |
@@ -220,11 +220,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1733.4 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1145.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
 | Interlock Clip 1 | 1145.4 mm | 90° | 1 |
 | Interlock Clip 2 | 1145.4 mm | 90° | 1 |
 | Glass/mesh glass | 812.4 × 1043.4 mm | — | 2 |
@@ -237,11 +238,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1733.4 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1145.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
 | Glass/mesh glass | 851.4 × 1043.4 mm | — | 2 |
 
 ---
@@ -324,8 +326,8 @@ Pieces:
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: 20 mm 2-Track — code BH-2504 — 56.3×31.4 mm — track<br>always: 20 mm 3-Track — code BH-2505 — 86.8×31.4 mm — track |
 | Shutter Top | shutter | 1 | shutterW | 45° | 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter<br>always: 20 mm Slim Interlock — code BH-2503 — 27.4×25 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 20 mm Shutter — code BH-2507 — 54.4×20.7 mm — shutter<br>always: 20 mm Slim Interlock — code BH-2503 — 27.4×25 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | 20 mm Interlock Clip (mini clip) — code BH-2509 — 34×24.5 mm — interlock-patti |
 
 Size rules:
@@ -351,8 +353,9 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Bottom | 1828.8 mm | 45° | 1 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1180.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1180.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1180.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1180.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1180.4 mm | 45° | 1 |
 | Interlock Clip 1 | 1180.4 mm | 90° | 1 |
 | Interlock Clip 2 | 1180.4 mm | 90° | 1 |
 | Glass/mesh glass | 819.4 × 1085.4 mm | — | 2 |
@@ -367,8 +370,9 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 | Frame Bottom | 1828.8 mm | 45° | 1 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1180.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1180.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1180.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1180.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1180.4 mm | 45° | 1 |
 | Glass/mesh glass | 848.3 × 1085.4 mm | — | 2 |
 
 ---
@@ -389,8 +393,8 @@ Pieces:
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: 22 mm 2-Track — code 41083 — 53.9×35 mm — track<br>always: 22 mm 3-Track — code 41084 — 83.9×35 mm — track |
 | Shutter Top | shutter | 1 | shutterW | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
-| Shutter Meeting Side | shutter | 1 | shutterH | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | 22 mm Shutter — code 41082 — 55.8×22 mm — shutter |
 
 Size rules:
 
@@ -413,8 +417,9 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Bottom | 1828.8 mm | 45° | 1 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1173.2 mm | 45° | 2 |
-| Shutter Shutter Meeting Side | 1173.2 mm | 45° | 2 |
+| Shutter Shutter Left | 1173.2 mm | 45° | 1 |
+| Shutter Interlock Side | 1173.2 mm | 45° | 2 |
+| Shutter Shutter Right | 1173.2 mm | 45° | 1 |
 | Glass/mesh glass | 819.6 × 1078.4 mm | — | 2 |
 
 ---
@@ -425,7 +430,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: 47.7 mm U track with roller clip 914401; shutter 41055 on all sides + interlock clip 41054, or slim interlock; jali 41050
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Shutter Meeting Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big · 29 mm Slim Interlock — light · 29 mm Slim Interlock — double glass
+  - Interlock Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big · 29 mm Slim Interlock — light · 29 mm Slim Interlock — double glass
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
 Pieces:
@@ -436,11 +441,11 @@ Pieces:
 | Frame Left | window | 1 | frameH | 45° | tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: 29 mm 2-Track — code 914400 — 50×47.69 mm — track<br>always: 29 mm 3-Track — code 41052 — 85.8×47.7 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | 29 mm Roller Clip — code 914401 — 12.99×16.09 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | 29 mm Track Clip — code 914401 — 12.99×16.09 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_light: 29 mm Slim Interlock — light — code 2915 — 35×17.5 mm — slim-interlock<br>pick_shutterMeet=el29_slim_dgu: 29 mm Slim Interlock — double glass — code 2916 — 34.1×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_light: 29 mm Slim Interlock — light — code 2915 — 35×17.5 mm — slim-interlock<br>pick_shutterMeet=el29_slim_dgu: 29 mm Slim Interlock — double glass — code 2916 — 34.1×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | 29 mm Interlock Clip — code 41054 — 33.63×38.89 mm — interlock-patti |
 
 Size rules:
@@ -449,7 +454,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W | observed | 45° frame goes round, full width |
 | Frame side (`frameH`) | always | H | observed | 45° frame goes round, full height |
-| Roller clip (`clipW`) | always | W − 95.4 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 95.4 (2 × 47.7). Check on one window. |
+| Track clip (`clipW`) | always | W − 95.4 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 95.4 (2 × 47.7). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | always | H − 73.8 | suggested | From the drawings (window built from the sections): 2 × 47.7 track + 2.4 clip − 24 roller. Check on one window. |
 | Glass width (`glassW`) | meet=clip | shutterW − 105.4 | suggested | From the drawings (window built from the sections): glass stops 52.7 mm in (Ample 41055) — the same shutter on both sides. Check on one window. |
@@ -468,11 +473,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1733.4 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1145.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
 | Interlock Clip 1 | 1145.4 mm | 90° | 1 |
 | Interlock Clip 2 | 1145.4 mm | 90° | 1 |
 | Glass/mesh glass | 809 × 1040 mm | — | 2 |
@@ -485,11 +491,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1733.4 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1145.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
 | Glass/mesh glass | 848.8 × 1040 mm | — | 2 |
 
 ---
@@ -511,11 +518,11 @@ Pieces:
 | Frame Left | window | 1 | frameH | 45° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | Euro Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | Euro Track Clip — code BH-2559 — 11×13.47 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
-| Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
@@ -524,7 +531,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W | observed | Euro track goes round at 45°, full width |
 | Frame side (`frameH`) | always | H | observed | Euro track goes round at 45°, full height |
-| Roller clip (`clipW`) | always | W − 59.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 59.6 (2 × 29.8, BH-2551 on the sides). Check on one window. |
+| Track clip (`clipW`) | always | W − 59.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 59.6 (2 × 29.8, BH-2551 on the sides). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | always | H − 39.6 | suggested | From the drawings (window built from the sections): 2 × 29.8 track + 3.9 clip − 24 roller. Check on one window. |
 | Glass width (`glassW`) | meet=clip | shutterW − 108.2 | suggested | From the drawings (window built from the sections): glass stops 54.1 mm in (BH-2555) — the same shutter on both sides. Check on one window. |
@@ -541,11 +548,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1769.2 mm | 90° | 2 |
+| Track Clip | 1769.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1179.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1179.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1179.6 mm | 45° | 1 |
 | Glass/mesh glass | 848.6 × 1071.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -556,11 +564,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1769.2 mm | 90° | 2 |
+| Track Clip | 1769.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1179.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1179.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1179.6 mm | 45° | 1 |
 | Interlock Clip 1 | 1179.6 mm | 90° | 1 |
 | Interlock Clip 2 | 1179.6 mm | 90° | 1 |
 | Glass/mesh glass | 806.2 × 1071.4 mm | — | 2 |
@@ -584,11 +593,11 @@ Pieces:
 | Frame Left | window | 1 | frameH | 45° | tracks=1/2: Euro 2-Track — code BH-6000 — 64.3×45 mm — frame<br>always: Euro 3-Track — code BH-6001 — 99.3×45 mm — frame |
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2: Euro 2-Track — code BH-6000 — 64.3×45 mm — frame<br>always: Euro 3-Track — code BH-6001 — 99.3×45 mm — frame |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: Euro 2-Track — code BH-6000 — 64.3×45 mm — frame<br>always: Euro 3-Track — code BH-6001 — 99.3×45 mm — frame |
-| Roller Clip | shutter | 1 | clipW | 90° | Euro Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | Euro Track Clip — code BH-2559 — 11×13.47 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter<br>pick_shutterMeet=bh_6052: Euro Slim Interlock — small — code BH-6052 — 32.6×23.7 mm — slim-interlock<br>pick_shutterMeet=bh_6053: Euro Slim Interlock — big (reinforcement) — code BH-6053 — 62.6×23.7 mm — slim-interlock<br>always: Euro Slim Interlock — small — code BH-6052 — 32.6×23.7 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Euro Shutter 65×26 — code BH-6003 — 65×26 mm — shutter<br>pick_shutterMeet=bh_6052: Euro Slim Interlock — small — code BH-6052 — 32.6×23.7 mm — slim-interlock<br>pick_shutterMeet=bh_6053: Euro Slim Interlock — big (reinforcement) — code BH-6053 — 62.6×23.7 mm — slim-interlock<br>always: Euro Slim Interlock — small — code BH-6052 — 32.6×23.7 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
@@ -597,7 +606,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W | observed | Founder: Euro track goes round like Domal — 45°, full width |
 | Frame side (`frameH`) | always | H | observed | Founder: Euro track goes round like Domal — 45°, full height |
-| Roller clip (`clipW`) | always | W − 89.9 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 45.0). Check on one window. |
+| Track clip (`clipW`) | always | W − 89.9 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 45.0). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | tracks=2 | H − 69.8 | suggested | From the drawings (window built from the sections): 2 × 44.9 track + 3.9 clip − 24 roller. Check on one window. |
 | Shutter height (`shutterH`) | always | H − 69.9 | suggested | From the drawings (window built from the sections): 2 × 45.0 track + 3.9 clip − 24 roller. Check on one window. |
@@ -615,11 +624,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1738.9 mm | 90° | 2 |
+| Track Clip | 1738.9 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1149.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1149.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1149.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1149.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1149.4 mm | 45° | 1 |
 | Glass/mesh glass | 837.9 × 1031.2 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -630,11 +640,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1738.9 mm | 90° | 2 |
+| Track Clip | 1738.9 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1149.4 mm | 45° | 2 |
-| Shutter Meeting Side | 1149.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1149.4 mm | 45° | 1 |
+| Shutter Interlock Side | 1149.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1149.4 mm | 45° | 1 |
 | Interlock Clip 1 | 1149.4 mm | 90° | 1 |
 | Interlock Clip 2 | 1149.4 mm | 90° | 1 |
 | Glass/mesh glass | 796.2 × 1031.2 mm | — | 2 |
@@ -658,11 +669,11 @@ Pieces:
 | Frame Left | window | 1 | frameH | 45° | tracks=1/2: Euro 35 2-Track — code BH-6705 / 3501 — 77.71×46.3 mm — frame<br>always: Euro 35 3-Track — code BH-6706 / 3502 — 124.09×46.3 mm — frame |
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2: Euro 35 2-Track — code BH-6705 / 3501 — 77.71×46.3 mm — frame<br>always: Euro 35 3-Track — code BH-6706 / 3502 — 124.09×46.3 mm — frame |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: Euro 35 2-Track — code BH-6705 / 3501 — 77.71×46.3 mm — frame<br>always: Euro 35 3-Track — code BH-6706 / 3502 — 124.09×46.3 mm — frame |
-| Roller Clip | shutter | 1 | clipW | 90° | Euro 35 Roller Clip (track rail) — code BH-6513 — 14.5×17.96 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | Euro 35 Track Clip — code BH-6513 — 14.5×17.96 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter<br>pick_shutterMeet=e35_slim: Euro 35 Slim Interlock — small — code BH-6707 / 3506 — 42.55×31 mm — slim-interlock<br>pick_shutterMeet=e35_big: Euro 35 Slim Interlock — big (reinforcement) — code BH-6709 — 89.86×31.1 mm — slim-interlock<br>always: Euro 35 Slim Interlock — small — code BH-6707 / 3506 — 42.55×31 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Euro 35 Shutter 75×35 — code BH-6712 / 3503 — 75×35 mm — shutter<br>pick_shutterMeet=e35_slim: Euro 35 Slim Interlock — small — code BH-6707 / 3506 — 42.55×31 mm — slim-interlock<br>pick_shutterMeet=e35_big: Euro 35 Slim Interlock — big (reinforcement) — code BH-6709 — 89.86×31.1 mm — slim-interlock<br>always: Euro 35 Slim Interlock — small — code BH-6707 / 3506 — 42.55×31 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal 35 I/L Clip — code BH-6711 / 3510 — 41×38.9 mm — interlock-patti |
 
 Size rules:
@@ -671,7 +682,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W | observed | Euro track goes round at 45°, full width |
 | Frame side (`frameH`) | always | H | observed | Euro track goes round at 45°, full height |
-| Roller clip (`clipW`) | always | W − 92.6 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 46.3). Check on one window. |
+| Track clip (`clipW`) | always | W − 92.6 | suggested | From the drawings (window built from the sections): clear width between the side U tips (2 × 46.3). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) |
 | Shutter height (`shutterH`) | always | H − 72.6 | suggested | From the drawings (window built from the sections): 2 × 46.3 track + 4.0 clip − 24 roller. Check on one window. |
 | Glass width (`glassW`) | meet=clip | shutterW − 118 | suggested | From the drawings (window built from the sections): glass stops 59.0 mm in (BH-6712) — the same shutter on both sides. Check on one window. |
@@ -688,11 +699,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1736.2 mm | 90° | 2 |
+| Track Clip | 1736.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1146.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1146.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1146.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1146.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1146.6 mm | 45° | 1 |
 | Glass/mesh glass | 841.3 × 1028.6 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -703,11 +715,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Shutter Roller Clip | 1736.2 mm | 90° | 2 |
+| Track Clip | 1736.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1146.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1146.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1146.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1146.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1146.6 mm | 45° | 1 |
 | Interlock Clip 1 | 1146.6 mm | 90° | 1 |
 | Interlock Clip 2 | 1146.6 mm | 90° | 1 |
 | Glass/mesh glass | 796.4 × 1028.6 mm | — | 2 |
@@ -731,11 +744,11 @@ Pieces:
 | Bottom Track | window | 1 | frameW | 90° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: Gulf 25 Side Track, one groove (2-track) — code BH-2550 — 75.7×24.8 mm — track<br>always: Gulf 25 Side Track, one groove (3-track) — code BH-2552 — 112.5×24.8 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: Gulf 25 Side Track, one groove (2-track) — code BH-2550 — 75.7×24.8 mm — track<br>always: Gulf 25 Side Track, one groove (3-track) — code BH-2552 — 112.5×24.8 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | Euro Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | Euro Track Clip — code BH-2559 — 11×13.47 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
-| Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
@@ -744,7 +757,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W − 49.6 | suggested | From the drawings (window built from the sections): top and bottom fit between the BH-2550 sides (24.8 mm each, 90°); if your shop runs them full width, set this to W. Check on one window. |
 | Frame side (`frameH`) | always | H | observed | Gulf: sides run full height (90°) |
-| Roller clip (`clipW`) | always | W − 49.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 49.6 (BH-2550 sides). Check on one window. |
+| Track clip (`clipW`) | always | W − 49.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 49.6 (BH-2550 sides). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | always | H − 39.6 | suggested | From the drawings (window built from the sections): 2 × 29.8 track + 3.9 clip − 24 roller. Check on one window. |
 | Glass width (`glassW`) | meet=clip | shutterW − 108.2 | suggested | From the drawings (window built from the sections): glass stops 54.1 mm in (BH-2555) — the same shutter on both sides. Check on one window. |
@@ -761,11 +774,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Bottom Track | 1779.2 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1779.2 mm | 90° | 2 |
+| Track Clip | 1779.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1179.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1179.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1179.6 mm | 45° | 1 |
 | Glass/mesh glass | 848.6 × 1071.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -776,11 +790,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Bottom Track | 1779.2 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1779.2 mm | 90° | 2 |
+| Track Clip | 1779.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1179.6 mm | 45° | 2 |
-| Shutter Meeting Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Left | 1179.6 mm | 45° | 1 |
+| Shutter Interlock Side | 1179.6 mm | 45° | 2 |
+| Shutter Shutter Right | 1179.6 mm | 45° | 1 |
 | Interlock Clip 1 | 1179.6 mm | 90° | 1 |
 | Interlock Clip 2 | 1179.6 mm | 90° | 1 |
 | Glass/mesh glass | 806.2 × 1071.4 mm | — | 2 |
@@ -804,11 +819,11 @@ Pieces:
 | Bottom Track | window | 1 | frameW | 90° | tracks=1/2: 31 mm 2-Track (top and bottom) — code BH-6401 — 80.8×47.6 mm — track<br>always: 31 mm 3-Track (top and bottom) — code BH-6403 — 120.5×47.6 mm — track |
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 31 mm Side Track, one groove (2-track) — code BH-6400 — 85×33.1 mm — track<br>always: 31 mm Side Track, one groove (3-track) — code BH-6402 — 124.7×33.1 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 31 mm Side Track, one groove (2-track) — code BH-6400 — 85×33.1 mm — track<br>always: 31 mm Side Track, one groove (3-track) — code BH-6402 — 124.7×33.1 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | Track Clip — code BH-2559 — 11×13.47 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
-| Handle Side | shutter | 1 | shutterH | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_slim_dgu: 31 mm Slim Interlock — small, double glass — code BH-6410 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine_dgu: 31 mm Slim Interlock — big, double glass — code BH-6411 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_slim_dgu: 31 mm Slim Interlock — small, double glass — code BH-6410 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine_dgu: 31 mm Slim Interlock — big, double glass — code BH-6411 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
@@ -817,7 +832,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W − 66.2 | suggested | From the drawings (window built from the sections): top and bottom fit between the BH-6400 sides (33.1 mm each, 90°); if your shop runs them full width, set this to W. Check on one window. |
 | Frame side (`frameH`) | always | H | observed | Gulf: sides run full height (90°) |
-| Roller clip (`clipW`) | always | W − 66.2 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 66.2 (BH-6400 sides). Check on one window. |
+| Track clip (`clipW`) | always | W − 66.2 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 66.2 (BH-6400 sides). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | tracks=2 | H − 65.3 | suggested | From the drawings (window built from the sections): 2 × 42.7 track + 3.9 clip − 24 roller. Check on one window. |
 | Shutter height (`shutterH`) | tracks=3 | H − 65.9 | suggested | From the drawings: 3-track BH-6403 with clip 2559 and shutter 6404 — shutter runs H − 65.9. Check on one window. |
@@ -836,11 +851,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Bottom Track | 1762.6 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1762.6 mm | 90° | 2 |
+| Track Clip | 1762.6 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1153.9 mm | 45° | 2 |
-| Shutter Meeting Side | 1153.9 mm | 45° | 2 |
+| Shutter Shutter Left | 1153.9 mm | 45° | 1 |
+| Shutter Interlock Side | 1153.9 mm | 45° | 2 |
+| Shutter Shutter Right | 1153.9 mm | 45° | 1 |
 | Glass/mesh glass | 853.3 × 1054.3 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -851,11 +867,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Bottom Track | 1762.6 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1762.6 mm | 90° | 2 |
+| Track Clip | 1762.6 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1153.9 mm | 45° | 2 |
-| Shutter Meeting Side | 1153.9 mm | 45° | 2 |
+| Shutter Shutter Left | 1153.9 mm | 45° | 1 |
+| Shutter Interlock Side | 1153.9 mm | 45° | 2 |
+| Shutter Shutter Right | 1153.9 mm | 45° | 1 |
 | Interlock Clip 1 | 1153.9 mm | 90° | 1 |
 | Interlock Clip 2 | 1153.9 mm | 90° | 1 |
 | Glass/mesh glass | 814.8 × 1054.3 mm | — | 2 |
@@ -879,11 +896,11 @@ Pieces:
 | Bottom Track | window | 1 | frameW | 90° | tracks=1/2: 35 mm 2-Track (top and bottom) — code BH-6501 — 95×31.2 mm — track<br>always: 35 mm 3-Track (top and bottom) — code BH-6503 — 145.6×31.2 mm — track |
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 35 mm Side Track, one groove (2-track) — code BH-6500 — 100×32.8 mm — track<br>always: 35 mm Side Track, one groove (3-track) — code BH-6502 — 150×32.8 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 35 mm Side Track, one groove (2-track) — code BH-6500 — 100×32.8 mm — track<br>always: 35 mm Side Track, one groove (3-track) — code BH-6502 — 150×32.8 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | 35 mm Roller Clip (track rail) — code BH-6513 — 14.5×17.96 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | 35 mm Track Clip — code BH-6513 — 14.5×17.96 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
-| Handle Side | shutter | 1 | shutterH | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
-| Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter<br>pick_shutterMeet=bh35_slim: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine: 35 mm Slim Interlock — big (reinforcement) — code BH-6508 — 96×27 mm — slim-interlock<br>pick_shutterMeet=bh35_slim_dgu: 35 mm Slim Interlock — small, double glass — code BH-6507 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine_dgu: 35 mm Slim Interlock — big, double glass — code BH-6509 — 96×27 mm — slim-interlock<br>always: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock |
+| Shutter {lr} | shutter | 1 | shutterH | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter<br>pick_shutterMeet=bh35_slim: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine: 35 mm Slim Interlock — big (reinforcement) — code BH-6508 — 96×27 mm — slim-interlock<br>pick_shutterMeet=bh35_slim_dgu: 35 mm Slim Interlock — small, double glass — code BH-6507 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine_dgu: 35 mm Slim Interlock — big, double glass — code BH-6509 — 96×27 mm — slim-interlock<br>always: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal 35 I/L Clip — code BH-6711 / 3510 — 41×38.9 mm — interlock-patti |
 
 Size rules:
@@ -892,7 +909,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W − 65.6 | suggested | From the drawings (window built from the sections): top and bottom fit between the BH-6500 sides (32.8 mm each, 90°); if your shop runs them full width, set this to W. Check on one window. |
 | Frame side (`frameH`) | always | H | observed | Gulf: sides run full height (90°) |
-| Roller clip (`clipW`) | always | W − 65.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 65.6 (BH-6500 sides). Check on one window. |
+| Track clip (`clipW`) | always | W − 65.6 | suggested | From the drawings (window built from the sections): clear width between the side tips: W − 65.6 (BH-6500 sides). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | always | H − 42.4 | suggested | From the drawings (window built from the sections): 2 × 31.2 track + 4.0 clip − 24 roller. Check on one window. |
 | Glass width (`glassW`) | meet=clip | shutterW − 93.4 | suggested | From the drawings (window built from the sections): glass stops 46.7 mm in (BH-6510) — the same shutter on both sides. Check on one window. |
@@ -909,11 +926,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Bottom Track | 1763.2 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1763.2 mm | 90° | 2 |
+| Track Clip | 1763.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1176.8 mm | 45° | 2 |
-| Shutter Meeting Side | 1176.8 mm | 45° | 2 |
+| Shutter Shutter Left | 1176.8 mm | 45° | 1 |
+| Shutter Interlock Side | 1176.8 mm | 45° | 2 |
+| Shutter Shutter Right | 1176.8 mm | 45° | 1 |
 | Glass/mesh glass | 852.1 × 1083.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
@@ -924,11 +942,12 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Bottom Track | 1763.2 mm | 90° | 1 |
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
-| Shutter Roller Clip | 1763.2 mm | 90° | 2 |
+| Track Clip | 1763.2 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Handle Side | 1176.8 mm | 45° | 2 |
-| Shutter Meeting Side | 1176.8 mm | 45° | 2 |
+| Shutter Shutter Left | 1176.8 mm | 45° | 1 |
+| Shutter Interlock Side | 1176.8 mm | 45° | 2 |
+| Shutter Shutter Right | 1176.8 mm | 45° | 1 |
 | Interlock Clip 1 | 1176.8 mm | 90° | 1 |
 | Interlock Clip 2 | 1176.8 mm | 90° | 1 |
 | Glass/mesh glass | 821 × 1083.4 mm | — | 2 |
@@ -941,7 +960,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 - In short: Vertical Gulf top and sides, separate bottom Gulf track, 90° screwed; glass or DGU shutter with interlock clip
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Roller clip (`rollerClip`): U groove (AT-35020) (default) · V groove (AT-35026)
+  - Track clip (`rollerClip`): U groove (AT-35020) (default) · V groove (AT-35026)
   - Interlock Clip (`pick_interlock`): Interlock Clip (default) · Double Interlock
 
 Pieces:
@@ -952,7 +971,7 @@ Pieces:
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 2 Track Vertical Gulf — code AT-30001 — 85×33 mm — track<br>always: 3 Track Vertical Gulf — code AT-30003 — 124×33 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 2 Track Vertical Gulf — code AT-30001 — 85×33 mm — track<br>always: 3 Track Vertical Gulf — code AT-30003 — 124×33 mm — track |
 | Bottom Gulf Track | window | 1 | frameW | 90° | tracks=1/2: 2 Track Bottom Gulf — code AT-30002 — 81.8×47 mm — track<br>always: 3 Track Bottom Gulf — code AT-30004 — 120.6×47 mm — track |
-| Roller Clip | shutter | 1 | clipW | 90° | rollerClip=v: Roller Clip, V groove — code AT-35026 — 13×16.5 mm — rail<br>always: Roller Clip, U groove — code AT-35020 — 14.5×18 mm — rail |
+| Track Clip | shutter | 1 | clipW | 90° | rollerClip=v: Track Clip, V groove — code AT-35026 — 13×16.5 mm — rail<br>always: Track Clip, U groove — code AT-35020 — 14.5×18 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Left | shutter | 1 | shutterH | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
@@ -965,7 +984,7 @@ Size rules:
 |---|---|---|---|---|
 | Frame top / bottom (`frameW`) | always | W − 66 | suggested | From the drawings (window built from the sections): top and bottom fit between the AT-30001 sides (33 mm each, 90°); if your shop runs them full width, set this to W. Check on one window. |
 | Frame side (`frameH`) | always | H | observed | Gulf: sides run full height (90°) |
-| Roller clip (`clipW`) | always | W − 66 | suggested | From the drawings (window built from the sections): clear width between the AT-30001 side tips (2 × 33). Check on one window. |
+| Track clip (`clipW`) | always | W − 66 | suggested | From the drawings (window built from the sections): clear width between the AT-30001 side tips (2 × 33). Check on one window. |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
 | Shutter height (`shutterH`) | tracks=2, rollerClip=v | H − 64.3 | suggested | From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, V-groove clip AT-35026 standing 3.3 mm, shutter AT-30005, 24 mm roller. Check on one window. |
 | Shutter height (`shutterH`) | tracks=2 | H − 65.7 | suggested | From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, U-groove clip AT-35020 standing 4.7 mm, shutter AT-30005, 24 mm roller. Check on one window. |
@@ -982,7 +1001,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
 | Bottom Gulf Track | 1762.8 mm | 90° | 1 |
-| Shutter Roller Clip | 1762.8 mm | 90° | 2 |
+| Track Clip | 1762.8 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Shutter Left | 1153.5 mm | 45° | 2 |

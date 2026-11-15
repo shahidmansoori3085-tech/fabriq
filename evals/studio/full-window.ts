@@ -65,7 +65,7 @@ if (fails.length) { console.error(`\nfull-window: ${fails.length} failed\n - ` +
   const el = TEMPLATES.find((t) => t.id === "eleanor-29")!;
   for (const [glazing, want, take] of [["2903", "el29_shutter", 108700], ["2906", "el29_shutter_b", 106300], ["2909", "el29_dgu", 106300]] as const) {
     const r = evaluate(el, { id: "W", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { shutter: glazing } }, { allowUnknown: true });
-    const sh = r.pieces.filter((p) => /Shutter|Handle|Meeting Side/.test(p.role));
+    const sh = r.pieces.filter((p) => /Shutter|Handle|Interlock Side/.test(p.role));
     expect(sh.length === 8 && sh.every((p) => p.sectionId === want), `eleanor-29 ${glazing}: shutter sides ${sh.map((p) => p.sectionId).join(",")}`);
     const sw = r.sizes.find((x) => x.id === "shutterW")!.value!, g = r.panels[0];
     expect(Math.abs(sw - g.w - take) < 2, `eleanor-29 ${glazing}: glass width shutter − ${(sw - g.w) / 1000}`);

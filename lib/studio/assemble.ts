@@ -180,13 +180,21 @@ function rollerSeat(s: Solid, edge: number, dir: 1 | -1, centre: number, opening
 export interface Stack {
   name: string; bottom: string; top: string; clip?: string; shutter: string;
   mouth: "start" | "end"; engine?: number;
+  /** which running lane of the bottom track (0 = the first U / leg); default 0 */
+  lane?: number;
 }
-export interface Result { x: number; run: number; stack: Stack; tipB: number; tipT: number; clipUp: number; takeOff: number; opening: number; wheel: number; topGap: number; clear: boolean; pic: string; runs: string }
+export interface Result {
+  x: number; run: number; stack: Stack; tipB: number; tipT: number; clipUp: number; takeOff: number; opening: number; wheel: number; topGap: number; clear: boolean; pic: string; runs: string;
+  /** the placed sections in the cross-section (X across the frame, Y up from the outer edge), for drawings and 3D */
+  solids: { track: Solid; clip: Solid; shutter: Solid };
+  /** every running lane of the bottom track (X) */
+  lanes: number[];
+}
 
 export function buildSliding(st: Stack, get: Get): Result {
   const b = asBottom(get, st.bottom), t = asBottom(get, st.top);
   const rb = runners(b.solid, b.w, b.h), rt = runners(t.solid, t.w, t.h);
-  const x = rb.at[0];
+  const x = rb.at[Math.min(st.lane ?? 0, rb.at.length - 1)];
   // highest point of the running legs around x (a U: both legs, up to 8 mm either side)
   const tipNear = (tr: Solid, at: number, kind: "U" | "leg", h: number) => {
     let best = -Infinity; const r = kind === "U" ? 8 : 2;
@@ -234,6 +242,7 @@ export function buildSliding(st: Stack, get: Get): Result {
   const pic = `<path d="${svgPath(b.solid)}" class="trk"/>${clipSolid.length ? `<path d="${svgPath(clipSolid)}" class="clip"/>` : ""}<path d="${svgPath(placed)}" class="sh"/><path d="${svgPath(roller)}" class="rol"/>`;
   return {
     x, run, stack: st, tipB, tipT, clipUp, takeOff, opening: ch.opening, wheel: seat.wheelRecess, topGap: ch.depth - topIn, clear, pic,
+    solids: { track: b.solid, clip: clipSolid, shutter: placed }, lanes: rb.at,
     runs: `${rb.kind === "U" ? "U channels" : "legs"} at ${rb.at.map(r2).join(", ")}`,
   };
 }

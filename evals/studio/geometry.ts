@@ -180,7 +180,7 @@ for (const sys of TEMPLATES) {
     if (layout.tracks < 2) continue;
     const vars = { ...defaults, ...choice, tracks: String(layout.tracks), glass: "2", shutters: String(layout.tracks), mix: layout.mixes[0] };
     const bottom = at("frame-bottom", vars), top = at("frame-top", vars), shutter = at("sash-bottom", vars);
-    const clipPart = sys.parts.find((p) => /Roller Clip|Track Rail/.test(p.role));
+    const clipPart = sys.parts.find((p) => p.id === "trackClip");
     const clip = clipPart ? shapeOf(prof(clipPart.profile.find((x) => matches(x.when, vars))?.id ?? "")) : undefined;
     const name = `${sys.name} ${layout.tracks}-track${Object.keys(choice).length ? " (" + Object.entries(choice).map(([k, v]) => k + " " + v).join(", ") + ")" : ""}`;
     if (!bottom || !top || !shutter) { notes.push(`${name}: a section has no drawing — not built`); continue; }

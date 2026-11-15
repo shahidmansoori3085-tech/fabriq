@@ -561,7 +561,8 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
     <div>
       {((sys.family === "casement" ? ["window", "between", "shutter"] : ["window", "shutter", "meeting"]) as PartScope[]).map((scope) => {
         // only the pieces this window takes (e.g. no interlock clip when the meeting side is a slim interlock)
-        const all = sys.parts.filter((p) => p.scope === scope);
+        // the track clip is cut once per shutter lane but belongs with the track (founder)
+        const all = sys.parts.filter((p) => (p.id === "trackClip" ? "window" : p.scope) === scope);
         const list = all.filter((p) => matches(p.when, vars));
         if (all.length && !list.length) return null;
         return (

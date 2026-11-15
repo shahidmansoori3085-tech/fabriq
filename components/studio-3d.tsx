@@ -22,6 +22,8 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import type { Member, WindowGeo } from "../lib/studio/geometry";
 import type { Pick } from "./studio-drawing";
+import { buildCutaway } from "../lib/studio/cutaway";
+import { CutawayScene } from "./studio/cutaway-3d";
 
 type V2 = [number, number];
 
@@ -155,6 +157,13 @@ function StudioLight() {
   return <primitive object={env} attach="environment" />;
 }
 
+/** camera [position, target] for the cutaway views (world mm, scene shifted by [-50, -35, -20]) */
+const CUT_VIEWS: Record<"corner" | "sliding" | "cutface", [[number, number, number], [number, number, number]]> = {
+  corner: [[640, 420, 600], [115, 70, 30]],
+  sliding: [[600, 170, 430], [150, 15, 30]],
+  cutface: [[620, 95, 210], [255, 5, 30]],
+};
+
 export default function Window3D({
   g,
   pick,
@@ -191,10 +200,11 @@ export default function Window3D({
   const cutFaceMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#94a3b8",
-        metalness: 0.88,
-        roughness: 0.22,
-        envMapIntensity: 1.5,
+        // bare machined aluminium where the section is cut: bright, so the chambers read clearly
+        color: "#e2e8f0",
+        metalness: 0.75,
+        roughness: 0.3,
+        envMapIntensity: 1.6,
         side: THREE.DoubleSide,
       }),
     []
@@ -296,7 +306,12 @@ export default function Window3D({
     return out;
   }, [g, H, frameDepth, tracks]);
 
-  // Architectural Corner Cutaway (Reynaers / Crystal Windows Style)
+  // the chosen window laid out from its drawings (series, track, clip, each shutter's section)
+  const cut = useMemo(() => (g.casement ? null : buildCutaway(g.section)), [g]);
+  const cutMats = useMemo(() => ({ coat: powderCoatMat, cut: cutFaceMat, picked: pickedMat, glass: glassMat, mesh: meshMat, rubber: gasketMat, steel: spacerMat }),
+    [powderCoatMat, cutFaceMat, pickedMat, glassMat, meshMat, gasketMat, spacerMat]);
+
+  // Architectural corner cutaway (fallback for Normal and casement)
   const cornerData = useMemo(() => {
     const mFb = g.frame.find((m) => m.place === "frame-bottom") ?? g.frame[0];
     const mFs = g.frame.find((m) => m.place === "frame-left") ?? g.frame[1];
@@ -508,7 +523,12 @@ export default function Window3D({
   const setViewPreset = (nextMode: "corner" | "sliding" | "cutface" | "full") => {
     setMode(nextMode);
     if (!controlsRef.current) return;
-    if (nextMode === "corner") {
+    if (cut && nextMode !== "full") {
+      // the cutaway of the chosen window: corner from above, the sill run, or straight into the cut
+      const [p, t] = CUT_VIEWS[nextMode];
+      controlsRef.current.object.position.set(...p);
+      controlsRef.current.target.set(...t);
+    } else if (nextMode === "corner") {
       controlsRef.current.object.position.set(310, 240, 260);
       controlsRef.current.target.set(120, 85, 40);
     } else if (nextMode === "sliding") {
@@ -602,7 +622,7 @@ export default function Window3D({
       <Canvas
         shadows
         camera={{
-          position: [310, 240, 260],
+          position: cut ? CUT_VIEWS.corner[0] : [310, 240, 260],
           fov: 34,
           near: 5,
           far: 3000,
@@ -616,8 +636,11 @@ export default function Window3D({
         <directionalLight position={[380, 180, -180]} intensity={0.9} />
         <directionalLight position={[80, -180, 180]} intensity={0.35} />
 
-        {(mode === "corner" || mode === "sliding" || mode === "cutface") && cornerData && (
+        {(mode === "corner" || mode === "sliding" || mode === "cutface") && (cut || cornerData) && (
           <group position={[-50, -35, -20]}>
+            {cut ? (
+              <CutawayScene cut={cut} g={g} mats={cutMats} pick={pick} onPick={onPick} hideUprights={mode === "sliding"} />
+            ) : cornerData && (<>
             {/* Extruded Profile Members with Two-Tone Reynaers Cutaway Materials */}
             {cornerData.members.map(({ key, geo, edges, m }) => {
               if (mode === "sliding" && (key === "cfs" || key === "css")) return null;
@@ -716,11 +739,13 @@ export default function Window3D({
               <boxGeometry args={[cornerData.glassSize + 12, 4.5, 2.5]} />
             </mesh>
 
+            </>)}
+
             {/* Ground Contact Shadow */}
-            <ContactShadows position={[140, -1, cornerData.fDepth / 2]} scale={440} blur={2.4} opacity={0.45} far={320} />
+            <ContactShadows position={[140, -1, (cut ? cut.trackW : cornerData?.fDepth ?? 60) / 2]} scale={440} blur={2.4} opacity={0.45} far={320} />
             <OrbitControls
               ref={controlsRef}
-              target={[120, 85, 40]}
+              target={cut ? CUT_VIEWS.corner[1] : [120, 85, 40]}
               enablePan={true}
               minDistance={90}
               maxDistance={1100}

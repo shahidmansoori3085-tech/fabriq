@@ -76,7 +76,7 @@ function stileShutter(sash: string, meet: ProfSpec, meetLabel = "Interlock"): Pa
   return [
     part("shutterTop", "{s} Shutter Top{tag}", sash, "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", sash, "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", sash, "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", sash, "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", `{s} ${meetLabel}{tag}`, meet, "shutter", "shutterH", 45, "sash-meet"),
   ];
 }
@@ -424,7 +424,7 @@ export const EURO_35: StudioSystem = withAlternatives(base({
   profiles: [
     prof("e35_t2", "Euro 35 2-Track", "frame", { bh: "BH-6705", eleanor: "3501" }, "77.71×46.3", { value: 4.58, perFt: 12 }, CATALOGUE("Banu Hashim p.67 / Eleanor p.35")),
     prof("e35_t3", "Euro 35 3-Track", "frame", { bh: "BH-6706", eleanor: "3502" }, "124.09×46.3", { value: 6.9, perFt: 12 }, CATALOGUE("Banu Hashim p.67 / Eleanor p.35")),
-    prof("e35_clip", "Euro 35 Roller Clip (track rail)", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
+    prof("e35_clip", "Euro 35 Track Clip", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
     prof("e35_shutter", "Euro 35 Shutter 75×35", "shutter", { bh: "BH-6712", eleanor: "3503" }, "75×35", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.69 / Eleanor p.35")),
     prof("e35_slim", "Euro 35 Slim Interlock — small", "slim-interlock", { bh: "BH-6707", eleanor: "3506" }, "42.55×31", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.68"), { faceMm: 31 }),
     prof("e35_big", "Euro 35 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6709" }, "89.86×31.1", { value: 5.0, perFt: 12 }, CATALOGUE("Banu Hashim p.68"), { faceMm: 31 }),
@@ -432,7 +432,7 @@ export const EURO_35: StudioSystem = withAlternatives(base({
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
-    size("clipW", "Roller clip", rule("W", -mm(92.6), FROM_DRAWING_35("clear width between the side U tips (2 × 46.3)"))),
+    size("clipW", "Track clip", rule("W", -mm(92.6), FROM_DRAWING_35("clear width between the side U tips (2 × 46.3)"))),
     size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Every shutter half the window (W/2)"), { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(72.6), FROM_DRAWING_35("2 × 46.3 track + 4.0 clip − 24 roller"))),
     size("glassW", "Glass width",
@@ -443,10 +443,10 @@ export const EURO_35: StudioSystem = withAlternatives(base({
   ],
   parts: [
     ...domalFrame(byTracks("e35_t2", "e35_t3")),
-    part("trackClip", "{s} Roller Clip", "e35_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "e35_clip", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "e35_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "e35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "e35_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "e35_shutter", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "e35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -488,7 +488,7 @@ export const MINI_DOMAL_20: StudioSystem = base({
     ...domalFrame(byTracks("md20_track_2t", "md20_track_3t")),
     part("shutterTop", "{s} Shutter Top{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "md20_shutter", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "md20_shutter", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "md20_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -514,7 +514,7 @@ export const AMPLE_22: StudioSystem = base({
     size("shutterH", "Shutter height", rule("H", -mm(46), ev("suggested", "From the drawings (window built from the sections): 2 × 35.0 track − 24 roller; roller on the pointed track, no clip. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
-  parts: [...domalFrame(byTracks("a22_track_2t", "a22_track_3t")), ...stileShutter("a22_shutter", "a22_shutter", "Shutter Meeting Side").map((p) => ({ ...p, meshProfile: "a22_interlock" }))],
+  parts: [...domalFrame(byTracks("a22_track_2t", "a22_track_3t")), ...stileShutter("a22_shutter", "a22_shutter", "Interlock Side").map((p) => ({ ...p, meshProfile: "a22_interlock" }))],
   notes: [
     "The shutter runs on the pointed track; the tall hooked wall on the outside is only design. No clip in the track.",
     "Catalogue gives sizes only. Teach every other cut from one window you have made.",
@@ -531,18 +531,18 @@ export const AMPLE_25: StudioSystem = base({
     prof("a25_track_3t_leg", "25 mm 3-Track with leg", "track", { ample: "41021" }, "101×42.5", perM(1.45), DRAWING("Ample 25 mm p.2")),
     prof("a25_shutter", "25 mm Shutter", "shutter", { ample: "41323" }, "63×25.52", perM(0.75), DRAWING("Ample 25 mm p.2 — glass pocket on one side, track channel on the other")),
     prof("a25_interlock", "25 mm Section 914744 (not used in shops)", "shutter", { ample: "914744" }, "54.9×25.52", perM(0.635), DRAWING("Ample 25 mm p.2 — founder: not used")),
-    prof("a25_clip", "25 mm Roller Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 25 mm p.3; drawing traced from the 29 mm catalogue p.5")),
+    prof("a25_clip", "25 mm Track Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 25 mm p.3; drawing traced from the 29 mm catalogue p.5")),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(58.4), ev("suggested", "From the drawings (window built from the sections): 2 × 40.0 track + 2.4 clip − 24 roller. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
     ...domalFrame(byTracks("a25_track_2t", "a25_track_3t")),
-    part("trackClip", "{s} Roller Clip", "a25_clip", "shutter", "clipW", 90, "other"),
-    ...stileShutter("a25_shutter", "a25_shutter", "Shutter Meeting Side"),
+    part("trackClip", "Track Clip", "a25_clip", "shutter", "clipW", 90, "other"),
+    ...stileShutter("a25_shutter", "a25_shutter", "Interlock Side"),
   ],
   notes: ["The roller runs on clip 914401 snapped into the track, like Euro. Any outer leg on the track is only design."],
 });
@@ -556,10 +556,10 @@ export const AMPLE_26: StudioSystem = base({
     prof("a26_shutter", "26 mm Shutter", "shutter", { ample: "992265" }, "56×26", perM(0.694), DRAWING("Ample 26 mm p.2")),
     prof("a26_interlock", "26 mm Interlock", "interlock", { ample: "992266" }, "56×26", perM(0.753), DRAWING("Ample 26 mm p.3")),
   ],
-  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
+  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
   parts: [
     ...domalFrame(byTracks("a26_track_2t", "a26_track_3t")),
-    part("trackClip", "{s} Roller Clip", "a25_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "a25_clip", "shutter", "clipW", 90, "other"),
     ...stileShutter("a26_shutter", "a26_interlock"),
   ],
   notes: [
@@ -581,7 +581,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     prof("a29_track_3t_b", "29 mm 3-Track (light)", "track", { ample: "41053" }, "85.8×47.7", perM(1.42), CATALOGUE("Ample 29 mm p.2")),
     prof("a29_track_3t_leg", "29 mm 3-Track with leg", "track", { ample: "41005" }, "100.2×50.19", perM(1.969), CATALOGUE("Ample 29 mm p.2")),
     prof("a29_track_4t", "29 mm 4-Track", "track", { ample: "41008" }, "121.6×47.69", perM(2.328), CATALOGUE("Ample 29 mm p.2")),
-    prof("a29_clip", "29 mm Roller Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 29 mm p.5")),
+    prof("a29_clip", "29 mm Track Clip", "rail", { ample: "914401" }, "12.99×16.09", perM(0.148), CATALOGUE("Ample 29 mm p.5")),
     prof("a29_cap", "29 mm Track Cap", "rail", { ample: "914565" }, "14.49×11.65", perM(0.093), CATALOGUE("Ample 29 mm p.5")),
     prof("a29_handle", "29 mm Shutter", "shutter", { ample: "41055" }, "65×29", perM(0.89), CATALOGUE("Ample 29 mm p.3")),
     prof("a29_shutter_b", "29 mm Shutter (light)", "shutter", { ample: "914900" }, "65×29", perM(0.705), CATALOGUE("Ample 29 mm p.3")),
@@ -599,18 +599,18 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     prof("a29_patti", "29 mm Interlock Clip", "interlock-patti", { ample: "41054" }, "33.63×38.89", perM(0.35), DRAWING("Ample 29 mm p.4"), { faceMm: 10 }),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(73.8), ev("suggested", "From the drawings (window built from the sections): 2 × 47.7 track + 2.4 clip − 24 roller. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
     ...domalFrame(byTracks("a29_track_2t", "a29_track_3t")),
-    part("trackClip", "{s} Roller Clip", "a29_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "a29_clip", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-top", { meshProfile: "a29_mesh" }),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "a29_handle", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "a29_mesh" }),
-    part("shutterLock", "{s} Handle Side{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a29_mesh" }),
-    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a29_mesh" }),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a29_mesh" }),
+    part("shutterMeet", "{s} Interlock Side{tag}", "a29_handle", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a29_mesh" }),
   ],
   notes: [
     "The roller (24 mm) runs on clip 914401 snapped into the track. Any outer leg on a track is only design.",
@@ -631,7 +631,7 @@ export const ELEANOR_29: StudioSystem = base({
     prof("el29_track_3t", "29 mm 3-Track", "track", { eleanor: "2902" }, "86.5×48", { value: 6.35, perFt: 12 }, EL29(32)),
     prof("el29_track_2t_b", "29 mm 2-Track (48.1)", "track", { eleanor: "2904" }, "50.1×48.1", { value: 3.9, perFt: 12 }, EL29(32)),
     prof("el29_track_3t_b", "29 mm 3-Track (48.6)", "track", { eleanor: "2905" }, "86.9×48.6", { value: 6.15, perFt: 12 }, EL29(32)),
-    prof("el29_clip", "29 mm Roller Clip", "rail", { eleanor: "2917" }, "13×16", { value: 0.6, perFt: 12 }, EL29(33)),
+    prof("el29_clip", "29 mm Track Clip", "rail", { eleanor: "2917" }, "13×16", { value: 0.6, perFt: 12 }, EL29(33)),
     prof("el29_shutter", "29 mm Shutter", "shutter", { eleanor: "2903" }, "65×29", { value: 3.25, perFt: 12 }, EL29(32)),
     prof("el29_shutter_b", "29 mm Shutter (2906)", "shutter", { eleanor: "2906" }, "65×29", { value: 3.2, perFt: 12 }, EL29(32)),
     prof("el29_dgu", "29 mm Shutter (double glass)", "shutter", { eleanor: "2909" }, "65×29", { value: 2.9, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.32 — double glass (founder)")),
@@ -640,7 +640,7 @@ export const ELEANOR_29: StudioSystem = base({
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "45° frame goes round, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "45° frame goes round, full height"))),
-    size("clipW", "Roller clip", rule("W", -mm(96), FROM_DRAWING_35("clear width between the side U tips (2 × 48.0)"))),
+    size("clipW", "Track clip", rule("W", -mm(96), FROM_DRAWING_35("clear width between the side U tips (2 × 48.0)"))),
     size("shutterW", "Shutter width", rule("W", 0, ev("observed", "Every shutter half the window (W/2) — the usual shop way"), { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(74.5), FROM_DRAWING_35("2 × 48.0 track + 2.5 clip − 24 roller (Ample / BH 47.7 track: H − 73.8)"))),
     size("glassW", "Glass width", rule("shutterW", -mm(108.7), FROM_DRAWING_35("glass stops 54.3 mm in from each shutter edge (2903)"))),
@@ -648,11 +648,11 @@ export const ELEANOR_29: StudioSystem = base({
   ],
   parts: [
     ...domalFrame(byTracks("el29_track_2t", "el29_track_3t")),
-    part("trackClip", "{s} Roller Clip", "el29_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "el29_clip", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "el29_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "el29_shutter", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-lock"),
-    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-meet"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterMeet", "{s} Interlock Side{tag}", "el29_shutter", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
     "The roller (24 mm) runs on clip 2917 snapped into the track.",
@@ -668,7 +668,7 @@ export const AMPLE_37: StudioSystem = withAlternatives(base({
     prof("a37_track_2t", "37 mm 2-Track", "track", { ample: "41015" }, "90×53", perM(1.822), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_track_3t", "37 mm 3-Track", "track", { ample: "41014" }, "140×53", perM(2.688), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_track_3t_b", "37 mm 3-Track (square)", "track", { ample: "41016" }, "109.9×49.8", perM(2.309), CATALOGUE("Ample 37 mm p.2")),
-    prof("a37_clip", "37 mm Roller Clip", "rail", { ample: "41310" }, "13×17.09", perM(0.151), CATALOGUE("Ample 37 mm p.3"), { shapeKey: "41310-cap" }),
+    prof("a37_clip", "37 mm Track Clip", "rail", { ample: "41310" }, "13×17.09", perM(0.151), CATALOGUE("Ample 37 mm p.3"), { shapeKey: "41310-cap" }),
     prof("a37_cap", "37 mm Track Cap", "rail", { ample: "41083" }, "15.77×16.49", perM(0.8), CATALOGUE("Ample 37 mm p.3"), { shapeKey: "41083-37cap" }),
     prof("a37_handle", "37 mm Shutter", "shutter", { ample: "41068" }, "82.7×37.01", perM(1.335), CATALOGUE("Ample 37 mm p.2")),
     prof("a37_handle_b", "37 mm Shutter (double glass)", "shutter", { ample: "41076" }, "82.7×37.01", perM(1.274), CATALOGUE("Ample 37 mm p.2")),
@@ -679,18 +679,18 @@ export const AMPLE_37: StudioSystem = withAlternatives(base({
     prof("a37_frame_b", "37 mm Section 41069", "frame", { ample: "41069" }, "52.21×44.94", perM(0.689), CATALOGUE("Ample 37 mm p.3")),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(79.1), ev("suggested", "From the drawings (window built from the sections): 2 × 49.7 track + 3.8 clip − 24 roller. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
     ...domalFrame(byTracks("a37_track_2t", "a37_track_3t")),
-    part("trackClip", "{s} Roller Clip", "a37_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "a37_clip", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-top", { meshProfile: "a37_interlock" }),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "a37_handle", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "a37_interlock" }),
-    part("shutterLock", "{s} Handle Side{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a37_interlock" }),
-    part("shutterMeet", "{s} Shutter Meeting Side{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a37_interlock" }),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "a37_interlock" }),
+    part("shutterMeet", "{s} Interlock Side{tag}", "a37_handle", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "a37_interlock" }),
   ],
   notes: [
     "The roller (24 mm) runs on the round clip 41310 (13 × 17.09) snapped into the track. The outer leg on the track is only design.",
@@ -712,10 +712,10 @@ export const BH_31: StudioSystem = withAlternatives(base({
     prof("bh31_spine", "31 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6409" }, "80.1×20.2", { value: 4.5, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
     prof("bh31_slim_dgu", "31 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6410" }, "38.1×20.2", { value: 2.1, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
     prof("bh31_spine_dgu", "31 mm Slim Interlock — big, double glass", "slim-interlock", { bh: "BH-6411" }, "80.1×20.2", { value: 4.2, perFt: 12 }, CATALOGUE("Banu Hashim p.59"), { faceMm: 20.2 }),
-    prof("bh31_clip", "Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
+    prof("bh31_clip", "Track Clip", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", 
       rule("H", -mm(65.3), ev("suggested", "From the drawings (window built from the sections): 2 × 42.7 track + 3.9 clip − 24 roller. Check on one window."), { when: { tracks: "2" } }),
@@ -728,12 +728,12 @@ export const BH_31: StudioSystem = withAlternatives(base({
     part("frameBottom", "Bottom Track", byTracks("bh31_track_2t_leg", "bh31_track_3t_leg"), "window", "frameW", 90, "frame-bottom"),
     part("frameLeft", "Left Side (one groove)", byTracks("bh31_track_2t", "bh31_track_3t"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh31_track_2t", "bh31_track_3t"), "window", "frameH", 90, "frame-right"),
-    part("trackClip", "{s} Roller Clip", "bh31_clip", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "bh31_clip", "shutter", "clipW", 90, "other"),
     // founder (2026-11-15): the 6406 shutter goes on all 4 sides; the catalogue's
     // top / bottom 6404 is a 29 mm section (printed size) and is not used here
     part("shutterTop", "{s} Shutter Top{tag}", "bh31_handle_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh31_handle_sgu", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh31_handle_sgu", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "bh31_handle_sgu", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh31_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -759,10 +759,10 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_spine", "35 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27 }),
     prof("bh35_slim_dgu", "35 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.6, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
     prof("bh35_spine_dgu", "35 mm Slim Interlock — big, double glass", "slim-interlock", { bh: "BH-6509" }, "96×27", { value: 5.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64"), { faceMm: 27 }),
-    prof("bh35_patri", "35 mm Roller Clip (track rail)", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
+    prof("bh35_patri", "35 mm Track Clip", "rail", { bh: "BH-6513" }, "14.5×17.96", { value: 0.65, perFt: 12 }, CATALOGUE("Banu Hashim p.65")),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(42.4), ev("suggested", "From the drawings (window built from the sections): 2 × 31.2 track + 4.0 clip − 24 roller. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
@@ -772,12 +772,12 @@ export const BH_35: StudioSystem = withAlternatives(base({
     part("frameBottom", "Bottom Track", byTracks("bh35_b2", "bh35_b3"), "window", "frameW", 90, "frame-bottom"),
     part("frameLeft", "Left Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
-    part("trackClip", "{s} Roller Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
     // founder (2026-11-15): the 6510 shutter goes on all 4 sides; the catalogue's
     // top / bottom 6504 is a 31.7 mm section (printed size) and is not used here
     part("shutterTop", "{s} Shutter Top{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh35_shutter", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "bh35_shutter", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -801,7 +801,7 @@ export const EURO_26: StudioSystem = withAlternatives(base({
     prof("bh_6000", "Euro 2-Track", "frame", { bh: "BH-6000" }, "64.3×45", { value: 3.9, perFt: 12 }, CATALOGUE("Banu Hashim p.39")),
     prof("bh_6001", "Euro 3-Track", "frame", { bh: "BH-6001" }, "99.3×45", { value: 5.95, perFt: 12 },
       CATALOGUE("Banu Hashim p.39 — table prints H 35; the drawing says 45 and the trace fits 45")),
-    prof("bh_2559", "Euro Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
+    prof("bh_2559", "Euro Track Clip", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
     prof("bh_6003", "Euro Shutter 65×26", "shutter", { bh: "BH-6003" }, "65×26", { value: 2.7, perFt: 12 }, CATALOGUE("Banu Hashim p.39")),
     prof("bh_6052", "Euro Slim Interlock — small", "slim-interlock", { bh: "BH-6052" }, "32.6×23.7", { value: 1.7, perFt: 12 }, CATALOGUE("Banu Hashim p.40"), { faceMm: 23.7 }),
     prof("bh_6053", "Euro Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6053" }, "62.6×23.7", { value: 2.6, perFt: 12 },
@@ -812,7 +812,7 @@ export const EURO_26: StudioSystem = withAlternatives(base({
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Founder: Euro track goes round like Domal — 45°, full height"))),
-    size("clipW", "Roller clip", unknownFrom("W")),
+    size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height",
       rule("H", -mm(69.8), ev("suggested", "From the drawings (window built from the sections): 2 × 44.9 track + 3.9 clip − 24 roller. Check on one window."), { when: { tracks: "2" } }),
@@ -822,10 +822,10 @@ export const EURO_26: StudioSystem = withAlternatives(base({
   ],
   parts: [
     ...domalFrame(byTracks("bh_6000", "bh_6001")),
-    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "bh_2559", "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "bh_6003", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_6003", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh_6003", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "bh_6003", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh_6052", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -850,10 +850,10 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     prof("bh_2556", "Gulf 25 Slim Interlock — small", "slim-interlock", { bh: "BH-2556" }, "35.8×20.3", { value: 1.9, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.3 }),
     prof("bh_2557", "Gulf 25 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-2557" }, "80×20.2", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.2 }),
     prof("bh_2558", "Gulf 25 Top Track Guide", "rail", { bh: "BH-2558" }, "12×15", { value: 0.7, perFt: 12 }, CATALOGUE("Banu Hashim p.37")),
-    prof("bh_2559", "Euro Roller Clip (track rail)", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
+    prof("bh_2559", "Euro Track Clip", "rail", { bh: "BH-2559" }, "11×13.47", { value: 0.52, perFt: 12 }, CATALOGUE("Banu Hashim p.38")),
   ],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")),
+    ...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")),
     size("shutterW", "Shutter width", unknownFrom("W", { den: 2 })),
     size("shutterH", "Shutter height", rule("H", -mm(39.6), ev("suggested", "From the drawings (window built from the sections): 2 × 29.8 track + 3.9 clip − 24 roller. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
@@ -863,12 +863,12 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     part("frameBottom", "Bottom Track", byTracks("bh_2551", "bh_2553"), "window", "frameW", 90, "frame-bottom"),
     part("frameLeft", "Left Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-right"),
-    part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", "bh_2559", "shutter", "clipW", 90, "other"),
     // founder (2026-11-15): shops put the 2555 shutter on all 4 sides; the catalogue's
     // top / bottom section 2554 is not used
     part("shutterTop", "{s} Shutter Top{tag}", "bh_2555", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_2555", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh_2555", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "bh_2555", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh_2556", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -896,16 +896,16 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     prof("at_clip", "Interlock Clip", "interlock-patti", { alucoat: "AT-30007" }, "37.1×35.1", { value: 1.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20"), { faceMm: 12 }),
     prof("at_dbl", "Double Interlock", "interlock", { alucoat: "AT-30008" }, "37.1×41.62", { value: 2.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
     // founder (2026-11-15): Gulf 30 takes a roller clip in the Bottom Gulf U (S-30 p.22)
-    prof("at_clip_u", "Roller Clip, U groove", "rail", { alucoat: "AT-35020" }, "14.5×18", { value: 0.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail U Groove")),
-    prof("at_clip_v", "Roller Clip, V groove", "rail", { alucoat: "AT-35026" }, "13×16.5", { value: 0.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail V Groove")),
+    prof("at_clip_u", "Track Clip, U groove", "rail", { alucoat: "AT-35020" }, "14.5×18", { value: 0.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail U Groove")),
+    prof("at_clip_v", "Track Clip, V groove", "rail", { alucoat: "AT-35026" }, "13×16.5", { value: 0.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail V Groove")),
   ],
   switches: [{
-    id: "rollerClip", label: "Roller clip", default: "u",
+    id: "rollerClip", label: "Track clip", default: "u",
     options: [{ value: "u", label: "U groove (AT-35020)" }, { value: "v", label: "V groove (AT-35026)" }],
   }],
   sizes: [
     ...UNKNOWN_SIZES().slice(0, 2),
-    size("clipW", "Roller clip", rule("W", -mm(66), FROM_DRAWING_35("clear width between the AT-30001 side tips (2 × 33)"))),
+    size("clipW", "Track clip", rule("W", -mm(66), FROM_DRAWING_35("clear width between the AT-30001 side tips (2 × 33)"))),
     ...UNKNOWN_SIZES().slice(2, 3),
     size("shutterH", "Shutter height",
       rule("H", -mm(64.3), FROM_DRAWING_35("2-track Bottom Gulf AT-30002 top and bottom, V-groove clip AT-35026 standing 3.3 mm, shutter AT-30005, 24 mm roller"), { when: { tracks: "2", rollerClip: "v" } }),
@@ -921,7 +921,7 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
     // founder (2026-11-15): a roller clip in the Bottom Gulf U (U or V groove, S-30 p.22);
     // not the solid rail AT-30101 — that belongs to the low-threshold sill AT-30102
-    part("trackClip", "{s} Roller Clip", [{ when: { rollerClip: "v" }, id: "at_clip_v" }, { id: "at_clip_u" }], "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", [{ when: { rollerClip: "v" }, id: "at_clip_v" }, { id: "at_clip_u" }], "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLeft", "{s} Shutter Left{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-lock"),
@@ -938,7 +938,7 @@ export const GULF: StudioSystem = base({
   blurb: "Built like Euro; the left and right sides take a one-groove track. Choose your sections.",
   // the roller clip piece is Gulf 30's: keep its choice and give it a (still unknown) length
   switches: GULF_S30.switches.filter((x) => x.id === "rollerClip"),
-  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
+  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Track clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
   profiles: GULF_S30.profiles,
   parts: GULF_S30.parts,
   notes: ["Gulf is built like Euro; only the left and right sides change to a one-groove track.", "Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
@@ -1125,7 +1125,7 @@ const ANY_CLIP: ProfileDef = { ...prof("interlock_clip", "Interlock Clip", "inte
 function withMeetChoice(sys: StudioSystem, o: { lock: string; clip: string; glassW: number | null; src: string; def?: "slim" | "clip" }): StudioSystem {
   sys.switches = [...sys.switches.filter((s) => s.id !== "meet"), MEET_SWITCH(o.def ?? "slim")];
   // the meeting side is the slim interlock or the shutter itself: name it for both
-  sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, role: "{s} Meeting Side{tag}", profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
+  sys.parts = sys.parts.map((p) => (p.id === "shutterMeet" ? { ...p, role: "{s} Interlock Side{tag}", profile: [{ when: { meet: "clip" }, id: o.lock }, ...p.profile] } : p));
   sys.parts = [...sys.parts.filter((p) => p.id !== "meetClip"),
     part("meetClip", "Interlock Clip {k}", o.clip || ANY_CLIP.id, "meeting", "shutterH", 90, "meeting", { count: 2, when: { meet: "clip" } })];
   // no clip section known: it is still cut to the shutter height (founder) — never block the cut
@@ -1237,7 +1237,7 @@ export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
-    size("clipW", "Roller clip",
+    size("clipW", "Track clip",
       rule("W", -mm(96), FROM_DRAWING("clear width between the side U tips (2 × 48.0, Eleanor)"), { when: { track: "48" } }),
       rule("W", -mm(95.4), FROM_DRAWING("clear width between the side U tips (2 × 47.7)"))),
     size("shutterW", "Shutter width", HALF),
@@ -1252,10 +1252,10 @@ export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
       { when: { tracks: ["1", "2"], track: "48" }, id: "el29_track_2t" }, { when: { track: "48" }, id: "el29_track_3t" },
       { when: { tracks: ["1", "2"] }, id: "a29_track_2t" }, { id: "a29_track_3t" },
     ]),
-    part("trackClip", "{s} Roller Clip", [{ when: { track: "48" }, id: "el29_clip" }, { id: "a29_clip" }], "shutter", "clipW", 90, "other"),
+    part("trackClip", "Track Clip", [{ when: { track: "48" }, id: "el29_clip" }, { id: "a29_clip" }], "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-top", { meshProfile: "domal_jali_shutter" }),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "domal_jali_shutter" }),
-    part("shutterLock", "{s} Handle Side{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "domal_jali_shutter" }),
+    part("shutterLock", "{s} Shutter {lr}{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "domal_jali_shutter" }),
     part("shutterMeet", "{s} Slim Interlock{tag}", "", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
   ],
   notes: [

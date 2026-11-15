@@ -152,7 +152,8 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
       for (const p of parts.filter((x) => x.scope === "shutter")) {
         if (p.onlyGlass && kind !== "glass") continue;
         const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p, i);
-        const role = p.role.replace("{s}", `S${i + 1}`).replace("{tag}", kind === "jali" ? " (Mesh)" : "");
+        // the outer (lock) upright: left on the first shutter, right on the others
+        const role = p.role.replace("{s}", `S${i + 1}`).replace("{lr}", i === 0 ? "Left" : "Right").replace("{tag}", kind === "jali" ? " (Mesh)" : "");
         for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);
       }
     });

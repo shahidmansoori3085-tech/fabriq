@@ -29,7 +29,7 @@ function measuredSizes(sys: StudioSystem, t: TaughtJob): { bySize: Record<string
   };
   for (const [partId, v] of Object.entries(t.measured)) {
     const p = sys.parts.find((x) => x.id === partId);
-    if (p && p.length !== "W" && p.length !== "H") put(p.length, v, p.role.replace(/\{.\}/g, "").trim());
+    if (p && p.length !== "W" && p.length !== "H") put(p.length, v, p.role.replace(/\{[a-z]+\}/g, "").trim());
   }
   if (t.glass?.w !== undefined) put(sys.infill.w, t.glass.w, "Glass width");
   if (t.glass?.h !== undefined) put(sys.infill.h, t.glass.h, "Glass height");

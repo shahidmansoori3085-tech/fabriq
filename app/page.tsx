@@ -257,7 +257,7 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
   return out.filter((c) => {
     const r = evaluate(s, { id: "Q", W: 1524000, H: 1219200, qty: 1, tracks: parseInt(tracks, 10) || 2, mix, switches: { ...sw, ...c.sw }, perShutter: c.per.length ? c.per : undefined }, { allowUnknown: true });
     if (r.missing.length) return false;
-    c.pics = [...new Set(r.pieces.filter((p) => /Meeting Side|Interlock Clip/.test(p.role)).map((p) => p.sectionId))].slice(0, 2);
+    c.pics = [...new Set(r.pieces.filter((p) => /Interlock Side|Meeting Side|Interlock Clip/.test(p.role)).map((p) => p.sectionId))].slice(0, 2);
     return true;
   });
 }

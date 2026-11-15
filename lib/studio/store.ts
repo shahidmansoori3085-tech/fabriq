@@ -43,6 +43,15 @@ function migrate(sys: StudioSystem): StudioSystem {
   const tpl = TEMPLATES.find((t) => t.id === sys.basedOn?.id);
   // names carry no company any more (founder, 2026-11-13): "Euro 25 mm — Ample" → "Euro 25 mm"
   if (tpl && sys.name.includes(" — ") && sys.name.split(" — ")[0] === tpl.name.split(" (")[0]) sys = { ...sys, name: tpl.name };
+  // shop words (founder, 2026-11-15): "Handle Side" → Shutter Left / Right, "Meeting Side" → Interlock Side
+  // and the clip in the bottom track is the Track Clip (founder): it belongs to the track, not the shutter
+  if (sys.parts.some((p) => /Handle Side|Meeting Side|Roller Clip|Track Rail/.test(p.role)) || sys.sizes.some((x) => x.label === "Roller clip")) {
+    sys = {
+      ...sys,
+      parts: sys.parts.map((p) => ({ ...p, role: p.id === "trackClip" ? "Track Clip" : p.role.replace("Handle Side", "Shutter {lr}").replace(/(Shutter )?Meeting Side/, "Interlock Side") })),
+      sizes: sys.sizes.map((x) => (x.label === "Roller clip" ? { ...x, label: "Track clip" } : x)),
+    };
+  }
   if (sys.parts.every((p) => p.place)) return sys;
   return {
     ...sys,

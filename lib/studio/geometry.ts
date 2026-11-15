@@ -57,6 +57,14 @@ export interface WindowGeo {
   sizesKnown: boolean;
   /** openable (casement): sashes lap over the frame and open on hinges */
   casement: boolean;
+  /** the real sections the 3D cutaway is built from (each shutter its own, e.g. its slim interlock) */
+  section: {
+    track?: Shape; side?: Shape; clip?: Shape; meeting?: Shape;
+    frameAngle: 90 | 45; sashAngle: 90 | 45;
+    /** Bombay (Normal): the roller sits in the bearing, not on a clip — another stack-up */
+    bombay: boolean;
+    shutters: { bottom?: Shape; lock?: Shape; meet?: Shape; kind: "G" | "J" | "S"; track: number }[];
+  };
 }
 
 const TYPICAL: Record<string, number> = { frame: 45, sash: 55, patti: 9 };
@@ -193,5 +201,17 @@ export function windowGeometry(
     }
   }
 
-  return { W, H, frame, shutters, sash, patti, faces: { top: t, bottom: b, left: l, right: r }, mitre, shutterW, shutterH, sizesKnown, casement };
+  const shapeFor = (p: PartDef | undefined) => (p ? shapeOf(find(profileOf(sys, p, vars))) : undefined);
+  const section: WindowGeo["section"] = {
+    track: fB.shape, side: fL.shape,
+    clip: shapeFor(parts.find((p) => p.id === "trackClip")),
+    meeting: shapeFor(at("meeting")),
+    frameAngle: fB.part?.angle ?? 90,
+    bombay: sys.series?.type === "bombay" || sys.family === "sliding",
+    sashAngle: at("sash-bottom")?.angle ?? 45,
+    shutters: shutters.map((s, i) => ({
+      bottom: face("sash-bottom", i).shape, lock: face("sash-lock", i).shape, meet: face("sash-meet", i).shape, kind: s.kind, track: s.track,
+    })),
+  };
+  return { W, H, frame, shutters, sash, patti, faces: { top: t, bottom: b, left: l, right: r }, mitre, shutterW, shutterH, sizesKnown, casement, section };
 }
