@@ -276,6 +276,14 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
   printed size shows they are another series.
 - Gulf 35: the shutter is the 75 × 35 (6712) on all 4 sides, not 6510.
 - Gulf 30: roller clip U groove AT-35020 or V groove AT-35026 in the Bottom Gulf U; never the solid rail AT-30101 (that is for the low-threshold sill).
+- A slim interlock must (a) take the glass in line with its shutter — one face flush with
+  the shutter face, and (b) hook the next shutter's slim: 2 × hook reach − track pitch =
+  1–12 mm (catalogue pairs 2.8–9.4). That is why Gulf 35 (track 6501, pitch 50.4) keeps
+  6506 / 6508 even on the 6712 shutter: 6707 would miss by 0.5 mm; 6707 is for Euro 35 (6705).
+  A big (reinforcement) slim has its long tube on the face side; its hook is the short side.
+- A roller clip's head must rest on the U lips (head ≥ U mouth). Euro 26 and Gulf 31 keep
+  BH-2559 (Banu Hashim's "Euro Roller Clip"); 6513 would change the shutter by only 0.1 mm.
+- Gulf 30: the top track is the Bottom Gulf too (founder).
 - Cross-check a section with the other catalogues: the same shape and size in another maker's book tells which series and which partner sections it belongs to.
 - Every N mm sliding system's shutter pieces must be N mm thick, every section's
   printed size must match its drawing, and every window must build from its
