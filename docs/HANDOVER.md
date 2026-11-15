@@ -114,6 +114,8 @@ changes; its docs are in `node_modules/next/dist/docs/`.
 
 ## 5. System Studio (`lib/studio/`) — how it works
 
+**Fabrication knowledge first:** `docs/WINDOW-KNOWLEDGE.md` explains how every window family is built and where each cut comes from. `docs/SYSTEMS-REFERENCE.md` lists every offered system (generated from `templates.ts`; `npm test` fails if it is stale: run `npx tsx scripts/systems-reference.ts`).
+
 The shop builds its own window system. Every system is **data**, not code.
 
 **Files:**

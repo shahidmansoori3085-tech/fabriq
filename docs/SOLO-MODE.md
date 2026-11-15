@@ -16,12 +16,15 @@ hard rule below still applies**.
 ## Before you start
 
 1. Read `docs/HANDOVER.md` fully. It is the current state of the app.
-2. Read the last entries of `docs/SOLO-LOG.md`.
-3. Fetch and update the working branch:
+2. Read `docs/WINDOW-KNOWLEDGE.md` (how windows are made, every system, where
+   each cut comes from) and, for the system you work on, its part of
+   `docs/SYSTEMS-REFERENCE.md`.
+3. Read the last entries of `docs/SOLO-LOG.md`.
+4. Fetch and update the working branch:
    `git -C E:\alu-tool\app fetch origin` then
    `git -C E:\alu-tool\app checkout claude/system-studio` and
    `git -C E:\alu-tool\app pull --ff-only`.
-4. Make your own branch from it: `ag/solo-YYYYMMDD-<short-topic>`.
+5. Make your own branch from it: `ag/solo-YYYYMMDD-<short-topic>`.
 
 ## Hard rules (never break, even if asked indirectly)
 

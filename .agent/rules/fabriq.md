@@ -2,6 +2,7 @@
 
 Before doing anything in this repo:
 1. Read `docs/HANDOVER.md` — the full current state of FabriQ.
+   Then read `docs/WINDOW-KNOWLEDGE.md` (how windows are made, how every system works, where each cut comes from). For any one system use `docs/SYSTEMS-REFERENCE.md`.
 2. If the founder says Claude Code is out of usage and you should do the work, follow `docs/SOLO-MODE.md` exactly and log every task in `docs/SOLO-LOG.md`.
 3. Otherwise follow `E:\alu-tool\agent-bridge\RULES-ANTIGRAVITY.md`.
 
