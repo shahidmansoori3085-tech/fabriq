@@ -94,8 +94,8 @@ to the bottom of its glass slot, minus the gap the glass needs (gasket/rubber).
 - If the meeting upright is a slim interlock, its pocket is much smaller,
   so the glass is **wider** (e.g. Euro 29: shutter − 105.4 with clip, but
   shutter − 65.6 with the small slim interlock).
-- Gulf shutters have a different top/bottom section, so the glass **height**
-  uses the top/bottom pocket and the glass **width** uses the side pocket.
+- The shutter section of a series goes on all 4 sides (Gulf too — founder), so the
+  glass height uses the same pocket as the glass width (with a clip).
 
 ## 3. The families
 
@@ -173,13 +173,16 @@ How it is built:
   **90°**. Top and bottom fit **between** the sides: W − 2 × side depth.
   (If a shop runs them full width, that is a shop choice — set it to W.)
 - Roller clip in the bottom track, like Euro.
-- Shutter: **different sections** for top/bottom (shutter-rail, e.g. 2554,
-  6404, 6504) and for the sides (handle, e.g. 2555, 6406, 6510), 45°.
+- Shutter: **the series' own shutter on all 4 sides**, 45° — 2555 (25), 6406 (31),
+  6510 (35). The catalogues also print "shutter top / bottom" sections (2554, 6404,
+  6504) — **not used** (founder): 6404 is 29 mm and 6504 is 31.7 mm thick, so they
+  are not even the right series. Always read the printed size on the drawing.
 - Meeting side: slim interlock (small / big / double glass) or clip.
   **The Gulf catalogues have no interlock clip of their own** — the clip choice
   is left empty until the founder says which clip shops use. Do not guess one.
-- Gulf 30 is different: same shutter all round, 90° frame screwed, solid track
-  rail, interlock clip or double interlock.
+- Gulf 30 is different: same shutter all round, 90° frame screwed, interlock clip
+  or double interlock. **No rail**: the roller runs on the Bottom Gulf's own U tops.
+  The solid rail AT-30101 belongs to the low-threshold sill AT-30102.
 
 ### E. Openable / casement (Z 40, Z 55)
 
@@ -267,6 +270,13 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
   in the middle, screw ports on both sides.
 - Gulf has no catalogue interlock clip. Don't add one from another series.
 - 41289 is an H-section, not the Euro 29 slim.
+- Gulf 25 / 31 / 35: the shutter goes on all 4 sides; the catalogue top/bottom
+  sections (2554, 6404, 6504) are not used. 6404 is 29 mm, 6504 is 31.7 mm — the
+  printed size shows they are another series.
+- Gulf 30: no solid rail (AT-30101 is for the low-threshold sill).
+- Every N mm sliding system's shutter pieces must be N mm thick, every section's
+  printed size must match its drawing, and every window must build from its
+  drawings: `evals/studio/geometry.ts` checks all of it on every system.
 - Normal 25 mm, the 5-track Normal and 37 mm are out of the app on purpose.
 - My sections shows only sections the app's systems actually cut, each once.
 - No company names and no bold sizes on section pictures; pictures must not be cut off.

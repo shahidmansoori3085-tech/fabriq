@@ -512,8 +512,8 @@ Pieces:
 | Frame Right | window | 1 | frameH | 45° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
 | Frame Bottom | window | 1 | frameW | 45° | tracks=1/2: Gulf 25 2-Track (top and bottom) — code BH-2551 — 71.8×29.8 mm — track<br>always: Gulf 25 3-Track (top and bottom) — code BH-2553 — 108.6×29.8 mm — track |
 | Roller Clip | shutter | 1 | clipW | 90° | Euro Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
-| Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter Top / Bottom — code BH-2554 — 53.8×22.2 mm — shutter-rail |
-| Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter Top / Bottom — code BH-2554 — 53.8×22.2 mm — shutter-rail |
+| Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
+| Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
@@ -531,7 +531,7 @@ Size rules:
 | Glass width (`glassW`) | pick_shutterMeet=bh_2556 | shutterW − 65.8 | suggested | From the drawings (window built from the sections): BH-2555 pocket 54.1 mm + slim 2556 pocket 11.7 mm. Check on one window. |
 | Glass width (`glassW`) | pick_shutterMeet=bh_2557 | shutterW − 65.6 | suggested | From the drawings (window built from the sections): BH-2555 pocket 54.1 mm + slim 2557 pocket 11.5 mm. Check on one window. |
 | Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
-| Glass height (`glassH`) | always | shutterH − 88.4 | suggested | From the drawings (window built from the sections): BH-2554 pocket: glass stops 44.2 mm in from the top and bottom edges. Check on one window. |
+| Glass height (`glassH`) | always | shutterH − 108.2 | suggested | From the drawings (window built from the sections): BH-2555 pocket (2555 on all 4 sides, founder): glass stops 54.1 mm in from the top and bottom edges. Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 
@@ -546,7 +546,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Handle Side | 1179.6 mm | 45° | 2 |
 | Shutter Meeting Side | 1179.6 mm | 45° | 2 |
-| Glass/mesh glass | 848.6 × 1091.2 mm | — | 2 |
+| Glass/mesh glass | 848.6 × 1071.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 
@@ -563,7 +563,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Shutter Meeting Side | 1179.6 mm | 45° | 2 |
 | Interlock Clip 1 | 1179.6 mm | 90° | 1 |
 | Interlock Clip 2 | 1179.6 mm | 90° | 1 |
-| Glass/mesh glass | 806.2 × 1091.2 mm | — | 2 |
+| Glass/mesh glass | 806.2 × 1071.4 mm | — | 2 |
 
 ---
 
@@ -732,8 +732,8 @@ Pieces:
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: Gulf 25 Side Track, one groove (2-track) — code BH-2550 — 75.7×24.8 mm — track<br>always: Gulf 25 Side Track, one groove (3-track) — code BH-2552 — 112.5×24.8 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: Gulf 25 Side Track, one groove (2-track) — code BH-2550 — 75.7×24.8 mm — track<br>always: Gulf 25 Side Track, one groove (3-track) — code BH-2552 — 112.5×24.8 mm — track |
 | Roller Clip | shutter | 1 | clipW | 90° | Euro Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
-| Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter Top / Bottom — code BH-2554 — 53.8×22.2 mm — shutter-rail |
-| Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter Top / Bottom — code BH-2554 — 53.8×22.2 mm — shutter-rail |
+| Shutter Top | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
+| Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
@@ -751,7 +751,7 @@ Size rules:
 | Glass width (`glassW`) | pick_shutterMeet=bh_2556 | shutterW − 65.8 | suggested | From the drawings (window built from the sections): BH-2555 pocket 54.1 mm + slim 2556 pocket 11.7 mm. Check on one window. |
 | Glass width (`glassW`) | pick_shutterMeet=bh_2557 | shutterW − 65.6 | suggested | From the drawings (window built from the sections): BH-2555 pocket 54.1 mm + slim 2557 pocket 11.5 mm. Check on one window. |
 | Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
-| Glass height (`glassH`) | always | shutterH − 88.4 | suggested | From the drawings (window built from the sections): BH-2554 pocket: glass stops 44.2 mm in from the top and bottom edges. Check on one window. |
+| Glass height (`glassH`) | always | shutterH − 108.2 | suggested | From the drawings (window built from the sections): BH-2555 pocket (2555 on all 4 sides, founder): glass stops 54.1 mm in from the top and bottom edges. Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 
@@ -766,7 +766,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Handle Side | 1179.6 mm | 45° | 2 |
 | Shutter Meeting Side | 1179.6 mm | 45° | 2 |
-| Glass/mesh glass | 848.6 × 1091.2 mm | — | 2 |
+| Glass/mesh glass | 848.6 × 1071.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 
@@ -783,7 +783,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Shutter Meeting Side | 1179.6 mm | 45° | 2 |
 | Interlock Clip 1 | 1179.6 mm | 90° | 1 |
 | Interlock Clip 2 | 1179.6 mm | 90° | 1 |
-| Glass/mesh glass | 806.2 × 1091.2 mm | — | 2 |
+| Glass/mesh glass | 806.2 × 1071.4 mm | — | 2 |
 
 ---
 
@@ -805,8 +805,8 @@ Pieces:
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 31 mm Side Track, one groove (2-track) — code BH-6400 — 85×33.1 mm — track<br>always: 31 mm Side Track, one groove (3-track) — code BH-6402 — 124.7×33.1 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 31 mm Side Track, one groove (2-track) — code BH-6400 — 85×33.1 mm — track<br>always: 31 mm Side Track, one groove (3-track) — code BH-6402 — 124.7×33.1 mm — track |
 | Roller Clip | shutter | 1 | clipW | 90° | Roller Clip (track rail) — code BH-2559 — 11×13.47 mm — rail |
-| Shutter Top | shutter | 1 | shutterW | 45° | 31 mm Shutter Top / Bottom (single glass) — code BH-6404 — 65.9×29 mm — shutter-rail |
-| Shutter Bottom | shutter | 1 | shutterW | 45° | 31 mm Shutter Top / Bottom (single glass) — code BH-6404 — 65.9×29 mm — shutter-rail |
+| Shutter Top | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
+| Shutter Bottom | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_slim_dgu: 31 mm Slim Interlock — small, double glass — code BH-6410 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine_dgu: 31 mm Slim Interlock — big, double glass — code BH-6411 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
@@ -826,7 +826,7 @@ Size rules:
 | Glass width (`glassW`) | pick_shutterMeet=bh31_slim | shutterW − 61.1 | suggested | From the drawings (window built from the sections): BH-6406 pocket 49.8 mm + slim 6408 pocket 11.3 mm. Check on one window. |
 | Glass width (`glassW`) | pick_shutterMeet=bh31_spine | shutterW − 60.5 | suggested | From the drawings (window built from the sections): BH-6406 pocket 49.8 mm + slim 6409 pocket 10.7 mm. Check on one window. |
 | Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
-| Glass height (`glassH`) | always | shutterH − 112.8 | suggested | From the drawings (window built from the sections): BH-6404 pocket: glass stops 56.4 mm in from the top and bottom edges. Check on one window. |
+| Glass height (`glassH`) | always | shutterH − 99.6 | suggested | From the drawings (window built from the sections): BH-6406 pocket (6406 on all 4 sides, founder): glass stops 49.8 mm in from the top and bottom edges. Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 
@@ -841,7 +841,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Handle Side | 1153.9 mm | 45° | 2 |
 | Shutter Meeting Side | 1153.9 mm | 45° | 2 |
-| Glass/mesh glass | 853.3 × 1041.1 mm | — | 2 |
+| Glass/mesh glass | 853.3 × 1054.3 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 
@@ -858,7 +858,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Shutter Meeting Side | 1153.9 mm | 45° | 2 |
 | Interlock Clip 1 | 1153.9 mm | 90° | 1 |
 | Interlock Clip 2 | 1153.9 mm | 90° | 1 |
-| Glass/mesh glass | 814.8 × 1041.1 mm | — | 2 |
+| Glass/mesh glass | 814.8 × 1054.3 mm | — | 2 |
 
 ---
 
@@ -880,8 +880,8 @@ Pieces:
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 35 mm Side Track, one groove (2-track) — code BH-6500 — 100×32.8 mm — track<br>always: 35 mm Side Track, one groove (3-track) — code BH-6502 — 150×32.8 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 35 mm Side Track, one groove (2-track) — code BH-6500 — 100×32.8 mm — track<br>always: 35 mm Side Track, one groove (3-track) — code BH-6502 — 150×32.8 mm — track |
 | Roller Clip | shutter | 1 | clipW | 90° | 35 mm Roller Clip (track rail) — code BH-6513 — 14.5×17.96 mm — rail |
-| Shutter Top | shutter | 1 | shutterW | 45° | 35 mm Shutter Top / Bottom (single glass) — code BH-6504 — 58×31.7 mm — shutter-rail |
-| Shutter Bottom | shutter | 1 | shutterW | 45° | 35 mm Shutter Top / Bottom (single glass) — code BH-6504 — 58×31.7 mm — shutter-rail |
+| Shutter Top | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — handle |
+| Shutter Bottom | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — handle<br>pick_shutterMeet=bh35_slim: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine: 35 mm Slim Interlock — big (reinforcement) — code BH-6508 — 96×27 mm — slim-interlock<br>pick_shutterMeet=bh35_slim_dgu: 35 mm Slim Interlock — small, double glass — code BH-6507 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine_dgu: 35 mm Slim Interlock — big, double glass — code BH-6509 — 96×27 mm — slim-interlock<br>always: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal 35 I/L Clip — code BH-6711 / 3510 — 41×38.9 mm — interlock-patti |
@@ -899,7 +899,7 @@ Size rules:
 | Glass width (`glassW`) | pick_shutterMeet=bh35_slim | shutterW − 62.3 | suggested | From the drawings (window built from the sections): BH-6510 pocket 46.7 mm + slim 6506 pocket (15 mm top slot) 15.6 mm. Check on one window. |
 | Glass width (`glassW`) | pick_shutterMeet=bh35_spine | shutterW − 61.9 | suggested | From the drawings (window built from the sections): BH-6510 pocket 46.7 mm + slim 6508 pocket 15.2 mm. Check on one window. |
 | Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
-| Glass height (`glassH`) | always | shutterH − 93.6 | suggested | From the drawings (window built from the sections): BH-6504 pocket: glass stops 46.8 mm in from the top and bottom edges. Check on one window. |
+| Glass height (`glassH`) | always | shutterH − 93.4 | suggested | From the drawings (window built from the sections): BH-6510 pocket (6510 on all 4 sides, founder): glass stops 46.7 mm in from the top and bottom edges. Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 
@@ -914,7 +914,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Handle Side | 1176.8 mm | 45° | 2 |
 | Shutter Meeting Side | 1176.8 mm | 45° | 2 |
-| Glass/mesh glass | 852.1 × 1083.2 mm | — | 2 |
+| Glass/mesh glass | 852.1 × 1083.4 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 
@@ -931,7 +931,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 | Shutter Meeting Side | 1176.8 mm | 45° | 2 |
 | Interlock Clip 1 | 1176.8 mm | 90° | 1 |
 | Interlock Clip 2 | 1176.8 mm | 90° | 1 |
-| Glass/mesh glass | 821 × 1083.2 mm | — | 2 |
+| Glass/mesh glass | 821 × 1083.4 mm | — | 2 |
 
 ---
 
@@ -951,7 +951,6 @@ Pieces:
 | Left Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 2 Track Vertical Gulf — code AT-30001 — 85×33 mm — track<br>always: 3 Track Vertical Gulf — code AT-30003 — 124×33 mm — track |
 | Right Side (one groove) | window | 1 | frameH | 90° | tracks=1/2: 2 Track Vertical Gulf — code AT-30001 — 85×33 mm — track<br>always: 3 Track Vertical Gulf — code AT-30003 — 124×33 mm — track |
 | Bottom Gulf Track | window | 1 | frameW | 90° | tracks=1/2: 2 Track Bottom Gulf — code AT-30002 — 81.8×47 mm — track<br>always: 3 Track Bottom Gulf — code AT-30004 — 120.6×47 mm — track |
-| Track Rail | shutter | 1 | frameW | 90° | Track Rail (solid) — code AT-30101 — 5×10.5 mm — rail |
 | Shutter Top | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Left | shutter | 1 | shutterH | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
@@ -965,7 +964,8 @@ Size rules:
 | Frame top / bottom (`frameW`) | always | W − 66 | suggested | From the drawings (window built from the sections): top and bottom fit between the AT-30001 sides (33 mm each, 90°); if your shop runs them full width, set this to W. Check on one window. |
 | Frame side (`frameH`) | always | H | observed | Gulf: sides run full height (90°) |
 | Shutter width (`shutterW`) | always | W ÷ 2 | observed | Every shutter half the window (W/2) — the usual shop way |
-| Shutter height (`shutterH`) | always | H − 57.6 | suggested | From the drawings: Bottom Gulf on top and bottom (tip 42.5), solid rail AT-30101 (10.5) on the U floor (28.6) → runs at 39.1; 42.5 + 39.1 − 24 roller. If your top is the 2-Track AT-30016 it is H − 53.3. Check on one window. |
+| Shutter height (`shutterH`) | tracks=2 | H − 61 | suggested | From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window. |
+| Shutter height (`shutterH`) | always | H − 61.5 | suggested | From the drawings (window built from the sections): 3-track Bottom Gulf AT-30004 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window. |
 | Glass width (`glassW`) | always | shutterW − 110.2 | suggested | From the drawings (window built from the sections): AT-30005 pocket: glass stops 55.1 mm in from each shutter edge. Check on one window. |
 | Glass height (`glassH`) | always | shutterH − 110.2 | suggested | From the drawings (window built from the sections): AT-30005 pocket: glass stops 55.1 mm in from each shutter edge. Check on one window. |
 
@@ -977,14 +977,13 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Left Side (one groove) | 1219.2 mm | 90° | 1 |
 | Right Side (one groove) | 1219.2 mm | 90° | 1 |
 | Bottom Gulf Track | 1762.8 mm | 90° | 1 |
-| Shutter Track Rail | 1762.8 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Shutter Left | 1161.6 mm | 45° | 2 |
-| Shutter Shutter Right | 1161.6 mm | 45° | 2 |
-| Interlock Clip 1 | 1161.6 mm | 90° | 1 |
-| Interlock Clip 2 | 1161.6 mm | 90° | 1 |
-| Glass/mesh glass | 804.2 × 1051.4 mm | — | 2 |
+| Shutter Shutter Left | 1158.2 mm | 45° | 2 |
+| Shutter Shutter Right | 1158.2 mm | 45° | 2 |
+| Interlock Clip 1 | 1158.2 mm | 90° | 1 |
+| Interlock Clip 2 | 1158.2 mm | 90° | 1 |
+| Glass/mesh glass | 804.2 × 1048 mm | — | 2 |
 
 ---
 

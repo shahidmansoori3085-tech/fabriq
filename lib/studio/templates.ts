@@ -706,8 +706,6 @@ export const BH_31: StudioSystem = withAlternatives(base({
     prof("bh31_track_2t_leg", "31 mm 2-Track (top and bottom)", "track", { bh: "BH-6401" }, "80.8×47.6", { value: 4.95, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
     prof("bh31_track_3t", "31 mm Side Track, one groove (3-track)", "track", { bh: "BH-6402" }, "124.7×33.1", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
     prof("bh31_track_3t_leg", "31 mm 3-Track (top and bottom)", "track", { bh: "BH-6403" }, "120.5×47.6", { value: 6.65, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_rail_sgu", "31 mm Shutter Top / Bottom (single glass)", "shutter-rail", { bh: "BH-6404" }, "65.9×29", { value: 3.85, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_rail_dgu", "31 mm Shutter Top / Bottom (double glass)", "shutter-rail", { bh: "BH-6405" }, "65.9×29", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
     prof("bh31_handle_sgu", "31 mm Shutter (single glass)", "handle", { bh: "BH-6406" }, "59×31.4", { value: 3.45, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
     prof("bh31_handle_dgu", "31 mm Shutter (double glass)", "handle", { bh: "BH-6407" }, "59×31.4", { value: 3.15, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
     prof("bh31_slim", "31 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6408" }, "38.1×20.2", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.58"), { faceMm: 20.2 }),
@@ -731,8 +729,10 @@ export const BH_31: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("bh31_track_2t", "bh31_track_3t"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh31_track_2t", "bh31_track_3t"), "window", "frameH", 90, "frame-right"),
     part("trackClip", "{s} Roller Clip", "bh31_clip", "shutter", "clipW", 90, "other"),
-    part("shutterTop", "{s} Shutter Top{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh31_rail_sgu", "shutter", "shutterW", 45, "sash-bottom"),
+    // founder (2026-11-15): the 6406 shutter goes on all 4 sides; the catalogue's
+    // top / bottom 6404 is a 29 mm section (printed size) and is not used here
+    part("shutterTop", "{s} Shutter Top{tag}", "bh31_handle_sgu", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh31_handle_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh31_handle_sgu", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh31_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
@@ -750,8 +750,6 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_b2", "35 mm 2-Track (top and bottom)", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_v3", "35 mm Side Track, one groove (3-track)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_b3", "35 mm 3-Track (top and bottom)", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_rail", "35 mm Shutter Top / Bottom (single glass)", "shutter-rail", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_rail_dgu", "35 mm Shutter Top / Bottom (double glass)", "shutter-rail", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
     prof("bh35_handle", "35 mm Shutter (single glass)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
     prof("bh35_handle_dgu", "35 mm Shutter (double glass)", "handle", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
     prof("bh35_slim", "35 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
@@ -772,8 +770,10 @@ export const BH_35: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
     part("trackClip", "{s} Roller Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
-    part("shutterTop", "{s} Shutter Top{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_rail", "shutter", "shutterW", 45, "sash-bottom"),
+    // founder (2026-11-15): the 6510 shutter goes on all 4 sides; the catalogue's
+    // top / bottom 6504 is a 31.7 mm section (printed size) and is not used here
+    part("shutterTop", "{s} Shutter Top{tag}", "bh35_handle", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_handle", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh35_handle", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
@@ -843,7 +843,6 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     prof("bh_2551", "Gulf 25 2-Track (top and bottom)", "track", { bh: "BH-2551" }, "71.8×29.8", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
     prof("bh_2552", "Gulf 25 Side Track, one groove (3-track)", "track", { bh: "BH-2552" }, "112.5×24.8", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
     prof("bh_2553", "Gulf 25 3-Track (top and bottom)", "track", { bh: "BH-2553" }, "108.6×29.8", { value: 5.1, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
-    prof("bh_2554", "Gulf 25 Shutter Top / Bottom", "shutter-rail", { bh: "BH-2554" }, "53.8×22.2", { value: 2.2, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2555", "Gulf 25 Shutter", "handle", { bh: "BH-2555" }, "62.37×25.5", { value: 2.4, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2556", "Gulf 25 Slim Interlock — small", "slim-interlock", { bh: "BH-2556" }, "35.8×20.3", { value: 1.9, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.3 }),
     prof("bh_2557", "Gulf 25 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-2557" }, "80×20.2", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.2 }),
@@ -862,8 +861,10 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh_2550", "bh_2552"), "window", "frameH", 90, "frame-right"),
     part("trackClip", "{s} Roller Clip", "bh_2559", "shutter", "clipW", 90, "other"),
-    part("shutterTop", "{s} Shutter Top{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_2554", "shutter", "shutterW", 45, "sash-bottom"),
+    // founder (2026-11-15): shops put the 2555 shutter on all 4 sides; the catalogue's
+    // top / bottom section 2554 is not used
+    part("shutterTop", "{s} Shutter Top{tag}", "bh_2555", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh_2555", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLock", "{s} Handle Side{tag}", "bh_2555", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh_2556", "shutter", "shutterH", 45, "sash-meet"),
   ],
@@ -891,11 +892,12 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     prof("at_dgu", "DGU Shutter", "shutter", { alucoat: "AT-30006" }, "67.4×30", { value: 4.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
     prof("at_clip", "Interlock Clip", "interlock-patti", { alucoat: "AT-30007" }, "37.1×35.1", { value: 1.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20"), { faceMm: 12 }),
     prof("at_dbl", "Double Interlock", "interlock", { alucoat: "AT-30008" }, "37.1×41.62", { value: 2.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
-    prof("at_rail", "Track Rail (solid)", "rail", { alucoat: "AT-30101" }, "5×10.5", { value: 0.4, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20 — the roller runs on it")),
   ],
   sizes: [
     ...UNKNOWN_SIZES().slice(0, 3),
-    size("shutterH", "Shutter height", rule("H", -mm(57.6), ev("suggested", "From the drawings: Bottom Gulf on top and bottom (tip 42.5), solid rail AT-30101 (10.5) on the U floor (28.6) → runs at 39.1; 42.5 + 39.1 − 24 roller. If your top is the 2-Track AT-30016 it is H − 53.3. Check on one window."))),
+    size("shutterH", "Shutter height",
+      rule("H", -mm(61.0), ev("suggested", "From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window."), { when: { tracks: "2" } }),
+      rule("H", -mm(61.5), ev("suggested", "From the drawings (window built from the sections): 3-track Bottom Gulf AT-30004 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window."))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
@@ -903,15 +905,15 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
     part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
-    // the roller runs on a solid rail set in the bottom track, one per shutter, the bottom track's length
-    part("trackClip", "{s} Track Rail", "at_rail", "shutter", "frameW", 90, "other"),
+    // founder (2026-11-15): no solid rail — AT-30101 belongs to the low-threshold sill AT-30102;
+    // in the Bottom Gulf the roller runs on the track's own U tops
     part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLeft", "{s} Shutter Left{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterRight", "{s} Shutter Right{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-meet"),
     part("interlock", "Interlock Clip {k}", "at_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
   ],
-  notes: ["Gulf (founder): the one-groove Vertical Gulf goes on the left and right; top and bottom are the same track. The roller runs on the solid bottom rail AT-30101 (5 × 10.5) set in the track.", "Gulf shops differ on which piece runs full length — teach from one window."],
+  notes: ["Gulf (founder): the one-groove Vertical Gulf goes on the left and right; top and bottom are the same track. The roller runs on the Bottom Gulf's own U tops; the solid rail AT-30101 is for the low-threshold sill, not this track (founder).", "Gulf shops differ on which piece runs full length — teach from one window."],
 }), "interlock", ["at_clip", "at_dbl"]);
 
 /* ———————————————— Gulf series ———————————————— */
@@ -1072,16 +1074,16 @@ drawn(EURO_26, { shutterW: [HALF], clipW: [rule("W", -mm(89.9), FROM_DRAWING("cl
 // Gulf 25 / 35 and BH 31 — slim interlock small or big, shutter by shutter
 drawn(GULF_25, {
   ...gulfFrame(24.8, "BH-2550"), shutterW: [HALF], clipW: clip(49.6, "BH-2550 sides"),
-  glassH: glassH(44.2, "BH-2554 pocket"),
+  glassH: glassH(54.1, "BH-2555 pocket (2555 on all 4 sides, founder)"),
   glassW: glassW(54.1, "BH-2555 pocket", { bh_2556: [11.7, "slim 2556 pocket"], bh_2557: [11.5, "slim 2557 pocket"] }),
 });
 drawn(BH_35, {
-  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.8, "BH-6504 pocket"),
+  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.7, "BH-6510 pocket (6510 on all 4 sides, founder)"),
   glassW: glassW(46.7, "BH-6510 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
 });
 drawn(BH_31, {
   ...gulfFrame(33.1, "BH-6400"), shutterW: [HALF], clipW: clip(66.2, "BH-6400 sides"),
-  glassH: glassH(56.4, "BH-6404 pocket"),
+  glassH: glassH(49.8, "BH-6406 pocket (6406 on all 4 sides, founder)"),
   glassW: glassW(49.8, "BH-6406 pocket", { bh31_slim: [11.3, "slim 6408 pocket"], bh31_spine: [10.7, "slim 6409 pocket"] }),
 });
 // Ample 25 / 29 / 37 — 45° frame, clip in the track
