@@ -174,7 +174,8 @@ How it is built:
   (If a shop runs them full width, that is a shop choice — set it to W.)
 - Roller clip in the bottom track, like Euro.
 - Shutter: **the series' own shutter on all 4 sides**, 45° — 2555 (25), 6406 (31),
-  6712 = the 75 × 35 (35; founder — not 6510). The catalogues also print "shutter top / bottom" sections (2554, 6404,
+  6510 (35) — the shutter Banu Hashim, NAPL (20411) and Alucoat (AT-35005) Gulf 35
+  catalogues share; the 75 × 35 (6712) is the Euro 35 shutter. The catalogues also print "shutter top / bottom" sections (2554, 6404,
   6504) — **not used** (founder): 6404 is 29 mm and 6504 is 31.7 mm thick, so they
   are not even the right series. Always read the printed size on the drawing.
 - Meeting side: slim interlock (small / big / double glass) or clip.
@@ -274,7 +275,7 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
 - Gulf 25 / 31 / 35: the shutter goes on all 4 sides; the catalogue top/bottom
   sections (2554, 6404, 6504) are not used. 6404 is 29 mm, 6504 is 31.7 mm — the
   printed size shows they are another series.
-- Gulf 35: the shutter is the 75 × 35 (6712) on all 4 sides, not 6510.
+- Gulf 35: the shutter is 6510 (59 × 35) on all 4 sides — common to the Banu Hashim, NAPL and Alucoat Gulf 35 catalogues (founder: "jo common mila vo laga do"). The 75 × 35 (6712) is Euro 35.
 - Gulf 30: roller clip U groove AT-35020 or V groove AT-35026 in the Bottom Gulf U; never the solid rail AT-30101 (that is for the low-threshold sill).
 - A slim interlock must (a) take the glass in line with its shutter — one face flush with
   the shutter face, and (b) hook the next shutter's slim: 2 × hook reach − track pitch =
@@ -289,8 +290,8 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
   BH-6054 picture (founder: the cut is the same — shutter height, 2 per meeting).
 - Euro 27 double-glass slim 2730 is used on the 29 mm track (founder), though it hooks only ~0.9 mm on the drawings.
 - Banu Hashim has two 35 mm series: Gulf 35 (6500–6513, shutter 6510) and Sliding 35 × 75
-  (6701–6713, shutter 6712, slims 6707–6710). The app's Gulf 35 = Gulf tracks + the 6712
-  shutter (founder) + Gulf slims 6506–6509 (they hook at the 6501 pitch; 6707 does not).
+  (6701–6713, shutter 6712, slims 6707–6710). The app's Gulf 35 is the Gulf series: tracks
+  6500–6503, shutter 6510, slims 6506–6509 (they hook at the 6501 pitch; 6707 does not), rail 6513.
 - Cross-check a section with the other catalogues: the same shape and size in another maker's book tells which series and which partner sections it belongs to.
 - Every N mm sliding system's shutter pieces must be N mm thick, every section's
   printed size must match its drawing, and every window must build from its

@@ -41,8 +41,8 @@ const STACKS: Stack[] = [
   // Gulf = Euro, but the left and right sides take a one-groove track (founder 2026-11-12)
   { name: "Gulf 25 BH, 2-track", bottom: "BH-2551", top: "BH-2551", clip: "BH-2559", shutter: "BH-2555", mouth: "start" },
   { name: "Gulf 25 BH, 3-track", bottom: "BH-2553", top: "BH-2553", clip: "BH-2559", shutter: "BH-2555", mouth: "start" },
-  { name: "Gulf 35 BH, 2-track", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6712", mouth: "start" },
-  { name: "Gulf 35 BH, 3-track", bottom: "BH-6503", top: "BH-6503", clip: "BH-6513", shutter: "BH-6712", mouth: "start" },
+  { name: "Gulf 35 BH, 2-track", bottom: "BH-6501", top: "BH-6501", clip: "BH-6513", shutter: "BH-6510", mouth: "start" },
+  { name: "Gulf 35 BH, 3-track", bottom: "BH-6503", top: "BH-6503", clip: "BH-6513", shutter: "BH-6510", mouth: "start" },
   { name: "Gulf 31 BH, 2-track", bottom: "BH-6401", top: "BH-6401", clip: "BH-2559", shutter: "BH-6406", mouth: "start" },
   { name: "Gulf 31 BH, 3-track", bottom: "BH-6403", top: "BH-6403", clip: "BH-2559", shutter: "BH-6406", mouth: "start" },
   // Gulf 30: U-groove roller clip AT-35020 in the Bottom Gulf U (founder 2026-11-15)

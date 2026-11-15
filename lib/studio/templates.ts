@@ -750,9 +750,11 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_b2", "35 mm 2-Track (top and bottom)", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_v3", "35 mm Side Track, one groove (3-track)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_b3", "35 mm 3-Track (top and bottom)", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    // founder (2026-11-15): the Gulf 35 shutter is the 35 × 75 (BH-6712), not 6510
-    prof("bh35_shutter", "35 mm Shutter 75×35", "shutter", { bh: "BH-6712", eleanor: "3503" }, "75×35", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.69 / Eleanor p.35")),
-    prof("bh35_shutter_dgu", "35 mm Shutter 75×35 (double glass)", "shutter", { bh: "BH-6713" }, "75×35", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.70")),
+    // Gulf 35 shutter = the one all three Gulf 35 catalogues share (founder 2026-11-15:
+    // "jo common mila vo laga do"): Banu Hashim 6510 (58.9×35.2) = NAPL 20411 (59×35)
+    // ≈ Alucoat AT-35005 (65×35). The 75 × 35 (6712) is the Euro 35 shutter.
+    prof("bh35_shutter", "35 mm Shutter (single glass)", "shutter", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64 (= NAPL 20411, Alucoat AT-35005)")),
+    prof("bh35_shutter_dgu", "35 mm Shutter (double glass)", "shutter", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
     prof("bh35_slim", "35 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
     prof("bh35_spine", "35 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27 }),
     prof("bh35_slim_dgu", "35 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.6, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
@@ -771,7 +773,7 @@ export const BH_35: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
     part("trackClip", "{s} Roller Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
-    // founder (2026-11-15): the 75 × 35 shutter (6712) goes on all 4 sides; the catalogue's
+    // founder (2026-11-15): the 6510 shutter goes on all 4 sides; the catalogue's
     // top / bottom 6504 is a 31.7 mm section (printed size) and is not used here
     part("shutterTop", "{s} Shutter Top{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
@@ -1093,8 +1095,8 @@ drawn(GULF_25, {
   glassW: glassW(54.1, "BH-2555 pocket", { bh_2556: [11.7, "slim 2556 pocket"], bh_2557: [11.5, "slim 2557 pocket"] }),
 });
 drawn(BH_35, {
-  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(59.0, "BH-6712 pocket (75 × 35 on all 4 sides, founder)"),
-  glassW: glassW(59.0, "BH-6712 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
+  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.7, "BH-6510 pocket (6510 on all 4 sides, founder)"),
+  glassW: glassW(46.7, "BH-6510 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
 });
 drawn(BH_31, {
   ...gulfFrame(33.1, "BH-6400"), shutterW: [HALF], clipW: clip(66.2, "BH-6400 sides"),
@@ -1150,7 +1152,7 @@ GULF_25.profiles.push(GULF_CLIP_PIC);
 BH_31.profiles.push(GULF_CLIP_PIC);
 withMeetChoice(GULF_25, { lock: "bh_2555", clip: "gulf_clip_pic", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
 withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "gulf_clip_pic", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
-withMeetChoice(BH_35, { lock: "bh35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
+withMeetChoice(BH_35, { lock: "bh35_shutter", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
 withShutterChoice(ELEANOR_29, [
