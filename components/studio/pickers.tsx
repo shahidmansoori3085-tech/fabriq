@@ -7,10 +7,10 @@ import { allProfiles, newId, type StudioLibrary } from "../../lib/studio/store";
 import { Sheet, Field } from "../studio-ui";
 import { noMaker, sectionTitle } from "../../lib/studio/format";
 import SectionSketch from "../section-sketch";
-import { traceImage } from "../../lib/studio/tracer";
+import { traceOptions } from "../../lib/studio/tracer";
 import { readDxf } from "../../lib/studio/dxf";
 import type { SectionRole } from "../../lib/studio/recognize";
-import { readSection, KIND_KNOWLEDGE, type Reading, type Match } from "../../lib/studio/know";
+import { readSection, bestTrace, KIND_KNOWLEDGE, type Reading, type Match } from "../../lib/studio/know";
 
 /** Where a known section goes: "Domal 27 mm — Shutter Top, Shutter Bottom (45°)". */
 function whereUsed(m: Match): string[] {
@@ -129,11 +129,13 @@ export function ProfileForm({ initial, onSave, onCancel }: {
   const runTrace = (p: { g: Uint8Array; w: number; h: number } | null, inv: boolean) => {
     if (!p) return;
     if (dims.length !== 2) { setTraceMsg("Type the size (mm) first, e.g. 65×29 — the drawing is scaled to it."); return; }
-    const t = traceImage(p.g, p.w, p.h, dims[0], dims[1], inv);
+    // read the picture every way (dimension lines wiped lightly or harder); keep the
+    // reading that matches a known section of this size, else the usual one
+    const t = bestTrace(traceOptions(p.g, p.w, p.h, dims[0], dims[1], inv));
     if (!t) { setTraceMsg("No section found in this picture. Try a closer, straight photo."); return; }
     setShape(t);
     look(t);
-    setTraceMsg(t.scaleCheck > 4 ? `Traced, but its shape is ${t.scaleCheck}% off the size you typed — check the size, or crop closer.` : "Traced to your size.");
+    setTraceMsg(t.scaleCheck > 4 ? `Traced, but its shape is ${t.scaleCheck}% off the size you typed — check the size, or crop closer (catalogue drawings are not always to scale).` : "Traced to your size.");
   };
 
   const pickStock = (ft: number) => { setStock([ft]); setOther(""); };

@@ -25,17 +25,21 @@ function otsu(g: Uint8Array): number {
   return t;
 }
 
+/** Square erode / dilate of radius r (outside the picture counts as paper). Summed-area table: same speed for any r. */
 function morph(m: Uint8Array, w: number, h: number, r: number, erode: boolean): Uint8Array {
-  const out = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    let v = erode ? 1 : 0;
-    for (let dy = -r; dy <= r && (erode ? v : !v); dy++) for (let dx = -r; dx <= r; dx++) {
-      const nx = x + dx, ny = y + dy;
-      const p = nx < 0 || ny < 0 || nx >= w || ny >= h ? 0 : m[ny * w + nx];
-      if (erode && !p) { v = 0; break; }
-      if (!erode && p) { v = 1; break; }
+  const W = w + 1, S = new Int32Array(W * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let row = 0;
+    for (let x = 0; x < w; x++) { row += m[y * w + x]; S[(y + 1) * W + x + 1] = S[y * W + x + 1] + row; }
+  }
+  const full = (2 * r + 1) * (2 * r + 1), out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1);
+      const s = S[y1 * W + x1] - S[y0 * W + x1] - S[y1 * W + x0] + S[y0 * W + x0];
+      out[y * w + x] = erode ? (s === full ? 1 : 0) : (s > 0 ? 1 : 0);
     }
-    out[y * w + x] = v;
   }
   return out;
 }
@@ -145,6 +149,21 @@ export function simplifyLoop(l: [number, number][], tol: number): [number, numbe
  * invert: the section is light on a dark background.
  */
 export function traceImage(gray: Uint8Array, w: number, h: number, wMm: number, hMm: number, invert = false): Traced | null {
+  return traceOptions(gray, w, h, wMm, hMm, invert)[0] ?? null;
+}
+
+/**
+ * Every way of reading the picture, the usual choice first:
+ *  A) wipe thin lines first (filled drawings with dimension lines crossing them)
+ *  B) take the ink as it is (outline drawings whose walls are thin lines)
+ *  C) wipe harder, up to what the walls allow: a catalogue screenshot's dimension
+ *     and extension lines are often 2–4 px, thin next to the section's walls.
+ * The usual choice is the best fit to the printed size (of near-equal fits the gentlest).
+ * A catalogue drawing is not always to scale, so the size alone can pick a reading that
+ * still carries a dimension line; the section reader (know.ts) then tries the others and
+ * keeps the one that matches a known section clearly better.
+ */
+export function traceOptions(gray: Uint8Array, w: number, h: number, wMm: number, hMm: number, invert = false): Traced[] {
   // Paper is the common light level; anything clearly darker is ink (grey metal
   // fill and black lines alike — the opening below removes the thin lines).
   const sorted = Uint8Array.from(gray).sort();
@@ -152,17 +171,49 @@ export function traceImage(gray: Uint8Array, w: number, h: number, wMm: number, 
   const t = invert ? paper + 45 : Math.max(Math.min(otsu(gray), paper - 25), paper - 45);
   const m = new Uint8Array(w * h);
   for (let i = 0; i < gray.length; i++) m[i] = (invert ? gray[i] > t : gray[i] < t) ? 1 : 0;
-  // Two ways to find the section, keep the one whose shape fits the printed size:
-  //  A) wipe thin lines first (filled drawings with dimension lines crossing them)
-  //  B) take the ink as it is (outline drawings whose walls are thin lines)
+  const wipe = (k: number) => {
+    const opened = morph(morph(m, w, h, k, true), w, h, k, false);
+    const grown = morph(largest(opened, w, h), w, h, k + 1, false);
+    const a1 = new Uint8Array(w * h);
+    for (let i = 0; i < m.length; i++) a1[i] = grown[i] && m[i] ? 1 : 0;
+    return finish(largest(a1, w, h), w, h, wMm, hMm);
+  };
+  const whole = largest(m, w, h);
   const r = Math.max(1, Math.round(Math.min(w, h) / 400));
-  const opened = morph(morph(m, w, h, r, true), w, h, r, false);
-  const grown = morph(largest(opened, w, h), w, h, r + 1, false);
-  const a1 = new Uint8Array(w * h);
-  for (let i = 0; i < m.length; i++) a1[i] = grown[i] && m[i] ? 1 : 0;
-  const cands = [finish(largest(a1, w, h), w, h, wMm, hMm), finish(largest(m, w, h), w, h, wMm, hMm)].filter(Boolean) as Traced[];
-  if (!cands.length) return null;
-  return cands.sort((x, y) => x.scaleCheck - y.scaleCheck)[0];
+  const all = [wipe(r), finish(whole, w, h, wMm, hMm)];
+  // up to a quarter of the wall, and never less than 3 steps (curved corners and text pull the wall estimate down)
+  const rWall = Math.floor(wallPx(whole, w, h) / 4);
+  for (let k = r + 1; k <= Math.min(Math.max(rWall, r + 3), r + 5); k++) all.push(wipe(k));
+  const ok = all.filter(Boolean) as Traced[];
+  if (!ok.length) return [];
+  const best = Math.min(...ok.map((c) => c.scaleCheck));
+  const first = ok.find((c) => c.scaleCheck <= best + 1)!;
+  return [first, ...ok.filter((c) => c !== first)];
+}
+
+/**
+ * The section's usual wall thickness in pixels: for each ink pixel the shorter of its
+ * across and up-down ink runs; walls carry most of the ink, so take the 60th percentile.
+ */
+function wallPx(m: Uint8Array, w: number, h: number): number {
+  const hr = new Int32Array(w * h), vr = new Int32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w;) {
+    if (!m[y * w + x]) { x++; continue; }
+    let e = x; while (e < w && m[y * w + e]) e++;
+    for (let k = x; k < e; k++) hr[y * w + k] = e - x;
+    x = e;
+  }
+  for (let x = 0; x < w; x++) for (let y = 0; y < h;) {
+    if (!m[y * w + x]) { y++; continue; }
+    let e = y; while (e < h && m[e * w + x]) e++;
+    for (let k = y; k < e; k++) vr[k * w + x] = e - y;
+    y = e;
+  }
+  const t: number[] = [];
+  for (let i = 0; i < m.length; i++) if (m[i]) t.push(Math.min(hr[i], vr[i]));
+  if (!t.length) return 0;
+  t.sort((a, b) => a - b);
+  return t[Math.floor(t.length * 0.6)];
 }
 
 function finish(m: Uint8Array, w: number, h: number, wMm: number, hMm: number): Traced | null {

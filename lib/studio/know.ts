@@ -229,3 +229,17 @@ export function readSection(shape: Shape): Reading {
   const kind = same?.kind ?? ROLE_KIND[seen.role] ?? like[0]?.kind ?? null;
   return { seen, kind, same, like };
 }
+
+/**
+ * Of the tracer's readings of one picture (usual one first), the one a fabricator
+ * would take: the one that matches a known section of the typed size clearly
+ * better. Unknown sections keep the tracer's usual reading.
+ */
+export function bestTrace<T extends Shape>(options: T[]): T | undefined {
+  if (options.length <= 1) return options[0];
+  const fit = (o: T) => Math.max(0, ...closest(o, 6).filter((m) => m.sameSize).map((m) => m.score));
+  const base = fit(options[0]);
+  let best = options[0], top = base;
+  for (const o of options.slice(1)) { const f = fit(o); if (f > top) { top = f; best = o; } }
+  return top >= base + 0.04 && top >= SAME_PHOTO ? best : options[0];
+}
