@@ -6,19 +6,18 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileDef, StudioSystem, SeriesType } from "../../lib/studio/model";
-import { PROFILE_KINDS } from "../../lib/studio/model";
 import { TEMPLATES, LIBRARY_PROFILES, WINDOW_SYSTEMS, OFFERED } from "../../lib/studio/templates";
 import {
   loadLibrary, saveLibrary, copyTemplate, newId, exportLibrary, importLibrary, type StudioLibrary,
 } from "../../lib/studio/store";
-import { SYSTEM_STATUS, noMaker, sectionTitle, type StudioUnit } from "../../lib/studio/format";
-import StudioEditor, { nextStep, ProfileForm } from "../../components/studio-editor";
-import { Badge, Seg, Sheet, SectionTitle } from "../../components/studio-ui";
+import { SYSTEM_STATUS, noMaker, type StudioUnit } from "../../lib/studio/format";
+import StudioEditor, { nextStep } from "../../components/studio-editor";
+import { Badge, Seg, SectionTitle } from "../../components/studio-ui";
 import { findProfile } from "../../lib/studio/store";
 import StudioThumb from "../../components/studio-thumb";
-import SectionSketch from "../../components/section-sketch";
+import { SectionLibrary } from "../../components/studio/section-library";
 
-type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string } | { kind: "sections" };
+type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string; tab?: "teach" } | { kind: "sections" };
 const UNIT_KEY = "fabriq_studio_unit";
 
 
@@ -72,7 +71,7 @@ export default function StudioPage() {
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-32 pt-3">
       {current ? (
-        <StudioEditor sys={current} lib={lib} unit={unit} onChange={putSystem} onAddProfile={addProfile}
+        <StudioEditor key={current.id + (view.kind === "system" ? view.tab ?? "" : "")} startTab={view.kind === "system" ? view.tab : undefined} sys={current} lib={lib} unit={unit} onChange={putSystem} onAddProfile={addProfile}
           onBack={() => setView({ kind: "home" })}
           onDuplicate={() => {
             const c: StudioSystem = { ...structuredClone(current), id: newId("sys"), name: `${current.name} (copy)` };
@@ -83,18 +82,25 @@ export default function StudioPage() {
       ) : view.kind === "new" ? (
         <NewSystem lib={lib} onPick={create} onBack={() => setView({ kind: "home" })} />
       ) : view.kind === "sections" ? (
-        <Sections lib={lib} onSave={addProfile}
+        <SectionLibrary lib={lib} onSave={addProfile}
           onRemove={(id) => commit({ ...lib, profiles: lib.profiles.filter((p) => p.id !== id) })}
-          onBack={() => setView({ kind: "home" })} />
+          onBack={() => setView({ kind: "home" })}
+          onOpenSystem={(id, tab) => {
+            // a built-in system opens as the shop's own copy (the same as tapping it on the list)
+            const own = lib.systems.find((x) => x.id === id);
+            if (own) setView({ kind: "system", id, tab });
+            else { const c = copyTemplate(id); commit({ ...lib, systems: [...lib.systems, c] }); setView({ kind: "system", id: c.id, tab }); }
+            window.scrollTo({ top: 0 });
+          }} />
       ) : (
         <>
           <header className="flex items-center justify-between gap-2">
             <Link href="/" className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← FabriQ</Link>
             <Seg small value={unit} onChange={changeUnit} options={[{ value: "ft", label: "feet" }, { value: "in", label: "inch" }, { value: "mm", label: "mm" }]} />
           </header>
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Window systems</h1>
+          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Systems</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
-            Every window in the app. Tap one to change its sections, cuts, glass and pipe length. Saved on this phone.
+            Every window system in the app. Open one to see or change its sections, cut formulas, hardware and bar lengths. Saved on this phone.
           </p>
 
           {KIND_ORDER.map(([kind, label]) => {
@@ -114,7 +120,7 @@ export default function StudioPage() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-bold">{t.name}</span>
                           <span className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-                            {mine ? "Your settings" : "Built-in · tap to change"}
+                            {mine ? "Customised by you" : "Standard · tap to open"}
                             {mine?.jobs.length ? ` · learned from ${mine.jobs.length} window${mine.jobs.length > 1 ? "s" : ""}` : ""}
                           </span>
                         </span>
@@ -134,7 +140,7 @@ export default function StudioPage() {
             const own = lib.systems.filter((x) => !x.basedOn || !offered.has(x.basedOn.id));
             return (
               <>
-                <SectionTitle>Your own systems</SectionTitle>
+                <SectionTitle>Custom systems</SectionTitle>
                 {own.length > 0 && (
                   <div className="card mb-2 divide-y overflow-hidden">
                     {own.map((x) => (
@@ -150,7 +156,7 @@ export default function StudioPage() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setView({ kind: "new" })} className="btn-ghost w-full py-3 text-sm">+ Make a new system</button>
+                <button onClick={() => setView({ kind: "new" })} className="btn-ghost w-full py-3 text-sm">+ Create a system</button>
               </>
             );
           })()}
@@ -158,22 +164,22 @@ export default function StudioPage() {
           <SectionTitle>Library</SectionTitle>
           <button onClick={() => setView({ kind: "sections" })} className="card flex w-full items-center justify-between p-3 text-left">
             <span>
-              <span className="block font-bold">My sections</span>
+              <span className="block font-bold">Section Library</span>
               <span className="block text-xs" style={{ color: "var(--ink-3)" }}>
-                {lib.profiles.length} of yours · {LIBRARY_PROFILES.length} built-in · sizes, codes, bar lengths
+                {LIBRARY_PROFILES.length} catalogue sections{lib.profiles.length ? ` · ${lib.profiles.length} added or changed by you` : ""} · drawing, size, code, where used
               </span>
             </span>
             <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
           </button>
 
           <div className="mt-6 grid grid-cols-2 gap-2">
-            <button className="btn-ghost py-2.5 text-sm" onClick={download} disabled={!lib.systems.length && !lib.profiles.length}>Save to file</button>
-            <button className="btn-ghost py-2.5 text-sm" onClick={() => fileRef.current?.click()}>Open a file</button>
+            <button className="btn-ghost py-2.5 text-sm" onClick={download} disabled={!lib.systems.length && !lib.profiles.length}>Export systems</button>
+            <button className="btn-ghost py-2.5 text-sm" onClick={() => fileRef.current?.click()}>Import systems</button>
             <input ref={fileRef} type="file" accept="application/json,.json" hidden
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
           </div>
           <p className="mt-2 text-center text-xs" style={{ color: "var(--ink-3)" }}>
-            Move your systems to another phone with a file. Nothing is sent anywhere.
+            Move your systems and sections to another phone with a file. Nothing is sent anywhere.
           </p>
         </>
       )}
@@ -230,7 +236,7 @@ function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: s
 
   return (
     <>
-      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
+      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Systems</button>
       <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">New system</h1>
       <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Pick your window. Sections, pieces, angles and cuts can all be changed after.</p>
 
@@ -263,54 +269,6 @@ function NewSystem({ lib, onPick, onBack }: { lib: StudioLibrary; onPick: (id: s
 
       <SectionTitle>Start from nothing</SectionTitle>
       <div className="grid grid-cols-2 gap-2">{blanks.map((t) => <SystemCard key={t.id} t={t} lib={lib} onPick={onPick} />)}</div>
-    </>
-  );
-}
-
-function Sections({ lib, onSave, onRemove, onBack }: {
-  lib: StudioLibrary; onSave: (p: ProfileDef) => void; onRemove: (id: string) => void; onBack: () => void;
-}) {
-  const [edit, setEdit] = useState<Partial<ProfileDef> | null>(null);
-  const [q, setQ] = useState("");
-  const match = (p: ProfileDef) => !q || `${p.name} ${Object.values(p.codes ?? {}).join(" ")} ${p.size}`.toLowerCase().includes(q.toLowerCase());
-  const row = (p: ProfileDef, mine: boolean) => (
-    <button key={p.id} onClick={() => setEdit(mine ? p : { ...p, id: undefined, mine: false, name: `${p.name}` })}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left">
-      <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md" style={{ background: "#fff", border: "1px solid var(--line)" }}><SectionSketch p={p} /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-semibold">{sectionTitle(p.name)}</span>
-        <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-          {[PROFILE_KINDS.find((k) => k.id === p.kind)?.label, p.codes ? [...new Set(Object.values(p.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", p.size, `${p.stockFt.join("/")} ft`].filter(Boolean).join(" · ")}
-        </span>
-      </span>
-      <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{mine ? "Edit" : "Copy"}</span>
-    </button>
-  );
-  return (
-    <>
-      <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
-      <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">My sections</h1>
-      <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>Every section you buy: its code, size and the bar lengths your dealer sells.</p>
-      <button className="btn-primary mt-5 w-full py-3.5" onClick={() => setEdit({})}>+ Add a section</button>
-      <input className="field mt-4 w-full px-3 py-2.5" placeholder="Search name, code or size" value={q} onChange={(e) => setQ(e.target.value)} />
-      <SectionTitle>Yours</SectionTitle>
-      <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
-        {lib.profiles.filter(match).map((p) => row(p, true))}
-        {lib.profiles.length === 0 && <div className="px-3 py-3 text-sm" style={{ color: "var(--ink-3)" }}>None yet. Add one, or copy a built-in one to change it.</div>}
-      </div>
-      <SectionTitle>Built-in</SectionTitle>
-      <div className="card divide-y" style={{ borderColor: "var(--line)" }}>{LIBRARY_PROFILES.filter(match).map((p) => row(p, false))}</div>
-      {edit && (
-        <Sheet title={edit.mine ? "Edit section" : edit.name ? "Your copy of this section" : "New section"}
-          sub={edit.mine || !edit.name ? "Only the name is needed." : "Built-in sections stay as they are. Your copy can have your own bar lengths and code."}
-          onClose={() => setEdit(null)}>
-          <ProfileForm initial={edit} onSave={(p) => { onSave(p); setEdit(null); }} onCancel={() => setEdit(null)} />
-          {edit.mine && edit.id && (
-            <button className="mt-3 w-full text-sm font-semibold" style={{ color: "var(--bad)" }}
-              onClick={() => { if (window.confirm("Delete this section?")) { onRemove(edit.id!); setEdit(null); } }}>Delete section</button>
-          )}
-        </Sheet>
-      )}
     </>
   );
 }

@@ -12,6 +12,7 @@ import { windowGeometry } from "../lib/studio/geometry";
 import { withAlternatives, alternativesOf, partLabel, pickSwitchId } from "../lib/studio/edit";
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
+import { HardwareTab } from "./studio/hardware";
 import { layoutLabel, fmtLen, readLen, lenToInput, STATUS_TEXT, evidenceBadge, noMaker, sectionTitle, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
@@ -27,7 +28,7 @@ import { Badge, Seg, Field, SectionTitle, Toggle } from "./studio-ui";
 
 export { ProfileForm } from "./studio/pickers";
 
-type Tab = "pieces" | "cut" | "teach" | "rules";
+type Tab = "pieces" | "cut" | "hardware" | "rules" | "teach";
 
 const SCOPE_TITLE: Record<PartScope, string> = {
   window: "Frame",
@@ -56,13 +57,13 @@ export function nextStep(sys: StudioSystem): { text: string; tab: Tab; tone: "go
   const r = evaluate(sys, { id: "W1", W: 1524000, H: 1219200, qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" }, { allowUnknown: true });
   const sections = r.missing.filter((m) => m.startsWith("Section for"));
   if (sections.length) return { text: `Choose ${sections.length === 1 ? "a section" : `${sections.length} sections`} — tap the red pieces`, tab: "pieces", tone: "bad" };
-  if (r.missing.length) return { text: `${r.missing.length} cut${r.missing.length > 1 ? "s" : ""} not known yet. Teach from one window you made.`, tab: "teach", tone: "warn" };
-  if (sys.jobs.length === 0) return { text: "Cuts ready. Check once with a window you made.", tab: "teach", tone: "good" };
-  if (sys.status === "teaching") return { text: "Learned from your window. Check it with a second window.", tab: "teach", tone: "warn" };
+  if (r.missing.length) return { text: `${r.missing.length} cut formula${r.missing.length > 1 ? "s" : ""} missing. Measure one finished window to complete them.`, tab: "teach", tone: "warn" };
+  if (sys.jobs.length === 0) return { text: "Cut formulas ready. Verify once with a window you have made.", tab: "teach", tone: "good" };
+  if (sys.status === "teaching") return { text: "Formulas set from your window. Confirm with a second window.", tab: "teach", tone: "warn" };
   return { text: "Ready to use.", tab: "cut", tone: "good" };
 }
 
-export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, onBack, onDuplicate, onDelete }: {
+export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
   sys: StudioSystem;
   lib: StudioLibrary;
   unit: StudioUnit;
@@ -71,6 +72,8 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   onBack: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** open on this tab (e.g. "teach" after a section size changed) */
+  startTab?: Tab;
 }) {
   const lay0 = sys.layouts[0] ?? { tracks: 2, mixes: ["GG"] };
   const [W, setW] = useState<Um>(inches(60));
@@ -80,7 +83,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   const [switches, setSwitches] = useState<Record<string, string>>({});
   const [perShutter, setPerShutter] = useState<Record<string, string>[]>([]);
   const [pick, setPick] = useState<Pick>(null);
-  const [tab, setTab] = useState<Tab>("pieces");
+  const [tab, setTab] = useState<Tab>(startTab ?? "pieces");
   const [menu, setMenu] = useState(false);
   const [view3d, setView3d] = useState(false);
   const [picker, setPicker] = useState<{ partId: string; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
@@ -127,7 +130,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Window systems</button>
+        <button onClick={onBack} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← Systems</button>
         <div className="relative">
           <button onClick={() => setMenu((m) => !m)} className="btn-ghost px-3 py-1.5 text-sm" aria-haspopup="menu">More</button>
           {menu && (
@@ -142,13 +145,27 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
 
       <input value={sys.name} onChange={(e) => onChange({ ...sys, name: e.target.value })} aria-label="System name"
         className="mt-3 w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
-      <p className="text-sm" style={{ color: "var(--ink-3)" }}>{noMaker(sys.blurb)}</p>
 
       <button onClick={() => setTab(step.tab)} className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold"
         style={{ background: toneBg, color: tone }}>
         <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] text-white" style={{ background: tone }}>{step.tone === "good" ? "✓" : "!"}</span>
         {step.text}
       </button>
+
+      {(() => {
+        // sections whose size the shop changed after these cuts were last checked
+        const ids = new Set(sys.parts.flatMap((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]).filter(Boolean));
+        const changed = [...ids].map((id) => findProfile(lib, id)).filter((p): p is ProfileDef => !!p?.sizeChanged && p.sizeChanged.at > (sys.taughtAt ?? 0));
+        if (!changed.length) return null;
+        return (
+          <button onClick={() => setTab("teach")} className="mt-2 w-full rounded-xl px-3 py-2.5 text-left text-sm"
+            style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
+            <b>Section size changed.</b>{" "}
+            {changed.map((p) => `${sectionTitle(p.name)} (${p.sizeChanged!.from} → ${p.size})`).join(", ")}.
+            <span className="mt-1 block font-semibold">Measure 2 finished windows to update the cuts ›</span>
+          </button>
+        );
+      })()}
 
       {/* ——— the window ——— */}
       <div ref={top} className="card mt-4 overflow-hidden" style={{ scrollMarginTop: 8 }}>
@@ -184,10 +201,10 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
       )}
 
       <div className="sticky top-0 z-20 -mx-4 mt-4 px-4 py-2" style={{ background: "var(--bg)" }}>
-        <div className="grid grid-cols-4 gap-1 rounded-xl p-1" style={{ background: "var(--surface-3)" }} role="tablist">
-          {([["pieces", "Pieces"], ["cut", "Cutting list"], ["teach", "Teach"], ["rules", "Rules"]] as const).map(([id, label]) => (
+        <div className="grid grid-cols-5 gap-1 rounded-xl p-1" style={{ background: "var(--surface-3)" }} role="tablist">
+          {([["pieces", "Parts"], ["cut", "Cut list"], ["hardware", "Hardware"], ["rules", "Formulas"], ["teach", "Measure"]] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              className="rounded-lg py-2 text-[13px] font-semibold"
+              className="rounded-lg py-2 text-[12px] font-semibold"
               style={{ background: tab === id ? "var(--surface)" : "transparent", color: tab === id ? "var(--ink)" : "var(--ink-3)" }}>
               {label}
             </button>
@@ -195,6 +212,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
         </div>
       </div>
 
+      {tab === "hardware" && <HardwareTab sys={sys} onChange={onChange} />}
       {tab === "pieces" && <PiecesList sys={sys} lib={lib} unit={unit} values={values} tracks={tracks} vars={vars} onChange={onChange} onSelect={selectPart} />}
       {tab === "cut" && <CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => setTab(w)} />}
       {tab === "teach" && <TeachPanel sys={sys} lib={lib} unit={unit} job={job} onChange={onChange} />}

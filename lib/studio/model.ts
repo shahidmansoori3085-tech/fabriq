@@ -137,11 +137,14 @@ export interface ProfileDef {
   /** bar lengths the shop buys, feet; first = default */
   stockFt: number[];
   source: Evidence;
+  /** the shop changed its size: the systems using it must be checked again with 2 windows */
+  sizeChanged?: { from: string; at: number };
 }
 
 export type ExtraDef =
   | { id: string; name: string; kind: "count"; per: "window" | "shutter"; qty: number; formula: string; unit: "nos" }
-  | { id: string; name: string; kind: "perimeter"; per: "shutter"; of: [string, string]; formula: string; unit: "rft" };
+  /** running feet round each shutter (of = shutter width, height) or round the window (of = W, H) */
+  | { id: string; name: string; kind: "perimeter"; per: "shutter" | "window"; of: [string, string]; formula: string; unit: "rft" };
 
 export interface SwitchDef {
   id: string;
@@ -193,6 +196,8 @@ export interface StudioSystem {
   wastagePct: number;
   /** real jobs the shop gave — kept as this system's own tests */
   jobs: TaughtJob[];
+  /** when the cuts were last checked against the shop's own windows (ms) */
+  taughtAt?: number;
   notes?: string[];
 }
 

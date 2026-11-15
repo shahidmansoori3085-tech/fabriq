@@ -2748,8 +2748,8 @@ function SettingsModal({ shop, onSave, onClose }: {
 
         <a href="/studio" className="card mt-5 flex items-center justify-between gap-3 p-3">
           <span className="min-w-0">
-            <span className="block text-sm font-bold">Window systems</span>
-            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Change the sections, cuts, glass and pipe length of any window.</span>
+            <span className="block text-sm font-bold">Systems &amp; Section Library</span>
+            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Sections, cut formulas, hardware and bar lengths of every window system.</span>
           </span>
           <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
         </a>

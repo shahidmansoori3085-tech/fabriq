@@ -50,8 +50,8 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
       id: `J${sys.jobs.length + 1}`, W: win.W, H: win.H, tracks: win.tracks, mix: win.mix, switches: job.switches ?? {}, measured,
       glass: gW !== null || gH !== null ? { w: gW ?? undefined, h: gH ?? undefined } : undefined, at: new Date().toISOString(),
     };
-    if (as === "teach") { const r = teach(sys, t); setMode("teach"); setTaught(r); setChecked(null); onChange(r.system); }
-    else { const r = check(sys, t); setChecked(r); setTaught(null); if (r.allOk) onChange(r.system); }
+    if (as === "teach") { const r = teach(sys, t); setMode("teach"); setTaught(r); setChecked(null); onChange({ ...r.system, taughtAt: Date.now() }); }
+    else { const r = check(sys, t); setChecked(r); setTaught(null); if (r.allOk) onChange({ ...r.system, taughtAt: Date.now() }); }
   };
   const reset = () => { setVals({}); setGw(""); setGh(""); setTaught(null); setChecked(null); };
   const step = mode === "teach" ? 1 : 2;
@@ -59,15 +59,15 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
   return (
     <div>
       <div className="card mt-4 p-4">
-        <div className="text-lg font-bold">Cut like your shop</div>
+        <div className="text-lg font-bold">Match your shop&apos;s cuts</div>
         <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
-          Sizes not matching yours? Type two windows you already made. The first one teaches FabriQ your numbers, the second one checks them.
+          Enter two windows you have already made. The first one sets the cut formulas to your shop&apos;s way; the second one confirms them.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {[1, 2].map((n) => (
             <button key={n} onClick={() => { setMode(n === 1 ? "teach" : "check"); reset(); }}
               className={`chip px-3 py-2 text-sm ${step === n ? "selected" : ""}`} aria-pressed={step === n}>
-              <b>Window {n}</b> · {n === 1 ? "teach" : "check"}
+              <b>Window {n}</b> · {n === 1 ? "set" : "confirm"}
               {n === 1 && sys.jobs.length > 0 && <span style={{ color: "var(--good)" }}> ✓</span>}
             </button>
           ))}
@@ -119,7 +119,7 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
             {taught.conflicts.map((c) => <div key={c} className="text-sm" style={{ color: "var(--bad)" }}>{c}. Measure again.</div>)}
           </div>
           <p className="mt-3 text-xs" style={{ color: "var(--ink-3)" }}>Each number is what you add or take off (window size, or shutter size for glass). One more window will confirm it.</p>
-          <button className="btn-primary mt-4 w-full py-3" onClick={() => { reset(); setMode("check"); }}>Next: window 2 to check</button>
+          <button className="btn-primary mt-4 w-full py-3" onClick={() => { reset(); setMode("check"); }}>Next: confirm with window 2</button>
         </div>
       )}
 
@@ -141,7 +141,7 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
           </div>
           {!checked.allOk && <p className="mt-3 text-xs" style={{ color: "var(--ink-3)" }}>Measure the red ones again. If they really are what you cut, learn from this window instead.</p>}
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <button className="btn-ghost py-3" onClick={reset}>{checked.allOk ? "Check another" : "Try again"}</button>
+            <button className="btn-ghost py-3" onClick={reset}>{checked.allOk ? "Confirm another" : "Try again"}</button>
             {!checked.allOk && <button className="btn-primary py-3" onClick={() => submit("teach")}>Learn from this one</button>}
           </div>
         </div>
@@ -174,7 +174,7 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
             </div>
           </div>
           <button className="btn-primary mt-4 w-full py-3.5" disabled={!ready} onClick={() => submit()}>
-            {mode === "teach" ? "Learn from window 1" : "Check window 2"}
+            {mode === "teach" ? "Set formulas from window 1" : "Confirm with window 2"}
           </button>
         </>
       )}

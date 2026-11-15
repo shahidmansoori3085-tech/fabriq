@@ -59,18 +59,32 @@ export const STATUS_TEXT: Record<EvidenceStatus, { label: string; tone: "good" |
 };
 
 /** Where a number came from, in a few words: the badge next to a rule. */
+/** Where a formula came from, in plain shop words (no internal notes or names). */
+export function sourceText(s: string): string {
+  return noMaker(s)
+    .replace(/^From the drawings \(window built from the sections\):\s*/i, "From the catalogue drawings: ")
+    .replace(/^From the drawings:\s*/i, "From the catalogue drawings: ")
+    .replace(/^Founder job:\s*/i, "Measured on a real window: ")
+    .replace(/^Founder:\s*/i, "Shop practice: ")
+    .replace(/\s*\([^()]*\bfounder\b[^()]*\)/gi, "")
+    .replace(/,?\s*\bfounder\b[^.;:)]*/gi, "")
+    .replace(/\s*Check on one window\.?/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function evidenceBadge(status: EvidenceStatus, source = "", known = true): { label: string; tone: "good" | "glass" | "warn" | "bad" } {
   if (!known || status === "unknown") return STATUS_TEXT.unknown;
-  if (status === "verified") return { label: "Checked on a window", tone: "good" };
+  if (status === "verified") return { label: "Verified on a real window", tone: "good" };
   if (status === "observed") return { label: /video/i.test(source) ? "From shop videos" : "Shop practice", tone: "glass" };
-  if (/^Your job/i.test(source)) return { label: "From your window · check once", tone: "warn" };
-  if (/drawing/i.test(source)) return { label: "From the drawings · check once", tone: "warn" };
+  if (/^Your job/i.test(source)) return { label: "From your window · verify once", tone: "warn" };
+  if (/drawing/i.test(source)) return { label: "From catalogue drawings · verify once", tone: "warn" };
   return STATUS_TEXT.suggested;
 }
 
 export const SYSTEM_STATUS: Record<SystemStatus, { label: string; tone: "good" | "glass" | "warn" | "bad" }> = {
-  draft: { label: "Not checked yet", tone: "warn" },
-  teaching: { label: "Learning", tone: "warn" },
+  draft: { label: "Not verified yet", tone: "warn" },
+  teaching: { label: "Being set up", tone: "warn" },
   checked: { label: "Ready", tone: "good" },
   verified: { label: "Ready", tone: "good" },
 };

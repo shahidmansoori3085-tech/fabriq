@@ -194,7 +194,7 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     } else {
       // a running item whose size is not taught yet is left out, not guessed
       if (values[e.of[0]] == null || values[e.of[1]] == null) continue;
-      const ft =2 * (toFeet(len(e.of[0])) + toFeet(len(e.of[1]))) * kinds.length * job.qty;
+      const ft = 2 * (toFeet(len(e.of[0])) + toFeet(len(e.of[1]))) * (e.per === "window" ? 1 : kinds.length) * job.qty;
       if (ft) hardware.push({ id: e.id, name: e.name, formula: e.formula, qty: ft, unit: e.unit });
     }
   }

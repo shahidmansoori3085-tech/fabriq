@@ -150,9 +150,14 @@ export function ProfileForm({ initial, onSave, onCancel }: {
       faceMm: parseFloat(face) > 0 ? parseFloat(face) : undefined,
       shape,
       ref: initial.ref,
+      shapeKey: initial.shapeKey,
+      // a changed size: the cuts of every system using it were worked out for the old one
+      sizeChanged: initial.size && size.trim() && size.trim() !== initial.size
+        ? { from: initial.sizeChanged?.from ?? initial.size, at: Date.now() }
+        : initial.sizeChanged,
       kg: parseFloat(kg) > 0 ? { value: parseFloat(kg), perFt: parseFloat(kgPer) || 16 } : undefined,
       stockFt,
-      source: { status: "suggested", source: "Entered by you" },
+      source: initial.id && !initial.id.startsWith("my-") ? { status: "observed", source: "Changed by you" } : { status: "suggested", source: "Entered by you" },
     });
   };
 

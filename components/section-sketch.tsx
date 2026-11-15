@@ -32,10 +32,25 @@ export default function SectionSketch({ p, tracks = 2 }: { p: ProfileDef | undef
 
   // 2. If we have the traced vector CAD die shape, render it full-scale
   const real = shapeOf(p);
-  if (real) return <RealSection s={real} />;
+  if (real) return <RealSection s={resized(real, p)} />;
 
   // 3. Fallback: parametric architectural vector sketch
   return <GuideSketch p={p} tracks={tracks} />;
+}
+
+/**
+ * The shop changed this section's size: stretch the catalogue drawing to the new
+ * width × height, so the numbers on it are the shop's (same order as the old size).
+ */
+function resized(s: Shape, p: ProfileDef | undefined): Shape {
+  const num = (t?: string) => (t ?? "").split(/[×x*]/).map(Number);
+  const [a, b] = num(p?.size), [a0, b0] = num(p?.sizeChanged?.from);
+  if (!p?.sizeChanged || !(a > 0 && b > 0 && a0 > 0 && b0 > 0)) return s;
+  // the old size is printed as w × h or h × w of the drawing
+  const same = Math.abs(a0 - s.w) + Math.abs(b0 - s.h) <= Math.abs(a0 - s.h) + Math.abs(b0 - s.w);
+  const sx = same ? a / a0 : b / b0, sy = same ? b / b0 : a / a0;
+  const paths = s.paths.map((d) => d.replace(/(-?[\d.]+)[ ,](-?[\d.]+)/g, (_, x, y) => `${(+x * sx).toFixed(2)} ${(+y * sy).toFixed(2)}`));
+  return { ...s, w: +(s.w * sx).toFixed(2), h: +(s.h * sy).toFixed(2), paths };
 }
 
 /** The section exactly as the catalogue draws it — traced, to scale, in mm. */
