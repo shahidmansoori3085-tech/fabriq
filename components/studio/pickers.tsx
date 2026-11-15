@@ -1,6 +1,6 @@
 "use client";
 /** Choosing a section for a piece, and adding / editing a section. */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ProfileDef, ProfileKind } from "../../lib/studio/model";
 import { PROFILE_KINDS } from "../../lib/studio/model";
 import { allProfiles, newId, type StudioLibrary } from "../../lib/studio/store";
@@ -9,13 +9,19 @@ import { noMaker, sectionTitle } from "../../lib/studio/format";
 import SectionSketch from "../section-sketch";
 import { traceImage } from "../../lib/studio/tracer";
 import { readDxf } from "../../lib/studio/dxf";
-import { recognize, type Recognized, type SectionRole } from "../../lib/studio/recognize";
+import type { SectionRole } from "../../lib/studio/recognize";
+import { readSection, KIND_KNOWLEDGE, type Reading, type Match } from "../../lib/studio/know";
 
-/** What the shape says a section is, in the form's own words. */
-const ROLE_KIND: Record<SectionRole, ProfileKind | null> = {
-  "glass-shutter": "shutter", "double-glass-shutter": "shutter", "mesh-shutter": "mesh-shutter",
-  track: "track", "side-track": "track", "slim-interlock": "slim-interlock", clip: "rail", "interlock-clip": "interlock-patti", interlock: "interlock", bead: "bead", other: null,
-};
+/** Where a known section goes: "Domal 27 mm — Shutter Top, Shutter Bottom (45°)". */
+function whereUsed(m: Match): string[] {
+  const by = new Map<string, { pieces: string[]; angles: Set<number> }>();
+  for (const u of m.uses) {
+    const r = by.get(u.system) ?? { pieces: [], angles: new Set<number>() };
+    if (!r.pieces.includes(u.piece)) r.pieces.push(u.piece);
+    r.angles.add(u.angle); by.set(u.system, r);
+  }
+  return [...by].map(([sys, r]) => `${noMaker(sys)}: ${r.pieces.join(", ")} (${[...r.angles].map((a) => `${a}°`).join(" / ")})`);
+}
 const ROLE_TEXT: Record<SectionRole, string> = {
   "glass-shutter": "a glass shutter", "double-glass-shutter": "a double-glass shutter", "mesh-shutter": "a mesh (jali) shutter",
   track: "a track", "side-track": "a Gulf side track (one groove)", "slim-interlock": "a slim interlock", clip: "a track clip / rail", "interlock-clip": "an interlock clip", interlock: "a heavy interlock", bead: "a glazing clip / patti", other: "",
@@ -98,23 +104,26 @@ export function ProfileForm({ initial, onSave, onCancel }: {
   const [pic, setPic] = useState<{ g: Uint8Array; w: number; h: number } | null>(null);
   const [invert, setInvert] = useState(false);
   const [traceMsg, setTraceMsg] = useState("");
-  const [seen, setSeen] = useState<Recognized | null>(null);
+  const [seen, setSeen] = useState<Reading | null>(null);
+  const autoKind = useRef<ProfileKind | null>(null);
   // read the section's job off its drawing (a few seconds on a phone); set it unless the shop already chose
   const look = (sh: NonNullable<typeof shape>) => {
     setSeen(null);
-    const done = (r: Recognized | null) => {
+    const done = (r: Reading | null) => {
       if (!r) return;
       setSeen(r);
-      const k = ROLE_KIND[r.role];
-      if (k) setKind((cur) => (cur === "other" ? k : cur));
+      const k = r.kind;
+      // set it unless the shop chose it by hand (a kind the reader set earlier may change)
+      if (k) setKind((cur) => (cur === "other" || cur === autoKind.current ? k : cur));
+      autoKind.current = k;
     };
     // measure off the screen thread when the browser can; otherwise right here
     try {
       const w = new Worker(new URL("../../lib/studio/recognize.worker.ts", import.meta.url));
-      w.onmessage = (e: MessageEvent<{ result: Recognized | null }>) => { done(e.data.result); w.terminate(); };
-      w.onerror = () => { w.terminate(); done(recognize(sh)); };
+      w.onmessage = (e: MessageEvent<{ result: Reading | null }>) => { done(e.data.result); w.terminate(); };
+      w.onerror = () => { w.terminate(); done(readSection(sh)); };
       w.postMessage({ id: 1, shape: sh });
-    } catch { setTimeout(() => done(recognize(sh)), 30); }
+    } catch { setTimeout(() => done(readSection(sh)), 30); }
   };
   const dims = size.split(/[×x*]/).map((v) => parseFloat(v)).filter((v) => v > 0);
   const runTrace = (p: { g: Uint8Array; w: number; h: number } | null, inv: boolean) => {
@@ -199,17 +208,37 @@ export function ProfileForm({ initial, onSave, onCancel }: {
             <button type="button" style={{ color: "var(--accent)" }} onClick={() => { setInvert(!invert); runTrace(pic, !invert); }}>Light drawing on dark</button>
           </div>
         )}
-        {shape && seen && seen.role !== "other" && (
-          <div className="mt-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--surface)" }}>
-            <div><b>Looks like {ROLE_TEXT[seen.role]}</b>{seen.grooves ? ` · ${seen.grooves} grooves` : ""}</div>
-            <div style={{ color: "var(--ink-3)" }}>{seen.why}</div>
-            {ROLE_KIND[seen.role] && ROLE_KIND[seen.role] !== kind && (
-              <button type="button" className="mt-1 font-semibold" style={{ color: "var(--accent)" }} onClick={() => setKind(ROLE_KIND[seen.role]!)}>
-                Set “What is it” to {PROFILE_KINDS.find((k) => k.id === ROLE_KIND[seen.role])?.label}
-              </button>
-            )}
-          </div>
-        )}
+        {shape && seen && (() => {
+          const kindLabel = (k: ProfileKind) => PROFILE_KINDS.find((x) => x.id === k)?.label.toLowerCase() ?? k;
+          const ref = seen.same ?? seen.like[0];
+          const where = ref ? whereUsed(ref) : [];
+          return (
+            <div className="mt-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--surface)" }}>
+              {seen.same ? (
+                <div><b>Same section as {seen.same.code}: {sectionTitle(seen.same.name)}</b></div>
+              ) : seen.seen.role !== "other" ? (
+                <div><b>Looks like {ROLE_TEXT[seen.seen.role]}</b>{seen.seen.grooves ? ` · ${seen.seen.grooves} grooves` : ""}</div>
+              ) : seen.kind ? (
+                <div><b>Looks like a {kindLabel(seen.kind)}</b></div>
+              ) : (
+                <div><b>Could not tell its job from the shape.</b> Choose “What is it” below.</div>
+              )}
+              {!seen.same && seen.seen.role !== "other" && <div style={{ color: "var(--ink-3)" }}>{seen.seen.why}</div>}
+              {seen.kind && KIND_KNOWLEDGE[seen.kind] && <div className="mt-1">{KIND_KNOWLEDGE[seen.kind]}</div>}
+              {ref && where.length > 0 && (
+                <div className="mt-1" style={{ color: "var(--ink-3)" }}>
+                  {seen.same ? "Used in" : `Shape like ${ref.code} (${sectionTitle(ref.name)}), used in`}:
+                  <ul className="ml-4 list-disc">{where.slice(0, 4).map((w) => <li key={w}>{w}</li>)}</ul>
+                </div>
+              )}
+              {seen.kind && seen.kind !== kind && (
+                <button type="button" className="mt-1 font-semibold" style={{ color: "var(--accent)" }} onClick={() => setKind(seen.kind!)}>
+                  Set “What is it” to {PROFILE_KINDS.find((k) => k.id === seen.kind)?.label}
+                </button>
+              )}
+            </div>
+          );
+        })()}
         {shape && !seen && <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Reading the shape…</p>}
         {shape && <button type="button" className="mt-2 text-xs font-semibold" style={{ color: "var(--bad)" }} onClick={() => { setShape(undefined); setPic(null); setTraceMsg(""); setSeen(null); }}>Remove drawing</button>}
       </div>

@@ -202,8 +202,22 @@ a glass size. Jali shutters (founder's full list): 2081, 41050, 41074, 41085, 41
 
 ## 4. Knowing a section by its shape
 
-Wrong role = wrong glass size = wasted glass. Recognise the job from the shape
-(code: `lib/studio/recognize.ts`, test `evals/studio/recognize.ts`):
+Wrong role = wrong glass size = wasted glass. The app's section reader does this
+in two steps (Add a section → photo or DXF):
+
+1. **Shape rules** (`lib/studio/recognize.ts`, test `evals/studio/recognize.ts`) —
+   the signatures below.
+2. **Compare with every known section** (`lib/studio/know.ts`, test
+   `evals/studio/know.ts`). Every traced section the app's systems use is
+   "known", with the systems and pieces it goes in. A new drawing is compared
+   shape-to-shape (turned or mirrored too; dimension lines and numbers are
+   ignored; every wall given the same weight so an outline and a filled photo
+   match). Same shape + same size → "Same section as 2046", with what the piece
+   does (`KIND_KNOWLEDGE`) and where it is used. When the rules cannot tell, the
+   closest known shapes give the job. A photo works best cropped close to the
+   section.
+
+The signatures:
 
 - **Glass shutter:** a deep roller channel (≥ 24 mm) at one end and a ~10 mm
   glass pocket at the other (2046, 41055, 41082).
