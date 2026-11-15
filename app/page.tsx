@@ -20,7 +20,7 @@ import {
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
-import { markInstalls, markMade, markSource, markStep } from "@/lib/track";
+import { markInstalls, markMade, markSource, markStep, markVisitor } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
 import {
@@ -298,6 +298,8 @@ export default function FabriQ() {
     setRecent(saved);
     // Count where this visit came from (WhatsApp link, Diwali box QR…).
     markSource();
+    // the same phone, day after day (a short random code, nothing personal)
+    markVisitor();
     // Arrived from a link (QR, Instagram, WhatsApp, the jump to Chrome):
     // start on the first screen, not on whatever job this browser had open
     // last time (that job stays under Recent jobs). The link's tags are then
