@@ -750,8 +750,9 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_b2", "35 mm 2-Track (top and bottom)", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_v3", "35 mm Side Track, one groove (3-track)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_b3", "35 mm 3-Track (top and bottom)", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_handle", "35 mm Shutter (single glass)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
-    prof("bh35_handle_dgu", "35 mm Shutter (double glass)", "handle", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
+    // founder (2026-11-15): the Gulf 35 shutter is the 35 × 75 (BH-6712), not 6510
+    prof("bh35_shutter", "35 mm Shutter 75×35", "shutter", { bh: "BH-6712", eleanor: "3503" }, "75×35", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.69 / Eleanor p.35")),
+    prof("bh35_shutter_dgu", "35 mm Shutter 75×35 (double glass)", "shutter", { bh: "BH-6713" }, "75×35", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.70")),
     prof("bh35_slim", "35 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
     prof("bh35_spine", "35 mm Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-6508" }, "96×27", { value: 5.25, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27 }),
     prof("bh35_slim_dgu", "35 mm Slim Interlock — small, double glass", "slim-interlock", { bh: "BH-6507" }, "47.2×27.5", { value: 2.6, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
@@ -770,11 +771,11 @@ export const BH_35: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("bh35_v2", "bh35_v3"), "window", "frameH", 90, "frame-right"),
     part("trackClip", "{s} Roller Clip", "bh35_patri", "shutter", "clipW", 90, "other"),
-    // founder (2026-11-15): the 6510 shutter goes on all 4 sides; the catalogue's
+    // founder (2026-11-15): the 75 × 35 shutter (6712) goes on all 4 sides; the catalogue's
     // top / bottom 6504 is a 31.7 mm section (printed size) and is not used here
-    part("shutterTop", "{s} Shutter Top{tag}", "bh35_handle", "shutter", "shutterW", 45, "sash-top"),
-    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_handle", "shutter", "shutterW", 45, "sash-bottom"),
-    part("shutterLock", "{s} Handle Side{tag}", "bh35_handle", "shutter", "shutterH", 45, "sash-lock"),
+    part("shutterTop", "{s} Shutter Top{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-top"),
+    part("shutterBottom", "{s} Shutter Bottom{tag}", "bh35_shutter", "shutter", "shutterW", 45, "sash-bottom"),
+    part("shutterLock", "{s} Handle Side{tag}", "bh35_shutter", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterMeet", "{s} Slim Interlock{tag}", "bh35_slim", "shutter", "shutterH", 45, "sash-meet"),
   ],
   notes: [
@@ -892,12 +893,23 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     prof("at_dgu", "DGU Shutter", "shutter", { alucoat: "AT-30006" }, "67.4×30", { value: 4.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
     prof("at_clip", "Interlock Clip", "interlock-patti", { alucoat: "AT-30007" }, "37.1×35.1", { value: 1.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20"), { faceMm: 12 }),
     prof("at_dbl", "Double Interlock", "interlock", { alucoat: "AT-30008" }, "37.1×41.62", { value: 2.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.20")),
+    // founder (2026-11-15): Gulf 30 takes a roller clip in the Bottom Gulf U (S-30 p.22)
+    prof("at_clip_u", "Roller Clip, U groove", "rail", { alucoat: "AT-35020" }, "14.5×18", { value: 0.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail U Groove")),
+    prof("at_clip_v", "Roller Clip, V groove", "rail", { alucoat: "AT-35026" }, "13×16.5", { value: 0.75, perFt: 16 }, CATALOGUE("Alucoat S-30 p.22 — Bottom Rail V Groove")),
   ],
+  switches: [{
+    id: "rollerClip", label: "Roller clip", default: "u",
+    options: [{ value: "u", label: "U groove (AT-35020)" }, { value: "v", label: "V groove (AT-35026)" }],
+  }],
   sizes: [
-    ...UNKNOWN_SIZES().slice(0, 3),
+    ...UNKNOWN_SIZES().slice(0, 2),
+    size("clipW", "Roller clip", rule("W", -mm(66), FROM_DRAWING_35("clear width between the AT-30001 side tips (2 × 33)"))),
+    ...UNKNOWN_SIZES().slice(2, 3),
     size("shutterH", "Shutter height",
-      rule("H", -mm(61.0), ev("suggested", "From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window."), { when: { tracks: "2" } }),
-      rule("H", -mm(61.5), ev("suggested", "From the drawings (window built from the sections): 3-track Bottom Gulf AT-30004 top and bottom, the roller runs on its U tops (no rail), shutter AT-30005. Check on one window."))),
+      rule("H", -mm(64.3), FROM_DRAWING_35("2-track Bottom Gulf AT-30002 top and bottom, V-groove clip AT-35026 standing 3.3 mm, shutter AT-30005, 24 mm roller"), { when: { tracks: "2", rollerClip: "v" } }),
+      rule("H", -mm(65.7), FROM_DRAWING_35("2-track Bottom Gulf AT-30002 top and bottom, U-groove clip AT-35020 standing 4.7 mm, shutter AT-30005, 24 mm roller"), { when: { tracks: "2" } }),
+      rule("H", -mm(64.8), FROM_DRAWING_35("3-track Bottom Gulf AT-30004 top and bottom, V-groove clip AT-35026 standing 3.3 mm, shutter AT-30005, 24 mm roller"), { when: { rollerClip: "v" } }),
+      rule("H", -mm(66.2), FROM_DRAWING_35("3-track Bottom Gulf AT-30004 top and bottom, U-groove clip AT-35020 standing 4.7 mm, shutter AT-30005, 24 mm roller"))),
     ...UNKNOWN_SIZES().slice(4),
   ],
   parts: [
@@ -905,15 +917,16 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
     part("frameLeft", "Left Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-left"),
     part("frameRight", "Right Side (one groove)", byTracks("at_v2", "at_v3"), "window", "frameH", 90, "frame-right"),
     part("frameBottom", "Bottom Gulf Track", byTracks("at_b2", "at_b3"), "window", "frameW", 90, "frame-bottom"),
-    // founder (2026-11-15): no solid rail — AT-30101 belongs to the low-threshold sill AT-30102;
-    // in the Bottom Gulf the roller runs on the track's own U tops
+    // founder (2026-11-15): a roller clip in the Bottom Gulf U (U or V groove, S-30 p.22);
+    // not the solid rail AT-30101 — that belongs to the low-threshold sill AT-30102
+    part("trackClip", "{s} Roller Clip", [{ when: { rollerClip: "v" }, id: "at_clip_v" }, { id: "at_clip_u" }], "shutter", "clipW", 90, "other"),
     part("shutterTop", "{s} Shutter Top{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-top"),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "at_sgu", "shutter", "shutterW", 45, "sash-bottom"),
     part("shutterLeft", "{s} Shutter Left{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-lock"),
     part("shutterRight", "{s} Shutter Right{tag}", "at_sgu", "shutter", "shutterH", 45, "sash-meet"),
     part("interlock", "Interlock Clip {k}", "at_clip", "meeting", "shutterH", 90, "meeting", { count: 2 }),
   ],
-  notes: ["Gulf (founder): the one-groove Vertical Gulf goes on the left and right; top and bottom are the same track. The roller runs on the Bottom Gulf's own U tops; the solid rail AT-30101 is for the low-threshold sill, not this track (founder).", "Gulf shops differ on which piece runs full length — teach from one window."],
+  notes: ["Gulf (founder): the one-groove Vertical Gulf goes on the left and right; top and bottom are the same track. The roller runs on a U- or V-groove roller clip (AT-35020 / AT-35026) in the Bottom Gulf U; the solid rail AT-30101 is for the low-threshold sill, not this track (founder).", "Gulf shops differ on which piece runs full length — teach from one window."],
 }), "interlock", ["at_clip", "at_dbl"]);
 
 /* ———————————————— Gulf series ———————————————— */
@@ -921,7 +934,9 @@ export const GULF_S30: StudioSystem = withAlternatives(base({
 export const GULF: StudioSystem = base({
   id: "gulf", name: "Gulf series — any size (25 to 35)", group: "gulf",
   blurb: "Built like Euro; the left and right sides take a one-groove track. Choose your sections.",
-  sizes: UNKNOWN_SIZES(),
+  // the roller clip piece is Gulf 30's: keep its choice and give it a (still unknown) length
+  switches: GULF_S30.switches.filter((x) => x.id === "rollerClip"),
+  sizes: [...UNKNOWN_SIZES().slice(0, 2), size("clipW", "Roller clip", unknownFrom("W")), ...UNKNOWN_SIZES().slice(2)],
   profiles: GULF_S30.profiles,
   parts: GULF_S30.parts,
   notes: ["Gulf is built like Euro; only the left and right sides change to a one-groove track.", "Gulf shops differ: some run the sides full height, others the bottom track full width. Teach from one window and FabriQ follows yours."],
@@ -1078,8 +1093,8 @@ drawn(GULF_25, {
   glassW: glassW(54.1, "BH-2555 pocket", { bh_2556: [11.7, "slim 2556 pocket"], bh_2557: [11.5, "slim 2557 pocket"] }),
 });
 drawn(BH_35, {
-  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(46.7, "BH-6510 pocket (6510 on all 4 sides, founder)"),
-  glassW: glassW(46.7, "BH-6510 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
+  ...gulfFrame(32.8, "BH-6500"), shutterW: [HALF], clipW: clip(65.6, "BH-6500 sides"), glassH: glassH(59.0, "BH-6712 pocket (75 × 35 on all 4 sides, founder)"),
+  glassW: glassW(59.0, "BH-6712 pocket", { bh35_slim: [15.6, "slim 6506 pocket (15 mm top slot)"], bh35_spine: [15.2, "slim 6508 pocket"] }),
 });
 drawn(BH_31, {
   ...gulfFrame(33.1, "BH-6400"), shutterW: [HALF], clipW: clip(66.2, "BH-6400 sides"),
@@ -1130,7 +1145,7 @@ withMeetChoice(EURO_35, { lock: "e35_shutter", clip: "d35_clip", glassW: 118, sr
 // Gulf series: the catalogue has no interlock clip (slim interlocks only) — the shop picks its own.
 withMeetChoice(GULF_25, { lock: "bh_2555", clip: "", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
 withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
-withMeetChoice(BH_35, { lock: "bh35_handle", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
+withMeetChoice(BH_35, { lock: "bh35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
 withShutterChoice(ELEANOR_29, [

@@ -68,13 +68,17 @@ for (const sys of TEMPLATES) {
     const c = part?.profile.find((x) => matches(x.when, vars));
     return c?.id ? shapeOf(prof(c.id)) : undefined;
   };
-  for (const layout of sys.layouts) {
+  // every shop choice (track, roller clip, meeting…), not only the default; per-shutter slim picks do not move the shutter height
+  let choices: Record<string, string>[] = [{}];
+  for (const sw of sys.switches.filter((x) => !x.id.startsWith("pick_")))
+    choices = choices.flatMap((c) => sw.options.map((o) => ({ ...c, [sw.id]: o.value })));
+  for (const layout of sys.layouts) for (const choice of choices) {
     if (layout.tracks < 2) continue;
-    const vars = { ...defaults, tracks: String(layout.tracks), glass: "2", shutters: String(layout.tracks), mix: layout.mixes[0] };
+    const vars = { ...defaults, ...choice, tracks: String(layout.tracks), glass: "2", shutters: String(layout.tracks), mix: layout.mixes[0] };
     const bottom = at("frame-bottom", vars), top = at("frame-top", vars), shutter = at("sash-bottom", vars);
     const clipPart = sys.parts.find((p) => /Roller Clip|Track Rail/.test(p.role));
     const clip = clipPart ? shapeOf(prof(clipPart.profile.find((x) => matches(x.when, vars))?.id ?? "")) : undefined;
-    const name = `${sys.name} ${layout.tracks}-track`;
+    const name = `${sys.name} ${layout.tracks}-track${Object.keys(choice).length ? " (" + Object.entries(choice).map(([k, v]) => k + " " + v).join(", ") + ")" : ""}`;
     if (!bottom || !top || !shutter) { notes.push(`${name}: a section has no drawing — not built`); continue; }
     const book: Record<string, { w: number; h: number; paths: string[] }> = { B: bottom, T: top, S: shutter, ...(clip ? { C: clip } : {}) };
     const get = (k: string) => ({ ...book[k], solid: solidOf(book[k].paths) });

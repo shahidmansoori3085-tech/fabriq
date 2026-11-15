@@ -174,15 +174,16 @@ How it is built:
   (If a shop runs them full width, that is a shop choice — set it to W.)
 - Roller clip in the bottom track, like Euro.
 - Shutter: **the series' own shutter on all 4 sides**, 45° — 2555 (25), 6406 (31),
-  6510 (35). The catalogues also print "shutter top / bottom" sections (2554, 6404,
+  6712 = the 75 × 35 (35; founder — not 6510). The catalogues also print "shutter top / bottom" sections (2554, 6404,
   6504) — **not used** (founder): 6404 is 29 mm and 6504 is 31.7 mm thick, so they
   are not even the right series. Always read the printed size on the drawing.
 - Meeting side: slim interlock (small / big / double glass) or clip.
   **The Gulf catalogues have no interlock clip of their own** — the clip choice
   is left empty until the founder says which clip shops use. Do not guess one.
 - Gulf 30 is different: same shutter all round, 90° frame screwed, interlock clip
-  or double interlock. **No rail**: the roller runs on the Bottom Gulf's own U tops.
-  The solid rail AT-30101 belongs to the low-threshold sill AT-30102.
+  or double interlock. A **roller clip** goes in the Bottom Gulf U: U groove AT-35020
+  or V groove AT-35026 (S-30 p.22), the shop's choice. The solid rail AT-30101
+  belongs to the low-threshold sill AT-30102, not this track.
 
 ### E. Openable / casement (Z 40, Z 55)
 
@@ -273,7 +274,9 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
 - Gulf 25 / 31 / 35: the shutter goes on all 4 sides; the catalogue top/bottom
   sections (2554, 6404, 6504) are not used. 6404 is 29 mm, 6504 is 31.7 mm — the
   printed size shows they are another series.
-- Gulf 30: no solid rail (AT-30101 is for the low-threshold sill).
+- Gulf 35: the shutter is the 75 × 35 (6712) on all 4 sides, not 6510.
+- Gulf 30: roller clip U groove AT-35020 or V groove AT-35026 in the Bottom Gulf U; never the solid rail AT-30101 (that is for the low-threshold sill).
+- Cross-check a section with the other catalogues: the same shape and size in another maker's book tells which series and which partner sections it belongs to.
 - Every N mm sliding system's shutter pieces must be N mm thick, every section's
   printed size must match its drawing, and every window must build from its
   drawings: `evals/studio/geometry.ts` checks all of it on every system.
