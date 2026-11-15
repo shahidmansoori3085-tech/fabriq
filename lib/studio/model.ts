@@ -96,7 +96,7 @@ export type Place =
 /** What a section is used as — filters the section picker for each part. */
 export type ProfileKind =
   | "track" | "frame" | "handle" | "interlock" | "slim-interlock" | "bearing"
-  | "shutter" | "mesh-shutter" | "interlock-patti" | "rail" | "bead" | "mullion" | "other";
+  | "shutter" | "shutter-rail" | "mesh-shutter" | "interlock-patti" | "rail" | "bead" | "mullion" | "other";
 
 export const PROFILE_KINDS: { id: ProfileKind; label: string }[] = [
   { id: "track", label: "Track (top / bottom / side)" },
@@ -106,6 +106,7 @@ export const PROFILE_KINDS: { id: ProfileKind; label: string }[] = [
   { id: "slim-interlock", label: "Slim interlock" },
   { id: "bearing", label: "Bearing / H-section" },
   { id: "shutter", label: "Shutter (4 sides)" },
+  { id: "shutter-rail", label: "Shutter top / bottom" },
   { id: "mesh-shutter", label: "Mesh shutter" },
   { id: "interlock-patti", label: "Interlock patti / clip" },
   { id: "rail", label: "Rail / track clip" },

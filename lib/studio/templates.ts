@@ -589,6 +589,11 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     prof("a29_mesh", "29 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "41050" }, "65×29", perM(0.816), CATALOGUE("Ample 29 mm p.3 — jali shutter (founder)")),
     prof("a29_interlock_b", "29 mm Interlock (heavy)", "interlock", { ample: "992325" }, "65×29", perM(0.865), DRAWING("Ample 29 mm p.7")),
     prof("a29_slim_40", "29 mm Slim Interlock 40", "slim-interlock", { ample: "41289" }, "40×29", perM(0.672), CATALOGUE("Ample 29 mm p.5"), { faceMm: 40 }),
+    // slim interlocks of the 29 mm series (Eleanor p.33): slot 29, fits the 29 mm shutter — founder 2026-11-14
+    prof("el29_slim", "29 mm Slim Interlock — small", "slim-interlock", { eleanor: "2913" }, "34.3×25", { value: 2.05, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.33 — small slim")),
+    prof("el29_slim_big", "29 mm Slim Interlock — big", "slim-interlock", { eleanor: "2914" }, "80×25", { value: 3.7, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.33 — big slim")),
+    prof("el29_slim_light", "29 mm Slim Interlock — light", "slim-interlock", { eleanor: "2915" }, "35×17.5", { value: 2.3, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.33 — light slim")),
+    prof("el29_slim_dgu", "29 mm Slim Interlock — double glass", "slim-interlock", { eleanor: "2916" }, "34.1×25", { value: 2.05, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.33 — double glass slim")),
     prof("a29_slim", "29 mm Section 992328 (not used in shops)", "slim-interlock", { ample: "992328" }, "37×29", perM(0.595), DRAWING("Ample 29 mm p.7"), { faceMm: 37 }),
     prof("a29_spine", "29 mm Reinforcement", "interlock", { ample: "914806" }, "45×50.61", perM(1.104), CATALOGUE("Ample 29 mm p.5")),
     prof("a29_patti", "29 mm Interlock Clip", "interlock-patti", { ample: "41054" }, "33.63×38.89", perM(0.35), DRAWING("Ample 29 mm p.4"), { faceMm: 10 }),
@@ -611,7 +616,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     "The roller (24 mm) runs on clip 914401 snapped into the track. Any outer leg on a track is only design.",
     "41010 and 41330 are tracks with a leg, not shutter rails.",
   ],
-}), "shutterMeet", ["a29_slim_40"]);
+}), "shutterMeet", ["el29_slim", "el29_slim_big", "el29_slim_light", "el29_slim_dgu"]);
 
 /**
  * Euro 29 — Eleanor (catalogue pages 32–33). Track 48.0 mm (2901 / 2902), so the
@@ -701,8 +706,8 @@ export const BH_31: StudioSystem = withAlternatives(base({
     prof("bh31_track_2t_leg", "31 mm 2-Track (top and bottom)", "track", { bh: "BH-6401" }, "80.8×47.6", { value: 4.95, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
     prof("bh31_track_3t", "31 mm Side Track, one groove (3-track)", "track", { bh: "BH-6402" }, "124.7×33.1", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.56")),
     prof("bh31_track_3t_leg", "31 mm 3-Track (top and bottom)", "track", { bh: "BH-6403" }, "120.5×47.6", { value: 6.65, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_rail_sgu", "31 mm Shutter Top / Bottom (single glass)", "shutter", { bh: "BH-6404" }, "65.9×29", { value: 3.85, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
-    prof("bh31_rail_dgu", "31 mm Shutter Top / Bottom (double glass)", "shutter", { bh: "BH-6405" }, "65.9×29", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
+    prof("bh31_rail_sgu", "31 mm Shutter Top / Bottom (single glass)", "shutter-rail", { bh: "BH-6404" }, "65.9×29", { value: 3.85, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
+    prof("bh31_rail_dgu", "31 mm Shutter Top / Bottom (double glass)", "shutter-rail", { bh: "BH-6405" }, "65.9×29", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.57")),
     prof("bh31_handle_sgu", "31 mm Shutter (single glass)", "handle", { bh: "BH-6406" }, "59×31.4", { value: 3.45, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
     prof("bh31_handle_dgu", "31 mm Shutter (double glass)", "handle", { bh: "BH-6407" }, "59×31.4", { value: 3.15, perFt: 12 }, CATALOGUE("Banu Hashim p.58")),
     prof("bh31_slim", "31 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6408" }, "38.1×20.2", { value: 2.5, perFt: 12 }, CATALOGUE("Banu Hashim p.58"), { faceMm: 20.2 }),
@@ -745,8 +750,8 @@ export const BH_35: StudioSystem = withAlternatives(base({
     prof("bh35_b2", "35 mm 2-Track (top and bottom)", "track", { bh: "BH-6501" }, "95×31.2", { value: 5.3, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_v3", "35 mm Side Track, one groove (3-track)", "track", { bh: "BH-6502" }, "150×32.8", { value: 4.9, perFt: 12 }, CATALOGUE("Banu Hashim p.61")),
     prof("bh35_b3", "35 mm 3-Track (top and bottom)", "track", { bh: "BH-6503" }, "145.6×31.2", { value: 7.58, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_rail", "35 mm Shutter Top / Bottom (single glass)", "shutter", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
-    prof("bh35_rail_dgu", "35 mm Shutter Top / Bottom (double glass)", "shutter", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_rail", "35 mm Shutter Top / Bottom (single glass)", "shutter-rail", { bh: "BH-6504" }, "58×31.7", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
+    prof("bh35_rail_dgu", "35 mm Shutter Top / Bottom (double glass)", "shutter-rail", { bh: "BH-6505" }, "58×31.7", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.62")),
     prof("bh35_handle", "35 mm Shutter (single glass)", "handle", { bh: "BH-6510" }, "58.9×35.2", { value: 4.0, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
     prof("bh35_handle_dgu", "35 mm Shutter (double glass)", "handle", { bh: "BH-6511" }, "58.9×35.2", { value: 3.75, perFt: 12 }, CATALOGUE("Banu Hashim p.64")),
     prof("bh35_slim", "35 mm Slim Interlock — small", "slim-interlock", { bh: "BH-6506" }, "47.2×27.5", { value: 2.95, perFt: 12 }, CATALOGUE("Banu Hashim p.63"), { faceMm: 27.5 }),
@@ -838,7 +843,7 @@ export const GULF_25: StudioSystem = withAlternatives(base({
     prof("bh_2551", "Gulf 25 2-Track (top and bottom)", "track", { bh: "BH-2551" }, "71.8×29.8", { value: 3.65, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
     prof("bh_2552", "Gulf 25 Side Track, one groove (3-track)", "track", { bh: "BH-2552" }, "112.5×24.8", { value: 4.1, perFt: 12 }, CATALOGUE("Banu Hashim p.35")),
     prof("bh_2553", "Gulf 25 3-Track (top and bottom)", "track", { bh: "BH-2553" }, "108.6×29.8", { value: 5.1, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
-    prof("bh_2554", "Gulf 25 Shutter Top / Bottom", "shutter", { bh: "BH-2554" }, "53.8×22.2", { value: 2.2, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
+    prof("bh_2554", "Gulf 25 Shutter Top / Bottom", "shutter-rail", { bh: "BH-2554" }, "53.8×22.2", { value: 2.2, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2555", "Gulf 25 Shutter", "handle", { bh: "BH-2555" }, "62.37×25.5", { value: 2.4, perFt: 12 }, CATALOGUE("Banu Hashim p.36")),
     prof("bh_2556", "Gulf 25 Slim Interlock — small", "slim-interlock", { bh: "BH-2556" }, "35.8×20.3", { value: 1.9, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.3 }),
     prof("bh_2557", "Gulf 25 Slim Interlock — big (reinforcement)", "slim-interlock", { bh: "BH-2557" }, "80×20.2", { value: 3.55, perFt: 12 }, CATALOGUE("Banu Hashim p.37"), { faceMm: 20.2 }),
@@ -1168,10 +1173,15 @@ function slimSide(sys: StudioSystem, slim: string): StudioSystem {
 }
 slimSide(AMPLE_25, "");
 slimSide(AMPLE_37, "");
-slimSide(AMPLE_29, "a29_slim_40");
+// 41289 is an H-section (glass channel on both sides), not a slim interlock (founder
+// 2026-11-14): the 29 mm slims are Eleanor's 2913 / 2914 / 2915 / 2916, slot 29.
+slimSide(AMPLE_29, "el29_slim");
 AMPLE_29.sizes = AMPLE_29.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
   ...x.cases.filter((c) => c.when),
-  rule("shutterW", -mm(83.6), FROM_DRAWING("41055 pocket 52.7 mm + slim 41289 pocket 30.9 mm (glass goes 13.0 mm into the slim)"), { when: { meet: "slim" } }),
+  rule("shutterW", -mm(65.6), FROM_DRAWING("41055 pocket 52.7 + small slim 2913 12.9 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim" } }),
+  rule("shutterW", -mm(65.5), FROM_DRAWING("41055 pocket 52.7 + big slim 2914 12.8 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_big" } }),
+  rule("shutterW", -mm(63.4), FROM_DRAWING("41055 pocket 52.7 + light slim 2915 10.7 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_light" } }),
+  rule("shutterW", -mm(65.6), FROM_DRAWING("41055 pocket 52.7 + double-glass slim 2916 12.9 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_dgu" } }),
   unknownFrom("shutterW"),
 ] }));
 
