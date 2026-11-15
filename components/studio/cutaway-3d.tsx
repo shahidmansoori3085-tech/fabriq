@@ -13,6 +13,7 @@ import * as THREE from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { solidOf, place, bounds, type Solid } from "../../lib/studio/assemble";
 import type { Cutaway } from "../../lib/studio/cutaway";
+import { MEET_RUN, type Meeting } from "../../lib/studio/meeting";
 import type { WindowGeo } from "../../lib/studio/geometry";
 import type { Pick } from "../studio-drawing";
 
@@ -146,6 +147,61 @@ export function CutawayScene({ cut, g, mats, pick, onPick, hideUprights }: {
         const material = p.metal ? (picked ? [mats.picked, mats.picked] : [mats.cut, mats.coat]) : p.mat!;
         return <mesh key={p.key} geometry={p.geo} material={material} castShadow receiveShadow
           onClick={p.partId ? click({ type: "part", id: p.partId }) : undefined} />;
+      })}
+      {edges.map((e) => (
+        <lineSegments key={`e${e.key}`} geometry={e.geo}>
+          <lineBasicMaterial color="#0f172a" transparent opacity={0.55} />
+        </lineSegments>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Where two shutters meet: both bottom rails on their lanes, the meeting uprights
+ * (slim interlocks, or the shutter section with its interlock clip) standing up,
+ * both glasses, and the track with its clips under them. Centred on X = 0.
+ */
+export function MeetingScene({ cut, meeting, g, mats, pick, onPick }: {
+  cut: Cutaway; meeting: Meeting; g: WindowGeo; mats: Mats; pick: Pick; onPick: (p: Pick) => void;
+}) {
+  const parts = useMemo(() => {
+    const items: { key: string; geo: THREE.BufferGeometry; partId?: string; metal: boolean; mat?: THREE.Material }[] = [];
+    const idOf = (pl: string, shutter?: number) => [...g.frame, ...g.sash].find((m) => m.place === pl && (shutter === undefined || m.shutter === shutter))?.partId;
+    const run = MEET_RUN + 30;
+    const sill = extrude(cut.track, "x", -run, 2 * run);
+    if (sill) items.push({ key: "sill", geo: sill, partId: idOf("frame-bottom"), metal: true });
+    for (const ln of cut.lanes) {
+      if (!ln.clip.length) continue;
+      const c = extrude(ln.clip, "x", -run, 2 * run);
+      if (c) items.push({ key: `clip${ln.lane}`, geo: c, partId: "trackClip", metal: true });
+    }
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, d).translate(x + w / 2, y + h / 2, z);
+    meeting.sides.forEach((sd, i) => {
+      const ln = sd.lane;
+      const rail = extrude(ln.rail, "x", sd.railFrom, sd.railTo - sd.railFrom);
+      if (rail) items.push({ key: `rail${i}`, geo: rail, partId: idOf("sash-bottom", ln.shutter), metal: true });
+      sd.uprights.forEach((u, j) => {
+        const geo = extrude(u, "y", ln.y0, CUT_H - 10 - ln.y0);
+        if (geo) items.push({ key: `up${i}${j}`, geo, partId: j === 0 ? idOf("sash-meet", ln.shutter) : g.patti[0]?.partId, metal: true });
+      });
+      const t = ln.kind === "J" ? 1 : 5, gy0 = ln.y0 + ln.face * 0.72, gh = CUT_H - 10 - gy0;
+      items.push({ key: `pane${i}`, geo: box(sd.glassTo - sd.glassFrom, gh, t, sd.glassFrom, gy0, sd.zg), metal: false, mat: ln.kind === "J" ? mats.mesh : mats.glass });
+      if (ln.kind !== "J") for (const s of [-1, 1]) items.push({ key: `rb${i}${s}`, geo: box(sd.glassTo - sd.glassFrom, 3, 2.4, sd.glassFrom, gy0 + 0.5, sd.zg + s * (t / 2 + 1.2)), metal: false, mat: mats.rubber });
+      const wheel = new THREE.CylinderGeometry(9.5, 9.5, 8, 28).rotateX(Math.PI / 2).translate(i === 0 ? sd.railFrom + 60 : sd.railTo - 60, ln.run + 9.5, ln.x);
+      items.push({ key: `roller${i}`, geo: wheel, metal: false, mat: mats.steel });
+    });
+    return items;
+  }, [cut, meeting, g, mats]);
+
+  const edges = useMemo(() => parts.filter((p) => p.metal).map((p) => ({ key: p.key, geo: new THREE.EdgesGeometry(p.geo, 25) })), [parts]);
+  const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onPick(p); };
+  return (
+    <group>
+      {parts.map((p) => {
+        const picked = !!p.partId && pick?.type === "part" && pick.id === p.partId;
+        const material = p.metal ? (picked ? [mats.picked, mats.picked] : [mats.cut, mats.coat]) : p.mat!;
+        return <mesh key={p.key} geometry={p.geo} material={material} castShadow receiveShadow onClick={p.partId ? click({ type: "part", id: p.partId }) : undefined} />;
       })}
       {edges.map((e) => (
         <lineSegments key={`e${e.key}`} geometry={e.geo}>

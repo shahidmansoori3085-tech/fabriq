@@ -14,16 +14,17 @@
  *   4. Architectural Finishes: Anthracite Grey (RAL 7016), Matt Noir (9005),
  *      Silver Anodised (EV1), Champagne Bronze, and Traffic White (9016).
  */
-import { useEffect, useMemo, useState, useRef } from "react";
-import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
+import { useEffect, useMemo, useState, useRef, type RefObject } from "react";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { OrbitControls, ContactShadows } from "@react-three/drei";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { TrackballControls, ContactShadows } from "@react-three/drei";
+import type { TrackballControls as TrackballImpl } from "three-stdlib";
 import * as THREE from "three";
 import type { Member, WindowGeo } from "../lib/studio/geometry";
 import type { Pick } from "./studio-drawing";
 import { buildCutaway } from "../lib/studio/cutaway";
-import { CutawayScene } from "./studio/cutaway-3d";
+import { CutawayScene, MeetingScene } from "./studio/cutaway-3d";
+import { buildMeeting } from "../lib/studio/meeting";
 
 type V2 = [number, number];
 
@@ -158,7 +159,8 @@ function StudioLight() {
 }
 
 /** camera [position, target] for the cutaway views (world mm, scene shifted by [-50, -35, -20]) */
-const CUT_VIEWS: Record<"corner" | "sliding" | "cutface", [[number, number, number], [number, number, number]]> = {
+const CUT_VIEWS: Record<"corner" | "sliding" | "cutface" | "meeting", [[number, number, number], [number, number, number]]> = {
+  meeting: [[330, 620, 470], [80, 170, 35]],
   corner: [[640, 420, 600], [115, 70, 30]],
   sliding: [[600, 170, 430], [150, 15, 30]],
   cutface: [[620, 95, 210], [255, 5, 30]],
@@ -175,9 +177,10 @@ export default function Window3D({
   onPick: (p: Pick) => void;
   tracks: number;
 }) {
-  const [mode, setMode] = useState<"corner" | "sliding" | "cutface" | "full">("corner");
+  const [mode, setMode] = useState<"corner" | "sliding" | "cutface" | "meeting" | "full">("corner");
+  const [spin, setSpin] = useState(false);
   const [finish, setFinish] = useState<FinishId>("anthracite");
-  const controlsRef = useRef<OrbitControlsImpl>(null);
+  const controlsRef = useRef<TrackballImpl>(null);
 
   const { W, H } = g;
   const frameDepth = Math.max(45, ...g.frame.map((m) => m.depth ?? 0));
@@ -308,6 +311,8 @@ export default function Window3D({
 
   // the chosen window laid out from its drawings (series, track, clip, each shutter's section)
   const cut = useMemo(() => (g.casement ? null : buildCutaway(g.section)), [g]);
+  // where two shutters meet: the chosen slim interlocks, or the shutter with its interlock clip
+  const meeting = useMemo(() => (cut ? buildMeeting(cut, g.section.meeting) : null), [cut, g]);
   const cutMats = useMemo(() => ({ coat: powderCoatMat, cut: cutFaceMat, picked: pickedMat, glass: glassMat, mesh: meshMat, rubber: gasketMat, steel: spacerMat }),
     [powderCoatMat, cutFaceMat, pickedMat, glassMat, meshMat, gasketMat, spacerMat]);
 
@@ -509,6 +514,9 @@ export default function Window3D({
   }, [g]);
 
   const big = Math.max(W, H);
+  // stable look-at points, so a re-render never pulls a moved view back
+  const cutTarget = useMemo(() => (cut ? CUT_VIEWS.corner[1] : [120, 85, 40]) as [number, number, number], [cut]);
+  const fullTarget = useMemo(() => [W / 2, H / 2, -frameDepth / 2] as [number, number, number], [W, H, frameDepth]);
   const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     onPick(p);
@@ -520,7 +528,7 @@ export default function Window3D({
     return all.find((m) => m.partId === pick.id);
   }, [pick, g]);
 
-  const setViewPreset = (nextMode: "corner" | "sliding" | "cutface" | "full") => {
+  const setViewPreset = (nextMode: "corner" | "sliding" | "cutface" | "meeting" | "full") => {
     setMode(nextMode);
     if (!controlsRef.current) return;
     if (cut && nextMode !== "full") {
@@ -543,6 +551,7 @@ export default function Window3D({
       controlsRef.current.object.position.set(W * 0.5 + big * 0.55, H * 0.55 + big * 0.18, big * 1.45);
       controlsRef.current.target.set(W / 2, H / 2, -frameDepth / 2);
     }
+    controlsRef.current.object.up.set(0, 1, 0);
     controlsRef.current.update();
   };
 
@@ -574,6 +583,17 @@ export default function Window3D({
           >
             <span>🏗️</span> Patio Cut
           </button>
+          {meeting && (
+            <button
+              type="button"
+              onClick={() => setViewPreset("meeting")}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                mode === "meeting" ? "bg-stone-900 text-white shadow-xs" : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
+              }`}
+            >
+              <span>🔗</span> Interlock
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setViewPreset("cutface")}
@@ -597,6 +617,16 @@ export default function Window3D({
             <span>🪟</span> Full Window
           </button>
         </div>
+
+        {/* Spin the whole model round, 360° */}
+        <button
+          type="button"
+          onClick={() => setSpin(!spin)}
+          className={`pointer-events-auto rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-sm border ${spin ? "bg-stone-900 text-white border-stone-900" : "bg-white/90 text-stone-700 border-stone-200/80"}`}
+          aria-pressed={spin}
+        >
+          ↻ 360°
+        </button>
 
         {/* Architectural Finish Swatches */}
         <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md border border-stone-200/80">
@@ -636,10 +666,16 @@ export default function Window3D({
         <directionalLight position={[380, 180, -180]} intensity={0.9} />
         <directionalLight position={[80, -180, 180]} intensity={0.35} />
 
-        {(mode === "corner" || mode === "sliding" || mode === "cutface") && (cut || cornerData) && (
+        {(mode === "corner" || mode === "sliding" || mode === "cutface" || mode === "meeting") && (cut || cornerData) && (
           <group position={[-50, -35, -20]}>
             {cut ? (
-              <CutawayScene cut={cut} g={g} mats={cutMats} pick={pick} onPick={onPick} hideUprights={mode === "sliding"} />
+              mode === "meeting" && meeting ? (
+                <group position={[130, 0, 0]}>
+                  <MeetingScene cut={cut} meeting={meeting} g={g} mats={cutMats} pick={pick} onPick={onPick} />
+                </group>
+              ) : (
+                <CutawayScene cut={cut} g={g} mats={cutMats} pick={pick} onPick={onPick} hideUprights={mode === "sliding"} />
+              )
             ) : cornerData && (<>
             {/* Extruded Profile Members with Two-Tone Reynaers Cutaway Materials */}
             {cornerData.members.map(({ key, geo, edges, m }) => {
@@ -743,13 +779,17 @@ export default function Window3D({
 
             {/* Ground Contact Shadow */}
             <ContactShadows position={[140, -1, (cut ? cut.trackW : cornerData?.fDepth ?? 60) / 2]} scale={440} blur={2.4} opacity={0.45} far={320} />
-            <OrbitControls
+            <TrackballControls
               ref={controlsRef}
-              target={cut ? CUT_VIEWS.corner[1] : [120, 85, 40]}
-              enablePan={true}
-              minDistance={90}
-              maxDistance={1100}
+              target={cutTarget}
+              rotateSpeed={3}
+              zoomSpeed={1.4}
+              panSpeed={0.9}
+              staticMoving
+              minDistance={40}
+              maxDistance={1400}
             />
+            <Spin on={spin} controls={controlsRef} />
           </group>
         )}
 
@@ -786,13 +826,17 @@ export default function Window3D({
               opacity={0.35}
               far={big}
             />
-            <OrbitControls
+            <TrackballControls
               ref={controlsRef}
-              target={[W / 2, H / 2, -frameDepth / 2]}
-              enablePan={false}
-              minDistance={big * 0.4}
-              maxDistance={big * 4}
+              target={fullTarget}
+              rotateSpeed={3}
+              zoomSpeed={1.4}
+              panSpeed={0.9}
+              staticMoving
+              minDistance={big * 0.15}
+              maxDistance={big * 5}
             />
+            <Spin on={spin} controls={controlsRef} />
           </group>
         )}
       </Canvas>
@@ -818,7 +862,9 @@ export default function Window3D({
             <span className="text-stone-400">ℹ️</span>
             <span>
               {mode === "corner"
-                ? "360° Architectural Corner Cutaway • Drag to rotate • Scroll to zoom"
+                ? "Drag to turn any way • Right-drag or two fingers to move • Scroll or pinch to zoom"
+                : mode === "meeting"
+                ? (meeting?.kind === "slim" ? "Where the shutters meet • the chosen slim interlocks hooked" : "Where the shutters meet • shutter with its interlock clip")
                 : mode === "sliding"
                 ? "Patio cutaway • Sill track, runner rail, rollers & double glazing"
                 : mode === "cutface"
@@ -833,4 +879,15 @@ export default function Window3D({
       </div>
     </div>
   );
+}
+
+/** Turns the camera slowly round the model while 360° is on (the shop can still drag, move and zoom). */
+function Spin({ on, controls }: { on: boolean; controls: RefObject<TrackballImpl | null> }) {
+  useFrame((_, dt) => {
+    const c = controls.current; if (!on || !c) return;
+    const cam = c.object, off = cam.position.clone().sub(c.target);
+    off.applyAxisAngle(cam.up.clone().normalize(), dt * 0.5);
+    cam.position.copy(c.target).add(off); cam.lookAt(c.target);
+  });
+  return null;
 }

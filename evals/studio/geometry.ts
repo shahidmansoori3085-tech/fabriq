@@ -14,57 +14,11 @@
  */
 import { TEMPLATES, OFFERED } from "../../lib/studio/templates";
 import { shapeOf } from "../../lib/studio/shapes";
-import { solidOf, buildSliding, rayToMaterial, inside, runners, place, tipAt } from "../../lib/studio/assemble";
+import { solidOf, buildSliding, rayToMaterial, runners, place, tipAt } from "../../lib/studio/assemble";
+import { glassPlane, slimSlotAt } from "../../lib/studio/measure";
 type Sh = { w: number; h: number; paths: string[] };
 
-/** Glass plane of a shutter across its thickness: centre of its glass pocket (open 4.5–22, 6–32 deep). */
-function glassPlane(s: Sh): number | undefined {
-  const so = solidOf(s.paths); let best: { c: number; depth: number } | undefined;
-  for (const ins of [1.2, 2, 3, 4.5]) for (const [x, dir] of [[ins, 1], [s.w - ins, -1]] as const) {
-    let y = 0.2;
-    while (y < s.h) {
-      if (inside(so, x, y)) { y += 0.1; continue; }
-      let e = y; while (e < s.h && !inside(so, x, e)) e += 0.1;
-      const c = (y + e) / 2, open = e - y, depth = rayToMaterial(so, dir === 1 ? -1 : s.w + 1, c, dir, 0, s.w + 2);
-      if (y > 0.3 && e < s.h - 0.3 && open >= 4.5 && open <= 22 && depth >= 6 && depth <= 32 && c > 3 && c < s.h - 3 && (!best || depth > best.depth)) best = { c, depth };
-      y = e;
-    }
-  }
-  if (best) return best.c;
-  // a wide bead-type glass mouth (6712, 6003): the glass line is its centre
-  for (const [x, dir] of [[1.2, 1], [s.w - 1.2, -1]] as const) {
-    let y = 0.2;
-    while (y < s.h) {
-      if (inside(so, x, y)) { y += 0.1; continue; }
-      let e = y; while (e < s.h && !inside(so, x, e)) e += 0.1;
-      const c = (y + e) / 2, depth = rayToMaterial(so, dir === 1 ? -1 : s.w + 1, c, dir, 0, s.w + 2);
-      if (e - y >= s.h * 0.6 && depth >= 6 && depth <= 32) return c;
-      y = e;
-    }
-  }
-  return undefined;
-}
-/**
- * Slots measured by hand on the enlarged catalogue drawing, where the trace closes the slot.
- * BH-6709: Banu Hashim p.68 at 14.2 px/mm (89.86 = 1279 px, 31 = 442 px): slot mouth 13.8 mm,
- * its centre 25.3 mm from the hook edge (6707: 24.95), 20 mm deep.
- */
-const MEASURED_SLOT: Record<string, number> = { "BH-6709": 25.3 };
-/** A slim interlock's glass slot (on its face): centre across its thickness. */
-function slimSlot(s: Sh): number | undefined {
-  const so = solidOf(s.paths); let best: { c: number; depth: number } | undefined;
-  for (const ins of [0.8, 1.5, 2.5, 3.5]) for (const [y, dir] of [[ins, 1], [s.h - ins, -1]] as const) {
-    let x = 0.2;
-    while (x < s.w) {
-      if (inside(so, x, y)) { x += 0.1; continue; }
-      let e = x; while (e < s.w && !inside(so, e, y)) e += 0.1;
-      const c = (x + e) / 2, open = e - x, depth = rayToMaterial(so, c, dir === 1 ? -1 : s.h + 1, 0, dir, s.h + 2);
-      if (x > 0.3 && e < s.w - 0.3 && open >= 4.5 && open <= 30 && depth >= 6 && (!best || depth > best.depth)) best = { c, depth };
-      x = e;
-    }
-  }
-  return best?.c;
-}
+const slimSlot = (s: Sh) => slimSlotAt(s)?.c;
 /** Distance between the first two running U's of a track (glass plane to glass plane). */
 function pitch(s: Sh): number | undefined {
   const so = place(solidOf(s.paths), 1, 0, 0, 0, -1, s.h); const r = runners(so, s.w, s.h);
@@ -151,7 +105,7 @@ for (const sys of TEMPLATES) {
     const track = trackPart ? shapeOf(prof(trackPart.profile.find((x) => matches(x.when, { ...defaults, tracks: "2" }))?.id ?? "")) : undefined;
     const plane = lock ? glassPlane(lock) : undefined, P = track ? pitch(track) : undefined;
     for (const o of meet?.options ?? []) {
-      const sl = shapeOf(prof(o.value)); const c = sl ? (MEASURED_SLOT[sl.code] ?? slimSlot(sl)) : undefined;
+      const sl = shapeOf(prof(o.value)); const c = sl ? slimSlot(sl) : undefined;
       if (!sl || c === undefined || plane === undefined || !lock || P === undefined) { notes.push(`${sys.name}: slim ${o.label} — glass line not measurable on the drawings`); continue; }
       const sides = [c, sl.w - c], shutterSides = [plane, lock.h - plane];
       const off = (a: number) => Math.min(...shutterSides.map((b) => Math.abs(a - b)));
