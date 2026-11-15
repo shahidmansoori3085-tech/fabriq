@@ -178,8 +178,13 @@ export function SectionLibrary({ lib, onSave, onRemove, onBack, onOpenSystem }: 
             onSave(saved);
             setForm(null);
             setOpen(saved.id);
-            if (before?.size && saved.size && before.size !== saved.size && sectionUses(lib, saved.id).length) setNotice({ id: saved.id, from: before.size, to: saved.size });
-            else setNotice(null);
+            // a new size moves the cuts: straight to Measure (2 finished windows) of the system using it;
+            // the other systems show the same check when opened
+            const used = sectionUses(lib, saved.id);
+            if (before?.size && saved.size && before.size !== saved.size && used.length) {
+              setNotice({ id: saved.id, from: before.size, to: saved.size });
+              onOpenSystem(used[0].open, "teach");
+            } else setNotice(null);
           }} />
         </Sheet>
       )}

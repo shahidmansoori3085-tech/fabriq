@@ -63,7 +63,10 @@ export function nextStep(sys: StudioSystem): { text: string; tab: Tab; tone: "go
   return { text: "Ready to use.", tab: "cut", tone: "good" };
 }
 
-export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
+/** time of a change (called from event handlers only) */
+const stamp = () => Date.now();
+
+export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
   sys: StudioSystem;
   lib: StudioLibrary;
   unit: StudioUnit;
@@ -84,10 +87,32 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   const [perShutter, setPerShutter] = useState<Record<string, string>[]>([]);
   const [pick, setPick] = useState<Pick>(null);
   const [tab, setTab] = useState<Tab>(startTab ?? "pieces");
+  // A piece given another section moves the cuts: go straight to Measure (2 finished windows) —
+  // a fabricator will not look for it later (founder).
+  const onChange = (next: StudioSystem) => {
+    const sec = (s: StudioSystem) => new Map(s.parts.map((p) => [p.id, [...p.profile.map((c) => c.id), p.meshProfile ?? ""].join(",")]));
+    const before = sec(sys), after = sec(next);
+    const swapped = next.parts.filter((p) => before.has(p.id) && before.get(p.id) !== after.get(p.id) && p.profile.some((c) => c.id));
+    if (swapped.length && tab !== "teach") {
+      save({ ...next, changed: { what: `Section changed: ${swapped.map((p) => partLabel(p)).join(", ")}`, at: stamp() } });
+      setTab("teach");
+      setGoMeasure(true);
+      return;
+    }
+    save(next);
+  };
   const [menu, setMenu] = useState(false);
   const [view3d, setView3d] = useState(false);
   const [picker, setPicker] = useState<{ partId: string; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [goMeasure, setGoMeasure] = useState(startTab === "teach");
+  // opened for a check (or sent there by a change): bring the Measure form into view
+  useEffect(() => {
+    if (!goMeasure) return;
+    const t = setTimeout(() => { tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setGoMeasure(false); }, 150);
+    return () => clearTimeout(t);
+  }, [goMeasure]);
 
   // a track count the system no longer offers falls back to its first layout
   useEffect(() => {
@@ -104,6 +129,9 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
   const values = useMemo(() => computeSizes(sys, job).values, [sys, job]);
   const vars = useMemo(() => jobVars(sys, job), [sys, job]);
   const step = useMemo(() => nextStep(sys), [sys]);
+  // a change that moves the cuts and is not checked with 2 windows yet
+  const pendingCheck = (sys.changed?.at ?? 0) > (sys.taughtAt ?? 0) || sys.parts.some((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]
+    .some((id) => { const pr = id ? findProfile(lib, id) : undefined; return !!pr?.sizeChanged && pr.sizeChanged.at > (sys.taughtAt ?? 0); }));
 
   const setPart = (id: string, patch: Partial<PartDef>) =>
     onChange({ ...sys, parts: sys.parts.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
@@ -146,23 +174,26 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
       <input value={sys.name} onChange={(e) => onChange({ ...sys, name: e.target.value })} aria-label="System name"
         className="mt-3 w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
 
-      <button onClick={() => setTab(step.tab)} className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold"
+      {!pendingCheck && <button onClick={() => setTab(step.tab)} className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold"
         style={{ background: toneBg, color: tone }}>
         <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] text-white" style={{ background: tone }}>{step.tone === "good" ? "✓" : "!"}</span>
         {step.text}
-      </button>
+      </button>}
 
       {(() => {
         // sections whose size the shop changed after these cuts were last checked
         const ids = new Set(sys.parts.flatMap((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]).filter(Boolean));
         const changed = [...ids].map((id) => findProfile(lib, id)).filter((p): p is ProfileDef => !!p?.sizeChanged && p.sizeChanged.at > (sys.taughtAt ?? 0));
-        if (!changed.length) return null;
+        const notes = [
+          ...changed.map((p) => `Size of ${sectionTitle(p.name)} changed (${p.sizeChanged!.from} → ${p.size})`),
+          ...(sys.changed && sys.changed.at > (sys.taughtAt ?? 0) ? [sys.changed.what] : []),
+        ];
+        if (!notes.length) return null;
         return (
           <button onClick={() => setTab("teach")} className="mt-2 w-full rounded-xl px-3 py-2.5 text-left text-sm"
             style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
-            <b>Section size changed.</b>{" "}
-            {changed.map((p) => `${sectionTitle(p.name)} (${p.sizeChanged!.from} → ${p.size})`).join(", ")}.
-            <span className="mt-1 block font-semibold">Measure 2 finished windows to update the cuts ›</span>
+            <b>Cuts need checking.</b> {notes.join(". ")}.
+            <span className="mt-1 block font-semibold">Enter 2 windows you have made ›</span>
           </button>
         );
       })()}
@@ -200,7 +231,7 @@ export default function StudioEditor({ sys, lib, unit, onChange, onAddProfile, o
           onSelectPart={selectPart} onClose={() => setPick(null)} />
       )}
 
-      <div className="sticky top-0 z-20 -mx-4 mt-4 px-4 py-2" style={{ background: "var(--bg)" }}>
+      <div ref={tabsRef} className="sticky top-0 z-20 -mx-4 mt-4 px-4 py-2" style={{ background: "var(--bg)", scrollMarginTop: 0 }}>
         <div className="grid grid-cols-5 gap-1 rounded-xl p-1" style={{ background: "var(--surface-3)" }} role="tablist">
           {([["pieces", "Parts"], ["cut", "Cut list"], ["hardware", "Hardware"], ["rules", "Formulas"], ["teach", "Measure"]] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
@@ -518,6 +549,8 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
       : [...sys.layouts, { tracks: t, mixes: MIXES[t] }].sort((a, b) => a.tracks - b.tracks);
     if (layouts.length) onChange({ ...sys, layouts });
   };
+  // adding pieces and track counts is rare: kept behind one button so the daily screen stays simple
+  const [advanced, setAdvanced] = useState(false);
   const addPart = (scope: PartScope) => {
     const id = newId("p");
     onChange({ ...sys, parts: [...sys.parts, { id, role: roleFrom("New piece", scope), profile: [{ id: "" }], scope, count: 1, length: sys.sizes[0]?.id ?? "W", angle: 90, place: "other" }] });
@@ -527,10 +560,13 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
   return (
     <div>
       {((sys.family === "casement" ? ["window", "between", "shutter"] : ["window", "shutter", "meeting"]) as PartScope[]).map((scope) => {
-        const list = sys.parts.filter((p) => p.scope === scope);
+        // only the pieces this window takes (e.g. no interlock clip when the meeting side is a slim interlock)
+        const all = sys.parts.filter((p) => p.scope === scope);
+        const list = all.filter((p) => matches(p.when, vars));
+        if (all.length && !list.length) return null;
         return (
           <div key={scope}>
-            <SectionTitle aside={<button onClick={() => addPart(scope)} className="text-sm font-semibold" style={{ color: "var(--accent)" }}>+ Add piece</button>}>
+            <SectionTitle aside={advanced ? <button onClick={() => addPart(scope)} className="text-sm font-semibold" style={{ color: "var(--accent)" }}>+ Add piece</button> : undefined}>
               {SCOPE_TITLE[scope]}
             </SectionTitle>
             {list.length === 0 && <div className="card px-4 py-3 text-sm" style={{ color: "var(--ink-3)" }}>None. Add one if your system has it.</div>}
@@ -570,6 +606,10 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
         );
       })}
 
+      <button onClick={() => setAdvanced(!advanced)} className="mt-5 w-full text-sm font-semibold" style={{ color: "var(--accent)" }}>
+        {advanced ? "Hide advanced settings" : "Advanced settings: add pieces, track counts"}
+      </button>
+      {advanced && <>
       <SectionTitle>{sys.family === "casement" ? "Sash counts this system makes" : "Track counts this system makes"}</SectionTitle>
       <div className="card p-3">
         <div className="flex flex-wrap gap-2">
@@ -578,8 +618,9 @@ function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }
               className={`chip px-3.5 py-2 text-sm ${tracksOn.has(t) ? "selected" : ""}`}>{layoutLabel(sys, t)}</button>
           ))}
         </div>
-        <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Each track count keeps its own cut rules.</p>
+        <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Each track count keeps its own cut formulas.</p>
       </div>
+      </>}
     </div>
   );
 }

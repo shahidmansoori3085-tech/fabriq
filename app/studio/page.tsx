@@ -87,9 +87,11 @@ export default function StudioPage() {
           onBack={() => setView({ kind: "home" })}
           onOpenSystem={(id, tab) => {
             // a built-in system opens as the shop's own copy (the same as tapping it on the list)
-            const own = lib.systems.find((x) => x.id === id);
-            if (own) setView({ kind: "system", id, tab });
-            else { const c = copyTemplate(id); commit({ ...lib, systems: [...lib.systems, c] }); setView({ kind: "system", id: c.id, tab }); }
+            // read the library fresh: a section saved a moment ago must not be lost
+            const cur = loadLibrary();
+            const own = cur.systems.find((x) => x.id === id);
+            if (own) { setLib(cur); setView({ kind: "system", id, tab }); }
+            else { const c = copyTemplate(id); commit({ ...cur, systems: [...cur.systems, c] }); setView({ kind: "system", id: c.id, tab }); }
             window.scrollTo({ top: 0 });
           }} />
       ) : (

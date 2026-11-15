@@ -200,7 +200,7 @@ function windowChoices(kind: string): WinChoice[] {
     const sys = systemForWindow(w.id);
     const changed = !!sys && sys.id !== w.id;
     const sec = SHUTTER_SECTION[w.id];
-    out.push({ sys: changed ? `studio:${sys!.id}` : w.engine ?? `studio:${w.id}`, title: sec?.[0] ?? sys?.name ?? w.id, sub: changed ? "Your settings" : sec?.[1] ?? "", pic: sys });
+    out.push({ sys: changed ? `studio:${sys!.id}` : w.engine ?? `studio:${w.id}`, title: sec?.[0] ?? sys?.name ?? w.id, sub: changed ? "Customised by you" : sec?.[1] ?? "", pic: sys });
   }
   // the shop's own systems that are not one of the above: under their kind, or under "My own"
   const offered = new Set(WINDOW_SYSTEMS.map((w) => w.id));
@@ -749,23 +749,23 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
 
 const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
-  kind: "Which window?",
-  studioOpts: "Which sections?",
-  meet: "Where two shutters meet?",
-  system: "Which size?",
-  tracks: "How many tracks?",
-  mix: "Which shutters?",
+  kind: "Window type",
+  studioOpts: "Sections",
+  meet: "Meeting side",
+  system: "Which series?",
+  tracks: "Number of tracks",
+  mix: "Shutter types",
   domalFix: "Fixed glass on top?",
-  zType: "Which type?",
+  zType: "Casement type",
   zDir: "Where is the fixed glass?",
   zSash: "How many shutters open?",
-  zProfile: "Which section?",
-  doorSys: "Which door?",
+  zProfile: "Section",
+  doorSys: "Door type",
   doorCenters: "How many center rails?",
   zDoorCenters: "How many center rails?",
   doorFrame: "Frame (chaukhat) too?",
   doorSection: "Shutter section?",
-  partSys: "Which partition?",
+  partSys: "Partition type",
   partDoor: "Door in the partition?",
   partDoorSize: "Door size",
   size: "Enter your sizes",
@@ -1160,7 +1160,7 @@ function JobScreen({
           <div className="min-w-0 flex-1">
             <div className="truncate text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
-              {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · {i + 1}/{steps.length}
+              {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · Step {i + 1}
             </div>
             <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : flow.step === "system" && o.kind === "bombay" ? "Shutter section?" : STEP_TITLE[flow.step]}</h1>
           </div>
@@ -1186,7 +1186,7 @@ function JobScreen({
             {KINDS.map(([k, label]) => {
               const ch = windowChoices(k);
               if (!ch.length) return null;
-              const sizes = WINDOW_SYSTEMS.filter((w) => w.kind === k).map((w) => w.mm);
+              const sizes = [...new Set(WINDOW_SYSTEMS.filter((w) => w.kind === k).map((w) => w.mm))];
               return (
                 <Choice key={k} selected={o.kind === k}
                   onClick={() => (ch.length === 1 ? choose({ kind: k, ...sysPatch(ch[0].sys) }) : choose({ kind: k }))}
@@ -1247,7 +1247,7 @@ function JobScreen({
               {list.map((c) => (
                 <Choice key={c.key} wide selected={cur?.key === c.key}
                   onClick={() => choose({ studioSw: JSON.stringify({ ...sw, ...c.sw }), studioPer: JSON.stringify(c.per) })}
-                  title={c.title} sub={c.key === "clip" ? "The shutter itself meets, with a clip on it" : c.key === "mixed" ? "One shutter small, the next big" : "Slim interlock, no clip"}
+                  title={c.title} sub={c.key === "clip" ? "Shutter section on both sides, joined by an interlock clip" : c.key === "mixed" ? "A different slim interlock on each shutter" : "Slim interlock on both shutters, no clip"}
                   picture={<span className="flex h-14 w-24 items-center justify-center gap-1">{c.pics.map((id) => { const sh = shapeOf(BUILT_IN_PROFILES.find((p) => p.id === id)); return sh ? <span key={id} className="block h-14 w-11"><MiniSection s={sh} /></span> : null; })}</span>} />
               ))}
             </div>
@@ -1525,7 +1525,7 @@ function JobScreen({
             })}
             {/* the next step sits right under the sizes, where the eye already is */}
             <button onClick={sizesDone} disabled={!allReady} className="btn-primary mt-1 w-full py-3 text-[15px]">
-              {!readyCount ? "Type a size first" : afterSize.length ? `Next — ${plural(readyPieces, "partition")} →` : `${doneLabel} →`}
+              {!readyCount ? "Enter width and height" : afterSize.length ? `Next — ${plural(readyPieces, "partition")} →` : `${doneLabel} →`}
             </button>
             {flow.editing && (
               <button onClick={() => { onRemove(flow.editing!); closeFlow(); }}

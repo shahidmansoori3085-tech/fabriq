@@ -34,9 +34,10 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
 
   const kinds = [...win.mix];
   const glassN = kinds.filter((k) => k !== "J").length;
+  const winVars = jobVars(sys, win);
   const rows = sys.sizes.map((s) => ({
     size: s,
-    parts: sys.parts.filter((p) => p.enabled !== false && p.length === s.id &&
+    parts: sys.parts.filter((p) => p.enabled !== false && p.length === s.id && matches(p.when, winVars) &&
       (p.scope !== "shutter" || kinds.length > 0) && (p.scope !== "meeting" || glassN > 1)),
   })).filter((r) => r.parts.length > 0);
   const sizeOk = W !== null && H !== null;
