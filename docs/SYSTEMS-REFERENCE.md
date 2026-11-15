@@ -516,7 +516,7 @@ Pieces:
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
-| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
+| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
 
@@ -736,7 +736,7 @@ Pieces:
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: Gulf 25 Shutter — code BH-2555 — 62.37×25.5 mm — handle<br>pick_shutterMeet=bh_2556: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock<br>pick_shutterMeet=bh_2557: Gulf 25 Slim Interlock — big (reinforcement) — code BH-2557 — 80×20.2 mm — slim-interlock<br>always: Gulf 25 Slim Interlock — small — code BH-2556 — 35.8×20.3 mm — slim-interlock |
-| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
+| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
 
@@ -809,7 +809,7 @@ Pieces:
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Handle Side | shutter | 1 | shutterH | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Meeting Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_slim_dgu: 31 mm Slim Interlock — small, double glass — code BH-6410 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine_dgu: 31 mm Slim Interlock — big, double glass — code BH-6411 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
-| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — interlock-patti |
+| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
 

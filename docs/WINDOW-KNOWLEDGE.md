@@ -284,6 +284,13 @@ bars. A piece longer than the pipe is an error, never split. Glazing clip = whol
 - A roller clip's head must rest on the U lips (head ≥ U mouth). Euro 26 and Gulf 31 keep
   BH-2559 (Banu Hashim's "Euro Roller Clip"); 6513 would change the shutter by only 0.1 mm.
 - Gulf 30: the top track is the Bottom Gulf too (founder).
+- 992325 is a jali shutter (founder), not an interlock.
+- Gulf 25 / 31 have no interlock clip in their catalogue: the app shows the Euro 26 clip
+  BH-6054 picture (founder: the cut is the same — shutter height, 2 per meeting).
+- Euro 27 double-glass slim 2730 is used on the 29 mm track (founder), though it hooks only ~0.9 mm on the drawings.
+- Banu Hashim has two 35 mm series: Gulf 35 (6500–6513, shutter 6510) and Sliding 35 × 75
+  (6701–6713, shutter 6712, slims 6707–6710). The app's Gulf 35 = Gulf tracks + the 6712
+  shutter (founder) + Gulf slims 6506–6509 (they hook at the 6501 pitch; 6707 does not).
 - Cross-check a section with the other catalogues: the same shape and size in another maker's book tells which series and which partner sections it belongs to.
 - Every N mm sliding system's shutter pieces must be N mm thick, every section's
   printed size must match its drawing, and every window must build from its

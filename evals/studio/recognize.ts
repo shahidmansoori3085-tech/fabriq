@@ -16,6 +16,7 @@ const KNOWN: [string, SectionRole, string][] = [
   ["41055", "glass-shutter", "Ample 29 shutter"],
   ["41074", "mesh-shutter", "Ample 37 jali shutter (founder)"],
   ["41085", "mesh-shutter", "Ample mini domal jali shutter (founder)"],
+  ["992325", "mesh-shutter", "Ample 29 jali shutter 992325 (founder 2026-11-15)"],
   ["41310-37", "mesh-shutter", "Ample 37 jali shutter 41310 (founder)"],
   ["214315", "glass-shutter", "Ample domal shutter"],
   ["41076", "double-glass-shutter", "Ample 37 double glass shutter (founder)"],

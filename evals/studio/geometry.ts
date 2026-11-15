@@ -44,6 +44,12 @@ function glassPlane(s: Sh): number | undefined {
   }
   return undefined;
 }
+/**
+ * Slots measured by hand on the enlarged catalogue drawing, where the trace closes the slot.
+ * BH-6709: Banu Hashim p.68 at 14.2 px/mm (89.86 = 1279 px, 31 = 442 px): slot mouth 13.8 mm,
+ * its centre 25.3 mm from the hook edge (6707: 24.95), 20 mm deep.
+ */
+const MEASURED_SLOT: Record<string, number> = { "BH-6709": 25.3 };
 /** A slim interlock's glass slot (on its face): centre across its thickness. */
 function slimSlot(s: Sh): number | undefined {
   const so = solidOf(s.paths); let best: { c: number; depth: number } | undefined;
@@ -80,14 +86,18 @@ const fails: string[] = [], notes: string[] = [];
  * Open questions for the founder: printed on every run (not failed) until he answers.
  * Key = the start of the check's text.
  */
-const DOUBTS: Record<string, string> = {
+const DOUBTS: Record<string, string> = {};
+/** Answered by the founder: a check that misses, but the shop does it this way. Printed, not failed. */
+const FOUNDER_OK: Record<string, string> = {
   "Euro 27 mm: slim 27 mm Slim Interlock — double glass — two slims hook":
-    "2730 hooks only ~0.9 mm on the 29 mm track (catalogue pairs hook 2.8–9.4) — ask whether shops use 2730 on this track",
+    "founder 2026-11-15: shops do use 2730 on the 29 mm track (it hooks ~0.9 mm on the drawings)",
 };
-const doubts: string[] = [];
+const doubts: string[] = [], accepted: string[] = [];
 const say = (ok: boolean, msg: string) => {
   const d = Object.keys(DOUBTS).find((k) => msg.startsWith(k));
-  if (!ok && d) doubts.push(`${msg} — ${DOUBTS[d]}`);
+  const f = Object.keys(FOUNDER_OK).find((k) => msg.startsWith(k));
+  if (!ok && f) accepted.push(`${msg} — ${FOUNDER_OK[f]}`);
+  else if (!ok && d) doubts.push(`${msg} — ${DOUBTS[d]}`);
   else if (!ok) fails.push(msg);
   else if (report) console.log("  ✓ " + msg);
 };
@@ -141,7 +151,7 @@ for (const sys of TEMPLATES) {
     const track = trackPart ? shapeOf(prof(trackPart.profile.find((x) => matches(x.when, { ...defaults, tracks: "2" }))?.id ?? "")) : undefined;
     const plane = lock ? glassPlane(lock) : undefined, P = track ? pitch(track) : undefined;
     for (const o of meet?.options ?? []) {
-      const sl = shapeOf(prof(o.value)); const c = sl ? slimSlot(sl) : undefined;
+      const sl = shapeOf(prof(o.value)); const c = sl ? (MEASURED_SLOT[sl.code] ?? slimSlot(sl)) : undefined;
       if (!sl || c === undefined || plane === undefined || !lock || P === undefined) { notes.push(`${sys.name}: slim ${o.label} — glass line not measurable on the drawings`); continue; }
       const sides = [c, sl.w - c], shutterSides = [plane, lock.h - plane];
       const off = (a: number) => Math.min(...shutterSides.map((b) => Math.abs(a - b)));
@@ -198,6 +208,7 @@ for (const sys of TEMPLATES) {
 }
 
 if (notes.length) console.log("Not checked:\n - " + notes.join("\n - "));
+if (accepted.length) console.log("Founder confirmed (shop practice):\n - " + accepted.join("\n - "));
 if (doubts.length) console.log("Open questions for the founder:\n - " + doubts.join("\n - "));
 if (fails.length) { console.error(`\ngeometry: ${fails.length} failed\n - ` + fails.join("\n - ")); process.exit(1); }
 console.log("geometry: every system's sections, series and built window agree with the drawings ✓");

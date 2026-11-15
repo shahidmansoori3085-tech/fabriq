@@ -587,7 +587,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     prof("a29_shutter_b", "29 mm Shutter (light)", "shutter", { ample: "914900" }, "65×29", perM(0.705), CATALOGUE("Ample 29 mm p.3")),
     prof("a29_shutter_54", "29 mm Section 914698 (not used in shops)", "shutter", { ample: "914698" }, "54×29", perM(0.617), CATALOGUE("Ample 29 mm p.3")),
     prof("a29_mesh", "29 mm Mesh (Jali) Shutter", "mesh-shutter", { ample: "41050" }, "65×29", perM(0.816), CATALOGUE("Ample 29 mm p.3 — jali shutter (founder)")),
-    prof("a29_interlock_b", "29 mm Interlock (heavy)", "interlock", { ample: "992325" }, "65×29", perM(0.865), DRAWING("Ample 29 mm p.7")),
+    prof("a29_interlock_b", "29 mm Jali Shutter (992325)", "mesh-shutter", { ample: "992325" }, "65×29", perM(0.865), DRAWING("Ample 29 mm p.7")),
     prof("a29_slim_40", "29 mm Slim Interlock 40", "slim-interlock", { ample: "41289" }, "40×29", perM(0.672), CATALOGUE("Ample 29 mm p.5"), { faceMm: 40 }),
     // slim interlocks of the 29 mm series (Eleanor p.33): slot 29, fits the 29 mm shutter — founder 2026-11-14
     prof("el29_slim", "29 mm Slim Interlock — small", "slim-interlock", { eleanor: "2913" }, "34.3×25", { value: 2.05, perFt: 12 }, CATALOGUE("Eleanor 29 mm p.33 — small slim")),
@@ -1142,9 +1142,14 @@ withMeetChoice(EURO_26, { lock: "bh_6003", clip: "bh_6054", glassW: 118.2, src: 
 EURO_35.profiles.push(DOMAL_35.profiles.find((p) => p.id === "d35_clip")!);
 BH_35.profiles.push(DOMAL_35.profiles.find((p) => p.id === "d35_clip")!);
 withMeetChoice(EURO_35, { lock: "e35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
-// Gulf series: the catalogue has no interlock clip (slim interlocks only) — the shop picks its own.
-withMeetChoice(GULF_25, { lock: "bh_2555", clip: "", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
-withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
+// Gulf 25 / 31: the catalogue has no interlock clip of its own. Founder (2026-11-15): show
+// another series' clip picture — the cut is the same (shutter height, 2 per meeting).
+const GULF_CLIP_PIC: ProfileDef = { ...EURO_26.profiles.find((x) => x.id === "bh_6054")!, id: "gulf_clip_pic",
+  source: CATALOGUE("Banu Hashim p.41 — picture of the Euro 26 clip BH-6054; the Gulf 25 / 31 catalogue has none (founder: the cut is the same)") };
+GULF_25.profiles.push(GULF_CLIP_PIC);
+BH_31.profiles.push(GULF_CLIP_PIC);
+withMeetChoice(GULF_25, { lock: "bh_2555", clip: "gulf_clip_pic", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
+withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "gulf_clip_pic", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
 withMeetChoice(BH_35, { lock: "bh35_shutter", clip: "d35_clip", glassW: 118, src: "glass stops 59.0 mm in (BH-6712)" });
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
