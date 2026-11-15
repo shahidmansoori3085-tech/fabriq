@@ -20,7 +20,7 @@ import {
 import { PieceTooLongError } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
-import { markInstalls, markSource, markStep } from "@/lib/track";
+import { markInstalls, markMade, markSource, markStep } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
 import {
@@ -394,8 +394,12 @@ export default function FabriQ() {
     if (window.history.state?.fabriq === "settings") window.history.back();
     else setShowSettings(false);
   };
-  const showResult = () => {
+  const showResult = (job: JobItem[] = items) => {
     markStep("material-list");
+    markMade(job.map((it) => ({
+      type: it.type, system: it.system, label: typeLabel(it),
+      wFt: it.width / 304800, hFt: it.height / 304800, qty: it.qty,
+    })), readUnit());
     window.history.pushState({ fabriq: "result" }, "");
     setView("result");
     window.scrollTo({ top: 0 });
@@ -496,7 +500,7 @@ export default function FabriQ() {
     lastSaved.current = JSON.stringify([p.items, p.customer ?? ""]);
     setItems(p.items);
     setJobName(p.customer ?? "");
-    showResult();
+    showResult(p.items);
   };
 
   return (
@@ -510,7 +514,7 @@ export default function FabriQ() {
           onAdd={addItem}
           onReplace={replaceItem}
           onRemove={removeItem}
-          onDone={showResult}
+          onDone={() => showResult()}
           onSettings={openSettings}
           onDemo={openDemo}
           recent={recent}
