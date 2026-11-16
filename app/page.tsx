@@ -2204,6 +2204,19 @@ function totalLines(groups: BarGroup[]): string[] {
 function pipeCount(full: number, pieces: number): string {
   return full && pieces ? `${full} + ${pieces}` : String(full || pieces);
 }
+/** What to buy as the shop says it: "1 + 4 ft" = one full pipe and a piece cut to 4 ft (founder). */
+function pipeQty(groups: BarGroup[]): string {
+  const full = groups.reduce((a, g) => a + g.full, 0);
+  const ft = groups.reduce((a, g) => a + g.pieces.reduce((x, y) => x + y, 0), 0);
+  return full && ft ? `${full} + ${ft} ft` : full ? String(full) : `${ft} ft`;
+}
+/** Under it: "16′ pipe + piece", "16′ pipes", "piece". */
+function pipeQtyWord(groups: BarGroup[]): string {
+  const full = groups.reduce((a, g) => a + g.full, 0);
+  const pieces = groups.reduce((a, g) => a + g.pieces.length, 0);
+  const len = groups.find((g) => g.full)?.ft;
+  return [full ? `${len}′ ${full > 1 ? "pipes" : "pipe"}` : "", pieces ? (full ? "piece" : "cut piece") : ""].filter(Boolean).join(" + ") || "pipes";
+}
 const pipeWord = (full: number, pieces: number) =>
   [full ? (full > 1 ? "pipes" : "pipe") : "", pieces ? (pieces > 1 ? "pieces" : "piece") : ""].filter(Boolean).join(" + ") || "pipes";
 const groupsCount = (groups: BarGroup[]) =>
@@ -2287,7 +2300,7 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
                 image: hasImage(s.sectionId) ? imageSrc(s.sectionId) : undefined,
                 label: sec.label,
                 sub: sec.size ? `${sec.size} mm` : undefined,
-                qty: pipeCount(s.bars16, s.bars8),
+                qty: pipeQty(s.stock),
                 qtySub: groupsText(s.stock),
               };
             })}
@@ -2413,8 +2426,8 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-2xl font-extrabold leading-none tabnum">{pipeCount(s.bars16, s.bars8)}</div>
-                <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{pipeWord(s.bars16, s.bars8)}</div>
+                <div className="text-2xl font-extrabold leading-none tabnum">{pipeQty(s.stock)}</div>
+                <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{pipeQtyWord(s.stock)}</div>
               </div>
               <DotsMenu label={`${sec.label} options`} items={[
                 { label: "View details", onClick: () => setSecView(s.sectionId) },
@@ -2689,7 +2702,6 @@ function CuttingPanel({ list, shop, items, jobName }: {
       {sectionGroups.map(([sectionId, bars]) => {
         const sec = getSection(sectionId);
         const [st] = stockGroups(sectionId, bars);
-        const full = st.full, pieces = st.pieces.length;
         return (
           <div key={sectionId} className="card overflow-hidden">
             {/* one header: the section as he knows it (profile, name, size) and
@@ -2703,7 +2715,7 @@ function CuttingPanel({ list, shop, items, jobName }: {
                 {sec.size && <div className="mono mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</div>}
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-sm font-bold tabnum">{pipeCount(full, pieces)} {pipeWord(full, pieces)}</div>
+                <div className="text-sm font-bold tabnum">{pipeQty([st])} <span className="font-normal">{pipeQtyWord([st])}</span></div>
                 <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(st)}</div>
               </div>
             </div>
