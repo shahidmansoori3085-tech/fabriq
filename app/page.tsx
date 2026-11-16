@@ -32,15 +32,16 @@ import { evaluate } from "@/lib/studio/evaluate";
 import { markInstalls, markMade, markSource, markStep, markVisitor } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
-import {
-  getSection,
-} from "@/lib/engine/sections";
+import { getSection, setJobBarLengths, jobBarLengths } from "@/lib/engine/sections";
+import { Sheet } from "@/components/studio-ui";
 import { reviewEstimate } from "@/lib/engine/review";
 import type {
   JobItem, MaterialList, OpeningType, PackedBar, CutPiece, ReviewFinding,
 } from "@/lib/engine/types";
 import { CuttingGuide, MiniElevation, PartitionGapPicture, DoorScopePicture } from "@/components/diagrams";
 import { SectionProfile, hasImage, imageSrc } from "@/components/section-profiles";
+import { DotsMenu, SystemSheet, SectionSheet } from "@/components/details";
+import { loadLibrary as loadStudioLibrary, findProfile as findStudioProfile } from "@/lib/studio/store";
 import { EngineeringSheet } from "@/components/eng-sheet";
 import { SupplierOrderDoc } from "@/components/supplier-doc";
 import { sharePdfToWhatsApp, elementToPdfBlob, whatsAppLink, type ShareResult } from "@/lib/pdf";
@@ -190,6 +191,7 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
  * 2026-11-13). A system the shop changed in Settings is used in place of
  * the built-in one; Normal 18, Domal 27 and Z run on the checked engine
  * until then. */
+const PINS_KEY = "fabriq.pinnedSystems";
 const KINDS: [string, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["euro", "Euro"], ["gulf", "Gulf"], ["casement", "Casement (Z)"], ["mine", "My own"]];
 interface WinChoice { sys: WinSys; title: string; sub: string; pic: StudioSystem | undefined }
 /** Normal 18 comes in two shutter sections (founder): the choice is named by its section. */
@@ -678,6 +680,7 @@ export default function FabriQ() {
           onBack={backToJob}
           onNew={newJob}
           onScrap={(pct) => { if (projectId.current) patchProject(projectId.current, { scrapPct: pct }); }}
+          onItems={setItems}
         />
       )}
       {demo && <DemoModal onClose={closeDemo} />}
@@ -863,6 +866,15 @@ function JobScreen({
   const [flow, setFlow] = useState<{ step: StepId; editing: string | null; start: StepId } | null>(null);
   /** the window-system list's tab: all, or one kind */
   const [sysTab, setSysTab] = useState<string>("all");
+  /** systems the shop pinned to the top of the list (this phone) */
+  const [pins, setPins] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(PINS_KEY) || "[]"); } catch { return []; } });
+  const togglePin = (key: string) => setPins((cur) => {
+    const next = cur.includes(key) ? cur.filter((x) => x !== key) : [key, ...cur];
+    try { localStorage.setItem(PINS_KEY, JSON.stringify(next)); } catch { /* this visit only */ }
+    return next;
+  });
+  /** a window system opened from its ⋮ menu (View) */
+  const [sysView, setSysView] = useState<{ sys: StudioSystem; title: string } | null>(null);
   /** Which partition the divider screens are on (index into readyIdx). */
   const [part, setPart] = useState(0);
   /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
@@ -1220,28 +1232,47 @@ function JobScreen({
                 ))}
               </div>
               <div className="flex flex-col gap-2">
-                {kinds.flatMap((k) => {
-                  if (k === "bombay") {
-                    if (!normal.length) return [];
-                    const pic = normal[0].pic;
-                    return [<Choice wide key="bombay" selected={o.kind === "bombay"}
-                      onClick={() => choose({ kind: "bombay", ...sysPatch(normal.some((c) => c.sys === o.sys) ? o.sys : normal[0].sys) })}
-                      title="Normal 18 mm" sub={normal.length > 1 ? "Shutter 1½″ or 2½″" : ""}
-                      picture={pic ? <span className="block w-24"><StudioThumb sys={pic} withTrack /></span> : undefined} />];
-                  }
-                  return windowChoices(k).map((c) => {
-                    // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
-                    const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
-                    const ready = !st || studioReady(st);
-                    return (
-                      <Choice wide key={c.sys} selected={o.sys === c.sys}
-                        onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose({ kind: k, ...sysPatch(c.sys) }); }}
-                        title={c.title} sub={ready ? c.sub : "Not ready yet — finish it in Settings"}
-                        picture={c.pic ? <span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
-                    );
+                {(() => {
+                  const edit = (sys: StudioSystem) => () => { window.location.href = `/studio?open=${encodeURIComponent(sys.id)}`; };
+                  const row = (key: string, title: string, sub: string, selected: boolean, pick: () => void, pic: StudioSystem | undefined, faded = false) => {
+                    const pinned = pins.includes(key);
+                    return {
+                      key, pinned, node: (
+                        // the ⋯ sits inside the card, at its right edge; the card stays full width
+                        <div key={key} className="relative">
+                          <Choice wide menu={!!pic} selected={selected} onClick={pick} title={title} sub={[pinned ? "Pinned" : "", sub].filter(Boolean).join(" · ")}
+                            picture={pic ? <span className="block w-24" style={{ opacity: faded ? 0.5 : 1 }}><StudioThumb sys={pic} withTrack /></span> : undefined} />
+                          {pic && <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                            <DotsMenu label={`${title} options`} items={[
+                              { label: "View details", onClick: () => setSysView({ sys: pic, title }) },
+                              { label: "Edit", onClick: edit(pic) },
+                              { label: pinned ? "Unpin" : "Pin to top", onClick: () => togglePin(key) },
+                            ]} />
+                          </div>}
+                        </div>
+                      ),
+                    };
+                  };
+                  const rows = kinds.flatMap((k) => {
+                    if (k === "bombay") {
+                      if (!normal.length) return [];
+                      return [row("bombay", "Normal 18 mm", normal.length > 1 ? "Shutter 1½″ or 2½″" : "", o.kind === "bombay",
+                        () => choose({ kind: "bombay", ...sysPatch(normal.some((c) => c.sys === o.sys) ? o.sys : normal[0].sys) }), normal[0].pic)];
+                    }
+                    return windowChoices(k).map((c) => {
+                      // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
+                      const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
+                      const ready = !st || studioReady(st);
+                      return row(c.sys, c.title, ready ? c.sub : "Not ready yet — finish it in Settings", o.sys === c.sys,
+                        () => { if (!ready) { window.location.href = "/studio"; return; } choose({ kind: k, ...sysPatch(c.sys) }); }, c.pic, !ready);
+                    });
                   });
-                })}
+                  // pinned systems first, the rest in their usual order
+                  return [...rows.filter((r) => r.pinned), ...rows.filter((r) => !r.pinned)].map((r) => r.node);
+                })()}
               </div>
+              {sysView && <SystemSheet sys={sysView.sys} title={sysView.title} onClose={() => setSysView(null)}
+                onEdit={() => { window.location.href = `/studio?open=${encodeURIComponent(sysView.sys.id)}`; }} />}
             </div>
           );
         })()}
@@ -1971,8 +2002,10 @@ function MiniQty({ value, onChange, label }: { value: number; onChange: (n: numb
 }
 
 /** One answer, as a picture with its name — tap to choose. */
-function Choice({ picture, title, sub, label, selected, onClick, wide }: {
+function Choice({ picture, title, sub, label, selected, onClick, wide, menu }: {
   picture: React.ReactNode; title?: string; sub?: string; selected: boolean; onClick: () => void; wide?: boolean;
+  /** leave room at the right for a ⋯ menu laid over the card */
+  menu?: boolean;
   /** a second name over the picture (then the title goes under it) */
   label?: string;
 }) {
@@ -1983,7 +2016,7 @@ function Choice({ picture, title, sub, label, selected, onClick, wide }: {
   const second = wide && label ? title : undefined;
   return (
     <button onClick={onClick} aria-pressed={selected}
-      className={`chip flex ${wide ? "flex-row items-center gap-4 px-4 py-3 text-left" : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
+      className={`chip flex ${wide ? `w-full flex-row items-center gap-4 py-3 pl-4 text-left ${menu ? "pr-14" : "pr-4"}` : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
       {above && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{above}</span>}
       <span className={`grid shrink-0 place-items-center ${wide ? "w-24" : "min-h-[72px] w-full"}`}>{picture}</span>
       {(below || sub || second) && (
@@ -2010,8 +2043,10 @@ function timeAgo(ts: number): string {
 
 type Tab = "material" | "cutting";
 
-function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
+function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
   items: JobItem[];
+  /** the material list changes the job (a pipe length, another section) */
+  onItems: (next: JobItem[]) => void;
   shop: ShopProfile;
   jobName: string;
   onBack: () => void;
@@ -2038,6 +2073,8 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
 
   const { list, error } = useMemo(() => {
     try {
+      // the pipe lengths this job asks for hold while it is open
+      setJobBarLengths(jobBarLengths(items));
       return { list: estimate(items), error: null as string | null };
     } catch (e) {
       if (e instanceof ImpossibleLayoutError) {
@@ -2059,6 +2096,8 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
     }
   }, [items]);
 
+  // leaving the job: other screens go back to each section's own pipe length
+  useEffect(() => () => setJobBarLengths({}), []);
   const scrap = list?.totals.wastePct;
   useEffect(() => {
     if (scrap !== undefined) onScrap(scrap);
@@ -2110,7 +2149,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
       {tab === "material" && <ShareAppBanner />}
 
       {tab === "material"
-        ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />
+        ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} onItems={onItems} />
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
 
       <ShareAppCard />
@@ -2174,10 +2213,54 @@ const groupsWord = (groups: BarGroup[]) =>
 
 /* —— material list —— */
 
-function MaterialPanel({ list, shop, items, jobName }: {
-  list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;
+function MaterialPanel({ list, shop, items, jobName, onItems }: {
+  list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string; onItems: (next: JobItem[]) => void;
 }) {
+  /** the ⋮ sheets: pipe length or another section for one section of this job */
+  const [secPipe, setSecPipe] = useState<string | null>(null);
+  const [secSwap, setSecSwap] = useState<string | null>(null);
+  const setPipe = (sid: string, ft: number | null) => {
+    const next = items.map((it) => {
+      const meta = { ...it.meta };
+      if (ft) meta[`pipe_${sid}`] = String(ft); else delete meta[`pipe_${sid}`];
+      return { ...it, meta };
+    });
+    // a piece longer than the pipe cannot be cut: say so and keep the job as it is
+    try { setJobBarLengths(jobBarLengths(next)); estimate(next); }
+    catch (e) {
+      setJobBarLengths(jobBarLengths(items));
+      if (e instanceof PieceTooLongError) { window.alert(`One piece is ${formatFtInSut(e.piece.length)} long. A ${ft} ft pipe is too short for it.`); return; }
+      throw e;
+    }
+    onItems(next); setSecPipe(null);
+  };
+  /** the other sections this piece can be, as the window's own system offers them */
+  const swapsOf = (sid: string) => {
+    const out = new Map<string, string>();
+    for (const it of items) {
+      const sys = it.system === "studio" ? systemOfItem(it) : undefined;
+      for (const sw of sys?.switches ?? []) if (sw.id.startsWith("pick_") && sw.options.some((op) => op.value === sid))
+        // a big slim goes with a small one only (founder): it is chosen in the window steps, not here
+        for (const op of sw.options) if (op.value !== sid && !/\bbig\b/i.test(op.label)) out.set(op.value, op.label);
+    }
+    return [...out.entries()];
+  };
+  const swapTo = (sid: string, to: string) => {
+    onItems(items.map((it) => {
+      const sys = it.system === "studio" ? systemOfItem(it) : undefined;
+      const sw = sys?.switches.find((x) => x.id.startsWith("pick_") && x.options.some((op) => op.value === sid) && x.options.some((op) => op.value === to));
+      if (!sw) return it;
+      let cur: Record<string, string> = {};
+      try { cur = JSON.parse(it.meta.studioSwitches || "{}"); } catch { /* none */ }
+      const meta: Record<string, string> = { ...it.meta, studioSwitches: JSON.stringify({ ...cur, [sw.id]: to }) };
+      if (meta.studioPerShutter) meta.studioPerShutter = meta.studioPerShutter.split(`"${sid}"`).join(`"${to}"`);
+      return { ...it, meta };
+    }));
+    setSecSwap(null);
+  };
   const aluDocRef = useRef<HTMLDivElement>(null);
+  /** a section opened from its ⋮ menu (View) */
+  const [secView, setSecView] = useState<string | null>(null);
   const glassDocRef = useRef<HTMLDivElement>(null);
   const today = useMemo(() => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }), []);
 
@@ -2276,6 +2359,40 @@ function MaterialPanel({ list, shop, items, jobName }: {
         )}
       </div>
 
+      {secView && <SectionSheet sectionId={secView} pieces={cutRows(list.bars.filter((b) => b.sectionId === secView))} onClose={() => setSecView(null)}
+        onEdit={findStudioProfile(loadStudioLibrary(), secView) ? () => { window.location.href = `/studio?section=${encodeURIComponent(secView)}`; } : undefined} />}
+      {secPipe && (() => {
+        const now = getSection(secPipe).barLengthFt ?? 16;
+        setJobBarLengths({});
+        const own = getSection(secPipe).barLengthFt ?? 16;
+        setJobBarLengths(jobBarLengths(items));
+        return (
+          <Sheet title="Pipe length" sub={`${getSection(secPipe).name} · this job only`} onClose={() => setSecPipe(null)}>
+            <div className="flex flex-col gap-2">
+              {[...new Set([12, 15, 16, own])].sort((x, y) => x - y).map((ft) => (
+                <button key={ft} type="button" aria-pressed={now === ft} onClick={() => setPipe(secPipe, ft === own ? null : ft)}
+                  className={`chip flex items-center justify-between px-4 py-3 text-left ${now === ft ? "selected" : ""}`}>
+                  <span className="text-base font-bold">{ft} ft</span>
+                  <span className="text-xs" style={{ color: "var(--ink-3)" }}>{ft === own ? "Usual" : ""}</span>
+                </button>
+              ))}
+            </div>
+          </Sheet>
+        );
+      })()}
+      {secSwap && (
+        <Sheet title="Change section" sub={`Instead of ${getSection(secSwap).name}, in every window of this job`} onClose={() => setSecSwap(null)}>
+          <div className="flex flex-col gap-2">
+            {swapsOf(secSwap).map(([id, label]) => (
+              <button key={id} type="button" onClick={() => swapTo(secSwap, id)} className="chip flex items-center gap-3 px-3 py-2.5 text-left">
+                <span className="shrink-0" style={{ width: 84 }}><SectionProfile sectionId={id} w={80} h={52} /></span>
+                <span className="text-sm font-semibold">{label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs" style={{ color: "var(--ink-3)" }}>Glass and other sizes follow the new section.</p>
+        </Sheet>
+      )}
       {/* aluminium: one row per section — drawing first, that is what he recognises */}
       <div className="card overflow-hidden">
         <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
@@ -2299,6 +2416,12 @@ function MaterialPanel({ list, shop, items, jobName }: {
                 <div className="text-2xl font-extrabold leading-none tabnum">{pipeCount(s.bars16, s.bars8)}</div>
                 <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{pipeWord(s.bars16, s.bars8)}</div>
               </div>
+              <DotsMenu label={`${sec.label} options`} items={[
+                { label: "View details", onClick: () => setSecView(s.sectionId) },
+                ...(findStudioProfile(loadStudioLibrary(), s.sectionId) ? [{ label: "Edit section", onClick: () => { window.location.href = `/studio?section=${encodeURIComponent(s.sectionId)}`; } }] : []),
+                { label: "Pipe length", onClick: () => setSecPipe(s.sectionId) },
+                ...(swapsOf(s.sectionId).length ? [{ label: "Change section", onClick: () => setSecSwap(s.sectionId) }] : []),
+              ]} />
             </div>
           );
         })}

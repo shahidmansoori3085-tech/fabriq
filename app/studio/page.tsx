@@ -17,7 +17,7 @@ import { findProfile } from "../../lib/studio/store";
 import StudioThumb from "../../components/studio-thumb";
 import { SectionLibrary } from "../../components/studio/section-library";
 
-type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string; tab?: "teach" } | { kind: "sections" };
+type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string; tab?: "teach" } | { kind: "sections"; open?: string };
 const UNIT_KEY = "fabriq_studio_unit";
 
 
@@ -41,10 +41,33 @@ export default function StudioPage() {
 
   useEffect(() => {
     // localStorage exists only in the browser: read it once after mounting.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLib(loadLibrary());
+    /* eslint-disable react-hooks/set-state-in-effect */
+    let l = loadLibrary();
+    setLib(l);
     const st = window.history.state?.studio as View | undefined;
     if (st) setView(st);
+    // opened from a window's or a section's menu: /studio?open=<system> or ?section=<section>
+    const q = new URLSearchParams(window.location.search);
+    const openSys = q.get("open"), openSec = q.get("section");
+    let to: View | undefined;
+    if (openSys) {
+      // a built-in system opens as the shop's own copy (the same as tapping it on the list)
+      const own = l.systems.find((x) => x.id === openSys) ?? [...l.systems].reverse().find((x) => x.basedOn?.id === openSys);
+      if (own) to = { kind: "system", id: own.id };
+      else if (TEMPLATES.some((t) => t.id === openSys)) {
+        const c = copyTemplate(openSys);
+        l = { ...l, systems: [...l.systems, c] };
+        saveLibrary(l); setLib(l);
+        to = { kind: "system", id: c.id };
+      }
+    } else if (openSec) to = { kind: "sections", open: openSec };
+    if (to) {
+      // the list sits under it, so Back goes to the list and then back to the job
+      window.history.replaceState({ ...(window.history.state ?? {}), studio: undefined }, "", "/studio");
+      window.history.pushState({ ...(window.history.state ?? {}), studio: to }, "", "/studio");
+      setView(to);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
     try { const u = localStorage.getItem(UNIT_KEY); if (u === "mm" || u === "ft") setUnit(u); } catch { /* inch stays */ }
   }, []);
 
@@ -101,7 +124,7 @@ export default function StudioPage() {
       ) : view.kind === "new" ? (
         <NewSystem lib={lib} onPick={create} onBack={() => go({ kind: "home" })} />
       ) : view.kind === "sections" ? (
-        <SectionLibrary lib={lib} onSave={addProfile}
+        <SectionLibrary lib={lib} onSave={addProfile} initialOpen={view.kind === "sections" ? view.open : undefined}
           onRemove={(id) => commit({ ...lib, profiles: lib.profiles.filter((p) => p.id !== id) })}
           onBack={() => go({ kind: "home" })}
           onOpenSystem={(id, tab) => {

@@ -50,8 +50,10 @@ function origin(p: ProfileDef, lib: StudioLibrary): string {
   return `Catalogue section${pg ? ` (${pg})` : ""}`;
 }
 
-export function SectionLibrary({ lib, onSave, onRemove, onBack, onOpenSystem }: {
+export function SectionLibrary({ lib, onSave, onRemove, onBack, onOpenSystem, initialOpen }: {
   lib: StudioLibrary;
+  /** a section to show at once (opened from the material list) */
+  initialOpen?: string;
   onSave: (p: ProfileDef) => void;
   onRemove: (id: string) => void;
   onBack: () => void;
@@ -59,7 +61,7 @@ export function SectionLibrary({ lib, onSave, onRemove, onBack, onOpenSystem }: 
   onOpenSystem: (id: string, tab?: "teach") => void;
 }) {
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const [form, setForm] = useState<Partial<ProfileDef> | null>(null);
   const [notice, setNotice] = useState<{ id: string; from: string; to: string } | null>(null);
 

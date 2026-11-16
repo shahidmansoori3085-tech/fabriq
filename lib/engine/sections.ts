@@ -230,10 +230,24 @@ export function registerCustomSections(list: Section[]): void {
   for (const s of list) if (!SECTIONS[s.id]) CUSTOM_SECTIONS[s.id] = s;
 }
 
+/** Pipe lengths the open job asks for, by section (the shop picked them on the material list). */
+let JOB_BAR_FT: Record<string, number> = {};
+export function setJobBarLengths(m: Record<string, number>): void { JOB_BAR_FT = m; }
+/** The pipe-length choices of a job, read from its items ("pipe_<section>" = feet). */
+export function jobBarLengths(items: { meta: Record<string, string> }[]): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const it of items) for (const [k, v] of Object.entries(it.meta)) {
+    const ft = parseFloat(v);
+    if (k.startsWith("pipe_") && ft > 0 && !m[k.slice(5)]) m[k.slice(5)] = ft;
+  }
+  return m;
+}
+
 export function getSection(id: string): Section {
   const s = SECTIONS[id] ?? CUSTOM_SECTIONS[id];
   if (!s) throw new Error(`Unknown section: ${id}`);
-  return s;
+  const ft = JOB_BAR_FT[id];
+  return ft ? { ...s, barLengthFt: ft } : s;
 }
 
 /* ————————————————— catalogue brand ————————————————— */
