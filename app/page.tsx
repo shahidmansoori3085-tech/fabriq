@@ -194,8 +194,8 @@ const KINDS: [string, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["e
 interface WinChoice { sys: WinSys; title: string; sub: string; pic: StudioSystem | undefined }
 /** Normal 18 comes in two shutter sections (founder): the choice is named by its section. */
 const SHUTTER_SECTION: Record<string, [string, string]> = {
-  "normal-18": ["1½″ × ¾″", "Normal 18 mm · 40 × 18"],
-  "normal-18-60": ["2½″ × ¾″", "Normal 18 mm · 60 × 19"],
+  "normal-18": ["Normal 18 mm", "Shutter 1½″ × ¾″"],
+  "normal-18-60": ["Normal 18 mm · 2½″ shutter", "Shutter 2½″ × ¾″"],
 };
 function windowChoices(kind: string): WinChoice[] {
   const own = studioSystems();
@@ -248,16 +248,17 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
     return (n.split(" — ")[1] ?? n.replace(/^\d+ mm /, "")).replace(/\s*\(.*?\)/g, "");
   };
   const out: MeetChoice[] = [];
+  const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
   const slim: Record<string, string> = meet ? { meet: "slim" } : {};
   // only glass shutters carry a slim interlock: with one glass shutter it is just "small", "big"…
   const glass = [...mix].filter((k) => k !== "J").length;
-  if (meet) out.push({ key: "clip", title: glass >= 2 ? "Shutter + interlock clip" : "Shutter section", sw: { meet: "clip" }, per: [], pics: [] });
+  if (meet) out.push({ key: "clip", title: glass >= 2 ? "Interlock clip" : "Shutter section", sw: { meet: "clip" }, per: [], pics: [] });
   if (pick) {
     // a big slim goes with a small one, never two big (founder 2026-11-16)
-    for (const op of pick.options) if (!(glass >= 2 && /^big/i.test(short(op.value)))) out.push({ key: `both-${op.value}`, title: glass >= 2 ? `Slim interlock · both ${short(op.value)}` : `Slim interlock · ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
+    for (const op of pick.options) if (!(glass >= 2 && /^big/i.test(short(op.value)))) out.push({ key: `both-${op.value}`, title: glass >= 2 ? `${cap(short(op.value))} slim on both shutters` : `${cap(short(op.value))} slim`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
     if (pick.options.length >= 2 && glass >= 2) {
       const [a, b] = pick.options;
-      out.push({ key: "mixed", title: `Slim interlock · one ${short(a.value)}, one ${short(b.value)}`, sw: { ...slim, [PICK_MEET]: a.value }, per: [{ [PICK_MEET]: a.value }, { [PICK_MEET]: b.value }], pics: [] });
+      out.push({ key: "mixed", title: `${cap(short(a.value))} slim + ${short(b.value)} slim`, sw: { ...slim, [PICK_MEET]: a.value }, per: [{ [PICK_MEET]: a.value }, { [PICK_MEET]: b.value }], pics: [] });
     }
   } else if (meet) out.push({ key: "slim", title: "Slim interlock", sw: slim, per: [], pics: [] });
   // keep what can be cut; the picture is the real meeting section(s)
@@ -744,7 +745,8 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const kind: StepId[] = o.partSys === "z" ? ["zProfile", ...door] : door;
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
-  const head: StepId[] = ["type", "kind", ...(windowChoices(o.kind).length > 1 ? ["system" as const] : [])];
+  // Window, then one list of every window system (Normal 18 mm first, then Domal 20 mm…)
+  const head: StepId[] = ["type", "system"];
   if (o.sys.startsWith("studio:")) {
     const st = studioSystem(o.sys.slice(7));
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
@@ -770,11 +772,11 @@ const STEP_TITLE: Record<StepId, string> = {
   type: "What are you making?",
   kind: "Window type",
   studioOpts: "Sections",
-  meet: "Meeting side",
-  system: "Which series?",
+  meet: "Interlock",
+  system: "Window system",
   normalSection: "Shutter section",
-  tracks: "Number of tracks",
-  mix: "Shutter types",
+  tracks: "Tracks",
+  mix: "Shutters",
   domalFix: "Fixed glass on top?",
   zType: "Casement type",
   zDir: "Where is the fixed glass?",
@@ -1182,7 +1184,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · Step {i + 1}
             </div>
-            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : flow.step === "system" && o.kind === "bombay" ? "Shutter section?" : STEP_TITLE[flow.step]}</h1>
+            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
@@ -1201,33 +1203,17 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "kind" && (
-          <div className="grid grid-cols-2 gap-2">
-            {KINDS.map(([k, label]) => {
-              const ch = windowChoices(k);
-              if (!ch.length) return null;
-              const sizes = [...new Set(WINDOW_SYSTEMS.filter((w) => w.kind === k).map((w) => w.mm))];
-              return (
-                <Choice key={k} selected={o.kind === k}
-                  onClick={() => (ch.length === 1 ? choose({ kind: k, ...sysPatch(ch[0].sys) }) : choose({ kind: k }))}
-                  title={label} sub={sizes.length ? `${sizes.join(" · ")} mm` : `${ch.length} saved`}
-                  picture={ch[0].pic ? <span className="block w-28"><StudioThumb sys={ch[0].pic} withTrack /></span> : undefined} />
-              );
-            })}
-          </div>
-        )}
-
         {flow.step === "system" && (
-          <div className="grid grid-cols-2 gap-2">
-            {windowChoices(o.kind).map((c) => {
+          <div className="flex flex-col gap-2">
+            {KINDS.flatMap(([k]) => windowChoices(k).map((c) => ({ ...c, k }))).map((c) => {
               // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
               const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
               const ready = !st || studioReady(st);
               return (
-                <Choice key={c.sys} selected={o.sys === c.sys}
-                  onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose(sysPatch(c.sys)); }}
+                <Choice wide key={c.sys} selected={o.sys === c.sys}
+                  onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose({ kind: c.k, ...sysPatch(c.sys) }); }}
                   title={c.title} sub={ready ? c.sub : "Not ready yet — finish it in Settings"}
-                  picture={c.pic ? <span className="block w-28" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
+                  picture={c.pic ? <span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
               );
             })}
           </div>
@@ -1241,7 +1227,7 @@ function JobScreen({
               {(st ? otherSwitches(st) : []).map((x) => (
                 <div key={x.id}>
                   <div className="mb-2 text-sm font-semibold" style={{ color: "var(--ink-2)" }}>{x.label}</div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-2">
                     {x.options.map((op) => {
                       const on = (sw[x.id] ?? x.default) === op.value;
                       return (
@@ -1279,10 +1265,10 @@ function JobScreen({
         {flow.step === "tracks" && o.sys.startsWith("studio:") && (() => {
           const s = studioSystem(o.sys.slice(7));
           return (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               {(s?.layouts ?? []).map((l) => ({ l, ok: cutMixes(s!, l.tracks, parseSw(o.studioSw)) })).filter((x) => x.ok.length).map(({ l, ok }) => (
-                <Choice key={l.tracks} selected={o.tracks === String(l.tracks)} onClick={() => choose({ tracks: String(l.tracks), mix: ok[0] })}
-                  title={layoutLabel(s!, l.tracks)} picture={<span className="block w-28"><StudioThumb sys={s!} tracks={l.tracks} mix={ok[0]} /></span>} />
+                <Choice wide key={l.tracks} selected={o.tracks === String(l.tracks)} onClick={() => choose({ tracks: String(l.tracks), mix: ok[0] })}
+                  title={layoutLabel(s!, l.tracks)} picture={<span className="block w-24"><StudioThumb sys={s!} tracks={l.tracks} mix={ok[0]} /></span>} />
               ))}
             </div>
           );
@@ -1292,10 +1278,10 @@ function JobScreen({
           const s = studioSystem(o.sys.slice(7));
           const lay = s?.layouts.find((l) => String(l.tracks) === o.tracks) ?? s?.layouts[0];
           return (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               {(s && lay ? cutMixes(s, lay.tracks, parseSw(o.studioSw)) : []).map((mx) => (
-                <Choice key={mx} selected={o.mix === mx} onClick={() => choose({ mix: mx })} title={studioMixText(mx)}
-                  picture={<span className="block w-28"><StudioThumb sys={s!} tracks={lay!.tracks} mix={mx} /></span>} />
+                <Choice wide key={mx} selected={o.mix === mx} onClick={() => choose({ mix: mx })} title={studioMixText(mx)}
+                  picture={<span className="block w-24"><StudioThumb sys={s!} tracks={lay!.tracks} mix={mx} /></span>} />
               ))}
             </div>
           );
@@ -1318,45 +1304,45 @@ function JobScreen({
         )}
 
         {flow.step === "tracks" && !o.sys.startsWith("studio:") && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {TRACKS.map(([v, label]) => (
-              <Choice key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
-                picture={<MiniElevation item={sample("window", { ...noFix(o), tracks: v, mix: MIXES[v][0][0] })} size={110} />} />
+              <Choice wide key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
+                picture={<MiniElevation item={sample("window", { ...noFix(o), tracks: v, mix: MIXES[v][0][0] })} size={88} />} />
             ))}
           </div>
         )}
 
         {flow.step === "mix" && !o.sys.startsWith("studio:") && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {(MIXES[o.tracks] ?? MIXES["2"]).map(([v, label]) => (
-              <Choice key={v} selected={o.mix === v} onClick={() => choose({ mix: v })} title={label}
-                picture={<MiniElevation item={sample("window", { ...noFix(o), mix: v })} size={110} />} />
+              <Choice wide key={v} selected={o.mix === v} onClick={() => choose({ mix: v })} title={label}
+                picture={<MiniElevation item={sample("window", { ...noFix(o), mix: v })} size={88} />} />
             ))}
           </div>
         )}
 
         {flow.step === "domalFix" && (
-          <div className="grid grid-cols-2 gap-2">
-            <Choice selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} label="Full Sliding"
-              picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={100} />} />
-            <Choice selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" })} label="Fixed + Sliding"
-              picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={100} />} />
+          <div className="flex flex-col gap-2">
+            <Choice wide selected={o.domalFix === "no"} onClick={() => choose({ domalFix: "no" })} title="Full sliding"
+              picture={<MiniElevation item={sample("window", { ...o, domalFix: "no" })} size={88} />} />
+            <Choice wide selected={o.domalFix === "yes"} onClick={() => choose({ domalFix: "yes" })} title="Fixed glass on top"
+              picture={<MiniElevation item={sample("window", { ...o, domalFix: "yes" })} size={88} />} />
           </div>
         )}
 
         {flow.step === "zType" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {Z_TYPES.map(([v, label]) => (
-              <Choice key={v} selected={o.zType === v} label={label} onClick={() => choose({ zType: v })}
-                picture={<MiniElevation item={sample("window", { ...o, zType: v })} size={100} />} />
+              <Choice wide key={v} selected={o.zType === v} label={label} onClick={() => choose({ zType: v })}
+                picture={<MiniElevation item={sample("window", { ...o, zType: v })} size={88} />} />
             ))}
           </div>
         )}
 
         {flow.step === "zDir" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {Z_DIRS.map(([v]) => (
-              <Choice key={v} selected={o.zComboDir === v} label={Z_DIR_NAME[v]}
+              <Choice wide key={v} selected={o.zComboDir === v} label={Z_DIR_NAME[v]}
                 // fixed in the middle usually has one shutter each side
                 onClick={() => choose(v === "center" ? { zComboDir: v, zSash: "1" } : { zComboDir: v })}
                 picture={<MiniElevation item={sample("window", { ...o, zComboDir: v, ...(v === "center" ? { zSash: "1" } : {}) })} size={80} />} />
@@ -1365,9 +1351,9 @@ function JobScreen({
         )}
 
         {flow.step === "zSash" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             {(zMiddle ? Z_SASH.slice(0, 2) : Z_SASH).map(([v]) => (
-              <Choice key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })}
+              <Choice wide key={v} selected={o.zSash === v} onClick={() => choose({ zSash: v })}
                 label={zMiddle ? `${v} Each Side` : `${v} Shutter${v === "1" ? " Opens" : "s Open"}`}
                 picture={<MiniElevation item={sample("window", { ...o, zSash: v })} size={80} />} />
             ))}
@@ -1375,9 +1361,9 @@ function JobScreen({
         )}
 
         {flow.step === "zProfile" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {Z_SIZE.map(([v, label]) => (
-              <Choice key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v })} title={label}
+              <Choice wide key={v} selected={o.zSize === v} onClick={() => choose({ zSize: v })} title={label}
                 label={v === "heavy" ? (type === "partition" ? "For Big Partitions" : "For Big Windows") : (type === "partition" ? "For Normal Partitions" : "For Normal Windows")}
                 picture={<SectionProfile sectionId={v === "heavy" ? "z_outer_55" : "z_outer_40"} w={72} h={56} />} />
             ))}
@@ -1385,49 +1371,49 @@ function JobScreen({
         )}
 
         {flow.step === "doorSys" && (
-          <div className="grid grid-cols-2 gap-2">
-            <Choice selected={o.doorSys === "normal"} onClick={() => choose({ doorSys: "normal" })} title="Normal door"
+          <div className="flex flex-col gap-2">
+            <Choice wide selected={o.doorSys === "normal"} onClick={() => choose({ doorSys: "normal" })} title="Normal door"
               sub="Shutter + panels"
               picture={<MiniElevation item={sample("door", { ...o, doorSys: "normal" })} size={44} />} />
-            <Choice selected={o.doorSys === "z"} onClick={() => choose({ doorSys: "z" })} title="Z-Section door"
+            <Choice wide selected={o.doorSys === "z"} onClick={() => choose({ doorSys: "z" })} title="Z-Section door"
               sub="Hinged, 40×55"
               picture={<MiniElevation item={sample("door", { ...o, doorSys: "z" })} size={44} />} />
           </div>
         )}
 
         {flow.step === "partSys" && (
-          <div className="grid grid-cols-2 gap-2">
-            <Choice selected={o.partSys === "spdp"} onClick={() => choose({ partSys: "spdp" })} title="SP / DP partition"
+          <div className="flex flex-col gap-2">
+            <Choice wide selected={o.partSys === "spdp"} onClick={() => choose({ partSys: "spdp" })} title="SP / DP partition"
               sub="Partition pipe"
               picture={<SectionProfile sectionId="partition_frame" w={72} h={56} />} />
-            <Choice selected={o.partSys === "z"} onClick={() => choose({ partSys: "z" })} title="Z-Section partition"
+            <Choice wide selected={o.partSys === "z"} onClick={() => choose({ partSys: "z" })} title="Z-Section partition"
               sub="Z outer + center"
               picture={<SectionProfile sectionId="z_outer_40" w={72} h={56} />} />
           </div>
         )}
 
         {flow.step === "doorCenters" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             {DOOR_CENTERS.map(([v, label]) => (
-              <Choice key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
+              <Choice wide key={v} selected={o.doorCenters === v} onClick={() => choose({ doorCenters: v })} title={label}
                 picture={<MiniElevation item={sample("door", { ...o, doorCenters: v })} size={40} />} />
             ))}
           </div>
         )}
 
         {flow.step === "zDoorCenters" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             {DOOR_CENTERS.map(([v, label]) => (
-              <Choice key={v} selected={o.zDoorCenters === v} onClick={() => choose({ zDoorCenters: v })} title={label}
+              <Choice wide key={v} selected={o.zDoorCenters === v} onClick={() => choose({ zDoorCenters: v })} title={label}
                 picture={<MiniElevation item={sample("door", { ...o, zDoorCenters: v })} size={40} />} />
             ))}
           </div>
         )}
 
         {flow.step === "doorFrame" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {CHOKHAT.map(([v, label]) => (
-              <Choice key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v })} title={label}
+              <Choice wide key={v} selected={o.chokhat === v} onClick={() => choose({ chokhat: v })} title={label}
                 sub={v === "needed" ? "New frame (chaukhat) and shutter" : "Frame is already fixed"}
                 picture={<DoorScopePicture item={sample("door", o)} withFrame={v === "needed"} size={44} />} />
             ))}
@@ -1435,20 +1421,20 @@ function JobScreen({
         )}
 
         {flow.step === "doorSection" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             {PALLA.map(([v, label]) => (
-              <Choice key={v} selected={o.palla === v} onClick={() => choose({ palla: v })} title={`${label} mm`}
+              <Choice wide key={v} selected={o.palla === v} onClick={() => choose({ palla: v })} title={`${label} mm`}
                 picture={<SectionProfile sectionId={`door_palla_${v}`} w={60} h={48} />} />
             ))}
           </div>
         )}
 
         {flow.step === "partDoor" && (
-          <div className="grid grid-cols-2 gap-2">
-            <Choice selected={o.partDoor === "no"} onClick={() => choose({ partDoor: "no" })} title="No door"
-              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "no" })} size={120} />} />
-            <Choice selected={o.partDoor === "yes"} onClick={() => choose({ partDoor: "yes" })} title="With a door"
-              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes" })} size={120} />} />
+          <div className="flex flex-col gap-2">
+            <Choice wide selected={o.partDoor === "no"} onClick={() => choose({ partDoor: "no" })} title="No door"
+              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "no" })} size={88} />} />
+            <Choice wide selected={o.partDoor === "yes"} onClick={() => choose({ partDoor: "yes" })} title="With a door"
+              picture={<MiniElevation item={sample("partition", { ...o, partDoor: "yes" })} size={88} />} />
           </div>
         )}
 
@@ -1971,16 +1957,18 @@ function Choice({ picture, title, sub, label, selected, onClick, wide }: {
 }) {
   // A tile (not a wide row) is named above its drawing — the name is read
   // first, then the picture. With a label too, the title sits underneath.
-  const above = wide ? label : label ?? title;
-  const below = wide || label ? title : undefined;
+  const above = wide ? undefined : label ?? title;
+  const below = wide ? label ?? title : label ? title : undefined;
+  const second = wide && label ? title : undefined;
   return (
     <button onClick={onClick} aria-pressed={selected}
       className={`chip flex ${wide ? "flex-row items-center gap-4 px-4 py-3 text-left" : "flex-col items-center gap-2 px-2 py-3 text-center"} ${selected ? "selected" : ""}`}>
       {above && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{above}</span>}
       <span className={`grid shrink-0 place-items-center ${wide ? "w-24" : "min-h-[72px] w-full"}`}>{picture}</span>
-      {(below || sub) && (
+      {(below || sub || second) && (
         <span className="min-w-0">
           {below && <span className="block text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>{below}</span>}
+          {second && <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-2)" }}>{second}</span>}
           {sub && <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>}
         </span>
       )}
