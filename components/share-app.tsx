@@ -7,12 +7,14 @@
  * there is at least one job behind them.
  */
 import { whatsAppLink } from "@/lib/pdf";
-import { markStep } from "@/lib/track";
+import { useEffect, useState } from "react";
+import { isReturning, markStep } from "@/lib/track";
 
 const LINE = "FabriQ achha laga? To apne fabricator dost ko bhi share kijiye";
 
-function message(): string {
-  const link = `${window.location.origin}/?utm_source=friend_share`;
+function message(place: string): string {
+  // the campaign says which banner sent it: arrivals show as /from/friend_share/<place>
+  const link = `${window.location.origin}/?utm_source=friend_share&utm_campaign=${place}`;
   return [
     "*FabriQ* – Aluminium Fabricators ka Smart App 🔧",
     "",
@@ -24,7 +26,7 @@ function message(): string {
 }
 
 export async function shareApp(place: "banner" | "card" | "home"): Promise<void> {
-  const text = message();
+  const text = message(place);
   // the phone's own share menu: WhatsApp, Telegram, Instagram… (the link goes
   // inside the text — some apps drop the text when a separate url is given)
   if (typeof navigator.share === "function") {
@@ -84,12 +86,22 @@ export function ShareAppRow() {
 }
 
 /** Top of the material list: the banner itself is the button. */
-export function ShareAppBanner({ src = "/banners/share-orange.webp" }: { src?: string }) {
+export function ShareAppBanner({ src = "/banners/share-orange.webp", place = "banner", w = 1200, h = 400 }:
+  { src?: string; place?: "banner" | "home"; w?: number; h?: number }) {
   return (
-    <button onClick={() => shareApp("banner")} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
+    <button onClick={() => shareApp(place)} aria-label="FabriQ achha laga? Apne fabricator dost ko bhi bhejein — Share"
       className="no-print block w-full overflow-hidden rounded-[var(--radius)]" style={{ border: "1px solid var(--line)" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 3:1 banner */}
-      <img src={src} alt="" width={1200} height={400} className="block h-auto w-full" />
+      <img src={src} alt="" width={w} height={h} className="block h-auto w-full" />
     </button>
   );
+}
+
+/** First screen, from a phone's second opening on: the big share banner. */
+export function ShareHomeBanner() {
+  const [show, setShow] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setShow(isReturning()), []);
+  if (!show) return null;
+  return <ShareAppBanner src="/banners/share-home.webp" place="home" w={1200} h={450} />;
 }

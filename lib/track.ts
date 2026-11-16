@@ -199,3 +199,28 @@ export function markVisitor(): void {
     /* storage blocked — nothing to count */
   }
 }
+
+/** How many times this phone has opened FabriQ (a reload is not a new opening). */
+function opens(): number {
+  let n = Number(localStorage.getItem("fabriq.opens")) || 0;
+  if (!sessionStorage.getItem("fabriq.open")) {
+    n += 1;
+    localStorage.setItem("fabriq.opens", String(n));
+    sessionStorage.setItem("fabriq.open", "1");
+  }
+  return n;
+}
+
+/** Not this phone's first opening of FabriQ (the very first time, they are still finding their way). */
+export function isReturning(): boolean {
+  try {
+    if (opens() >= 2) return true;
+    // here before openings were counted: an earlier first day, or a job saved before today
+    const today = istDay(Date.now());
+    const first = localStorage.getItem("fabriq.first");
+    if (first && first !== today) return true;
+    return loadProjects().some((p) => p.created && istDay(p.created) !== today);
+  } catch {
+    return false;
+  }
+}

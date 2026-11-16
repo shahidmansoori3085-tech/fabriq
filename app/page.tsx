@@ -51,7 +51,7 @@ import {
 } from "@/lib/projects";
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
-import { ShareAppBanner, ShareAppCard, ShareAppRow } from "@/components/share-app";
+import { ShareAppBanner, ShareAppCard, ShareHomeBanner } from "@/components/share-app";
 
 /* ————————————————— item options ————————————————— */
 
@@ -1737,6 +1737,9 @@ function JobScreen({
         </>
       )}
 
+      {/* from a phone's second opening on: pass FabriQ on */}
+      {items.length === 0 && <ShareHomeBanner />}
+
       {/* earlier jobs — only when nothing is being entered, so it never competes */}
       {items.length === 0 && recent.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -1765,9 +1768,6 @@ function JobScreen({
           </div>
         </div>
       )}
-
-      {/* someone with a job behind them: pass FabriQ on */}
-      {items.length === 0 && recent.length > 0 && <ShareAppRow />}
 
       {/* the how-to video: its own quiet row on the first screen, after the work */}
       {items.length === 0 && (
