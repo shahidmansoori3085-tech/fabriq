@@ -224,3 +224,19 @@ export function isReturning(): boolean {
     return false;
   }
 }
+
+/**
+ * "Hisaab sahi laga?" under the material list. A yes, or what was wrong
+ * (and an optional line in their words), with the system the list was for:
+ *   /feedback/ok/<type>-<system>
+ *   /feedback/wrong/<reason>/<type>-<system>
+ *   /feedback/note/<their line, made path-safe>
+ * The note is what they typed about the sizes — nothing else is sent.
+ */
+export function markFeedback(what: "ok" | "wrong", system: string, reason?: string, note?: string): void {
+  const sys = slug(system) || "unknown";
+  if (what === "ok") { view(`/feedback/ok/${sys}`); return; }
+  view(`/feedback/wrong/${slug(reason ?? "other") || "other"}/${sys}`);
+  const n = (note ?? "").trim().toLowerCase().replace(/[^a-z0-9\u0900-\u097f.x]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
+  if (n) view(`/feedback/note/${sys}/${n}`);
+}
