@@ -331,8 +331,8 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
 /** A plain line icon for each topic of the system page (drawn here, so it never waits for a font). */
 function PageIcon({ id }: { id: Exclude<Page, "home"> }) {
   const d: Record<Exclude<Page, "home">, React.ReactNode> = {
-    // an aluminium section, cut across: two chambers and its legs
-    sections: <><rect x="3" y="9" width="18" height="10" rx="1" /><path d="M9.5 9v10M14.5 9v10" /><path d="M6 9V5h2v4M16 9V5h2v4" /></>,
+    // a long square aluminium pipe: its hollow end in front, its length going back
+    sections: <><path d="M3 11h6v6H3z" /><path d="M4.7 12.7h2.6v2.6H4.7z" /><path d="M3 11l11-6h6l-11 6M9 17l11-6V5" /></>,
     // a measuring tape / ruler
     cuts: <><path d="M17 3l4 4L7 21l-4-4z" /><path d="M16 7l-1.5-1.5M13 10l-1.5-1.5M10 13l-1.5-1.5M7 16l-1.5-1.5" /></>,
     // choices: sliders
