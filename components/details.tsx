@@ -17,27 +17,50 @@ import { Sheet } from "@/components/studio-ui";
 import StudioThumb, { MiniSection } from "@/components/studio-thumb";
 import { SectionProfile } from "@/components/section-profiles";
 
-/** A ⋮ button with a small menu. */
+/**
+ * A ⋯ button with a small menu. The menu is laid over the whole page (fixed,
+ * above everything), so the next card or a card's own edge never hides it;
+ * near the bottom of the screen it opens upwards.
+ */
 export function DotsMenu({ items, label = "More" }: { items: { label: string; onClick: () => void }[]; label?: string }) {
-  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState<{ right: number; top?: number; bottom?: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const open = !!at;
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const close = (e: Event) => { if (!box.current?.contains(e.target as Node)) setAt(null); };
+    // the page moved under the menu: close it (a tiny scroll from the tap itself does not count)
+    const y0 = window.scrollY;
+    const gone = () => { if (Math.abs(window.scrollY - y0) > 24) setAt(null); };
     document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    window.addEventListener("scroll", gone);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+      window.removeEventListener("scroll", gone);
+    };
   }, [open]);
+  const toggle = () => {
+    if (open || !btn.current) { setAt(null); return; }
+    const r = btn.current.getBoundingClientRect();
+    const tall = items.length * 44 + 12;
+    const right = Math.max(8, window.innerWidth - r.right);
+    setAt(r.bottom + tall + 8 > window.innerHeight ? { right, bottom: window.innerHeight - r.top + 4 } : { right, top: r.bottom + 4 });
+  };
   return (
-    <div ref={box} className="relative shrink-0">
-      <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open}
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+    <div ref={box} className="shrink-0">
+      <button ref={btn} type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open}
+        onClick={(e) => { e.stopPropagation(); toggle(); }}
         className="grid h-10 w-10 place-items-center rounded-lg text-xl font-bold leading-none" style={{ color: "var(--ink-3)" }}>⋯</button>
-      {open && (
-        <div role="menu" className="card absolute right-0 top-10 z-30 w-40 overflow-hidden p-1" style={{ boxShadow: "var(--shadow-lg)" }}>
+      {at && (
+        <div role="menu" className="card fixed z-[60] w-44 overflow-hidden p-1"
+          style={{ boxShadow: "var(--shadow-lg)", right: at.right, top: at.top, bottom: at.bottom }}>
           {items.map((it) => (
             <button key={it.label} role="menuitem" type="button"
               className="block w-full rounded-md px-3 py-2.5 text-left text-sm font-semibold hover:bg-[var(--surface-2)]"
-              onClick={(e) => { e.stopPropagation(); setOpen(false); it.onClick(); }}>{it.label}</button>
+              onClick={(e) => { e.stopPropagation(); setAt(null); it.onClick(); }}>{it.label}</button>
           ))}
         </div>
       )}

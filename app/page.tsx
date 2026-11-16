@@ -1242,7 +1242,7 @@ function JobScreen({
                         <div key={key} className="relative">
                           <Choice wide menu={!!pic} selected={selected} onClick={pick} title={title} sub={[pinned ? "Pinned" : "", sub].filter(Boolean).join(" · ")}
                             picture={pic ? <span className="block w-24" style={{ opacity: faded ? 0.5 : 1 }}><StudioThumb sys={pic} withTrack /></span> : undefined} />
-                          {pic && <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                          {pic && <div className="absolute inset-y-0 right-1.5 flex items-center">
                             <DotsMenu label={`${title} options`} items={[
                               { label: "View details", onClick: () => setSysView({ sys: pic, title }) },
                               { label: "Edit", onClick: edit(pic) },
