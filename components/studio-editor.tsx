@@ -217,9 +217,12 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
       </div>
 
       {(() => {
+        if (sys.family === "casement") return null;
         const mode = sys.switches.find((x) => x.id === "mode");
-        if (!mode) return null;
-        const pickSplit = (v: string) => onChange({ ...sys, splitSet: true, switches: sys.switches.map((x) => (x.id === "mode" ? { ...x, default: v } : x)) });
+        // "share the width" needs its own formula for this series; where none is known, half each is the only way
+        const canShare = !!mode && !!sys.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
+        const current = canShare ? mode!.default : "half";
+        const pickSplit = (v: string) => { if (canShare) onChange({ ...sys, splitSet: true, switches: sys.switches.map((x) => (x.id === "mode" ? { ...x, default: v } : x)) }); };
         return (
           <div className="card mt-3 p-3">
             <div className="text-sm font-bold">Shutter width</div>
@@ -227,12 +230,12 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
             <div className="mt-2 grid grid-cols-2 gap-2">
               {([["half", "Half each", "Every shutter is half the window. The window opens half."],
                 ["equal", "Share the width", "The shutters share the window width. The window opens more."]] as const).map(([v, title, sub]) => {
-                const on = mode.default === v;
+                const on = current === v, off = v === "equal" && !canShare;
                 return (
-                  <button key={v} type="button" onClick={() => pickSplit(v)} aria-pressed={on} className="card px-3 py-2.5 text-left"
-                    style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}>
+                  <button key={v} type="button" onClick={() => pickSplit(v)} aria-pressed={on} disabled={off} className="card px-3 py-2.5 text-left"
+                    style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)", opacity: off ? 0.55 : 1 }}>
                     <div className="text-sm font-bold">{title}</div>
-                    <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{sub}</div>
+                    <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{off ? "The size for this series is not known yet." : sub}</div>
                   </button>
                 );
               })}
