@@ -12,8 +12,9 @@ import { isReturning, markStep } from "@/lib/track";
 
 const LINE = "FabriQ achha laga? To apne fabricator dost ko bhi share kijiye";
 
-function message(): string {
-  const link = `${window.location.origin}/?utm_source=friend_share`;
+function message(place: string): string {
+  // the campaign says which banner sent it: arrivals show as /from/friend_share/<place>
+  const link = `${window.location.origin}/?utm_source=friend_share&utm_campaign=${place}`;
   return [
     "*FabriQ* – Aluminium Fabricators ka Smart App 🔧",
     "",
@@ -25,7 +26,7 @@ function message(): string {
 }
 
 export async function shareApp(place: "banner" | "card" | "home"): Promise<void> {
-  const text = message();
+  const text = message(place);
   // the phone's own share menu: WhatsApp, Telegram, Instagram… (the link goes
   // inside the text — some apps drop the text when a separate url is given)
   if (typeof navigator.share === "function") {
