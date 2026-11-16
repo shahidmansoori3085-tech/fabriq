@@ -6,7 +6,7 @@
  */
 import { registerCustomSections, type Section } from "../engine/sections";
 import type { ProfileDef, StudioSystem } from "./model";
-import { BUILT_IN_PROFILES, LIBRARY_PROFILES, TEMPLATES } from "./templates";
+import { BUILT_IN_PROFILES, LIBRARY_PROFILES, MODE_SWITCH, TEMPLATES } from "./templates";
 import { registerStudioSystems, registerShopProfiles } from "./runtime";
 
 const KEY = "fabriq_studio_v1";
@@ -51,6 +51,11 @@ function migrate(sys: StudioSystem): StudioSystem {
       parts: sys.parts.map((p) => ({ ...p, role: p.id === "trackClip" ? "Track Clip" : p.role.replace("Handle Side", "Shutter {lr}").replace(/(Shutter )?Meeting Side/, "Interlock Side") })),
       sizes: sys.sizes.map((x) => (x.label === "Roller clip" ? { ...x, label: "Track clip" } : x)),
     };
+  }
+  // shutter width: all equal unless the shop chose it in the system (founder 2026-11-16)
+  const mode = sys.switches.find((x) => x.id === "mode");
+  if (mode && (mode.label !== MODE_SWITCH.label || (!sys.splitSet && mode.default !== MODE_SWITCH.default))) {
+    sys = { ...sys, switches: sys.switches.map((x) => (x.id === "mode" ? { ...MODE_SWITCH, default: sys.splitSet ? x.default : MODE_SWITCH.default } : x)) };
   }
   if (sys.parts.every((p) => p.place)) return sys;
   return {

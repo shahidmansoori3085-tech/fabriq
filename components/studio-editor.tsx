@@ -216,6 +216,31 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
           onSwitch={(id, v) => setSwitches((s) => ({ ...s, [id]: v }))} />
       </div>
 
+      {(() => {
+        const mode = sys.switches.find((x) => x.id === "mode");
+        if (!mode) return null;
+        const pickSplit = (v: string) => onChange({ ...sys, splitSet: true, switches: sys.switches.map((x) => (x.id === "mode" ? { ...x, default: v } : x)) });
+        return (
+          <div className="card mt-3 p-3">
+            <div className="text-sm font-bold">Shutter width</div>
+            <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>For windows with 3 or 4 glass shutters. With 2 shutters, each is half the window.</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {([["equal", "All equal", "The shutters share the window width. The window opens more."],
+                ["half", "Half each", "Every shutter is half the window. The window opens half."]] as const).map(([v, title, sub]) => {
+                const on = mode.default === v;
+                return (
+                  <button key={v} type="button" onClick={() => pickSplit(v)} aria-pressed={on} className="card px-3 py-2.5 text-left"
+                    style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}>
+                    <div className="text-sm font-bold">{title}</div>
+                    <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {pickedPart && (
         <PartPanel key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} values={values} tracks={tracks} vars={vars}
           onPatch={(patch) => setPart(pickedPart.id, patch)} onSys={onChange}
@@ -302,7 +327,7 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
             className={`chip px-2.5 py-1 text-xs ${m === mix ? "selected" : ""}`}>{mixText(m)}</button>
         ))}
       </div>
-      {sys.switches.filter((s) => !s.id.startsWith("pick_")).map((sw) => (
+      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode").map((sw) => (
         <div key={sw.id} className="mt-3">
           <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{sw.label}</div>
           <Seg small value={switches[sw.id] ?? sw.default} onChange={(v) => onSwitch(sw.id, v)} options={sw.options.map((o) => ({ value: o.value, label: o.label }))} />

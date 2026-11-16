@@ -198,6 +198,8 @@ export interface StudioSystem {
   jobs: TaughtJob[];
   /** when the cuts were last checked against the shop's own windows (ms) */
   taughtAt?: number;
+  /** the shop chose the shutter width itself (else saved copies follow the default: all equal) */
+  splitSet?: boolean;
   /** a change that moves the cuts (a section swapped), not yet checked with 2 windows */
   changed?: { what: string; at: number };
   notes?: string[];

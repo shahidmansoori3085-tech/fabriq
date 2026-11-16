@@ -44,10 +44,11 @@ const SLIDING_EXTRAS: ExtraDef[] = [
   { id: "woolpile", name: "Wool pile", kind: "perimeter", per: "shutter", of: ["shutterW", "shutterH"], formula: "2×(shutterH+shutterW)×shutters +5%", unit: "rft" },
 ];
 
-const MODE_SWITCH = {
-  id: "mode", label: "Shutter size",
-  options: [{ value: "half", label: "Half each (opens 50%)" }, { value: "equal", label: "Equal share (opens more)" }],
-  default: "half",
+/** Shutter width for 3 or 4 glass shutters — all equal by default (founder 2026-11-16). */
+export const MODE_SWITCH = {
+  id: "mode", label: "Shutter width",
+  options: [{ value: "equal", label: "All equal" }, { value: "half", label: "Half each" }],
+  default: "equal",
 };
 
 const CATALOGUE = (s: string) => ev("verified", s);

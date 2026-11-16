@@ -567,10 +567,14 @@ export default function FabriQ() {
     writeOpenJob(id);
   }, [items, jobName]);
 
-  /** The shop's sliding-shutter choice (Settings) goes on each new or edited
-   *  item, so a later change in Settings never alters a saved item silently. */
-  const withShopChoices = (meta: Record<string, string>) =>
-    shop.shutterSplit === "equal" ? { ...meta, shutterSplit: "equal" } : meta;
+  /** The system's shutter width (set in the system: all equal or half each) goes on
+   *  each new or edited item, so a later change never alters a saved item silently. */
+  const withShopChoices = (meta: Record<string, string>) => {
+    const sys = meta.system?.startsWith("studio:") ? studioSystem(meta.system.slice(7))
+      : meta.system === "normal" ? systemForWindow("normal-18") : meta.system === "domal" ? systemForWindow("domal-27") : undefined;
+    const mode = sys?.switches.find((x) => x.id === "mode");
+    return mode ? { ...meta, shutterSplit: mode.default === "half" ? "half" : "equal" } : meta;
+  };
 
   const addItem = (type: OpeningType, w: Um, h: Um, qty: number, meta: Record<string, string>) => {
     setItems((prev) => {
@@ -2753,30 +2757,6 @@ function SettingsModal({ shop, onSave, onClose }: {
           {field("name", "Business name", "e.g. Al-Noor Aluminium")}
           {field("phone", "Mobile", "98765 43210", "tel")}
           {field("address", "Address", "Optional")}
-        </div>
-
-        <div className="mt-5">
-          <div className="text-xs font-semibold" style={{ color: "var(--ink-2)" }}>Sliding shutter size</div>
-          <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>
-            For windows with 3 or 4 glass shutters.
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {([
-              ["half", "Half each", "Each shutter is half the window. Opens half."],
-              ["equal", "Equal share", "Shutters share the width. Opens more."],
-            ] as const).map(([v, title, sub]) => {
-              const on = (s.shutterSplit ?? "half") === v;
-              return (
-                <button key={v} type="button" onClick={() => setS((p) => ({ ...p, shutterSplit: v }))}
-                  className="card px-3 py-2.5 text-left"
-                  style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}
-                  aria-pressed={on}>
-                  <div className="text-sm font-bold">{title}</div>
-                  <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{sub}</div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <CloudCard />
