@@ -298,15 +298,22 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
         );
       })()}
 
-      {/* the window, small — tap it to try a size */}
-      <button onClick={() => open("try")} className="card mt-4 block w-full overflow-hidden p-2 text-left" aria-label="Try a size">
-        <div className="pointer-events-none mx-auto max-w-[220px]"><WindowDrawing g={geo} unit={unit} pick={null} onPick={() => {}} /></div>
-        <div className="pb-1 text-center text-[11px]" style={{ color: "var(--ink-3)" }}>Tap to try a size or see it in 3D</div>
-      </button>
-
-      <div className="card mt-4 divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
+      {/* one card: the window, small (tap it to try a size), then one line per topic */}
+      <div className="card mt-4 overflow-hidden">
+        <button onClick={() => open("try")} className="block w-full p-3 text-left" aria-label="Try a size">
+          <div className="rounded-xl border p-2" style={{ borderColor: "var(--line)" }}>
+            <div className="pointer-events-none mx-auto max-w-[200px]"><WindowDrawing g={geo} unit={unit} pick={null} onPick={() => {}} /></div>
+            <div className="pb-0.5 text-center text-[11px]" style={{ color: "var(--ink-3)" }}>Tap to try a size or see it in 3D</div>
+          </div>
+        </button>
+        <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>
         {PAGES.map((x) => (
-          <button key={x.id} onClick={() => open(x.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
+          <button key={x.id} onClick={() => open(x.id)} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left">
+            <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+              style={{ background: x.id === "check" && sub.check.tone ? (sub.check.tone === "good" ? "var(--good-soft)" : "var(--warn-soft)") : "var(--surface-2)",
+                color: x.id === "check" && sub.check.tone ? toneFg(sub.check.tone) : "var(--ink-2)" }}>
+              <PageIcon id={x.id} />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{x.title}</span>
               <span className="mt-0.5 block truncate text-xs" style={{ color: sub[x.id].tone ? toneFg(sub[x.id].tone!) : "var(--ink-3)" }}>{sub[x.id].text}</span>
@@ -314,10 +321,30 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
             <span aria-hidden className="text-lg" style={{ color: "var(--ink-3)" }}>›</span>
           </button>
         ))}
+        </div>
       </div>
       {sectionPicker}
     </div>
   );
+}
+
+/** A plain line icon for each topic of the system page (drawn here, so it never waits for a font). */
+function PageIcon({ id }: { id: Exclude<Page, "home"> }) {
+  const d: Record<Exclude<Page, "home">, React.ReactNode> = {
+    // the pipes, in their places
+    sections: <><rect x="4" y="4" width="16" height="16" rx="1.5" /><rect x="7.5" y="7.5" width="9" height="9" rx="0.5" /><path d="M4 4l3.5 3.5M20 4l-3.5 3.5M4 20l3.5-3.5M20 20l-3.5-3.5" /></>,
+    // a measuring tape / ruler
+    cuts: <><path d="M17 3l4 4L7 21l-4-4z" /><path d="M16 7l-1.5-1.5M13 10l-1.5-1.5M10 13l-1.5-1.5M7 16l-1.5-1.5" /></>,
+    // choices: sliders
+    options: <><circle cx="14" cy="6" r="2" /><path d="M4 6h8M16 6h4" /><circle cx="8" cy="12" r="2" /><path d="M4 12h2M10 12h10" /><circle cx="17" cy="18" r="2" /><path d="M4 18h11M19 18h1" /></>,
+    // a spanner
+    hardware: <path d="M7 10h3V7L6.5 3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8L7 10" />,
+    // a calculator
+    try: <><rect x="4" y="3" width="16" height="18" rx="2" /><rect x="8" y="7" width="8" height="3" rx="1" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01M16 17h.01" /></>,
+    // checked
+    check: <><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" /></>,
+  };
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d[id]}</svg>;
 }
 
 type Page = "home" | "sections" | "cuts" | "options" | "hardware" | "try" | "check";
