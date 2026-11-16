@@ -194,8 +194,8 @@ const KINDS: [string, string][] = [["bombay", "Normal"], ["domal", "Domal"], ["e
 interface WinChoice { sys: WinSys; title: string; sub: string; pic: StudioSystem | undefined }
 /** Normal 18 comes in two shutter sections (founder): the choice is named by its section. */
 const SHUTTER_SECTION: Record<string, [string, string]> = {
-  "normal-18": ["Normal 18 mm", "Shutter 1½″ × ¾″"],
-  "normal-18-60": ["Normal 18 mm · 2½″ shutter", "Shutter 2½″ × ¾″"],
+  "normal-18": ["1½″ × ¾″", "Handle, interlock and bearing 40 × 18 mm"],
+  "normal-18-60": ["2½″ × ¾″", "Handle, interlock and bearing 60 × 19 mm"],
 };
 function windowChoices(kind: string): WinChoice[] {
   const own = studioSystems();
@@ -746,7 +746,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     return ["type", "partSys", ...kind, "size", "partBays", "partRows"];
   }
   // Window, then one list of every window system (Normal 18 mm first, then Domal 20 mm…)
-  const head: StepId[] = ["type", "system"];
+  const head: StepId[] = ["type", "system", ...(o.kind === "bombay" && windowChoices("bombay").length > 1 ? ["normalSection" as const] : [])];
   if (o.sys.startsWith("studio:")) {
     const st = studioSystem(o.sys.slice(7));
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
@@ -774,7 +774,7 @@ const STEP_TITLE: Record<StepId, string> = {
   studioOpts: "Sections",
   meet: "Interlock",
   system: "Window system",
-  normalSection: "Shutter section",
+  normalSection: "Shutter size",
   tracks: "Tracks",
   mix: "Shutters",
   domalFix: "Fixed glass on top?",
@@ -861,6 +861,8 @@ function JobScreen({
   /** `start` is the screen the flow opened on — Back from it leaves the flow,
    *  never steps into a question that was answered before it opened. */
   const [flow, setFlow] = useState<{ step: StepId; editing: string | null; start: StepId } | null>(null);
+  /** the window-system list's tab: all, or one kind */
+  const [sysTab, setSysTab] = useState<string>("all");
   /** Which partition the divider screens are on (index into readyIdx). */
   const [part, setPart] = useState(0);
   /** The furthest partition shown so far — one not reached yet inherits the gaps before it. */
@@ -1203,21 +1205,46 @@ function JobScreen({
           </div>
         )}
 
-        {flow.step === "system" && (
-          <div className="flex flex-col gap-2">
-            {KINDS.flatMap(([k]) => windowChoices(k).map((c) => ({ ...c, k }))).map((c) => {
-              // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
-              const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
-              const ready = !st || studioReady(st);
-              return (
-                <Choice wide key={c.sys} selected={o.sys === c.sys}
-                  onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose({ kind: c.k, ...sysPatch(c.sys) }); }}
-                  title={c.title} sub={ready ? c.sub : "Not ready yet — finish it in Settings"}
-                  picture={c.pic ? <span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
-              );
-            })}
-          </div>
-        )}
+        {flow.step === "system" && (() => {
+          // tabs: All (default) and one per kind; Normal shows as one row, its shutter size comes next
+          const TABS: [string, string][] = [["all", "All"], ["domal", "Domal"], ["euro", "Euro"], ["gulf", "Gulf"], ["casement", "Z Section"], ["bombay", "Normal"], ["mine", "My own"]];
+          const tabs = TABS.filter(([k]) => k === "all" || windowChoices(k).length);
+          const kinds = sysTab === "all" ? KINDS.map(([k]) => k) : [sysTab];
+          const normal = windowChoices("bombay");
+          return (
+            <div className="flex flex-col gap-3">
+              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist">
+                {tabs.map(([k, label]) => (
+                  <button key={k} type="button" role="tab" aria-selected={sysTab === k} onClick={() => setSysTab(k)}
+                    className={`chip shrink-0 px-4 py-2 text-sm font-semibold ${sysTab === k ? "selected" : ""}`}>{label}</button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                {kinds.flatMap((k) => {
+                  if (k === "bombay") {
+                    if (!normal.length) return [];
+                    const pic = normal[0].pic;
+                    return [<Choice wide key="bombay" selected={o.kind === "bombay"}
+                      onClick={() => choose({ kind: "bombay", ...sysPatch(normal.some((c) => c.sys === o.sys) ? o.sys : normal[0].sys) })}
+                      title="Normal 18 mm" sub={normal.length > 1 ? "Shutter 1½″ or 2½″" : ""}
+                      picture={pic ? <span className="block w-24"><StudioThumb sys={pic} withTrack /></span> : undefined} />];
+                  }
+                  return windowChoices(k).map((c) => {
+                    // a system with sections or cuts still missing cannot cut yet — send the shop to finish it in Settings
+                    const st = c.sys.startsWith("studio:") ? studioSystem(c.sys.slice(7)) : undefined;
+                    const ready = !st || studioReady(st);
+                    return (
+                      <Choice wide key={c.sys} selected={o.sys === c.sys}
+                        onClick={() => { if (!ready) { window.location.href = "/studio"; return; } choose({ kind: k, ...sysPatch(c.sys) }); }}
+                        title={c.title} sub={ready ? c.sub : "Not ready yet — finish it in Settings"}
+                        picture={c.pic ? <span className="block w-24" style={{ opacity: ready ? 1 : 0.5 }}><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
+                    );
+                  });
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {flow.step === "studioOpts" && (() => {
           const st = studioSystem(o.sys.slice(7));
@@ -1289,16 +1316,10 @@ function JobScreen({
 
         {flow.step === "normalSection" && (
           <div className="flex flex-col gap-2">
-            {([["40", "1½″ × ¾″", "Handle, interlock and bearing 40 × 18 mm"], ["60", "2½″ × ¾″", "Handle, interlock and bearing 60 × 19 mm"]] as const).map(([v, title, sub]) => (
-              <button key={v} type="button" onClick={() => choose({ normalSection: v })} aria-pressed={o.normalSection === v}
-                className="card flex w-full items-center justify-between gap-3 p-4 text-left"
-                style={{ borderColor: o.normalSection === v ? "var(--accent)" : "var(--line)", borderWidth: o.normalSection === v ? 2 : 1, background: o.normalSection === v ? "var(--accent-soft, var(--surface-2))" : "var(--surface)" }}>
-                <span>
-                  <span className="block text-lg font-bold">{title}</span>
-                  <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
-                </span>
-                <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
-              </button>
+            {windowChoices("bombay").map((c) => (
+              <Choice wide key={c.sys} selected={o.sys === c.sys} onClick={() => choose({ kind: "bombay", ...sysPatch(c.sys) })}
+                title={c.title} sub={c.sub}
+                picture={c.pic ? <span className="block w-24"><StudioThumb sys={c.pic} withTrack /></span> : undefined} />
             ))}
           </div>
         )}
