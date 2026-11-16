@@ -51,6 +51,7 @@ import {
 import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
 import { ShareAppBanner, ShareAppCard, ShareHomeBanner } from "@/components/share-app";
+import { FeedbackCard } from "@/components/feedback";
 
 /* ————————————————— item options ————————————————— */
 
@@ -2112,6 +2113,11 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap }: {
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} />
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
+
+      {/* did it match their own sums? — what a new fabricator is checking */}
+      <FeedbackCard
+        system={[...new Set(items.map((it) => `${it.type}-${it.system}`))].join("+")}
+        jobKey={String([...JSON.stringify(items)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))} />
 
       <ShareAppCard />
 
