@@ -1,6 +1,28 @@
 "use client";
 /** Small shared pieces for the System Studio screens. */
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+
+/**
+ * The phone's back button closes what is open (a sheet) instead of leaving the page:
+ * an entry is added to the history while it is open, and taken off when it closes.
+ */
+export function useBackClose(onClose: () => void) {
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; });
+  useEffect(() => {
+    const key = Math.random().toString(36).slice(2);
+    let pushed = false, popped = false;
+    // pushed a moment later, so a quick mount / unmount (development) leaves no entry behind
+    const t = window.setTimeout(() => { window.history.pushState({ ...(window.history.state ?? {}), sheet: key }, ""); pushed = true; }, 0);
+    const onPop = () => { if (pushed && window.history.state?.sheet !== key && !popped) { popped = true; close.current(); } };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("popstate", onPop);
+      if (pushed && !popped && window.history.state?.sheet === key) window.history.back();
+    };
+  }, []);
+}
 
 export type Tone = "good" | "glass" | "warn" | "bad" | "plain";
 
@@ -39,6 +61,7 @@ export function Seg<T extends string | number>({ value, options, onChange, small
 
 /** Bottom sheet on phones, centred dialog on wide screens. */
 export function Sheet({ title, sub, onClose, children }: { title: string; sub?: string; onClose: () => void; children: ReactNode }) {
+  useBackClose(onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-t-2xl p-5 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}

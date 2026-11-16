@@ -32,16 +32,35 @@ export default function StudioPage() {
   const [unit, setUnit] = useState<StudioUnit>("in");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // every screen here is an entry in the history: the phone's back button goes to the previous screen
+  useEffect(() => {
+    const onPop = () => setView((window.history.state?.studio as View | undefined) ?? { kind: "home" });
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   useEffect(() => {
     // localStorage exists only in the browser: read it once after mounting.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLib(loadLibrary());
+    const st = window.history.state?.studio as View | undefined;
+    if (st) setView(st);
     try { const u = localStorage.getItem(UNIT_KEY); if (u === "mm" || u === "ft") setUnit(u); } catch { /* inch stays */ }
   }, []);
 
   if (!lib) return <main className="mx-auto w-full max-w-xl flex-1 px-4 pt-6" />;
 
   const commit = (next: StudioLibrary) => { setLib(next); saveLibrary(next); };
+  /** Open a screen (a new history entry, or in place of this one); home goes back to the list. */
+  const go = (v: View, replace = false) => {
+    if (v.kind === "home") {
+      if (window.history.state?.studio) { window.history.back(); return; }
+      setView(v); return;
+    }
+    const st = { ...(window.history.state ?? {}), studio: v, sheet: undefined };
+    if (replace) window.history.replaceState(st, ""); else window.history.pushState(st, "");
+    setView(v);
+  };
   const putSystem = (s: StudioSystem) => commit({ ...lib, systems: lib.systems.map((x) => (x.id === s.id ? s : x)) });
   const addProfile = (p: ProfileDef) => commit({ ...lib, profiles: [...lib.profiles.filter((x) => x.id !== p.id), p] });
   const changeUnit = (u: StudioUnit) => { setUnit(u); try { localStorage.setItem(UNIT_KEY, u); } catch { /* session only */ } };
@@ -49,7 +68,7 @@ export default function StudioPage() {
   const create = (templateId: string) => {
     const s = copyTemplate(templateId);
     commit({ ...lib, systems: [...lib.systems, s] });
-    setView({ kind: "system", id: s.id });
+    go({ kind: "system", id: s.id }, view.kind === "new");
     window.scrollTo({ top: 0 });
   };
 
@@ -72,26 +91,26 @@ export default function StudioPage() {
     <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-32 pt-3">
       {current ? (
         <StudioEditor key={current.id + (view.kind === "system" ? view.tab ?? "" : "")} startTab={view.kind === "system" ? view.tab : undefined} sys={current} lib={lib} unit={unit} onChange={putSystem} onAddProfile={addProfile}
-          onBack={() => setView({ kind: "home" })}
+          onBack={() => go({ kind: "home" })}
           onDuplicate={() => {
             const c: StudioSystem = { ...structuredClone(current), id: newId("sys"), name: `${current.name} (copy)` };
             commit({ ...lib, systems: [...lib.systems, c] });
-            setView({ kind: "system", id: c.id });
+            go({ kind: "system", id: c.id }, true);
           }}
-          onDelete={() => { commit({ ...lib, systems: lib.systems.filter((s) => s.id !== current.id) }); setView({ kind: "home" }); }} />
+          onDelete={() => { commit({ ...lib, systems: lib.systems.filter((s) => s.id !== current.id) }); go({ kind: "home" }); }} />
       ) : view.kind === "new" ? (
-        <NewSystem lib={lib} onPick={create} onBack={() => setView({ kind: "home" })} />
+        <NewSystem lib={lib} onPick={create} onBack={() => go({ kind: "home" })} />
       ) : view.kind === "sections" ? (
         <SectionLibrary lib={lib} onSave={addProfile}
           onRemove={(id) => commit({ ...lib, profiles: lib.profiles.filter((p) => p.id !== id) })}
-          onBack={() => setView({ kind: "home" })}
+          onBack={() => go({ kind: "home" })}
           onOpenSystem={(id, tab) => {
             // a built-in system opens as the shop's own copy (the same as tapping it on the list)
             // read the library fresh: a section saved a moment ago must not be lost
             const cur = loadLibrary();
             const own = cur.systems.find((x) => x.id === id);
-            if (own) { setLib(cur); setView({ kind: "system", id, tab }); }
-            else { const c = copyTemplate(id); commit({ ...cur, systems: [...cur.systems, c] }); setView({ kind: "system", id: c.id, tab }); }
+            if (own) { setLib(cur); go({ kind: "system", id, tab }); }
+            else { const c = copyTemplate(id); commit({ ...cur, systems: [...cur.systems, c] }); go({ kind: "system", id: c.id, tab }); }
             window.scrollTo({ top: 0 });
           }} />
       ) : (
@@ -116,7 +135,7 @@ export default function StudioPage() {
                     const mine = lib.systems.filter((x) => x.basedOn?.id === w.id).at(-1);
                     const t = TEMPLATES.find((x) => x.id === w.id)!;
                     return (
-                      <button key={w.id} onClick={() => { if (mine) { setView({ kind: "system", id: mine.id }); window.scrollTo({ top: 0 }); } else create(w.id); }}
+                      <button key={w.id} onClick={() => { if (mine) { go({ kind: "system", id: mine.id }); window.scrollTo({ top: 0 }); } else create(w.id); }}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                         <span className="w-[72px] shrink-0"><Thumb sys={mine ?? t} lib={lib} /></span>
                         <span className="min-w-0 flex-1">
@@ -146,7 +165,7 @@ export default function StudioPage() {
                 {own.length > 0 && (
                   <div className="card mb-2 divide-y overflow-hidden">
                     {own.map((x) => (
-                      <button key={x.id} onClick={() => { setView({ kind: "system", id: x.id }); window.scrollTo({ top: 0 }); }}
+                      <button key={x.id} onClick={() => { go({ kind: "system", id: x.id }); window.scrollTo({ top: 0 }); }}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                         <span className="w-[72px] shrink-0"><Thumb sys={x} lib={lib} /></span>
                         <span className="min-w-0 flex-1">
@@ -158,13 +177,13 @@ export default function StudioPage() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setView({ kind: "new" })} className="btn-ghost w-full py-3 text-sm">+ Create a system</button>
+                <button onClick={() => go({ kind: "new" })} className="btn-ghost w-full py-3 text-sm">+ Create a system</button>
               </>
             );
           })()}
 
           <SectionTitle>Library</SectionTitle>
-          <button onClick={() => setView({ kind: "sections" })} className="card flex w-full items-center justify-between p-3 text-left">
+          <button onClick={() => go({ kind: "sections" })} className="card flex w-full items-center justify-between p-3 text-left">
             <span>
               <span className="block font-bold">Section Library</span>
               <span className="block text-xs" style={{ color: "var(--ink-3)" }}>
