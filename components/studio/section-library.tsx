@@ -120,11 +120,11 @@ export function SectionLibrary({ lib, onSave, onRemove, onBack, onOpenSystem, in
           {notice && notice.id === p.id && (
             <div className="mt-3 rounded-xl px-3 py-2.5 text-sm" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
               <b>Size changed from {notice.from} to {notice.to}.</b> The cuts of {uses.length > 1 ? "these systems were" : "this system was"} worked out for the old size.
-              Measure 2 finished windows to update them.
+              Check them with 2 windows you have made.
               <div className="mt-2 flex flex-wrap gap-2">
                 {uses.map((u) => (
                   <button key={u.key} className="rounded-lg px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--surface)", color: "var(--accent)" }}
-                    onClick={() => onOpenSystem(u.open, "teach")}>{u.name} › Measure</button>
+                    onClick={() => onOpenSystem(u.open, "teach")}>{u.name} › Check with your window</button>
                 ))}
               </div>
             </div>

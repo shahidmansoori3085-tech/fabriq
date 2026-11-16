@@ -32,7 +32,7 @@ export function CutsTab({ sys, unit, onChange }: { sys: StudioSystem; unit: Stud
   return (
     <div>
       <p className="mt-4 text-sm" style={{ color: "var(--ink-2)" }}>
-        Every cut is worked out from the window size. You do not need to type these — <b>Teach</b> fills them from a window you made.
+        Every cut is worked out from the window size. You do not need to type these — <b>Check with your window</b> fills them from a window you made.
       </p>
       <FromDrawing sys={sys} unit={unit} onChange={onChange} />
       {sys.sizes.map((s) => (

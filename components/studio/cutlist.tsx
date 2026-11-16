@@ -59,7 +59,7 @@ export function CutList({ sys, lib, unit, job, onFix }: {
           )}
           {cutsMissing.length > 0 && (
             <button onClick={() => onFix("teach")} className="mt-2 flex w-full items-center justify-between rounded-lg bg-white px-3 py-2.5 text-left text-sm">
-              <span><b>Teach from one window</b> · {cutsMissing.join(", ")}</span><span aria-hidden>›</span>
+              <span><b>Check with your window</b> · {cutsMissing.join(", ")}</span><span aria-hidden>›</span>
             </button>
           )}
         </div>

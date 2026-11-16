@@ -86,33 +86,40 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
   const [switches, setSwitches] = useState<Record<string, string>>({});
   const [perShutter, setPerShutter] = useState<Record<string, string>[]>([]);
   const [pick, setPick] = useState<Pick>(null);
-  const [tab, setTab] = useState<Tab>(startTab ?? "pieces");
-  // A piece given another section moves the cuts: go straight to Measure (2 finished windows) —
+  // the system page is a short menu; each topic opens on its own screen (founder 2026-11-16:
+  // one clean thing at a time, so a fabricator new to it understands it at once)
+  const [page, setPage] = useState<Page>(startTab === "teach" ? "check" : "home");
+  // A piece given another section moves the cuts: go straight to the 2-window check —
   // a fabricator will not look for it later (founder).
   const onChange = (next: StudioSystem) => {
     const sec = (s: StudioSystem) => new Map(s.parts.map((p) => [p.id, [...p.profile.map((c) => c.id), p.meshProfile ?? ""].join(",")]));
     const before = sec(sys), after = sec(next);
     const swapped = next.parts.filter((p) => before.has(p.id) && before.get(p.id) !== after.get(p.id) && p.profile.some((c) => c.id));
-    if (swapped.length && tab !== "teach") {
+    if (swapped.length && page !== "check") {
       save({ ...next, changed: { what: `Section changed: ${swapped.map((p) => partLabel(p)).join(", ")}`, at: stamp() } });
-      setTab("teach");
-      setGoMeasure(true);
+      open("check");
       return;
     }
     save(next);
   };
   const [menu, setMenu] = useState(false);
   const [view3d, setView3d] = useState(false);
-  const [picker, setPicker] = useState<{ partId: string; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
+  const [picker, setPicker] = useState<{ partId: string; partIds?: string[]; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
-  const tabsRef = useRef<HTMLDivElement>(null);
-  const [goMeasure, setGoMeasure] = useState(startTab === "teach");
-  // opened for a check (or sent there by a change): bring the Measure form into view
+
+  // each screen is a history entry: the phone's Back returns to the system page
   useEffect(() => {
-    if (!goMeasure) return;
-    const t = setTimeout(() => { tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setGoMeasure(false); }, 150);
-    return () => clearTimeout(t);
-  }, [goMeasure]);
+    const onPop = () => { setPage((window.history.state?.sysPage as Page | undefined) ?? "home"); setPick(null); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const open = (p: Page) => {
+    if (p === page) return;
+    window.history.pushState({ ...(window.history.state ?? {}), sysPage: p, sheet: undefined }, "");
+    setPage(p); setPick(null);
+    window.scrollTo({ top: 0 });
+  };
+  const back = () => { if (window.history.state?.sysPage) window.history.back(); else setPage("home"); };
 
   // a track count the system no longer offers falls back to its first layout
   useEffect(() => {
@@ -133,27 +140,120 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
   const pendingCheck = (sys.changed?.at ?? 0) > (sys.taughtAt ?? 0) || sys.parts.some((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]
     .some((id) => { const pr = id ? findProfile(lib, id) : undefined; return !!pr?.sizeChanged && pr.sizeChanged.at > (sys.taughtAt ?? 0); }));
 
-  const setPart = (id: string, patch: Partial<PartDef>) =>
-    onChange({ ...sys, parts: sys.parts.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const selectPart = (id: string) => { setPick({ type: "part", id }); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
+  /** one piece takes another section (the same choice is made on every piece of its group) */
+  const applyChoice = (s0: StudioSystem, partId: string, slot: "main" | "mesh" | "alt", idx: number | undefined, profileId: string): StudioSystem => {
+    const p = s0.parts.find((x) => x.id === partId);
+    if (!p) return s0;
+    const label = (id: string) => find(id)?.name ?? id;
+    const alts = alternativesOf(s0, p);
+    const patch = (q: Partial<PartDef>) => ({ ...s0, parts: s0.parts.map((x) => (x.id === partId ? { ...x, ...q } : x)) });
+    if (slot === "mesh") return patch({ meshProfile: profileId });
+    if (slot === "alt") return withAlternatives(s0, p.id, [...(alts ?? [p.profile[p.profile.length - 1]?.id ?? ""]), profileId], label);
+    if (alts) return withAlternatives(s0, p.id, alts.map((a, i) => (i === (idx ?? 0) ? profileId : a)), label);
+    if (idx !== undefined && p.profile.length > 1) return patch({ profile: p.profile.map((c, i) => (i === idx ? { ...c, id: profileId } : c)) });
+    return patch({ profile: [{ id: profileId }] });
+  };
   const choose = (profileId: string) => {
     if (!picker) return;
-    const p = sys.parts.find((x) => x.id === picker.partId)!;
-    const label = (id: string) => find(id)?.name ?? id;
-    const alts = alternativesOf(sys, p);
-    if (picker.slot === "mesh") setPart(p.id, { meshProfile: profileId });
-    else if (picker.slot === "alt") onChange(withAlternatives(sys, p.id, [...(alts ?? [p.profile[p.profile.length - 1]?.id ?? ""]), profileId], label));
-    else if (alts) onChange(withAlternatives(sys, p.id, alts.map((a, i) => (i === (picker.idx ?? 0) ? profileId : a)), label));
-    else if (picker.idx !== undefined && p.profile.length > 1) setPart(p.id, { profile: p.profile.map((c, i) => (i === picker.idx ? { ...c, id: profileId } : c)) });
-    else setPart(p.id, { profile: [{ id: profileId }] });
+    let next = sys;
+    for (const id of picker.partIds ?? [picker.partId]) next = applyChoice(next, id, picker.slot, picker.idx, profileId);
+    onChange(next);
     setPicker(null);
   };
 
-  const tone = step.tone === "good" ? "var(--good)" : step.tone === "warn" ? "var(--warn)" : "var(--bad)";
-  const toneBg = step.tone === "good" ? "var(--good-soft)" : step.tone === "warn" ? "var(--warn-soft)" : "var(--bad-soft)";
   const pickedPart = pick?.type === "part" ? sys.parts.find((p) => p.id === pick.id) : undefined;
   const pickerPart = picker ? sys.parts.find((p) => p.id === picker.partId) : undefined;
+  const partGroup = pickedPart ? groupOf(sys, pickedPart) : [];
+
+  const partPanel = pickedPart && (
+    <PartPanel key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} values={values} tracks={tracks} vars={vars}
+      group={partGroup.length > 1 ? partGroup.map(partLabel) : undefined}
+      // on / off goes to the whole group (the same pipe); a length, count or name only to this piece
+      onPatch={(patch) => onChange({ ...sys, parts: sys.parts.map((x) => (x.id === pickedPart.id ? { ...x, ...patch }
+        : "enabled" in patch && Object.keys(patch).length === 1 && partGroup.some((g) => g.id === x.id) ? { ...x, enabled: patch.enabled } : x)) })}
+      onSys={onChange}
+      onPickSection={(slot, idx) => setPicker({ partId: pickedPart.id, partIds: partGroup.map((g) => g.id), slot, idx })}
+      onClose={() => setPick(null)}
+      onDelete={() => { setPick(null); onChange({ ...sys, parts: sys.parts.filter((x) => x.id !== pickedPart.id), switches: sys.switches.filter((s) => s.id !== pickSwitchId(pickedPart.id)) }); }} />
+  );
+  const sectionPicker = picker && pickerPart && (
+    <SectionPicker lib={lib} kind={kindFor(lib, pickerPart, picker.slot)}
+      title={picker.slot === "alt" ? `Another section for ${partLabel(pickerPart)}` : `Section for ${(picker.partIds && picker.partIds.length > 1 ? groupName(sys, sys.parts.filter((x) => picker.partIds!.includes(x.id))) : partLabel(pickerPart))}${picker.slot === "mesh" ? " (mesh shutter)" : ""}`}
+      onPick={choose} onAdd={(prof) => { onAddProfile(prof); choose(prof.id); }} onClose={() => setPicker(null)} />
+  );
+
+  /* ——— one topic on its own screen ——— */
+  if (page !== "home") {
+    const meta = PAGES.find((x) => x.id === page)!;
+    return (
+      <div ref={top} style={{ scrollMarginTop: 8 }}>
+        <button onClick={back} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← {sys.name}</button>
+        <h1 className="mt-3 text-[26px] font-bold leading-tight tracking-tight">{meta.title}</h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>{meta.help}</p>
+
+        {page === "sections" && <>
+          {partPanel}
+          <SectionsPage sys={sys} lib={lib} tracks={tracks} vars={vars} onChange={onChange} onSelect={selectPart} />
+        </>}
+        {page === "cuts" && <CutSizesPage sys={sys} unit={unit} onChange={onChange} onCheck={() => open("check")} />}
+        {page === "options" && <OptionsPage sys={sys} onChange={onChange} />}
+        {page === "hardware" && <div className="mt-2"><HardwareTab sys={sys} onChange={onChange} /></div>}
+        {page === "check" && <div className="mt-2"><TeachPanel sys={sys} lib={lib} unit={unit} job={job} onChange={onChange} /></div>}
+        {page === "try" && <>
+          <div className="card mt-4 overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-3 pt-3">
+              <Seg small value={view3d ? "3d" : "2d"} onChange={(v) => setView3d(v === "3d")} options={[{ value: "2d", label: "Drawing" }, { value: "3d", label: "3D" }]} />
+              <span className="text-right text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>
+                {view3d ? "Drag to turn · tap a piece" : pick ? "Tap empty space to close" : "Tap any piece or shutter"}
+                <br />To scale{geo.sizesKnown ? "" : " · shutter size estimated"}
+              </span>
+            </div>
+            <div className="px-2 pb-1 pt-1">
+              {view3d ? <Window3D g={geo} pick={pick} onPick={setPick} tracks={tracks} /> : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} />}
+            </div>
+            <WindowBar sys={sys} unit={unit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
+              onSize={(w, h) => { setW(w); setH(h); }}
+              onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); }}
+              onSwitch={(id, v) => setSwitches((s) => ({ ...s, [id]: v }))} />
+          </div>
+          {partPanel}
+          {pick?.type === "shutter" && (
+            <ShutterPanel sys={sys} lib={lib} unit={unit} index={pick.index} mix={mix} values={values} perShutter={perShutter}
+              meetClip={(switches.meet ?? sys.switches.find((x) => x.id === "meet")?.default) === "clip"}
+              onKind={(k) => setMix((m) => m.slice(0, pick.index) + k + m.slice(pick.index + 1))}
+              onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
+              onSelectPart={selectPart} onClose={() => setPick(null)} />
+          )}
+          <div className="mt-4"><CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => open(w === "teach" ? "check" : w === "pieces" ? "sections" : "cuts")} /></div>
+        </>}
+        {sectionPicker}
+      </div>
+    );
+  }
+
+  /* ——— the system page: name, state, picture, and one line per topic ——— */
+  const missingSections = sys.parts.filter((p) => p.enabled !== false && p.profile.every((c) => !c.id)).length;
+  // only lengths that cannot be worked out for this system as usually made (not a spare fallback line)
+  const unknownCuts = sys.sizes.filter((s) => values[s.id] === null || values[s.id] === undefined).length;
+  const state = missingSections ? { label: "Sections missing", tone: "bad" as const }
+    : pendingCheck ? { label: "Check needed", tone: "warn" as const }
+    : step.tone === "warn" ? { label: "Check needed", tone: "warn" as const }
+    : { label: "Ready", tone: "good" as const };
+  const toneFg = (t: "good" | "warn" | "bad") => (t === "good" ? "var(--good)" : t === "warn" ? "var(--warn)" : "var(--bad)");
+  const toneBg = (t: "good" | "warn" | "bad") => (t === "good" ? "var(--good-soft)" : t === "warn" ? "var(--warn-soft)" : "var(--bad-soft)");
+  const sub: Record<Page, { text: string; tone?: "good" | "warn" | "bad" }> = {
+    home: { text: "" },
+    sections: missingSections ? { text: `${missingSections} piece${missingSections > 1 ? "s" : ""} without a section`, tone: "bad" } : { text: `${groupRows(sys).length} pipes · ${[...new Set(sys.parts.map((p) => ({ window: "frame", shutter: "shutter", meeting: "interlock", between: "mullion" } as const)[p.scope]))].join(", ")}` },
+    cuts: unknownCuts ? { text: `${unknownCuts} not known yet`, tone: "warn" } : { text: `${sys.sizes.length} lengths, worked out from the window size` },
+    options: { text: [sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" / "), ...sys.switches.filter((x) => !x.id.startsWith("pick_") && x.options.length > 1).map((x) => SWITCH_NAME[x.id] ?? x.label)].join(" · ") },
+    hardware: { text: sys.extras.length ? sys.extras.slice(0, 3).map((x) => x.name.split(" /")[0]).join(", ") + (sys.extras.length > 3 ? ` +${sys.extras.length - 3}` : "") : "None yet" },
+    try: { text: "Type a size, see every cut and pipe" },
+    check: pendingCheck ? { text: "Needed: a section or size changed", tone: "warn" }
+      : sys.jobs.length ? { text: `Checked with ${sys.jobs.length} window${sys.jobs.length > 1 ? "s" : ""}`, tone: "good" }
+      : { text: "Not done yet · enter 2 windows you made" },
+  };
 
   return (
     <div>
@@ -171,14 +271,14 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
         </div>
       </div>
 
-      <input value={sys.name} onChange={(e) => onChange({ ...sys, name: e.target.value })} aria-label="System name"
-        className="mt-3 w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
-
-      {!pendingCheck && <button onClick={() => setTab(step.tab)} className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold"
-        style={{ background: toneBg, color: tone }}>
-        <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] text-white" style={{ background: tone }}>{step.tone === "good" ? "✓" : "!"}</span>
-        {step.text}
-      </button>}
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <input value={sys.name} onChange={(e) => onChange({ ...sys, name: e.target.value })} aria-label="System name"
+          className="min-w-0 flex-1 bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
+        <span className="mt-1.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: toneBg(state.tone), color: toneFg(state.tone) }}>{state.label}</span>
+      </div>
+      <p className="mt-0.5 text-sm" style={{ color: "var(--ink-3)" }}>
+        {sys.layouts.length > 2 ? `${layoutLabel(sys, sys.layouts[0].tracks).replace(/ sash(es)?$/, "")} to ${layoutLabel(sys, sys.layouts[sys.layouts.length - 1].tracks)}` : sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" and ")} · {sys.parts.some((p) => p.place?.startsWith("frame") && p.angle === 45) ? "45° frame" : "90° frame"}
+      </p>
 
       {(() => {
         // sections whose size the shop changed after these cuts were last checked
@@ -190,7 +290,7 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
         ];
         if (!notes.length) return null;
         return (
-          <button onClick={() => setTab("teach")} className="mt-2 w-full rounded-xl px-3 py-2.5 text-left text-sm"
+          <button onClick={() => open("check")} className="mt-3 w-full rounded-xl px-3 py-2.5 text-left text-sm"
             style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
             <b>Cuts need checking.</b> {notes.join(". ")}.
             <span className="mt-1 block font-semibold">Enter 2 windows you have made ›</span>
@@ -198,93 +298,269 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
         );
       })()}
 
-      {/* ——— the window ——— */}
-      <div ref={top} className="card mt-4 overflow-hidden" style={{ scrollMarginTop: 8 }}>
-        <div className="flex items-center justify-between gap-2 px-3 pt-3">
-          <Seg small value={view3d ? "3d" : "2d"} onChange={(v) => setView3d(v === "3d")} options={[{ value: "2d", label: "Drawing" }, { value: "3d", label: "3D" }]} />
-          <span className="text-right text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>
-            {view3d ? "Drag to turn · tap a piece" : pick ? "Tap empty space to close" : "Tap any piece or shutter"}
-            <br />To scale{geo.sizesKnown ? "" : " · shutter size estimated"}
-          </span>
-        </div>
-        <div className="px-2 pb-1 pt-1">
-          {view3d ? <Window3D g={geo} pick={pick} onPick={setPick} tracks={tracks} /> : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} />}
-        </div>
-        <WindowBar sys={sys} unit={unit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
-          onSize={(w, h) => { setW(w); setH(h); }}
-          onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); }}
-          onSwitch={(id, v) => setSwitches((s) => ({ ...s, [id]: v }))} />
-      </div>
+      {/* the window, small — tap it to try a size */}
+      <button onClick={() => open("try")} className="card mt-4 block w-full overflow-hidden p-2 text-left" aria-label="Try a size">
+        <div className="pointer-events-none mx-auto max-w-[220px]"><WindowDrawing g={geo} unit={unit} pick={null} onPick={() => {}} /></div>
+        <div className="pb-1 text-center text-[11px]" style={{ color: "var(--ink-3)" }}>Tap to try a size or see it in 3D</div>
+      </button>
 
-      {(() => {
-        if (sys.family === "casement") return null;
-        const mode = sys.switches.find((x) => x.id === "mode");
-        // "share the width" needs its own formula for this series; where none is known, half each is the only way
-        const canShare = !!mode && !!sys.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
-        const current = canShare ? mode!.default : "half";
-        const pickSplit = (v: string) => { if (canShare) onChange({ ...sys, splitSet: true, switches: sys.switches.map((x) => (x.id === "mode" ? { ...x, default: v } : x)) }); };
+      <div className="card mt-4 divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
+        {PAGES.map((x) => (
+          <button key={x.id} onClick={() => open(x.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">{x.title}</span>
+              <span className="mt-0.5 block truncate text-xs" style={{ color: sub[x.id].tone ? toneFg(sub[x.id].tone!) : "var(--ink-3)" }}>{sub[x.id].text}</span>
+            </span>
+            <span aria-hidden className="text-lg" style={{ color: "var(--ink-3)" }}>›</span>
+          </button>
+        ))}
+      </div>
+      {sectionPicker}
+    </div>
+  );
+}
+
+type Page = "home" | "sections" | "cuts" | "options" | "hardware" | "try" | "check";
+const PAGES: { id: Exclude<Page, "home">; title: string; help: string }[] = [
+  { id: "sections", title: "Sections", help: "Which pipe goes where. Tap a pipe to change it." },
+  { id: "cuts", title: "Cut sizes", help: "How each length is worked out from the window size." },
+  { id: "options", title: "Options", help: "What this system can be made as, and its usual choice." },
+  { id: "hardware", title: "Hardware", help: "Rollers, lock, cleats and the rest — counted for every window." },
+  { id: "try", title: "Try a size", help: "Type any size to see the window, every cut and the pipes to buy." },
+  { id: "check", title: "Check with your window", help: "Enter 2 windows you have made. The app learns your shop's cuts." },
+];
+/** the shop's words for a choice */
+const SWITCH_NAME: Record<string, string> = { meet: "Interlock", mode: "Shutter width", track: "Track", rollerClip: "Track clip" };
+
+/** "2-track", "3-track": the track counts (this system makes) a section is used for */
+function trackNote(sys: StudioSystem, p: PartDef, c: PartDef["profile"][number] | undefined): string {
+  const made = sys.layouts.map((l) => String(l.tracks));
+  const onlyTracks = (w?: PartDef["profile"][number]["when"]) => !!w && Object.keys(w).every((k) => k === "tracks");
+  const list = (w: NonNullable<PartDef["profile"][number]["when"]>) => ([] as string[]).concat(w.tracks as string | string[]).map(String);
+  if (!c) return "";
+  if (c.when && !onlyTracks(c.when)) return whenText(sys, c.when);
+  // by track count: the counts this system makes that land on this section
+  const taken = new Set(p.profile.filter((x) => x !== c && onlyTracks(x.when)).flatMap((x) => list(x.when!)));
+  const mine = c.when ? list(c.when).filter((t) => made.includes(t)) : made.filter((t) => !taken.has(t));
+  return mine.length ? mine.map((t) => layoutLabel(sys, Number(t))).join(", ") : "";
+}
+
+/** pieces that are the same pipe, cut the same way (e.g. the frame's 4 sides) */
+function groupKey(p: PartDef): string {
+  return [p.scope, JSON.stringify(p.profile), p.meshProfile ?? "", p.enabled === false ? "off" : "on", JSON.stringify(p.when ?? null), p.angle].join("|");
+}
+function groupOf(sys: StudioSystem, p: PartDef): PartDef[] {
+  const k = groupKey(p);
+  return sys.parts.filter((x) => x.id !== "trackClip" && p.id !== "trackClip" ? groupKey(x) === k : x.id === p.id);
+}
+function groupRows(sys: StudioSystem): PartDef[][] {
+  const seen = new Set<string>(), rows: PartDef[][] = [];
+  for (const p of sys.parts) { if (seen.has(p.id)) continue; const g = groupOf(sys, p); g.forEach((x) => seen.add(x.id)); rows.push(g); }
+  return rows;
+}
+/** "Frame · all 4 sides", "Shutter · all 4 sides", or the pieces' own names */
+function groupName(sys: StudioSystem, g: PartDef[]): string {
+  const places = new Set(g.map((p) => p.place));
+  if (g.length === 4 && ["frame-top", "frame-bottom", "frame-left", "frame-right"].every((x) => places.has(x as Place))) return "Frame · all 4 sides";
+  if (g.length === 4 && ["sash-top", "sash-bottom", "sash-lock", "sash-meet"].every((x) => places.has(x as Place))) return "Shutter · all 4 sides";
+  const names = g.map(partLabel);
+  const first = names[0]?.split(" ")[0];
+  if (names.length > 1 && names.every((n) => n.split(" ")[0] === first && n.includes(" ")))
+    return `${first} ${names.map((n) => n.slice(first.length + 1).toLowerCase()).join(", ")}`;
+  return names.join(", ");
+}
+
+/* ———————————————— Sections: the pipes, grouped ———————————————— */
+
+function SectionsPage({ sys, lib, tracks, vars, onChange, onSelect }: {
+  sys: StudioSystem; lib: StudioLibrary; tracks: number; vars: Record<string, string>;
+  onChange: (s: StudioSystem) => void; onSelect: (id: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const addPart = (scope: PartScope) => {
+    const id = newId("p");
+    onChange({ ...sys, parts: [...sys.parts, { id, role: roleFrom("New piece", scope), profile: [{ id: "" }], scope, count: 1, length: sys.sizes[0]?.id ?? "W", angle: 90, place: "other" }] });
+    onSelect(id);
+  };
+  const rows = groupRows(sys);
+  const scopes = (sys.family === "casement" ? ["window", "between", "shutter"] : ["window", "shutter", "meeting"]) as PartScope[];
+  return (
+    <div>
+      {scopes.map((scope) => {
+        // the track clip is cut once per shutter lane but belongs with the track (founder)
+        const list = rows.filter((g) => (g[0].id === "trackClip" ? "window" : g[0].scope) === scope);
+        if (!list.length) return null;
         return (
-          <div className="card mt-3 p-3">
-            <div className="text-sm font-bold">Shutter width</div>
-            <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>For windows with 3 or 4 glass shutters. With 2 shutters, each is half the window.</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {([["half", "Half each", "Every shutter is half the window. The window opens half."],
-                ["equal", "Share the width", "The shutters share the window width. The window opens more."]] as const).map(([v, title, sub]) => {
-                const on = current === v, off = v === "equal" && !canShare;
+          <div key={scope}>
+            <SectionTitle>{SCOPE_TITLE[scope]}</SectionTitle>
+            <div className="card divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
+              {list.map((g) => {
+                const p = g[0];
+                const alts = alternativesOf(sys, p);
+                // every section this pipe can be: its choices, or one per track count
+                const lines = (alts ?? [...new Set(p.profile.map((c) => c.id))]).map((id) => {
+                  const c = p.profile.find((x) => x.id === id);
+                  const pr = id ? findProfile(lib, id) : undefined;
+                  const when = !alts && p.profile.length > 1 ? trackNote(sys, p, c) : alts && alts.length > 1 ? "choice" : "";
+                  return { id, pr, when };
+                });
+                // with a choice of slims, the meeting side can also be the shutter itself (with the interlock clip)
+                if (alts) for (const c of p.profile) if (c.id && c.when && !alts.includes(c.id) && !Object.keys(c.when).some((k) => k.startsWith("pick_")))
+                  lines.push({ id: c.id, pr: findProfile(lib, c.id), when: whenText(sys, c.when) });
+                const cur = p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1];
+                const shown = findProfile(lib, alts ? alts[0] : cur?.id ?? "");
+                const off = p.enabled === false;
+                const missing = lines.every((l) => !l.pr);
                 return (
-                  <button key={v} type="button" onClick={() => pickSplit(v)} aria-pressed={on} disabled={off} className="card px-3 py-2.5 text-left"
-                    style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)", opacity: off ? 0.55 : 1 }}>
-                    <div className="text-sm font-bold">{title}</div>
-                    <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{off ? "The size for this series is not known yet." : sub}</div>
+                  <button key={p.id} onClick={() => onSelect(p.id)} className="flex w-full items-center gap-3 px-3 py-3 text-left" style={{ opacity: off ? 0.5 : 1 }}>
+                    <span className="h-12 w-14 shrink-0 overflow-hidden rounded-md border bg-white" style={{ borderColor: missing ? "var(--bad)" : "var(--line)" }}>
+                      <SectionSketch p={shown} tracks={tracks} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold leading-tight">{groupName(sys, g)}{p.count > 1 ? ` ×${p.count}` : ""}</span>
+                      {missing
+                        ? <span className="mt-0.5 block text-xs font-semibold" style={{ color: "var(--bad)" }}>Choose a section</span>
+                        : lines.filter((l) => l.pr).map((l) => (
+                          <span key={l.id} className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>
+                            {[l.pr!.codes && Object.values(l.pr!.codes)[0] ? noMaker(Object.values(l.pr!.codes)[0]) : "", sectionTitle(l.pr!.name), l.when].filter(Boolean).join(" · ")}
+                          </span>
+                        ))}
+                      {p.meshProfile && <span className="mt-0.5 block truncate text-xs" style={{ color: "var(--ink-3)" }}>Mesh shutter: {sectionTitle(findProfile(lib, p.meshProfile)?.name ?? p.meshProfile)}</span>}
+                      {off && <span className="mt-0.5 block text-xs" style={{ color: "var(--ink-3)" }}>Not used</span>}
+                    </span>
+                    <span aria-hidden className="text-lg" style={{ color: "var(--ink-3)" }}>›</span>
                   </button>
                 );
               })}
             </div>
           </div>
         );
-      })()}
-
-      {pickedPart && (
-        <PartPanel key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} values={values} tracks={tracks} vars={vars}
-          onPatch={(patch) => setPart(pickedPart.id, patch)} onSys={onChange}
-          onPickSection={(slot, idx) => setPicker({ partId: pickedPart.id, slot, idx })}
-          onClose={() => setPick(null)}
-          onDelete={() => { setPick(null); onChange({ ...sys, parts: sys.parts.filter((x) => x.id !== pickedPart.id), switches: sys.switches.filter((s) => s.id !== pickSwitchId(pickedPart.id)) }); }} />
-      )}
-      {pick?.type === "shutter" && (
-        <ShutterPanel sys={sys} lib={lib} unit={unit} index={pick.index} mix={mix} values={values} perShutter={perShutter}
-          meetClip={(switches.meet ?? sys.switches.find((x) => x.id === "meet")?.default) === "clip"}
-          onKind={(k) => setMix((m) => m.slice(0, pick.index) + k + m.slice(pick.index + 1))}
-          onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
-          onSelectPart={selectPart} onClose={() => setPick(null)} />
-      )}
-
-      <div ref={tabsRef} className="sticky top-0 z-20 -mx-4 mt-4 px-4 py-2" style={{ background: "var(--bg)", scrollMarginTop: 0 }}>
-        <div className="grid grid-cols-5 gap-1 rounded-xl p-1" style={{ background: "var(--surface-3)" }} role="tablist">
-          {([["pieces", "Parts"], ["cut", "Cut list"], ["hardware", "Hardware"], ["rules", "Formulas"], ["teach", "Measure"]] as const).map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              className="rounded-lg py-2 text-[12px] font-semibold"
-              style={{ background: tab === id ? "var(--surface)" : "transparent", color: tab === id ? "var(--ink)" : "var(--ink-3)" }}>
-              {label}
-            </button>
-          ))}
+      })}
+      <button onClick={() => setAdding(!adding)} className="mt-5 w-full text-sm font-semibold" style={{ color: "var(--accent)" }}>
+        {adding ? "Close" : "+ Add a piece"}
+      </button>
+      {adding && (
+        <div className="card mt-2 p-3">
+          <p className="text-xs" style={{ color: "var(--ink-3)" }}>Where does the new piece go?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {scopes.map((s) => <button key={s} onClick={() => { setAdding(false); addPart(s); }} className="chip px-3 py-2 text-sm">{SCOPE_TITLE[s]}</button>)}
+          </div>
         </div>
-      </div>
-
-      {tab === "hardware" && <HardwareTab sys={sys} onChange={onChange} />}
-      {tab === "pieces" && <PiecesList sys={sys} lib={lib} unit={unit} values={values} tracks={tracks} vars={vars} onChange={onChange} onSelect={selectPart} />}
-      {tab === "cut" && <CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => setTab(w)} />}
-      {tab === "teach" && <TeachPanel sys={sys} lib={lib} unit={unit} job={job} onChange={onChange} />}
-      {tab === "rules" && <CutsTab sys={sys} unit={unit} onChange={onChange} />}
-
-      {picker && pickerPart && (
-        <SectionPicker lib={lib} kind={kindFor(lib, pickerPart, picker.slot)}
-          title={picker.slot === "alt" ? `Another section for ${partLabel(pickerPart)}` : `Section for ${partLabel(pickerPart)}${picker.slot === "mesh" ? " (mesh shutter)" : ""}`}
-          onPick={choose} onAdd={(prof) => { onAddProfile(prof); choose(prof.id); }} onClose={() => setPicker(null)} />
       )}
     </div>
   );
 }
+
+/* ———————————————— Cut sizes: each length in one line ———————————————— */
+
+function CutSizesPage({ sys, unit, onChange, onCheck }: { sys: StudioSystem; unit: StudioUnit; onChange: (s: StudioSystem) => void; onCheck: () => void }) {
+  const [edit, setEdit] = useState(false);
+  if (edit) return (
+    <div className="mt-3">
+      <button onClick={() => setEdit(false)} className="mb-2 text-sm font-semibold" style={{ color: "var(--accent)" }}>← Back to the list</button>
+      <CutsTab sys={sys} unit={unit} onChange={onChange} />
+    </div>
+  );
+  return (
+    <div>
+      <div className="card mt-4 divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
+        {sys.sizes.map((s) => (
+          <div key={s.id} className="px-4 py-3">
+            <div className="font-semibold">{s.label}</div>
+            {s.cases.map((c, i) => (
+              <div key={i} className="mt-1 flex items-baseline justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate text-xs" style={{ color: "var(--ink-3)" }}>{s.cases.length > 1 ? (c.when ? whenText(sys, c.when) : "Others") : ""}</span>
+                <span className="mono shrink-0 font-semibold" style={{ color: c.add === null ? (s.cases.length > 1 ? "var(--ink-3)" : "var(--warn)") : "var(--ink)" }}>
+                  {c.add === null ? "Not known yet" : ruleText(c, sizeLabel(sys, c.base).replace("Window width", "W").replace("Window height", "H"), unit)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs" style={{ color: "var(--ink-3)" }}>W = window width, H = window height. The cuts move with the window size.</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button onClick={onCheck} className="btn-primary py-3 text-sm">Check with your window</button>
+        <button onClick={() => setEdit(true)} className="btn-ghost py-3 text-sm">Change a formula</button>
+      </div>
+    </div>
+  );
+}
+
+/* ———————————————— Options: what the system can be made as ———————————————— */
+
+function OptionsPage({ sys, onChange }: { sys: StudioSystem; onChange: (s: StudioSystem) => void }) {
+  const tracksOn = new Set(sys.layouts.map((l) => l.tracks));
+  const toggleTracks = (t: number) => {
+    const layouts = tracksOn.has(t)
+      ? sys.layouts.filter((l) => l.tracks !== t)
+      : [...sys.layouts, { tracks: t, mixes: MIXES[t] }].sort((a, b) => a.tracks - b.tracks);
+    if (layouts.length) onChange({ ...sys, layouts });
+  };
+  const choices = sys.switches.filter((x) => !x.id.startsWith("pick_") && x.id !== "mode" && x.options.length > 1);
+  const setDefault = (id: string, v: string) => onChange({ ...sys, switches: sys.switches.map((x) => (x.id === id ? { ...x, default: v } : x)) });
+  const mode = sys.switches.find((x) => x.id === "mode");
+  const canShare = !!mode && !!sys.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
+  const split = canShare ? mode!.default : "half";
+  return (
+    <div>
+      <SectionTitle>{sys.family === "casement" ? "Sashes" : "Tracks"}</SectionTitle>
+      <div className="card p-3">
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5].map((t) => (
+            <button key={t} onClick={() => toggleTracks(t)} aria-pressed={tracksOn.has(t)}
+              className={`chip px-3.5 py-2 text-sm ${tracksOn.has(t) ? "selected" : ""}`}>{layoutLabel(sys, t)}</button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>The ones you make. Each keeps its own cuts.</p>
+        <div className="mt-3 flex flex-col gap-1 text-sm">
+          {sys.layouts.map((l) => (
+            <div key={l.tracks} className="flex justify-between gap-3"><span style={{ color: "var(--ink-3)" }}>{layoutLabel(sys, l.tracks)}</span><span className="text-right">{l.mixes.map(mixText).join(" · ")}</span></div>
+          ))}
+        </div>
+      </div>
+
+      {choices.map((x) => (
+        <div key={x.id}>
+          <SectionTitle>{SWITCH_NAME[x.id] ?? x.label}</SectionTitle>
+          <div className="card p-3">
+            <div className="flex flex-col gap-2">
+              {x.options.map((o) => (
+                <button key={o.value} onClick={() => setDefault(x.id, o.value)} aria-pressed={x.default === o.value}
+                  className={`chip flex items-center justify-between px-3 py-2.5 text-left text-sm font-semibold ${x.default === o.value ? "selected" : ""}`}>
+                  <span>{o.label}</span>{x.default === o.value && <span className="text-xs" style={{ color: "var(--accent)" }}>Usual</span>}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>The usual one comes chosen when a window is made. It can still be changed there.</p>
+          </div>
+        </div>
+      ))}
+
+      {sys.family !== "casement" && <>
+        <SectionTitle>Shutter width</SectionTitle>
+        <div className="card p-3">
+          <p className="text-xs" style={{ color: "var(--ink-3)" }}>For windows with 3 or 4 glass shutters. With 2 shutters, each is half the window.</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {([["half", "Half each", "Every shutter is half the window. The window opens half."],
+              ["equal", "Share the width", "The shutters share the window width. The window opens more."]] as const).map(([v, title, subText]) => {
+              const on = split === v, off = v === "equal" && !canShare;
+              return (
+                <button key={v} type="button" onClick={() => { if (!off && mode) onChange({ ...sys, splitSet: true, switches: sys.switches.map((x) => (x.id === "mode" ? { ...x, default: v } : x)) }); }}
+                  aria-pressed={on} disabled={off} className="card px-3 py-2.5 text-left"
+                  style={{ borderColor: on ? "var(--accent)" : "var(--line)", borderWidth: on ? 2 : 1, background: on ? "var(--accent-soft, var(--surface-2))" : "var(--surface)", opacity: off ? 0.55 : 1 }}>
+                  <div className="text-sm font-bold">{title}</div>
+                  <div className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>{off ? "The size for this series is not known yet." : subText}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </>}
+    </div>
+  );
+}
+
 
 function kindFor(lib: StudioLibrary, p: PartDef, slot: "main" | "mesh" | "alt"): ProfileKind | undefined {
   if (slot === "mesh") return "mesh-shutter";
@@ -342,8 +618,10 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
 
 /* ———————————————— a tapped piece ———————————————— */
 
-function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onSys, onPickSection, onClose, onDelete }: {
+function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, group, onPatch, onSys, onPickSection, onClose, onDelete }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; part: PartDef; values: Record<string, Um | null>; tracks: number; vars: Record<string, string>;
+  /** the pieces that share this pipe (a change goes to all of them) */
+  group?: string[];
   onPatch: (patch: Partial<PartDef>) => void; onSys: (s: StudioSystem) => void;
   onPickSection: (slot: "main" | "mesh" | "alt", idx?: number) => void; onClose: () => void; onDelete: () => void;
 }) {
@@ -369,6 +647,7 @@ function PartPanel({ sys, lib, unit, part: p, values, tracks, vars, onPatch, onS
         <Toggle on={on} onChange={(v) => onPatch({ enabled: v })} label="Use this piece" />
         <button onClick={onClose} aria-label="Close" className="-mt-1 text-2xl leading-none" style={{ color: "var(--ink-3)" }}>×</button>
       </div>
+      {group && <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>Same pipe on: {group.join(", ")}. A change goes to all of them.</p>}
       {!on && <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>Switched off — not cut, not bought.</p>}
 
       {/* section */}
@@ -560,96 +839,6 @@ function ShutterPanel({ sys, lib, unit, index, mix, values, perShutter, meetClip
           <button key={p.id} onClick={() => onSelectPart(p.id)} className="chip px-2.5 py-1 text-xs">{partLabel(p)}</button>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ———————————————— all pieces ———————————————— */
-
-function PiecesList({ sys, lib, unit, values, tracks, vars, onChange, onSelect }: {
-  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; values: Record<string, Um | null>; tracks: number; vars: Record<string, string>;
-  onChange: (s: StudioSystem) => void; onSelect: (id: string) => void;
-}) {
-  const tracksOn = new Set(sys.layouts.map((l) => l.tracks));
-  const toggleTracks = (t: number) => {
-    const layouts = tracksOn.has(t)
-      ? sys.layouts.filter((l) => l.tracks !== t)
-      : [...sys.layouts, { tracks: t, mixes: MIXES[t] }].sort((a, b) => a.tracks - b.tracks);
-    if (layouts.length) onChange({ ...sys, layouts });
-  };
-  // adding pieces and track counts is rare: kept behind one button so the daily screen stays simple
-  const [advanced, setAdvanced] = useState(false);
-  const addPart = (scope: PartScope) => {
-    const id = newId("p");
-    onChange({ ...sys, parts: [...sys.parts, { id, role: roleFrom("New piece", scope), profile: [{ id: "" }], scope, count: 1, length: sys.sizes[0]?.id ?? "W", angle: 90, place: "other" }] });
-    onSelect(id);
-  };
-
-  return (
-    <div>
-      {((sys.family === "casement" ? ["window", "between", "shutter"] : ["window", "shutter", "meeting"]) as PartScope[]).map((scope) => {
-        // only the pieces this window takes (e.g. no interlock clip when the meeting side is a slim interlock)
-        // the track clip is cut once per shutter lane but belongs with the track (founder)
-        const all = sys.parts.filter((p) => (p.id === "trackClip" ? "window" : p.scope) === scope);
-        const list = all.filter((p) => matches(p.when, vars));
-        if (all.length && !list.length) return null;
-        return (
-          <div key={scope}>
-            <SectionTitle aside={advanced ? <button onClick={() => addPart(scope)} className="text-sm font-semibold" style={{ color: "var(--accent)" }}>+ Add piece</button> : undefined}>
-              {SCOPE_TITLE[scope]}
-            </SectionTitle>
-            {list.length === 0 && <div className="card px-4 py-3 text-sm" style={{ color: "var(--ink-3)" }}>None. Add one if your system has it.</div>}
-            <div className="card divide-y overflow-hidden" style={{ borderColor: "var(--line)" }}>
-              {list.map((p) => {
-                const alts = alternativesOf(sys, p);
-                const c = p.profile.find((x) => matches(x.when, vars)) ?? p.profile[p.profile.length - 1];
-                const pr = findProfile(lib, alts && !(c && !alts.includes(c.id)) ? alts[0] : c?.id ?? "");
-                const on = p.enabled !== false;
-                const len = values[p.length];
-                return (
-                  <div key={p.id} className="flex items-center gap-3 px-3 py-2.5" style={{ opacity: on ? 1 : 0.5 }}>
-                    <button onClick={() => onSelect(p.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                      <span className="h-11 w-14 shrink-0 overflow-hidden rounded-md border" style={{ borderColor: pr ? "var(--line)" : "var(--bad)" }}>
-                        <SectionSketch p={pr} tracks={tracks} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5">
-                          <span className="truncate font-semibold">{partLabel(p)}</span>
-                          {p.count > 1 && <span className="text-xs font-bold" style={{ color: "var(--ink-3)" }}>×{p.count}</span>}
-                        </span>
-                        <span className="block truncate text-xs" style={{ color: pr ? "var(--ink-3)" : "var(--bad)" }}>
-                          {pr ? `${pr.codes && Object.values(pr.codes)[0] ? `${noMaker(Object.values(pr.codes)[0])} · ` : ""}${sectionTitle(pr.name)}${alts && alts.length > 1 ? ` · +${alts.length - 1} choice` : ""}` : "Choose a section"}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-right">
-                        <span className="mono block text-sm font-semibold">{len != null ? fmtLen(len, unit) : "—"}</span>
-                        <span className="block text-[11px] font-bold" style={{ color: p.angle === 45 ? "var(--glass)" : "var(--ink-3)" }}>{p.angle}°</span>
-                      </span>
-                    </button>
-                    <Toggle on={on} onChange={(v) => onChange({ ...sys, parts: sys.parts.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)) })} label={`Use ${partLabel(p)}`} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
-      <button onClick={() => setAdvanced(!advanced)} className="mt-5 w-full text-sm font-semibold" style={{ color: "var(--accent)" }}>
-        {advanced ? "Hide advanced settings" : "Advanced settings: add pieces, track counts"}
-      </button>
-      {advanced && <>
-      <SectionTitle>{sys.family === "casement" ? "Sash counts this system makes" : "Track counts this system makes"}</SectionTitle>
-      <div className="card p-3">
-        <div className="flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5].map((t) => (
-            <button key={t} onClick={() => toggleTracks(t)} aria-pressed={tracksOn.has(t)}
-              className={`chip px-3.5 py-2 text-sm ${tracksOn.has(t) ? "selected" : ""}`}>{layoutLabel(sys, t)}</button>
-          ))}
-        </div>
-        <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Each track count keeps its own cut formulas.</p>
-      </div>
-      </>}
     </div>
   );
 }
