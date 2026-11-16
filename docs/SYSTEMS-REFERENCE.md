@@ -251,10 +251,10 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 ## Domal 35 mm
 
 - App id: `domal-35` · family: domal-type · series: domal 35 mm · status: draft
-- In short: One 75×35 shutter on all 4 sides + I/L clip; leg track 42.6 (BH 6701 / 6703) or 48 with 2 legs (6702 / 6704)
+- In short: One 75×35 shutter on all 4 sides + I/L clip; 48 mm track with 2 legs (BH 6702 / 6704)
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG); 4 track (GGGJ); 5 track (GGGGJ)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Track (`track`): 42.6 mm, one leg (default) · 48 mm, two legs
+  - Track (`track`): 48 mm, two legs (default)
   - Interlock (`pick_interlock`): Domal 35 I/L Clip (default) · Domal 35 Interlock
 
 Pieces:
@@ -300,11 +300,11 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Bottom | 1828.8 mm | 45° | 1 |
 | Shutter Shutter Top | 909.6 mm | 45° | 2 |
 | Shutter Shutter Bottom | 909.6 mm | 45° | 2 |
-| Shutter Shutter Left | 1158.1 mm | 45° | 2 |
-| Shutter Shutter Right | 1158.1 mm | 45° | 2 |
-| Interlock 1 | 1158.1 mm | 90° | 1 |
-| Interlock 2 | 1158.1 mm | 90° | 1 |
-| Glass/mesh glass | 791.6 × 1040.1 mm | — | 2 |
+| Shutter Shutter Left | 1147.4 mm | 45° | 2 |
+| Shutter Shutter Right | 1147.4 mm | 45° | 2 |
+| Interlock 1 | 1147.4 mm | 90° | 1 |
+| Interlock 2 | 1147.4 mm | 90° | 1 |
+| Glass/mesh glass | 791.6 × 1029.4 mm | — | 2 |
 
 ---
 
@@ -960,7 +960,9 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Track clip (`rollerClip`): U groove (AT-35020) (default) · V groove (AT-35026)
-  - Interlock Clip (`pick_interlock`): Interlock Clip (default) · Double Interlock
+  - Shutter Right (`pick_shutterMeet`): 30 mm Slim Interlock — small (default) · 30 mm Slim Interlock — big · 30 mm Slim Interlock — double glass · 30 mm Slim Interlock — big, double glass
+  - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
+  - Interlock Clip (`pick_meetClip`): Interlock Clip (default) · Double Interlock
 
 Pieces:
 
@@ -974,8 +976,8 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Left | shutter | 1 | shutterH | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
-| Shutter Right | shutter | 1 | shutterH | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
-| Interlock Clip | meeting | 2 | shutterH | 90° | pick_interlock=at_clip: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti<br>pick_interlock=at_dbl: Double Interlock — code AT-30008 — 37.1×41.62 mm — interlock<br>always: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter<br>pick_shutterMeet=at_slim: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock<br>pick_shutterMeet=at_kpa: 30 mm Slim Interlock — big — code AT-30011 — 86.65×25 mm — slim-interlock<br>pick_shutterMeet=at_slim_dgu: 30 mm Slim Interlock — double glass — code AT-30010 — 36.93×25 mm — slim-interlock<br>pick_shutterMeet=at_kpa_dgu: 30 mm Slim Interlock — big, double glass — code AT-30012 — 86.65×25 mm — slim-interlock<br>always: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock |
+| Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | pick_meetClip=at_clip: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti<br>pick_meetClip=at_dbl: Double Interlock — code AT-30008 — 37.1×41.62 mm — interlock<br>always: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti |
 
 Size rules:
 
@@ -989,8 +991,13 @@ Size rules:
 | Shutter height (`shutterH`) | tracks=2 | H − 65.7 | suggested | From the drawings (window built from the sections): 2-track Bottom Gulf AT-30002 top and bottom, U-groove clip AT-35020 standing 4.7 mm, shutter AT-30005, 24 mm roller. Check on one window. |
 | Shutter height (`shutterH`) | rollerClip=v | H − 64.8 | suggested | From the drawings (window built from the sections): 3-track Bottom Gulf AT-30004 top and bottom, V-groove clip AT-35026 standing 3.3 mm, shutter AT-30005, 24 mm roller. Check on one window. |
 | Shutter height (`shutterH`) | always | H − 66.2 | suggested | From the drawings (window built from the sections): 3-track Bottom Gulf AT-30004 top and bottom, U-groove clip AT-35020 standing 4.7 mm, shutter AT-30005, 24 mm roller. Check on one window. |
-| Glass width (`glassW`) | always | shutterW − 110.2 | suggested | From the drawings (window built from the sections): AT-30005 pocket: glass stops 55.1 mm in from each shutter edge. Check on one window. |
-| Glass height (`glassH`) | always | shutterH − 110.2 | suggested | From the drawings (window built from the sections): AT-30005 pocket: glass stops 55.1 mm in from each shutter edge. Check on one window. |
+| Glass width (`glassW`) | meet=clip | shutterW − 110.2 | suggested | From the drawings (window built from the sections): glass stops 55.1 mm in (AT-30005) — the same shutter on both sides. Check on one window. |
+| Glass width (`glassW`) | pick_shutterMeet=at_slim | shutterW − 68 | suggested | From the drawings (window built from the sections): AT-30005 pocket 55.1 mm + slim AT-30009 slot 12.9 mm. Check on one window. |
+| Glass width (`glassW`) | pick_shutterMeet=at_kpa | shutterW − 67.5 | suggested | From the drawings (window built from the sections): AT-30005 pocket 55.1 mm + slim AT-30011 slot 12.4 mm. Check on one window. |
+| Glass width (`glassW`) | pick_shutterMeet=at_slim_dgu | shutterW − 68 | suggested | From the drawings (window built from the sections): AT-30005 pocket 55.1 mm + slim AT-30010 slot 12.9 mm. Check on one window. |
+| Glass width (`glassW`) | pick_shutterMeet=at_kpa_dgu | shutterW − 67.8 | suggested | From the drawings (window built from the sections): AT-30005 pocket 55.1 mm + slim AT-30012 slot 12.7 mm. Check on one window. |
+| Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
+| Glass height (`glassH`) | always | shutterH − 110.2 | suggested | From the drawings (window built from the sections): AT-30005 pocket: glass stops 55.1 mm in from the top and bottom edges. Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 
@@ -1004,10 +1011,25 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
 | Shutter Shutter Left | 1153.5 mm | 45° | 2 |
-| Shutter Shutter Right | 1153.5 mm | 45° | 2 |
+| Shutter Interlock Side | 1153.5 mm | 45° | 2 |
 | Interlock Clip 1 | 1153.5 mm | 90° | 1 |
 | Interlock Clip 2 | 1153.5 mm | 90° | 1 |
 | Glass/mesh glass | 804.2 × 1043.3 mm | — | 2 |
+
+Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
+
+| Piece | Length | Cut | Pieces |
+|---|---|---|---|
+| Top Track | 1762.8 mm | 90° | 1 |
+| Left Side (one groove) | 1219.2 mm | 90° | 1 |
+| Right Side (one groove) | 1219.2 mm | 90° | 1 |
+| Bottom Gulf Track | 1762.8 mm | 90° | 1 |
+| Track Clip | 1762.8 mm | 90° | 2 |
+| Shutter Shutter Top | 914.4 mm | 45° | 2 |
+| Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1153.5 mm | 45° | 2 |
+| Shutter Interlock Side | 1153.5 mm | 45° | 2 |
+| Glass/mesh glass | 846.4 × 1043.3 mm | — | 2 |
 
 ---
 

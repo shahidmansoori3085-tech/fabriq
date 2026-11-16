@@ -71,8 +71,18 @@ function migrate(sys: StudioSystem): StudioSystem {
       parts: sys.parts.map((pt) => ({ ...pt, profile: pt.profile.filter((k) => !DROPPED.includes(k.id) || !k.when) })),
     };
   }
-  // Euro 27 runs on the 48.0 mm track only (founder 2026-11-16): not asked any more
-  if (sys.basedOn?.id === "euro-27" && sys.switches.some((x) => x.id === "track" && x.options.length > 1)) {
+  // Gulf 30 got its slim interlocks (founder 2026-11-16): a copy saved before takes the system's
+  // pieces, choices and sizes (keeping its own picks), unless the shop taught it its own cuts
+  if (sys.basedOn?.id === "gulf-s30" && tpl && !sys.taughtAt && !sys.switches.some((x) => x.id === "meet")) {
+    const mine = Object.fromEntries(sys.switches.map((x) => [x.id, x.default]));
+    sys = {
+      ...sys, parts: tpl.parts, sizes: tpl.sizes,
+      switches: tpl.switches.map((x) => (mine[x.id] && x.options.some((o) => o.value === mine[x.id]) ? { ...x, default: mine[x.id] } : x)),
+      profiles: [...sys.profiles, ...tpl.profiles.filter((p) => !sys.profiles.some((q) => q.id === p.id))],
+    };
+  }
+  // Euro 27 (48.0) and Domal 35 (48) run on one track only (founder 2026-11-16): not asked any more
+  if ((sys.basedOn?.id === "euro-27" || sys.basedOn?.id === "domal-35") && sys.switches.some((x) => x.id === "track" && x.options.length > 1)) {
     sys = { ...sys, switches: sys.switches.map((x) => (x.id === "track" ? { ...x, default: "48", options: x.options.filter((o) => o.value === "48") } : x)) };
   }
   if (sys.parts.every((p) => p.place)) return sys;

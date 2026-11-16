@@ -354,15 +354,11 @@ export const ELEANOR_27: StudioSystem = {
 export const DOMAL_35: StudioSystem = withAlternatives(base({
   id: "domal-35", name: "Domal 35×75", group: "domal",
   heightFrom: { kind: "domal-legs" },
-  blurb: "One 75×35 shutter on all 4 sides + I/L clip; leg track 42.6 (BH 6701 / 6703) or 48 with 2 legs (6702 / 6704)",
+  blurb: "One 75×35 shutter on all 4 sides + I/L clip; 48 mm track with 2 legs (BH 6702 / 6704)",
   layouts: [L2(), L3(), { tracks: 4, mixes: ["GGGJ"] }, { tracks: 5, mixes: ["GGGGJ"] }],
-  switches: [{
-    id: "track", label: "Track", default: "42",
-    options: [
-      { value: "42", label: "42.6 mm, one leg" },
-      { value: "48", label: "48 mm, two legs" },
-    ],
-  }],
+  // the 48 mm two-leg track only (founder 2026-11-16): one option, so it is not asked;
+  // the 42.6 mm rules stay below for a shop that adds that track back
+  switches: [{ id: "track", label: "Track", default: "48", options: [{ value: "48", label: "48 mm, two legs" }] }],
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "45° frame goes round, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "45° frame goes round, full height"))),
@@ -1108,8 +1104,22 @@ drawn(BH_31, {
 drawn(AMPLE_25, { shutterW: [HALF], clipW: clip(80, "2 × 40.0"), ...glassBoth(54.3, "Ample 41323 pocket (shutter on all 4 sides)") });
 drawn(AMPLE_29, { shutterW: [HALF], clipW: clip(95.4, "2 × 47.7"), ...glassBoth(52.7, "Ample 41055 pocket (shutter on all 4 sides)") });
 drawn(AMPLE_37, { shutterW: [HALF], clipW: clip(99.4, "2 × 49.7"), ...glassBoth(63.5, "Ample 41068 pocket (shutter on all 4 sides)") });
-// Alucoat S-30: one shutter profile on 4 sides, interlock clip at the meeting
-drawn(GULF_S30, { ...gulfFrame(33, "AT-30001"), shutterW: [HALF], ...glassBoth(55.1, "AT-30005 pocket") });
+// Alucoat S-30: one shutter profile on 4 sides; at the meeting the shutter with an interlock
+// clip, or a slim interlock (S-30 p.21, founder 2026-11-16). Glass from the drawings.
+GULF_S30.profiles = [...GULF_S30.profiles,
+  prof("at_slim", "30 mm Slim Interlock — small", "slim-interlock", { alucoat: "AT-30009" }, "36.93×25", { value: 3.3, perFt: 16 }, CATALOGUE("Alucoat S-30 p.21 — slim interlock, single glass")),
+  prof("at_kpa", "30 mm Slim Interlock — big", "slim-interlock", { alucoat: "AT-30011" }, "86.65×25", { value: 7.1, perFt: 16 }, CATALOGUE("Alucoat S-30 p.21 — KPA interlock, single glass")),
+  prof("at_slim_dgu", "30 mm Slim Interlock — double glass", "slim-interlock", { alucoat: "AT-30010" }, "36.93×25", { value: 2.95, perFt: 16 }, CATALOGUE("Alucoat S-30 p.21 — slim interlock, DGU")),
+  prof("at_kpa_dgu", "30 mm Slim Interlock — big, double glass", "slim-interlock", { alucoat: "AT-30012" }, "86.65×25", { value: 6.8, perFt: 16 }, CATALOGUE("Alucoat S-30 p.21 — KPA interlock, DGU")),
+];
+GULF_S30.parts = GULF_S30.parts.filter((x) => x.id !== "interlock").map((x) => (x.id === "shutterRight" ? { ...x, id: "shutterMeet" } : x));
+GULF_S30.switches = GULF_S30.switches.filter((x) => x.id !== "pick_interlock");
+Object.assign(GULF_S30, withAlternatives(GULF_S30, "shutterMeet", ["at_slim", "at_kpa", "at_slim_dgu", "at_kpa_dgu"]));
+drawn(GULF_S30, {
+  ...gulfFrame(33, "AT-30001"), shutterW: [HALF],
+  glassH: glassH(55.1, "AT-30005 pocket"),
+  glassW: glassW(55.1, "AT-30005 pocket", { at_slim: [12.9, "slim AT-30009 slot"], at_kpa: [12.4, "slim AT-30011 slot"], at_slim_dgu: [12.9, "slim AT-30010 slot"], at_kpa_dgu: [12.7, "slim AT-30012 slot"] }),
+});
 
 /* ———————————————— meeting side: slim interlock, or shutter + interlock clip ———————————————— */
 // Founder (2026-11-13): the slim interlock is a choice. Many shops put the glass
@@ -1154,6 +1164,8 @@ BH_31.profiles.push(GULF_CLIP_PIC);
 withMeetChoice(GULF_25, { lock: "bh_2555", clip: "gulf_clip_pic", glassW: 108.2, src: "glass stops 54.1 mm in (BH-2555)" });
 withMeetChoice(BH_31, { lock: "bh31_handle_sgu", clip: "gulf_clip_pic", glassW: 99.6, src: "glass stops 49.8 mm in (BH-6406)" });
 withMeetChoice(BH_35, { lock: "bh35_shutter", clip: "d35_clip", glassW: 93.4, src: "glass stops 46.7 mm in (BH-6510)" });
+withMeetChoice(GULF_S30, { lock: "at_sgu", clip: "at_clip", glassW: 110.2, src: "glass stops 55.1 mm in (AT-30005)", def: "clip" });
+Object.assign(GULF_S30, withAlternatives(GULF_S30, "meetClip", ["at_clip", "at_dbl"]));
 withMeetChoice(AMPLE_29, { lock: "a29_handle", clip: "a29_patti", glassW: 105.4, src: "glass stops 52.7 mm in (Ample 41055)", def: "clip" });
 withMeetChoice(ELEANOR_29, { lock: "el29_shutter", clip: "el29_patti", glassW: 108.7, src: "glass stops 54.3 mm in (Eleanor 2903)", def: "clip" });
 withShutterChoice(ELEANOR_29, [
