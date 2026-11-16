@@ -29,18 +29,11 @@ export function DotsMenu({ items, label = "More" }: { items: { label: string; on
   const open = !!at;
   useEffect(() => {
     if (!open) return;
-    const close = (e: Event) => { if (!box.current?.contains(e.target as Node)) setAt(null); };
     // the page moved under the menu: close it (a tiny scroll from the tap itself does not count)
     const y0 = window.scrollY;
     const gone = () => { if (Math.abs(window.scrollY - y0) > 24) setAt(null); };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("touchstart", close);
     window.addEventListener("scroll", gone);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("touchstart", close);
-      window.removeEventListener("scroll", gone);
-    };
+    return () => window.removeEventListener("scroll", gone);
   }, [open]);
   const toggle = () => {
     if (open || !btn.current) { setAt(null); return; }
@@ -54,6 +47,9 @@ export function DotsMenu({ items, label = "More" }: { items: { label: string; on
       <button ref={btn} type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open}
         onClick={(e) => { e.stopPropagation(); toggle(); }}
         className="grid h-10 w-10 place-items-center rounded-lg text-xl font-bold leading-none" style={{ color: "var(--ink-3)" }}>⋯</button>
+      {/* a tap anywhere else only closes the menu (nothing under it is pressed) */}
+      {at && <div aria-hidden className="fixed inset-0 z-[59]" onClick={(e) => { e.stopPropagation(); setAt(null); }}
+        onTouchMove={() => setAt(null)} />}
       {at && (
         <div role="menu" className="card fixed z-[60] w-44 overflow-hidden p-1"
           style={{ boxShadow: "var(--shadow-lg)", right: at.right, top: at.top, bottom: at.bottom }}>
