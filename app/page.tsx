@@ -1610,6 +1610,9 @@ function JobScreen({
 
       <InAppNotice />
 
+      {/* from a phone's second opening on: pass FabriQ on */}
+      {items.length === 0 && <ShareHomeBanner />}
+
       {items.length === 0 ? (
         /* first screen: what are you making — tap one to start */
         <div className="card flex flex-col gap-4 p-4">
@@ -1705,9 +1708,6 @@ function JobScreen({
           </div>
         </>
       )}
-
-      {/* from a phone's second opening on: pass FabriQ on */}
-      {items.length === 0 && <ShareHomeBanner />}
 
       {/* earlier jobs — only when nothing is being entered, so it never competes */}
       {items.length === 0 && recent.length > 0 && (
