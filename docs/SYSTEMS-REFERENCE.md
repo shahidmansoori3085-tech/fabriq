@@ -175,7 +175,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: Euro 29 track (Ample 914400 / 41052 or Eleanor 2901 / 2902) with its roller clip; 27 mm shutter on all sides; interlock clip, or slim interlock
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - 29 track (`track`): 47.7 mm track (default) · 48.0 mm track
+  - 29 track (`track`): 48.0 mm track (default)
   - Slim Interlock (`pick_shutterMeet`): 27 mm Slim Interlock — small (default) · 27 mm Slim Interlock — big · 27 mm Slim Interlock — double glass
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
@@ -220,15 +220,15 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Track Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1732.8 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
-| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
-| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
-| Interlock Clip 1 | 1145.4 mm | 90° | 1 |
-| Interlock Clip 2 | 1145.4 mm | 90° | 1 |
-| Glass/mesh glass | 812.4 × 1043.4 mm | — | 2 |
+| Shutter Shutter Left | 1144.7 mm | 45° | 1 |
+| Shutter Interlock Side | 1144.7 mm | 45° | 2 |
+| Shutter Shutter Right | 1144.7 mm | 45° | 1 |
+| Interlock Clip 1 | 1144.7 mm | 90° | 1 |
+| Interlock Clip 2 | 1144.7 mm | 90° | 1 |
+| Glass/mesh glass | 812.4 × 1042.7 mm | — | 2 |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 
@@ -238,13 +238,13 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
 | Frame Left | 1219.2 mm | 45° | 1 |
 | Frame Right | 1219.2 mm | 45° | 1 |
 | Frame Bottom | 1828.8 mm | 45° | 1 |
-| Track Clip | 1733.4 mm | 90° | 2 |
+| Track Clip | 1732.8 mm | 90° | 2 |
 | Shutter Shutter Top | 914.4 mm | 45° | 2 |
 | Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
-| Shutter Shutter Left | 1145.4 mm | 45° | 1 |
-| Shutter Interlock Side | 1145.4 mm | 45° | 2 |
-| Shutter Shutter Right | 1145.4 mm | 45° | 1 |
-| Glass/mesh glass | 851.4 × 1043.4 mm | — | 2 |
+| Shutter Shutter Left | 1144.7 mm | 45° | 1 |
+| Shutter Interlock Side | 1144.7 mm | 45° | 2 |
+| Shutter Shutter Right | 1144.7 mm | 45° | 1 |
+| Glass/mesh glass | 851.4 × 1042.7 mm | — | 2 |
 
 ---
 

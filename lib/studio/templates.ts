@@ -1228,13 +1228,8 @@ export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
     prof("el27_slim_big", "27 mm Slim Interlock — big", "slim-interlock", { eleanor: "2729" }, "85.2×22.7", { value: 4.1, perFt: 12 }, CATALOGUE("Eleanor 27 mm p.30 — big slim (founder)")),
     prof("el27_slim_dgu", "27 mm Slim Interlock — double glass", "slim-interlock", { eleanor: "2730" }, "32.3×22.7", { value: 2.1, perFt: 12 }, CATALOGUE("Eleanor 27 mm p.30 — double glass slim (founder)")),
   ],
-  switches: [{
-    id: "track", label: "29 track", default: "47",
-    options: [
-      { value: "47", label: "47.7 mm track" },
-      { value: "48", label: "48.0 mm track" },
-    ],
-  }],
+  // the 48.0 mm track only (founder 2026-11-16): one option, so the window steps do not ask it
+  switches: [{ id: "track", label: "29 track", default: "48", options: [{ value: "48", label: "48.0 mm track" }] }],
   sizes: [
     size("frameW", "Frame top / bottom", rule("W", 0, ev("observed", "Euro track goes round at 45°, full width"))),
     size("frameH", "Frame side", rule("H", 0, ev("observed", "Euro track goes round at 45°, full height"))),
@@ -1260,7 +1255,7 @@ export const EURO_27: StudioSystem = withMeetChoice(withAlternatives(base({
     part("shutterMeet", "{s} Slim Interlock{tag}", "", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
   ],
   notes: [
-    "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder). Choose whose 29 track you use: Eleanor's is 0.3 mm taller, so its shutter is 0.7 mm shorter.",
+    "Euro 27 uses the Euro 29 track and clip; the shutter is the 27 mm one (founder). Track: the 48.0 mm one (founder 2026-11-16).",
     "Meeting side: the shutter itself with the interlock patti on it, or your slim interlock (choose its section).",
   ],
 }), "shutterMeet", ["el27_slim", "el27_slim_big", "el27_slim_dgu"]), { lock: "domal_glass_shutter", clip: "domal_interlock", glassW: 102, src: "27 mm shutter pocket (OMEO 2046) — as Domal 27", def: "clip" });

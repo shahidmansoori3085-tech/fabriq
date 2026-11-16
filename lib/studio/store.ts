@@ -71,6 +71,10 @@ function migrate(sys: StudioSystem): StudioSystem {
       parts: sys.parts.map((pt) => ({ ...pt, profile: pt.profile.filter((k) => !DROPPED.includes(k.id) || !k.when) })),
     };
   }
+  // Euro 27 runs on the 48.0 mm track only (founder 2026-11-16): not asked any more
+  if (sys.basedOn?.id === "euro-27" && sys.switches.some((x) => x.id === "track" && x.options.length > 1)) {
+    sys = { ...sys, switches: sys.switches.map((x) => (x.id === "track" ? { ...x, default: "48", options: x.options.filter((o) => o.value === "48") } : x)) };
+  }
   if (sys.parts.every((p) => p.place)) return sys;
   return {
     ...sys,
