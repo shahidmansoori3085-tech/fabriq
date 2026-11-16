@@ -253,7 +253,8 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
   const glass = [...mix].filter((k) => k !== "J").length;
   if (meet) out.push({ key: "clip", title: glass >= 2 ? "Shutter + interlock clip" : "Shutter section", sw: { meet: "clip" }, per: [], pics: [] });
   if (pick) {
-    for (const op of pick.options) out.push({ key: `both-${op.value}`, title: glass >= 2 ? `Slim interlock · both ${short(op.value)}` : `Slim interlock · ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
+    // a big slim goes with a small one, never two big (founder 2026-11-16)
+    for (const op of pick.options) if (!(glass >= 2 && /^big/i.test(short(op.value)))) out.push({ key: `both-${op.value}`, title: glass >= 2 ? `Slim interlock · both ${short(op.value)}` : `Slim interlock · ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
     if (pick.options.length >= 2 && glass >= 2) {
       const [a, b] = pick.options;
       out.push({ key: "mixed", title: `Slim interlock · one ${short(a.value)}, one ${short(b.value)}`, sw: { ...slim, [PICK_MEET]: a.value }, per: [{ [PICK_MEET]: a.value }, { [PICK_MEET]: b.value }], pics: [] });

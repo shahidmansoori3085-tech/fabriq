@@ -100,7 +100,13 @@ export function windowGeometry(
   const face = (pl: Place, shutter?: number) => {
     const p = at(pl);
     if (!p) return { mm: 0, known: true, part: undefined as PartDef | undefined, stops: undefined as Stop[] | undefined, shape: undefined as Shape | undefined, depth: 0 };
-    const id = profileOf(sys, p, vars, shutter !== undefined ? job.perShutter?.[shutter] : undefined);
+    const own = (q: PartDef) => profileOf(sys, q, vars, shutter !== undefined ? job.perShutter?.[shutter] : undefined);
+    // a mesh shutter is its mesh section all round and never carries a slim interlock (founder
+    // 2026-11-16); where the series has no mesh section its meeting side is its other upright
+    const mesh = shutter !== undefined && job.mix[shutter] === "J" && pl.startsWith("sash");
+    const lockP = at("sash-lock");
+    const slimHere = find(own(p))?.kind === "slim-interlock";
+    const id = !mesh ? own(p) : p.meshProfile ? p.meshProfile : slimHere && lockP ? lockP.meshProfile ?? own(lockP) : own(p);
     const prof = find(id);
     const shape = shapeOf(prof);
     const role = placeRole(pl);

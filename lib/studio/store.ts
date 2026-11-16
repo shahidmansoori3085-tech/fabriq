@@ -39,6 +39,8 @@ export function loadLibrary(): StudioLibrary {
 }
 
 /** Systems saved before pieces had a place in the drawing get one from their template. */
+const DROPPED = ["el29_slim_light"];
+
 function migrate(sys: StudioSystem): StudioSystem {
   const tpl = TEMPLATES.find((t) => t.id === sys.basedOn?.id);
   // names carry no company any more (founder, 2026-11-13): "Euro 25 mm — Ample" → "Euro 25 mm"
@@ -56,6 +58,18 @@ function migrate(sys: StudioSystem): StudioSystem {
   const mode = sys.switches.find((x) => x.id === "mode");
   if (mode && (mode.label !== MODE_SWITCH.label || (!sys.splitSet && mode.default !== MODE_SWITCH.default))) {
     sys = { ...sys, switches: sys.switches.map((x) => (x.id === "mode" ? { ...MODE_SWITCH, default: sys.splitSet ? x.default : MODE_SWITCH.default } : x)) };
+  }
+  // sections no longer offered as a choice (founder 2026-11-16: no light slim 2915 on the 29 mm shutter)
+  if (sys.switches.some((sw) => sw.id.startsWith("pick_") && sw.options.some((o) => DROPPED.includes(o.value)))) {
+    sys = {
+      ...sys,
+      switches: sys.switches.map((sw) => {
+        if (!sw.id.startsWith("pick_")) return sw;
+        const options = sw.options.filter((o) => !DROPPED.includes(o.value));
+        return { ...sw, options, default: DROPPED.includes(sw.default) ? options[0]?.value ?? sw.default : sw.default };
+      }),
+      parts: sys.parts.map((pt) => ({ ...pt, profile: pt.profile.filter((k) => !DROPPED.includes(k.id) || !k.when) })),
+    };
   }
   if (sys.parts.every((p) => p.place)) return sys;
   return {

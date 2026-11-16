@@ -151,8 +151,15 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     kinds.forEach((kind, i) => {
       for (const p of parts.filter((x) => x.scope === "shutter")) {
         if (p.onlyGlass && kind !== "glass") continue;
-        // a mesh shutter is its own mesh section on all four sides: no interlock on it (founder 2026-11-16)
-        const sec = kind === "jali" && p.meshProfile ? p.meshProfile : profileFor(p, i);
+        // a slim interlock is never on a mesh shutter (founder 2026-11-16): the mesh shutter is its
+        // mesh section all round; where the series has none, its meeting side is its other upright
+        const lockPart = parts.find((x) => x.scope === "shutter" && x.place === "sash-lock");
+        const main = profileFor(p, i);
+        const slimHere = sys.profiles.find((x) => x.id === main)?.kind === "slim-interlock";
+        const sec = kind !== "jali" ? main
+          : p.meshProfile ? p.meshProfile
+          : slimHere && lockPart ? lockPart.meshProfile ?? profileFor(lockPart, i)
+          : main;
         // the outer (lock) upright: left on the first shutter, right on the others
         const role = p.role.replace("{s}", `S${i + 1}`).replace("{lr}", i === 0 ? "Left" : "Right").replace("{tag}", kind === "jali" ? " (Mesh)" : "");
         for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);

@@ -617,7 +617,7 @@ export const AMPLE_29: StudioSystem = withAlternatives(base({
     "The roller (24 mm) runs on clip 914401 snapped into the track. Any outer leg on a track is only design.",
     "41010 and 41330 are tracks with a leg, not shutter rails.",
   ],
-}), "shutterMeet", ["el29_slim", "el29_slim_big", "el29_slim_light", "el29_slim_dgu"]);
+}), "shutterMeet", ["el29_slim", "el29_slim_big", "el29_slim_dgu"]);
 
 /**
  * Euro 29 — Eleanor (catalogue pages 32–33). Track 48.0 mm (2901 / 2902), so the
@@ -1199,13 +1199,13 @@ function slimSide(sys: StudioSystem, slim: string): StudioSystem {
 slimSide(AMPLE_25, "");
 slimSide(AMPLE_37, "");
 // 41289 is an H-section (glass channel on both sides), not a slim interlock (founder
-// 2026-11-14): the 29 mm slims are Eleanor's 2913 / 2914 / 2915 / 2916, slot 29.
+// 2026-11-14): the 29 mm slims are Eleanor's 2913 / 2914 / 2916, slot 29. The light slim 2915
+// is not offered on the 29 mm shutter (founder 2026-11-16).
 slimSide(AMPLE_29, "el29_slim");
 AMPLE_29.sizes = AMPLE_29.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [
   ...x.cases.filter((c) => c.when),
   rule("shutterW", -mm(65.6), FROM_DRAWING("41055 pocket 52.7 + small slim 2913 12.9 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim" } }),
   rule("shutterW", -mm(65.5), FROM_DRAWING("41055 pocket 52.7 + big slim 2914 12.8 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_big" } }),
-  rule("shutterW", -mm(63.4), FROM_DRAWING("41055 pocket 52.7 + light slim 2915 10.7 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_light" } }),
   rule("shutterW", -mm(65.6), FROM_DRAWING("41055 pocket 52.7 + double-glass slim 2916 12.9 (where the glass stops in its top slot, + 3.9)"), { when: { meet: "slim", pick_shutterMeet: "el29_slim_dgu" } }),
   unknownFrom("shutterW"),
 ] }));

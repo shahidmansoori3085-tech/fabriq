@@ -430,7 +430,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: 47.7 mm U track with roller clip 914401; shutter 41055 on all sides + interlock clip 41054, or slim interlock; jali 41050
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Interlock Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big · 29 mm Slim Interlock — light · 29 mm Slim Interlock — double glass
+  - Interlock Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big · 29 mm Slim Interlock — double glass
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
 Pieces:
@@ -445,7 +445,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
 | Shutter {lr} | shutter | 1 | shutterH | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_light: 29 mm Slim Interlock — light — code 2915 — 35×17.5 mm — slim-interlock<br>pick_shutterMeet=el29_slim_dgu: 29 mm Slim Interlock — double glass — code 2916 — 34.1×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_dgu: 29 mm Slim Interlock — double glass — code 2916 — 34.1×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | 29 mm Interlock Clip — code 41054 — 33.63×38.89 mm — interlock-patti |
 
 Size rules:
@@ -460,7 +460,6 @@ Size rules:
 | Glass width (`glassW`) | meet=clip | shutterW − 105.4 | suggested | From the drawings (window built from the sections): glass stops 52.7 mm in (Ample 41055) — the same shutter on both sides. Check on one window. |
 | Glass width (`glassW`) | meet=slim, pick_shutterMeet=el29_slim | shutterW − 65.6 | suggested | From the drawings (window built from the sections): 41055 pocket 52.7 + small slim 2913 12.9 (where the glass stops in its top slot, + 3.9). Check on one window. |
 | Glass width (`glassW`) | meet=slim, pick_shutterMeet=el29_slim_big | shutterW − 65.5 | suggested | From the drawings (window built from the sections): 41055 pocket 52.7 + big slim 2914 12.8 (where the glass stops in its top slot, + 3.9). Check on one window. |
-| Glass width (`glassW`) | meet=slim, pick_shutterMeet=el29_slim_light | shutterW − 63.4 | suggested | From the drawings (window built from the sections): 41055 pocket 52.7 + light slim 2915 10.7 (where the glass stops in its top slot, + 3.9). Check on one window. |
 | Glass width (`glassW`) | meet=slim, pick_shutterMeet=el29_slim_dgu | shutterW − 65.6 | suggested | From the drawings (window built from the sections): 41055 pocket 52.7 + double-glass slim 2916 12.9 (where the glass stops in its top slot, + 3.9). Check on one window. |
 | Glass width (`glassW`) | always | shutterW + **UNKNOWN** (app refuses to cut) | unknown | — |
 | Glass height (`glassH`) | always | shutterH − 105.4 | suggested | From the drawings (window built from the sections): Ample 41055 pocket (shutter on all 4 sides): glass stops 52.7 mm in from each shutter edge. Check on one window. |
