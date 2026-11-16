@@ -29,7 +29,11 @@ const map = (sol: Solid, f: (x: number, y: number) => [number, number]): Solid =
 export const MEET_RUN = 240;
 
 export function buildMeeting(cut: Cutaway, meetClip?: Shape): Meeting | null {
-  const A = cut.lanes.find((l) => l.shutter === 0), B = cut.lanes.find((l) => l.shutter === 1);
+  // the meeting shown is two glass shutters side by side when there are; a mesh shutter carries
+  // no slim and no interlock clip (founder 2026-11-16)
+  const byIdx = [...cut.lanes].sort((p, q) => p.shutter - q.shutter);
+  const pairAt = byIdx.findIndex((l, i) => i < byIdx.length - 1 && l.kind !== "J" && byIdx[i + 1].kind !== "J");
+  const A = byIdx[pairAt >= 0 ? pairAt : 0], B = byIdx[pairAt >= 0 ? pairAt + 1 : 1];
   if (!A || !B || !A.meet || !B.meet) return null;
   const M = 0;
   const zgOf = (ln: CutLane) => ln.depth0 + (glassPlane(ln.bottom) ?? ln.thick / 2);
@@ -77,7 +81,7 @@ export function buildMeeting(cut: Cutaway, meetClip?: Shape): Meeting | null {
     const f = (x: number) => (ln.mouth === "start" ? x - ob.x0 : ob.x1 - x);
     const stile = map(own, (x, y) => [left ? edge - f(x) : edge + f(x), y + ln.depth0]);
     const ups: Solid[] = [stile];
-    if (fit) {
+    if (fit && ln.kind !== "J") {
       // one end of the clip is pressed into the shutter's mouth, the other lies on the shutter's
       // back (the face toward the other shutter); the other shutter's clip is the same, turned
       // round, and the two lock into each other
