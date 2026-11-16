@@ -20,7 +20,7 @@ worked out by the shutter layout, so a plain `W` there means "the share".
 - In short: Top + 2 sides + bottom track at 90°; shutter from handle, interlock and 2 bearings
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Shutter width (`mode`): All equal (default) · Half each
+  - Shutter width (`mode`): Half each (default) · Share the width
 
 Pieces:
 
@@ -71,7 +71,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: Same tracks as Normal 18; handle, interlock and bearing 2½″ × ¾″ (60 × 19)
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Shutter width (`mode`): All equal (default) · Half each
+  - Shutter width (`mode`): Half each (default) · Share the width
 
 Pieces:
 
@@ -122,7 +122,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: 45° frame (2-track 2051 / 3-track 2062); one shutter profile on all 4 sides + interlock patti
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Shutter width (`mode`): All equal (default) · Half each
+  - Shutter width (`mode`): Half each (default) · Share the width
 
 Pieces:
 
@@ -1193,7 +1193,7 @@ Still unknown here: Frame top / bottom, Frame side, Shutter width, Shutter heigh
 - In short: Any Bombay-type series with a 4-profile shutter
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Shutter width (`mode`): All equal (default) · Half each
+  - Shutter width (`mode`): Half each (default) · Share the width
 
 Pieces:
 

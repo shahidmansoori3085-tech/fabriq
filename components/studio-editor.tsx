@@ -225,8 +225,8 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
             <div className="text-sm font-bold">Shutter width</div>
             <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>For windows with 3 or 4 glass shutters. With 2 shutters, each is half the window.</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {([["equal", "All equal", "The shutters share the window width. The window opens more."],
-                ["half", "Half each", "Every shutter is half the window. The window opens half."]] as const).map(([v, title, sub]) => {
+              {([["half", "Half each", "Every shutter is half the window. The window opens half."],
+                ["equal", "Share the width", "The shutters share the window width. The window opens more."]] as const).map(([v, title, sub]) => {
                 const on = mode.default === v;
                 return (
                   <button key={v} type="button" onClick={() => pickSplit(v)} aria-pressed={on} className="card px-3 py-2.5 text-left"

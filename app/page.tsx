@@ -567,7 +567,7 @@ export default function FabriQ() {
     writeOpenJob(id);
   }, [items, jobName]);
 
-  /** The system's shutter width (set in the system: all equal or half each) goes on
+  /** The system's shutter width (set in the system: half each or share the width) goes on
    *  each new or edited item, so a later change never alters a saved item silently. */
   const withShopChoices = (meta: Record<string, string>) => {
     const sys = meta.system?.startsWith("studio:") ? studioSystem(meta.system.slice(7))

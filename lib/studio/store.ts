@@ -52,7 +52,7 @@ function migrate(sys: StudioSystem): StudioSystem {
       sizes: sys.sizes.map((x) => (x.label === "Roller clip" ? { ...x, label: "Track clip" } : x)),
     };
   }
-  // shutter width: all equal unless the shop chose it in the system (founder 2026-11-16)
+  // shutter width: half each unless the shop chose it in the system (founder 2026-11-16)
   const mode = sys.switches.find((x) => x.id === "mode");
   if (mode && (mode.label !== MODE_SWITCH.label || (!sys.splitSet && mode.default !== MODE_SWITCH.default))) {
     sys = { ...sys, switches: sys.switches.map((x) => (x.id === "mode" ? { ...MODE_SWITCH, default: sys.splitSet ? x.default : MODE_SWITCH.default } : x)) };
