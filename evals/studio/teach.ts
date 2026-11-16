@@ -97,11 +97,12 @@ const job = (over: Partial<TaughtJob>): TaughtJob =>
   const d35 = TEMPLATES.find((s) => s.id === "domal-35")!;
   const r = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG" });
   const v = (id: string) => r.sizes.find((s) => s.id === id)!;
-  expect(v("shutterH").value === 48 * IN - 61100 && v("shutterH").status === "suggested", "Domal 35 leg track 42.6: H − 61.1 from the drawing");
+  // founder 2026-11-16: the 48 mm two-leg track only (the 42.6 rules stay for a shop that adds it back)
+  expect(v("shutterH").value === 48 * IN - 71800 && v("shutterH").status === "suggested", "Domal 35 48 track with 2 legs: H − 71.8 from the drawing");
   expect(Math.abs(v("shutterW").value! - 29.8125 * IN) <= 1, "35×75 2-track width (W − ⅜″) ÷ 2");
-  expect(r.pieces.some((p) => p.sectionId === "d35_track_2t"), "2-track frame is the 42.6 leg track by default");
-  const r48 = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "48" } });
-  expect(r48.sizes.find((s) => s.id === "shutterH")!.value === 48 * IN - 71800, "48 track with 2 legs: H − 71.8");
+  expect(r.pieces.some((p) => p.sectionId === "d35_t2_48"), "2-track frame is the 48 two-leg track by default");
+  const r42 = evaluate(d35, { id: "W1", W: 60 * IN, H: 48 * IN, qty: 1, tracks: 2, mix: "GG", switches: { track: "42" } });
+  expect(r42.sizes.find((s) => s.id === "shutterH")!.value === 48 * IN - 61100, "42.6 leg track (if added back): H − 61.1");
   let noSection = false;
   try { evaluate(d35, { id: "W1", W: 120 * IN, H: 60 * IN, qty: 1, tracks: 4, mix: "GGGJ" }); }
   catch (e) { noSection = e instanceof StudioUnknownError && e.missing.every((m) => m.startsWith("Section for")); }
