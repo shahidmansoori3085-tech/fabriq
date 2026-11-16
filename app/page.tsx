@@ -249,10 +249,12 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
   };
   const out: MeetChoice[] = [];
   const slim: Record<string, string> = meet ? { meet: "slim" } : {};
-  if (meet) out.push({ key: "clip", title: "Shutter + interlock clip", sw: { meet: "clip" }, per: [], pics: [] });
+  // only glass shutters carry a slim interlock: with one glass shutter it is just "small", "big"…
+  const glass = [...mix].filter((k) => k !== "J").length;
+  if (meet) out.push({ key: "clip", title: glass >= 2 ? "Shutter + interlock clip" : "Shutter section", sw: { meet: "clip" }, per: [], pics: [] });
   if (pick) {
-    for (const op of pick.options) out.push({ key: `both-${op.value}`, title: `Slim interlock · both ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
-    if (pick.options.length >= 2) {
+    for (const op of pick.options) out.push({ key: `both-${op.value}`, title: glass >= 2 ? `Slim interlock · both ${short(op.value)}` : `Slim interlock · ${short(op.value)}`, sw: { ...slim, [PICK_MEET]: op.value }, per: [], pics: [] });
+    if (pick.options.length >= 2 && glass >= 2) {
       const [a, b] = pick.options;
       out.push({ key: "mixed", title: `Slim interlock · one ${short(a.value)}, one ${short(b.value)}`, sw: { ...slim, [PICK_MEET]: a.value }, per: [{ [PICK_MEET]: a.value }, { [PICK_MEET]: b.value }], pics: [] });
     }
@@ -261,7 +263,8 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
   return out.filter((c) => {
     const r = evaluate(s, { id: "Q", W: 1524000, H: 1219200, qty: 1, tracks: parseInt(tracks, 10) || 2, mix, switches: { ...sw, ...c.sw }, perShutter: c.per.length ? c.per : undefined }, { allowUnknown: true });
     if (r.missing.length) return false;
-    c.pics = [...new Set(r.pieces.filter((p) => /Interlock Side|Meeting Side|Interlock Clip/.test(p.role)).map((p) => p.sectionId))].slice(0, 2);
+    // a mesh shutter has no interlock (its own mesh section all round): its pieces are not the meeting picture
+    c.pics = [...new Set(r.pieces.filter((p) => /Interlock Side|Meeting Side|Interlock Clip/.test(p.role) && !p.role.includes("(Mesh)")).map((p) => p.sectionId))].slice(0, 2);
     return true;
   });
 }
@@ -1263,7 +1266,9 @@ function JobScreen({
               {list.map((c) => (
                 <Choice key={c.key} wide selected={cur?.key === c.key}
                   onClick={() => choose({ studioSw: JSON.stringify({ ...sw, ...c.sw }), studioPer: JSON.stringify(c.per) })}
-                  title={c.title} sub={c.key === "clip" ? "Shutter section on both sides, joined by an interlock clip" : c.key === "mixed" ? "A different slim interlock on each shutter" : "Slim interlock on both shutters, no clip"}
+                  title={c.title} sub={[...o.mix].filter((k) => k !== "J").length < 2
+                    ? (c.key === "clip" ? "Glass shutter section on all sides. The mesh shutter has no interlock." : "Slim interlock on the glass shutter. The mesh shutter has no interlock.")
+                    : c.key === "clip" ? "Shutter section on both sides, joined by an interlock clip" : c.key === "mixed" ? "A different slim interlock on each shutter" : "Slim interlock on both shutters, no clip"}
                   picture={<span className="flex h-14 w-24 items-center justify-center gap-1">{c.pics.map((id) => { const sh = shapeOf(BUILT_IN_PROFILES.find((p) => p.id === id)); return sh ? <span key={id} className="block h-14 w-11"><MiniSection s={sh} /></span> : null; })}</span>} />
               ))}
             </div>
