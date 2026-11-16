@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/i", destination: "/?utm_source=instagram", permanent: false },
+      // a fabricator's Instagram bio (collab reels), counted apart from our own
+      { source: "/f", destination: "/?utm_source=ig", permanent: false },
     ];
   },
   // The service worker must never be cached itself, or a phone keeps running
