@@ -96,7 +96,7 @@ export function ShareAppBanner({ src = "/banners/share-orange.webp", place = "ba
   );
 }
 
-/** First screen, from a phone's second day on: the big share banner. */
+/** First screen, from a phone's second opening on: the big share banner. */
 export function ShareHomeBanner() {
   const [show, setShow] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect

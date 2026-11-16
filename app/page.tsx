@@ -1464,7 +1464,7 @@ function JobScreen({
         </>
       )}
 
-      {/* from a phone's second day on: pass FabriQ on */}
+      {/* from a phone's second opening on: pass FabriQ on */}
       {items.length === 0 && <ShareHomeBanner />}
 
       {/* earlier jobs — only when nothing is being entered, so it never competes */}
