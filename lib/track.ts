@@ -199,3 +199,16 @@ export function markVisitor(): void {
     /* storage blocked — nothing to count */
   }
 }
+
+/** Not this phone's first day with FabriQ (a first-day visitor is still finding their way). */
+export function isReturning(): boolean {
+  try {
+    const first = localStorage.getItem("fabriq.first");
+    if (first) return first !== istDay(Date.now());
+    // here before the day-count began: a saved job from an earlier day says so
+    const today = istDay(Date.now());
+    return loadProjects().some((p) => p.created && istDay(p.created) !== today);
+  } catch {
+    return false;
+  }
+}
