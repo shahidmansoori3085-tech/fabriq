@@ -555,7 +555,10 @@ function expandNormalItem(item: JobItem): CutPiece[] {
   const { top, bottom } = frameSections(item);
   const { shutterW, shutterH } = shutterSize(item, DEFAULTS);
   const set = normalSet(item);
-  const bearingLen = shutterW - DEFAULTS.bearingDeduction - set.extra;
+  // 45° shutter (founder 2026-11-17): handle pipe top and bottom, full shutter width, mitred
+  const sash45 = item.meta.sash === "45";
+  const bearingLen = sash45 ? shutterW : shutterW - DEFAULTS.bearingDeduction - set.extra;
+  const sa: 90 | 45 = sash45 ? 45 : 90;
 
   for (let q = 0; q < item.qty; q++) {
     const wId = `${item.id}${item.qty > 1 ? `.${q + 1}` : ""}`;
@@ -599,10 +602,12 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     item.shutters.forEach((sh, i) => {
       const sn = `S${i + 1}`;
       const tag = sh.kind === "jali" ? " (Mesh)" : "";
-      push(set.handle, shutterH, `${sn} Handle${tag}`);
-      push(set.interlock, shutterH, `${sn} Interlock${tag}`);
-      push(set.bearing, bearingLen, `${sn} Bearing Top${tag}`);
-      push(set.bearing, bearingLen, `${sn} Bearing Bottom${tag}`);
+      const sp = (sectionId: string, length: Um, role: string) =>
+        pieces.push({ sectionId, length, itemId: wId, role, label: `${wId} ${sizeLabel} — ${role}`, angle: sa });
+      sp(set.handle, shutterH, `${sn} Handle${tag}`);
+      sp(set.interlock, shutterH, `${sn} Interlock${tag}`);
+      sp(sash45 ? set.handle : set.bearing, bearingLen, `${sn} ${sash45 ? "Shutter" : "Bearing"} Top${tag}`);
+      sp(sash45 ? set.handle : set.bearing, bearingLen, `${sn} ${sash45 ? "Shutter" : "Bearing"} Bottom${tag}`);
     });
   }
   return pieces;
@@ -1163,7 +1168,8 @@ export function estimate(items: JobItem[]): MaterialList {
     const { shutterW, shutterH } = shutterSize(item, d);
     const extra = normalSet(item).extra;
     const gW = shutterW - d.glassDeductionW - extra;
-    const gH = shutterH - d.glassDeductionH - extra;
+    // 45° shutter: the glass sits in the handle groove on all four sides, so it loses the same both ways
+    const gH = shutterH - (item.meta.sash === "45" ? d.glassDeductionW : d.glassDeductionH) - extra;
 
     const glassShutters = item.shutters.filter((s) => s.kind === "glass").length;
     const jaliShutters = item.shutters.filter((s) => s.kind === "jali").length;

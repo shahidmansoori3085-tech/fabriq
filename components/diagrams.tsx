@@ -407,7 +407,9 @@ export function DoorScopePicture({ item, withFrame, size = 44 }: { item: JobItem
 }
 
 /** Annotated window reference — shows where each section type goes */
-export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false }: {
+export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false, sash45 = false }: {
+  /** Normal shutter cut 45°: handle pipe top and bottom instead of bearings */
+  sash45?: boolean;
   system?: "normal" | "domal";
   /** the job's shutters left to right — G glass, J mesh — e.g. "GGJ" */
   panes?: string;
@@ -447,7 +449,7 @@ export function CuttingGuide({ system = "normal", panes = "GGJ", fixTop = false 
         ["#e2e8f0", "#475569", `${tracks}-Track Bottom`, "Bottom only"],
         ["#fed7aa", "#f97316", "Handle", "Outer side of each shutter"],
         ["#e9d5ff", "#a855f7", "Interlock", "Where shutters meet"],
-        ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
+        sash45 ? ["#d1fae5", "#10b981", "Handle (45°)", "Shutter top and bottom (×2)"] : ["#d1fae5", "#10b981", "Bearing", "Top and bottom (×2)"],
       ];
   if (fixTop) {
     legend.push(

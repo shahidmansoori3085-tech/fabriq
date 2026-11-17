@@ -52,15 +52,36 @@ export const MODE_SWITCH = {
 };
 
 /** Normal frame corners: 90° (tracks between the sides) or 45° — chosen on the cutting sheet, not asked. */
-export const JOINT_SWITCH = { id: "joint", label: "Frame joint", options: [{ value: "90", label: "90°" }, { value: "45", label: "45°" }], default: "90" };
-/** A Normal 18 system saved before the 45° choice existed takes it (and its full-length track). */
+export const JOINT_SWITCH = { id: "joint", label: "Track cutting", options: [{ value: "90", label: "90°" }, { value: "45", label: "45°" }], default: "90" };
+/** Normal shutter corners: 90° (bearings between handle and interlock) or 45° (handle pipe top and bottom, all four mitred). */
+export const SASH_SWITCH = { id: "sash", label: "Shutter cutting", options: [{ value: "90", label: "90°" }, { value: "45", label: "45°" }], default: "90" };
+/** A Normal 18 system takes the 45° frame and 45° shutter choices (also one saved before they existed). */
 export function withJoint(sys: StudioSystem): StudioSystem {
   const normal = /^normal-18/.test(sys.basedOn?.id ?? sys.id);
-  if (!normal || sys.switches.some((x) => x.id === "joint")) return sys;
-  return {
-    ...sys, switches: [...sys.switches, JOINT_SWITCH],
-    sizes: sys.sizes.map((x) => (x.id !== "trackW" ? x : { ...x, cases: [{ when: { joint: "45" }, base: "W", add: 0, evidence: { status: "verified" as const, source: "Founder job: 45° frame: all four pieces full length, mitred (2026-11-17)" } }, ...x.cases] })),
-  };
+  if (!normal) return sys;
+  if (!sys.switches.some((x) => x.id === "joint")) {
+    sys = {
+      ...sys, switches: [...sys.switches, JOINT_SWITCH],
+      sizes: sys.sizes.map((x) => (x.id !== "trackW" ? x : { ...x, cases: [{ when: { joint: "45" }, base: "W", add: 0, evidence: { status: "verified" as const, source: "Founder job: 45° frame: all four pieces full length, mitred (2026-11-17)" } }, ...x.cases] })),
+    };
+  }
+  if (!sys.switches.some((x) => x.id === "sash")) {
+    // 45° shutter (founder 2026-11-17, shop video "Bombay sliding 45° palla"): the handle pipe
+    // runs top and bottom too, full shutter width, every corner mitred. The glass then sits in
+    // the same groove on all four sides, so its height loses what its width loses.
+    const handle = sys.parts.find((p) => p.place === "sash-lock")?.profile.at(-1)?.id;
+    const glassW = sys.sizes.find((x) => x.id === "glassW")?.cases.at(-1);
+    const SRC = { status: "suggested" as const, source: "45° shutter: handle pipe on all four sides, mitred (founder 2026-11-17; shop video). Check on one window." };
+    sys = {
+      ...sys, switches: [...sys.switches, SASH_SWITCH],
+      sizes: sys.sizes.map((x) => x.id === "bearing" ? { ...x, cases: [{ when: { sash: "45" }, base: "shutterW", add: 0, evidence: SRC }, ...x.cases] }
+        : x.id === "glassH" && glassW ? { ...x, cases: [{ when: { sash: "45" }, base: "shutterH", add: glassW.add, evidence: SRC }, ...x.cases] }
+        : x),
+      parts: sys.parts.map((p) => (handle && (p.place === "sash-top" || p.place === "sash-bottom") && !p.profile.some((c) => c.when?.sash)
+        ? { ...p, profile: [{ when: { sash: "45" }, id: handle }, ...p.profile] } : p)),
+    };
+  }
+  return sys;
 }
 
 const CATALOGUE = (s: string) => ev("verified", s);
@@ -1343,7 +1364,7 @@ export const NORMAL_18_60: StudioSystem = (() => {
 })();
 
 export const TEMPLATES: StudioSystem[] = [
-  NORMAL_18, NORMAL_18_60, DOMAL_27,
+  withJoint(NORMAL_18), withJoint(NORMAL_18_60), DOMAL_27,
   NORMAL_25, NORMAL_5T,
   AMPLE_27, ELEANOR_27, BH_27, EURO_27, DOMAL_35, MINI_DOMAL_20, AMPLE_22, AMPLE_25, AMPLE_26,
   AMPLE_29, ELEANOR_29, AMPLE_37,

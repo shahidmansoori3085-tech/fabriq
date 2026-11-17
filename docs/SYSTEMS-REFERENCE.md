@@ -21,7 +21,8 @@ worked out by the shutter layout, so a plain `W` there means "the share".
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
-  - Frame joint (`joint`): 90° (default) · 45°
+  - Track cutting (`joint`): 90° (default) · 45°
+  - Shutter cutting (`sash`): 90° (default) · 45°
 
 Pieces:
 
@@ -33,8 +34,8 @@ Pieces:
 | Bottom | window | 1 | trackW | 90° | tracks=3: 3-Track Bottom — code 1031 / 1831 — 92×32 mm — track<br>always: 2-Track Bottom — code 1011 / 1821 — 62×32 mm — track |
 | Handle | shutter | 1 | shutterH | 90° | Handle 3/4"×1.5" — code 1041 / 1841 — 40×18 mm — handle |
 | Interlock | shutter | 1 | shutterH | 90° | Interlock Stile 40×18 — code 1081 — 40×18 mm — interlock |
-| Bearing Top | shutter | 1 | bearing | 90° | Bottom Bearing / Rail 40×18 — code 1051 — 40×18 mm — bearing |
-| Bearing Bottom | shutter | 1 | bearing | 90° | Bottom Bearing / Rail 40×18 — code 1051 — 40×18 mm — bearing |
+| Bearing Top | shutter | 1 | bearing | 90° | sash=45: Handle 3/4"×1.5" — code 1041 / 1841 — 40×18 mm — handle<br>always: Bottom Bearing / Rail 40×18 — code 1051 — 40×18 mm — bearing |
+| Bearing Bottom | shutter | 1 | bearing | 90° | sash=45: Handle 3/4"×1.5" — code 1041 / 1841 — 40×18 mm — handle<br>always: Bottom Bearing / Rail 40×18 — code 1051 — 40×18 mm — bearing |
 
 Size rules:
 
@@ -47,8 +48,10 @@ Size rules:
 | Shutter width (`shutterW`) | mode=equal, glass=4 | (W − 279.4) ÷ 4 + 80 | observed | Shop videos: 4 glass share: (W − 11″) ÷ 4, + 80 mm |
 | Shutter width (`shutterW`) | always | W ÷ 2 | verified | Founder job: every shutter is half the window |
 | Shutter height (handle, interlock) (`shutterH`) | always | H − 41.3 | verified | Founder job: 72×60 3-track, handle 58⅜″ |
+| Bearing (top & bottom) (`bearing`) | sash=45 | shutterW | suggested | 45° shutter: handle pipe on all four sides, mitred (founder 2026-11-17; shop video). Check on one window. |
 | Bearing (top & bottom) (`bearing`) | always | shutterW − 80 | verified | Founder job: shutter width − handle and interlock |
 | Glass width (`glassW`) | always | shutterW − 64.1 | observed | Shop videos: bearing + 5 sut (5 videos) |
+| Glass height (`glassH`) | sash=45 | shutterH − 64.1 | suggested | 45° shutter: handle pipe on all four sides, mitred (founder 2026-11-17; shop video). Check on one window. |
 | Glass height (`glassH`) | always | shutterH − 66.7 | observed | Shop videos: H − 4″2 sut |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
@@ -74,7 +77,8 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
-  - Frame joint (`joint`): 90° (default) · 45°
+  - Track cutting (`joint`): 90° (default) · 45°
+  - Shutter cutting (`sash`): 90° (default) · 45°
 
 Pieces:
 
@@ -86,8 +90,8 @@ Pieces:
 | Bottom | window | 1 | trackW | 90° | tracks=3: 3-Track Bottom — code 1031 / 1831 — 92×32 mm — track<br>always: 2-Track Bottom — code 1011 / 1821 — 62×32 mm — track |
 | Handle | shutter | 1 | shutterH | 90° | Handle 2½″×¾″ — 60×19 mm — handle |
 | Interlock | shutter | 1 | shutterH | 90° | Interlock 2½″×¾″ — 60×19 mm — interlock |
-| Bearing Top | shutter | 1 | bearing | 90° | Bearing 2½″×¾″ — 60×19 mm — bearing |
-| Bearing Bottom | shutter | 1 | bearing | 90° | Bearing 2½″×¾″ — 60×19 mm — bearing |
+| Bearing Top | shutter | 1 | bearing | 90° | sash=45: Handle 2½″×¾″ — 60×19 mm — handle<br>always: Bearing 2½″×¾″ — 60×19 mm — bearing |
+| Bearing Bottom | shutter | 1 | bearing | 90° | sash=45: Handle 2½″×¾″ — 60×19 mm — handle<br>always: Bearing 2½″×¾″ — 60×19 mm — bearing |
 
 Size rules:
 
@@ -100,8 +104,10 @@ Size rules:
 | Shutter width (`shutterW`) | mode=equal, glass=4 | (W − 279.4) ÷ 4 + 80 | observed | Shop videos: 4 glass share: (W − 11″) ÷ 4, + 80 mm |
 | Shutter width (`shutterW`) | always | W ÷ 2 | verified | Founder job: every shutter is half the window |
 | Shutter height (handle, interlock) (`shutterH`) | always | H − 41.3 | verified | Founder job: 72×60 3-track, handle 58⅜″ |
+| Bearing (top & bottom) (`bearing`) | sash=45 | shutterW | suggested | 45° shutter: handle pipe on all four sides, mitred (founder 2026-11-17; shop video). Check on one window. |
 | Bearing (top & bottom) (`bearing`) | always | shutterW − 120 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): shutter width − handle 60 − interlock 60. Check on one window. |
 | Glass width (`glassW`) | always | shutterW − 104.1 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): bearing + 15.9, as the 1½″ set (bearing + 5 sut). Check on one window. |
+| Glass height (`glassH`) | sash=45 | shutterH − 104.1 | suggested | 45° shutter: handle pipe on all four sides, mitred (founder 2026-11-17; shop video). Check on one window. |
 | Glass height (`glassH`) | always | shutterH − 106.7 | suggested | From the 1½″ set, 20 mm wider pieces (OMEO p.43): two bearings 20 mm wider each than the 1½″ set (shutter − 66.7). Check on one window. |
 
 Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
@@ -1219,7 +1225,7 @@ Still unknown here: Frame top / bottom, Frame side, Shutter width, Shutter heigh
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
-  - Frame joint (`joint`): 90° (default) · 45°
+  - Track cutting (`joint`): 90° (default) · 45°
 
 Pieces:
 

@@ -283,7 +283,7 @@ const glassOf = (mix: string) => [...mix].filter((k) => k !== "J").length;
 const canShare = (s: StudioSystem) => !!s.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
 function otherSwitches(s: StudioSystem) {
   // not asked here: the meeting side, shutter width (its own step) and the frame joint (on the cutting sheet)
-  return s.switches.filter((x) => x.id !== "meet" && x.id !== "mode" && x.id !== "joint" && !x.id.startsWith("pick_") && x.options.length > 1);
+  return s.switches.filter((x) => x.id !== "meet" && x.id !== "mode" && x.id !== "joint" && x.id !== "sash" && !x.id.startsWith("pick_") && x.options.length > 1);
 }
 const parseSw = (j: string): Record<string, string> => { try { return JSON.parse(j); } catch { return {}; } };
 /** The shutter mixes of a track count this system can cut with these choices (a 4-track with no frame section is not offered). */
@@ -2675,12 +2675,16 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
     || (it.system === "studio" && /^normal-18/.test(systemOfItem(it)?.basedOn?.id ?? systemOfItem(it)?.id ?? "")));
   const normals = items.filter(isNormal);
   const joint = normals.length && normals.every((it) => it.meta.joint === "45") ? "45" : "90";
-  const setJoint = (v: "90" | "45") => onItems(items.map((it) => {
+  const setCorner = (key: "joint" | "sash") => (v: "90" | "45") => onItems(items.map((it) => {
     if (!isNormal(it)) return it;
     const meta = { ...it.meta };
-    if (v === "45") meta.joint = "45"; else delete meta.joint;
+    if (v === "45") meta[key] = "45"; else delete meta[key];
     return { ...it, meta };
   }));
+  const setJoint = setCorner("joint");
+  // shutter corners (founder 2026-11-17): 45° = handle pipe on all four sides, mitred
+  const sash = normals.length && normals.every((it) => it.meta.sash === "45") ? "45" : "90";
+  const setSash = setCorner("sash");
   const sectionGroups = useMemo(() => {
     const map = new Map<string, PackedBar[]>();
     for (const b of list.bars) map.set(b.sectionId, [...(map.get(b.sectionId) ?? []), b]);
@@ -2708,7 +2712,7 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
   const guideOf = (sys: "normal" | "domal") => {
     const ws = items.filter((it) => it.type === "window" && (sys === "domal" ? it.system === "domal" : it.system !== "domal" && it.system !== "z_section"));
     const it = ws.find((w) => w.meta.domalFix === "yes") ?? ws[0];
-    return it ? { panes: it.meta.mix || undefined, fixTop: it.meta.domalFix === "yes" } : {};
+    return it ? { panes: it.meta.mix || undefined, fixTop: it.meta.domalFix === "yes", sash45: it.meta.sash === "45" } : {};
   };
   const totalPieces = list.bars.reduce((a, b) => a + b.pieces.length, 0);
   const groups = barGroups(list.sections);
@@ -2717,18 +2721,25 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
   return (
     <div ref={sheetRef} className="print-sheet flex flex-col gap-3">
       {normals.length > 0 && (
-        <div className="no-print card flex items-center justify-between gap-3 px-4 py-3">
-          <span className="min-w-0">
-            <span className="block text-sm font-bold">Frame corners</span>
-            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{joint === "45" ? "45°: all four sides full length" : "90°: top and bottom fit between the sides"}</span>
-          </span>
-          <div className="flex shrink-0 gap-1 rounded-[var(--radius)] p-1" style={{ background: "var(--surface-3)" }} role="radiogroup" aria-label="Frame corners">
-            {(["90", "45"] as const).map((v) => (
-              <button key={v} type="button" role="radio" aria-checked={joint === v} onClick={() => setJoint(v)}
-                className="rounded-[8px] px-4 py-1.5 text-sm font-bold"
-                style={joint === v ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" } : { color: "var(--ink-3)" }}>{v}°</button>
-            ))}
-          </div>
+        <div className="no-print card flex flex-col px-4 py-1">
+          {([
+            ["Track cutting", joint, setJoint, joint === "45" ? "45°: all four sides full length" : "90°: top and bottom fit between the sides"],
+            ["Shutter cutting", sash, setSash, sash === "45" ? "45°: handle pipe on all four sides, full length" : "90°: bearings fit between handle and interlock"],
+          ] as const).map(([title, val, set, sub], i) => (
+            <div key={title} className="flex items-center justify-between gap-3 py-2.5" style={i ? { borderTop: "1px solid var(--line)" } : undefined}>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">{title}</span>
+                <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+              </span>
+              <div className="flex shrink-0 gap-1 rounded-[var(--radius)] p-1" style={{ background: "var(--surface-3)" }} role="radiogroup" aria-label={title}>
+                {(["90", "45"] as const).map((v) => (
+                  <button key={v} type="button" role="radio" aria-checked={val === v} onClick={() => set(v)}
+                    className="rounded-[8px] px-4 py-1.5 text-sm font-bold"
+                    style={val === v ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" } : { color: "var(--ink-3)" }}>{v}°</button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       <div className="card p-4">

@@ -100,7 +100,7 @@ export function SystemSheet({ sys, title, onClose, onEdit }: { sys: StudioSystem
   const find = (id: string) => findProfile(lib, id) ?? sys.profiles.find((x) => x.id === id);
   const parts = sys.parts.filter((p) => p.enabled !== false);
   const sizeLabel = (id: string) => (id === "W" ? "Window width" : id === "H" ? "Window height" : sys.sizes.find((x) => x.id === id)?.label ?? id);
-  const options = sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "joint" && s.options.length > 1);
+  const options = sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "joint" && s.id !== "sash" && s.options.length > 1);
   return (
     <Sheet title={title} sub={sys.layouts.map((l) => `${layoutLabel(sys, l.tracks)}: ${l.mixes.map(mixText).join(", ")}`).join(" · ")} onClose={onClose}>
       <div className="rounded-xl bg-white p-2" style={{ border: "1px solid var(--line)" }}>

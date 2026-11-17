@@ -163,7 +163,10 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
           : main;
         // the outer (lock) upright: left on the first shutter, right on the others
         const role = p.role.replace("{s}", `S${i + 1}`).replace("{lr}", i === 0 ? "Left" : "Right").replace("{tag}", kind === "jali" ? " (Mesh)" : "");
-        for (let c = 0; c < p.count; c++) push(sec, len(p.length), role, p.angle);
+        // a Normal shutter chosen 45° on the cutting sheet: all four corners mitred, handle pipe top and bottom
+        const s45 = vars.sash === "45" && !!p.place?.startsWith("sash");
+        const name = s45 ? role.replace(/Bearing (Top|Bottom)/, "Shutter $1") : role;
+        for (let c = 0; c < p.count; c++) push(sec, len(p.length), name, s45 ? 45 : p.angle);
       }
     });
     for (const p of parts.filter((x) => x.scope === "between")) {
