@@ -59,10 +59,14 @@ export function FeedbackCard({ system, jobKey }: { system: string; jobKey: strin
                 className={`chip px-3 py-2 text-sm${reason === v ? " selected" : ""}`}>{label}</button>
             ))}
           </div>
+          <div className="text-sm font-semibold">Kya galat tha? <span style={{ color: "var(--bad)" }}>*</span></div>
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={120}
-            placeholder="Kya galat tha? Jaise: glass 1 inch chhota aaya (zaroori nahi)"
+            placeholder="Jaise: Interlock 1 inch chhota aaya"
             className="dim-input w-full px-3 py-2.5 text-sm" />
-          <button disabled={!reason} onClick={() => { markFeedback("wrong", system, reason ?? "other", note); finish(); }}
+          {reason && note.trim().length < 3 && (
+            <div className="text-xs" style={{ color: "var(--ink-3)" }}>Kaunsa piece aur kitna fark, ek line likhein — tabhi hum theek kar paayenge</div>
+          )}
+          <button disabled={!reason || note.trim().length < 3} onClick={() => { markFeedback("wrong", system, reason ?? "other", note); finish(); }}
             className="btn-primary w-full py-3 disabled:opacity-50">Bhejo</button>
         </div>
       )}
