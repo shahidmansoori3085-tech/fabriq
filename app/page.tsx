@@ -1730,7 +1730,7 @@ function JobScreen({
                         {openingText(it)}{it.qty > 1 && <span style={{ color: "var(--accent)" }}> × {it.qty}</span>}
                         {fresh && <span className="ml-2 text-xs font-bold" style={{ color: "var(--good)" }}>✓ Added</span>}
                       </span>
-                      <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
+                      <span className="block text-xs leading-snug" style={{ color: "var(--ink-3)" }}>{itemLabel(it)}</span>
                     </span>
                   </button>
                   <button onClick={() => startEdit(it)} aria-label={`Change ${it.id}`}
@@ -1757,7 +1757,7 @@ function JobScreen({
             <span className="grid w-12 shrink-0 place-items-center"><MiniElevation item={last} size={last.type === "door" ? 22 : 44} /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold" style={{ color: "var(--accent)" }}>+ Same {last.type}, new size</span>
-              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{typeLabel(last)}</span>
+              <span className="block text-xs leading-snug" style={{ color: "var(--ink-3)" }}>{typeLabel(last)}</span>
             </span>
           </button>
           <div>
@@ -2789,7 +2789,7 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
                 {sec.size && <div className="mono mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{sec.size} mm</div>}
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-sm font-bold tabnum">{pipeQty([st])} <span className="font-normal">{pipeQtyWord([st])}</span></div>
+                <div className="text-base font-extrabold leading-tight tabnum">{pipeQty([st])}</div>
                 <div className="text-[11px] tabnum" style={{ color: "var(--ink-3)" }}>{barsText(st)}</div>
               </div>
             </div>

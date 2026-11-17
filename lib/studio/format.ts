@@ -33,7 +33,10 @@ export function fmtLen(um: Um, unit: StudioUnit): string {
 /** "− 1″ 5s" with an explicit sign, for deductions. */
 export function fmtDelta(um: Um, unit: StudioUnit): string {
   if (um === 0) return "± 0";
-  return `${um < 0 ? "−" : "+"} ${fmtLen(Math.abs(um), unit)}`;
+  const sign = um < 0 ? "−" : "+";
+  // under an inch the shop says sut: "− 6 sut", not "− 0″ 6s" (founder 2026-11-17)
+  if (unit !== "mm" && Math.abs(um) < 25400 - UM_PER_SUT / 2) return `${sign} ${Math.round(Math.abs(um) / UM_PER_SUT)} sut`;
+  return `${sign} ${fmtLen(Math.abs(um), unit).replace(/^~/, "")}`;
 }
 
 /** Read a typed length in the Studio unit: "58.3" = 58″ 3 sut, or mm. */
@@ -126,7 +129,9 @@ export function whenText(sys: StudioSystem, when: SizeCase["when"]): string {
     else if (k === "mix") bits.push(vals.map(mixText).join(" or "));
     else {
       const sw = sys.switches.find((s) => s.id === k);
-      bits.push(vals.map((x) => sw?.options.find((o) => o.value === x)?.label ?? x).join(" or "));
+      // "45°" alone does not say what is cut at 45°: "Track cutting 45°"
+      const lab = vals.map((x) => sw?.options.find((o) => o.value === x)?.label ?? x).join(" or ");
+      bits.push(sw && /°$/.test(lab) ? `${sw.label} ${lab}` : lab);
     }
   }
   return bits.join(", ");

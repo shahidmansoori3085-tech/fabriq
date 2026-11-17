@@ -7,12 +7,17 @@
 import { useState } from "react";
 import type { Um } from "../../lib/engine/units";
 import type { StudioSystem, TaughtJob } from "../../lib/studio/model";
-import { jobVars, matches, type StudioJob } from "../../lib/studio/evaluate";
+import { jobVars, matches, computeSizes, type StudioJob } from "../../lib/studio/evaluate";
+import { windowGeometry } from "../../lib/studio/geometry";
+import WindowDrawing from "../studio-drawing";
 import { teach, check, type TeachResult, type CheckRow } from "../../lib/studio/teach";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { partLabel } from "../../lib/studio/edit";
 import { fmtLen, fmtDelta, readLen, lenToInput, mixText, layoutLabel, sectionTitle, UNIT_HINT, UNIT_SHORT, type StudioUnit } from "../../lib/studio/format";
 import { Badge, Field, SectionTitle } from "../studio-ui";
+
+/** time of a teach (called from event handlers only) */
+const stampNow = () => Date.now();
 
 export function TeachPanel({ sys, lib, unit, job, onChange }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; job: StudioJob; onChange: (s: StudioSystem) => void;
@@ -41,6 +46,13 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
       (p.scope !== "shutter" || kinds.length > 0) && (p.scope !== "meeting" || glassN > 1)),
   })).filter((r) => r.parts.length > 0);
   const sizeOk = W !== null && H !== null;
+  // what the app cuts for this window: shown beside every box, and on the drawing
+  const app = computeSizes(sys, win).values;
+  const appText = (id: string) => { const v = app[id]; return v != null ? fmtLen(v, unit).replace(/~/g, "") : "—"; };
+  const geo = windowGeometry(sys, win, (id) => findProfile(lib, id));
+  const labels: Record<string, string> = {};
+  for (const q of sys.parts) { const v = app[q.length]; if (q.enabled !== false && v != null) labels[q.id] = fmtLen(v, unit); }
+  const diffOf = (id: string, typed: string) => { const t = readLen(typed, unit), a = app[id]; return t !== null && a != null ? t - a : null; };
   const ready = sizeOk && rows.some((r) => readLen(vals[r.size.id] ?? "", unit) !== null) || readLen(gw, unit) !== null || readLen(gh, unit) !== null;
 
   const submit = (as: "teach" | "check" = mode) => {
@@ -51,28 +63,31 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
       id: `J${sys.jobs.length + 1}`, W: win.W, H: win.H, tracks: win.tracks, mix: win.mix, switches: job.switches ?? {}, measured,
       glass: gW !== null || gH !== null ? { w: gW ?? undefined, h: gH ?? undefined } : undefined, at: new Date().toISOString(),
     };
-    if (as === "teach") { const r = teach(sys, t); setMode("teach"); setTaught(r); setChecked(null); onChange({ ...r.system, taughtAt: Date.now() }); }
-    else { const r = check(sys, t); setChecked(r); setTaught(null); if (r.allOk) onChange({ ...r.system, taughtAt: Date.now() }); }
+    if (as === "teach") { const r = teach(sys, t); setMode("teach"); setTaught(r); setChecked(null); onChange({ ...r.system, taughtAt: stampNow() }); }
+    else { const r = check(sys, t); setChecked(r); setTaught(null); if (r.allOk) onChange({ ...r.system, taughtAt: stampNow() }); }
   };
   const reset = () => { setVals({}); setGw(""); setGh(""); setTaught(null); setChecked(null); };
   const step = mode === "teach" ? 1 : 2;
 
   return (
     <div>
-      <div className="card mt-4 p-4">
-        <div className="text-lg font-bold">Match your shop&apos;s cuts</div>
-        <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
-          Enter two windows you have already made. The first one sets the cut formulas to your shop&apos;s way; the second one confirms them.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {[1, 2].map((n) => (
-            <button key={n} onClick={() => { setMode(n === 1 ? "teach" : "check"); reset(); }}
-              className={`chip px-3 py-2 text-sm ${step === n ? "selected" : ""}`} aria-pressed={step === n}>
-              <b>Window {n}</b> · {n === 1 ? "set" : "confirm"}
-              {n === 1 && sys.jobs.length > 0 && <span style={{ color: "var(--good)" }}> ✓</span>}
+      <div className="card mt-4 flex items-center gap-2 p-2">
+        {[1, 2].map((n) => {
+          const done = n === 1 ? sys.jobs.length > 0 : sys.jobs.length > 1;
+          const on = step === n;
+          return (
+            <button key={n} type="button" onClick={() => { setMode(n === 1 ? "teach" : "check"); reset(); }} aria-pressed={on}
+              className="flex flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left"
+              style={{ background: on ? "var(--surface-2)" : "transparent" }}>
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold"
+                style={{ background: done ? "var(--good)" : on ? "var(--accent)" : "var(--surface-3)", color: done || on ? "#fff" : "var(--ink-3)" }}>{done ? "✓" : n}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold leading-tight">Window {n}</span>
+                <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{n === 1 ? "Sets your cuts" : "Confirms them"}</span>
+              </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {!taught && !checked && (
@@ -88,6 +103,9 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
             </Field>
           </div>
           {!sizeOk && <p className="mt-1 text-xs" style={{ color: "var(--warn)" }}>Type the size as {UNIT_HINT[unit]}.</p>}
+          {sizeOk && <div className="mt-3 rounded-xl border bg-white px-1" style={{ borderColor: "var(--line)" }}>
+            <WindowDrawing g={geo} unit={unit} pick={null} labels={labels} infill={app[sys.infill.w] != null && app[sys.infill.h] != null ? `${fmtLen(app[sys.infill.w]!, unit)} × ${fmtLen(app[sys.infill.h]!, unit)}` : undefined} />
+          </div>}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {sys.layouts.map((l) => (
               <button key={l.tracks} onClick={() => { setTracks(l.tracks); setMix(l.mixes[0]); }} aria-pressed={l.tracks === tracks}
@@ -150,32 +168,38 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
 
       {!taught && !checked && (
         <>
-          <SectionTitle>Window {step}: the cuts you made</SectionTitle>
+          <SectionTitle>What you cut on this window</SectionTitle>
           <p className="-mt-1 mb-2 text-xs" style={{ color: "var(--ink-3)" }}>
-            Fill the ones you know, in {UNIT_HINT[unit]}. Leave the rest empty.
+            The app&apos;s cut is shown on each line. Type yours where you know it ({UNIT_HINT[unit]}).
           </p>
           <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
             {rows.map((r) => (
               <label key={r.size.id} className="flex items-center gap-3 px-3 py-2.5">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{r.size.label}</span>
+                  <span className="block truncate text-sm font-semibold">{r.parts.map((p) => partLabel(p)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}</span>
                   <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-                    {r.parts.map((p) => partLabel(p)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}
+                    App: <b className="mono" style={{ color: "var(--ink-2)" }}>{appText(r.size.id)}</b>
                     {(() => { const vars = jobVars(sys, win); const spec = r.parts[0].profile.find((x) => matches(x.when, vars)); const pr = findProfile(lib, spec?.id ?? ""); return pr ? ` · ${sectionTitle(pr.name)}` : ""; })()}
                   </span>
                 </span>
+                {(() => { const d = diffOf(r.size.id, vals[r.size.id] ?? ""); return d !== null && d !== 0
+                  ? <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>{fmtDelta(d, unit)}</span>
+                  : d === 0 ? <span className="shrink-0 text-xs font-bold" style={{ color: "var(--good)" }}>Same</span> : null; })()}
                 <input className="field w-28 px-3 py-2 text-right font-semibold" inputMode="decimal" value={vals[r.size.id] ?? ""}
-                  onChange={(e) => setVals((v) => ({ ...v, [r.size.id]: e.target.value }))} placeholder="—" />
+                  onChange={(e) => setVals((v) => ({ ...v, [r.size.id]: e.target.value }))} placeholder={appText(r.size.id)} />
               </label>
             ))}
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <span className="flex-1 text-sm font-semibold">Glass width × height</span>
-              <input className="field w-20 px-2 py-2 text-right font-semibold" inputMode="decimal" value={gw} onChange={(e) => setGw(e.target.value)} placeholder="—" aria-label="Glass width" />
-              <input className="field w-20 px-2 py-2 text-right font-semibold" inputMode="decimal" value={gh} onChange={(e) => setGh(e.target.value)} placeholder="—" aria-label="Glass height" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Glass</span>
+                <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>App: <b className="mono" style={{ color: "var(--ink-2)" }}>{appText(sys.infill.w)} × {appText(sys.infill.h)}</b></span>
+              </span>
+              <input className="field w-20 px-2 py-2 text-right font-semibold" inputMode="decimal" value={gw} onChange={(e) => setGw(e.target.value)} placeholder={appText(sys.infill.w)} aria-label="Glass width" />
+              <input className="field w-20 px-2 py-2 text-right font-semibold" inputMode="decimal" value={gh} onChange={(e) => setGh(e.target.value)} placeholder={appText(sys.infill.h)} aria-label="Glass height" />
             </div>
           </div>
           <button className="btn-primary mt-4 w-full py-3.5" disabled={!ready} onClick={() => submit()}>
-            {mode === "teach" ? "Set formulas from window 1" : "Confirm with window 2"}
+            {mode === "teach" ? "Use my cuts" : "Confirm with window 2"}
           </button>
         </>
       )}

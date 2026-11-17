@@ -11,14 +11,18 @@ export type Pick = { type: "part"; id: string } | { type: "shutter"; index: numb
 
 const pts = (poly: Pt[]) => poly.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
 
-export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
+export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, infill }: {
   g: WindowGeo; unit: StudioUnit; pick: Pick; onPick?: (p: Pick) => void; compact?: boolean;
+  /** cut length written on each pipe (part id → "59″ 2s"), once per pipe */
+  labels?: Record<string, string>;
+  /** glass / mesh size written on the panes */
+  infill?: string;
 }) {
   const uid = useId().replace(/[:]/g, "");
   const { W, H } = g;
   const big = Math.max(W, H);
   const fs = compact ? 0 : big / 21;          // label size, mm
-  const pad = compact ? big * 0.02 : big * 0.17;
+  const pad = compact ? big * 0.02 : big * (labels ? 0.13 : 0.17);
   const vb = `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad + (compact ? 0 : fs * 1.6)}`;
   const isPart = (m: Member) => pick?.type === "part" && pick.id === m.partId;
   const isShutter = (i: number) => pick?.type === "shutter" && pick.index === i;
@@ -138,6 +142,54 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact }: {
         <circle key={`r${s.index}${k}`} cx={s.x + s.w * f} cy={H - g.faces.bottom / 2} r={Math.max(4, g.faces.bottom * 0.22)}
           fill="none" stroke="#6b7280" strokeWidth={0.8} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
       )))}
+
+      {/* every pipe carries its cut, like a shop drawing (founder 2026-11-17) */}
+      {!compact && labels && (() => {
+        const seen = new Set<string>();
+        // the same cut on both sides of the frame (or top and bottom) is written once: the right
+        // side and the top, away from the shutter labels; each shutter upright keeps its own
+        const shown = new Set<string>();
+        const tags: React.ReactNode[] = [];
+        const lf = fs * 0.95;
+        const put = (m: Member, key: string) => {
+          const txt = labels[m.partId]?.replace(/^~/, "");
+          if (!txt || seen.has(m.partId)) return;
+          const fam = m.place.startsWith("frame") ? "f" : "s";
+          const key2 = `${fam}|${m.vertical}|${txt}`;
+          if (!(fam === "s" && m.vertical) && shown.has(key2)) return;
+          seen.add(m.partId); shown.add(key2);
+          const xs = m.poly.map((q) => q[0]), ys = m.poly.map((q) => q[1]);
+          const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+          const w = txt.length * lf * 0.6 + lf * 0.9, h = lf * 1.5;
+          const on = pick?.type === "part" && pick.id === m.partId;
+          tags.push(
+            <g key={key} transform={m.vertical ? `translate(${cx} ${cy}) rotate(-90)` : `translate(${cx} ${cy})`}
+              onClick={tap({ type: "part", id: m.partId })} style={{ cursor: onPick ? "pointer" : undefined }}>
+              <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={on ? "var(--accent)" : "#ffffff"} fillOpacity={on ? 1 : 0.94}
+                stroke={on ? "none" : "#cbd2da"} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+              <text textAnchor="middle" y={lf * 0.36} fontSize={lf} fontWeight={700} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fill={on ? "#ffffff" : "#1f2937"}>{txt}</text>
+            </g>,
+          );
+        };
+        const first = (pl: string) => (pl === "frame-right" || pl === "frame-top" || pl === "sash-top" ? 0 : 1);
+        [...g.frame].sort((a, b) => first(a.place) - first(b.place)).forEach((m, k) => put(m, `lf${k}`));
+        // shutter pipes: on the first shutter (they are the same on every shutter)
+        g.sash.filter((m) => m.shutter === 0).sort((a, b) => first(a.place) - first(b.place)).forEach((m, k) => put(m, `ls${k}`));
+        g.patti.forEach((m, k) => put(m, `lp${k}`));
+        const pane = g.shutters[0]?.pane;
+        return (
+          <g>
+            {tags}
+            {infill && pane && (() => { const inf = infill.replace(/~/g, ""); return (
+              <g pointerEvents="none" transform={`translate(${pane.x + pane.w / 2} ${pane.y + pane.h / 2})`}>
+                <rect x={-(inf.length * lf * 0.6 + lf) / 2} y={-lf * 0.85} width={inf.length * lf * 0.6 + lf} height={lf * 1.7} rx={lf * 0.4} fill="#ffffff" fillOpacity={0.9} />
+                <text textAnchor="middle" y={lf * 0.36} fontSize={lf} fontWeight={600} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e3a5f">{inf}</text>
+              </g>
+            ); })()}
+          </g>
+        );
+      })()}
 
       {/* dimensions */}
       {!compact && (

@@ -1,5 +1,5 @@
 /** Small, pure edits on a system, shared by the templates and the Studio screens. */
-import type { PartDef, StudioSystem } from "./model";
+import type { Cond, PartDef, SizeCase, StudioSystem } from "./model";
 
 export const pickSwitchId = (partId: string) => `pick_${partId}`;
 
@@ -36,3 +36,64 @@ export function alternativesOf(sys: StudioSystem, part: PartDef): string[] | nul
 /** A piece's name as the shop reads it (no {s} / {tag} / {k} placeholders). */
 export const partLabel = (p: PartDef) =>
   p.role.replace(/\{s\}\s*/g, "").replace(/\{lr\}/g, "Left / Right").replace(/\{tag\}/g, "").replace(/\s*\{k\}/g, "").trim();
+
+/* ——— cut changes made on the drawing (founder 2026-11-17: the fabricator fixes a size by
+   tapping the pipe and pressing − / +, one sut at a time) ——— */
+
+const matchesCond = (cond: Cond | undefined, vars: Record<string, string>) =>
+  !cond || Object.entries(cond).every(([k, v]) => (Array.isArray(v) ? v.includes(vars[k]) : vars[k] === v));
+
+/** the rule that gives this size on this window (first match wins) */
+export function caseIndex(sys: StudioSystem, sizeId: string, vars: Record<string, string>): number {
+  const s = sys.sizes.find((x) => x.id === sizeId);
+  if (!s) return -1;
+  const i = s.cases.findIndex((c) => matchesCond(c.when, vars));
+  return i >= 0 ? i : s.cases.length - 1;
+}
+
+const SHOP = { status: "verified" as const, source: "Your shop: set on the drawing" };
+
+/**
+ * Make a size longer or shorter (µm) where it applies to this window. A piece cut
+ * straight to the window width / height first gets its own size, so it can move.
+ * Returns the new system and the size id the piece now uses.
+ */
+export function bumpCut(sys: StudioSystem, part: PartDef, delta: number, vars: Record<string, string>): StudioSystem {
+  if (part.length === "W" || part.length === "H") {
+    const id = `cut_${part.id}`;
+    const c: SizeCase = { base: part.length, add: delta, evidence: SHOP };
+    return {
+      ...sys,
+      sizes: [...sys.sizes, { id, label: partLabel(part), cases: [c] }],
+      parts: sys.parts.map((p) => (p.id === part.id ? { ...p, length: id } : p)),
+    };
+  }
+  return bumpSize(sys, part.length, delta, vars);
+}
+
+/** Move one size (glass width, shutter height…) where it applies to this window. */
+export function bumpSize(sys: StudioSystem, sizeId: string, delta: number, vars: Record<string, string>): StudioSystem {
+  const i = caseIndex(sys, sizeId, vars);
+  return {
+    ...sys,
+    sizes: sys.sizes.map((s) => (s.id !== sizeId ? s : {
+      ...s, cases: s.cases.map((c, k) => (k !== i || c.add === null ? c : { ...c, add: c.add + delta, evidence: SHOP })),
+    })),
+  };
+}
+
+/** Give these pieces a length of their own (a copy of the shared one), so a change moves only them. */
+export function ownCut(sys: StudioSystem, partIds: string[]): StudioSystem {
+  const first = sys.parts.find((p) => p.id === partIds[0]);
+  if (!first || first.length === "W" || first.length === "H") return sys;
+  const from = sys.sizes.find((s) => s.id === first.length);
+  if (!from) return sys;
+  const id = `${from.id}_${first.id}`;
+  const at = sys.sizes.indexOf(from);
+  const copy = { ...from, id, label: partLabel(first), cases: from.cases.map((c) => ({ ...c })) };
+  return {
+    ...sys,
+    sizes: [...sys.sizes.slice(0, at + 1), copy, ...sys.sizes.slice(at + 1)],
+    parts: sys.parts.map((p) => (partIds.includes(p.id) ? { ...p, length: id } : p)),
+  };
+}
