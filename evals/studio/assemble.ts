@@ -35,13 +35,13 @@ for (const code of ["2062", "2051"]) {
   expect(Math.abs(r.takeOff - 66.7) <= HALF_SUT, `Domal ${code}: drawing gives H − ${r.takeOff.toFixed(2)}, engine H − 66.7`);
 }
 
-// 2a. Normal 18 (Bombay): 13 mm bearing roller in the 1051 pocket, on the rail —
-//     the shutter up to the top channel floor = engine H − 41.3 within ½ sut.
+// 2a. Normal 18 (Bombay): 9 mm bearing roller in the 1051 pocket (founder 2026-11-17), on the
+//     rail — the engine's H − 41.3 leaves 4–6 mm above the shutter to lift it in and out.
 for (const [bot, top] of [["1011", "1000"], ["1031", "1021"]]) {
   const r = buildBombay(bot, top, "1051", get);
-  console.log(`  Normal ${bot}/${top}: rail ${r.rail.toFixed(2)}, wheel ${r.wheel.toFixed(2)} below the bearing → H − ${r.takeOff.toFixed(2)} (engine H − 41.3)`);
+  console.log(`  Normal ${bot}/${top}: rail ${r.rail.toFixed(2)}, roller ${r.wheel.toFixed(2)} below the bearing → touches the top at H − ${r.takeOff.toFixed(2)}; engine H − 41.3 leaves ${(41.3 - r.takeOff).toFixed(1)} mm to lift`);
   expect(r.clear, `Normal ${bot}: bearing should clear the track`);
-  expect(Math.abs(r.takeOff - 41.3) <= HALF_SUT, `Normal ${bot}/${top}: drawing gives H − ${r.takeOff.toFixed(2)}, engine H − 41.3`);
+  expect(41.3 - r.takeOff >= 4 && 41.3 - r.takeOff <= 6, `Normal ${bot}/${top}: engine H − 41.3 should leave 4–6 mm to lift the shutter (has ${(41.3 - r.takeOff).toFixed(1)})`);
 }
 
 // 2b. Same 27×65 domal, other makers: Ample and Eleanor cut the same as OMEO;

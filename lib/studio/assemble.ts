@@ -249,10 +249,10 @@ export function buildSliding(st: Stack, get: Get): Result {
 
 
 /* ———————————————— Bombay / Normal: roller in the bearing pocket, on a round rail ———————————————— */
-// Founder (2026-11-13): the Normal bearing roller is 13 mm high and fits inside
+// Founder (2026-11-17): the Normal bearing roller is 9 mm high (not 13) and fits inside
 // the bearing shutter's pocket. The shutter rides on the rail of the bottom track
 // and reaches up into the top track's channel.
-export const BOMBAY_ROLLER = 13;
+export const BOMBAY_ROLLER = 9;
 
 export interface BombayResult { rail: number; topFloor: number; rollerIn: number; wheel: number; shutterBottom: number; takeOff: number; walls: number; clear: boolean }
 
