@@ -69,6 +69,8 @@ interface Opts {
   studioPer: string;
   /** Normal Sliding shutter set: "40" = 1½″ × ¾″, "60" = 2½″ × ¾″ */
   normalSection: string;
+  /** 3+ glass shutters: "50" (each half the window) or "66" (they share the width). Asked once, then kept. */
+  opening: string;
   tracks: string;
   mix: string;
   domalFix: string;
@@ -99,7 +101,7 @@ interface Opts {
 }
 
 const DEFAULT_OPTS: Opts = {
-  kind: "bombay", sys: "normal", studioSw: "{}", studioPer: "[]", normalSection: "40", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
+  kind: "bombay", sys: "normal", studioSw: "{}", studioPer: "[]", normalSection: "40", opening: "", tracks: "2", mix: "GG", domalFix: "no", domalFixFt: "2",
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
@@ -178,10 +180,12 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
     if (o.studioSw !== "{}") m.studioSwitches = o.studioSw;
     if (o.studioPer !== "[]") m.studioPerShutter = o.studioPer;
+    if (o.opening && glassOf(o.mix) >= 3) m.shutterSplit = o.opening === "66" ? "equal" : "half";
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
   if (o.sys === "normal" && o.normalSection === "60") m.shutterSection = "60";
+  if (o.opening && glassOf(o.mix) >= 3) m.shutterSplit = o.opening === "66" ? "equal" : "half";
   m.domalFix = o.domalFix;
   if (o.domalFix === "yes") m.domalFixFt = o.domalFixFt;
   return m;
@@ -274,8 +278,12 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
   });
 }
 /** The other choices a system asks (its track, its shutter…), not the meeting side. */
+const glassOf = (mix: string) => [...mix].filter((k) => k !== "J").length;
+/** the system has its own share-the-width cut (else every shutter is half the window) */
+const canShare = (s: StudioSystem) => !!s.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
 function otherSwitches(s: StudioSystem) {
-  return s.switches.filter((x) => x.id !== "meet" && x.id !== "mode" && !x.id.startsWith("pick_") && x.options.length > 1);
+  // not asked here: the meeting side, shutter width (its own step) and the frame joint (on the cutting sheet)
+  return s.switches.filter((x) => x.id !== "meet" && x.id !== "mode" && x.id !== "joint" && !x.id.startsWith("pick_") && x.options.length > 1);
 }
 const parseSw = (j: string): Record<string, string> => { try { return JSON.parse(j); } catch { return {}; } };
 /** The shutter mixes of a track count this system can cut with these choices (a 4-track with no frame section is not offered). */
@@ -349,14 +357,15 @@ function itemLabel(it: JobItem): string {
   if (it.system === "studio") {
     const s = systemOfItem(it);
     const n = parseInt(m.tracks ?? "", 10) || it.shutters.length;
-    return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}`;
+    const share = m.shutterSplit === "equal" && [...(m.mix ?? "")].filter((k) => k !== "J").length >= 3 ? " · 66% opening" : "";
+    return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}${share}`;
   }
   const name = it.system === "domal" ? "Domal" : m.shutterSection === "60" ? 'Normal Sliding 2½"' : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
   const fix = m.domalFix === "yes" ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
   // Shown only where it changes the cut: 3 or more glass shutters.
   const glass = it.shutters.filter((s) => s.kind !== "jali").length;
-  const split = m.shutterSplit === "equal" && glass >= 3 ? " · Equal shutters" : "";
+  const split = m.shutterSplit === "equal" && glass >= 3 ? " · 66% opening" : "";
   return `${name} ${m.tracks} Track · ${mix}${fix}${split}`;
 }
 
@@ -578,6 +587,7 @@ export default function FabriQ() {
   /** The system's shutter width (set in the system: half each or share the width) goes on
    *  each new or edited item, so a later change never alters a saved item silently. */
   const withShopChoices = (meta: Record<string, string>) => {
+    if (meta.shutterSplit) return meta; // the window opening was chosen for this window
     const sys = meta.system?.startsWith("studio:") ? studioSystem(meta.system.slice(7))
       : meta.system === "normal" ? systemForWindow("normal-18") : meta.system === "domal" ? systemForWindow("domal-27") : undefined;
     const mode = sys?.switches.find((x) => x.id === "mode");
@@ -734,7 +744,7 @@ function layoutError(e: unknown): string {
  * the partition actually being made, so the gap each choice leaves is real.
  */
 type StepId =
-  | "type" | "kind" | "system" | "normalSection" | "studioOpts" | "meet" | "tracks" | "mix" | "domalFix"
+  | "type" | "kind" | "system" | "normalSection" | "studioOpts" | "meet" | "tracks" | "mix" | "opening" | "domalFix"
   | "zType" | "zDir" | "zSash" | "zProfile"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
@@ -755,7 +765,8 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const st = studioSystem(o.sys.slice(7));
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
     const meet: StepId[] = st && meetChoices(st, o.tracks, o.mix, parseSw(o.studioSw)).length > 1 ? ["meet"] : [];
-    return [...head, ...opts, "tracks", "mix", ...meet, "size"];
+    const opening: StepId[] = st && glassOf(o.mix) >= 3 && canShare(st) && !o.opening ? ["opening"] : [];
+    return [...head, ...opts, "tracks", "mix", ...opening, ...meet, "size"];
   }
   if (o.sys === "z_section") {
     return [
@@ -769,7 +780,9 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   }
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
-  return [...head, "tracks", ...(o.sys === "domal" ? ["mix" as const] : []), "domalFix", "size"];
+  const mixStep: StepId[] = o.sys === "domal" || o.tracks === "3" ? ["mix"] : [];
+  const opening: StepId[] = mixStep.length && glassOf(o.mix) >= 3 && !o.opening ? ["opening"] : [];
+  return [...head, "tracks", ...mixStep, ...opening, "domalFix", "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -779,6 +792,7 @@ const STEP_TITLE: Record<StepId, string> = {
   meet: "Interlock",
   system: "Window system",
   normalSection: "Shutter size",
+  opening: "Window opening",
   tracks: "Tracks",
   mix: "Shutters",
   domalFix: "Fixed glass on top?",
@@ -957,7 +971,12 @@ function JobScreen({
     setO(next);
     if (!advance || !flow) return;
     const st = stepsFor(nextType, next);
-    go(st[Math.min(st.indexOf(flow.step) + 1, st.length - 1)]);
+    const at = st.indexOf(flow.step);
+    if (at >= 0) { go(st[Math.min(at + 1, st.length - 1)]); return; }
+    // the answer took this step out of the list (a question asked once): go on from where it was
+    const old = stepsFor(nextType, o);
+    const after = old.slice(old.indexOf(flow.step) + 1).find((x) => st.includes(x));
+    go(after ?? st[st.length - 1]);
   };
 
   /* —— sizes —— */
@@ -1362,6 +1381,16 @@ function JobScreen({
               <Choice wide key={v} selected={o.tracks === v} onClick={() => choose({ tracks: v, mix: MIXES[v][0][0] })} title={label}
                 picture={<MiniElevation item={sample("window", { ...noFix(o), tracks: v, mix: MIXES[v][0][0] })} size={88} />} />
             ))}
+          </div>
+        )}
+
+        {flow.step === "opening" && (
+          <div className="flex flex-col gap-2">
+            {([["50", "50% opening", "Every shutter is half the window."], ["66", "66% opening", "The shutters share the window width. Two thirds of it opens."]] as const).map(([v, title, sub]) => (
+              <Choice key={v} wide selected={o.opening === v} onClick={() => choose({ opening: v })} title={title} sub={sub}
+                picture={<span className="block text-2xl font-extrabold tabnum" style={{ color: "var(--accent)" }}>{v}%</span>} />
+            ))}
+            <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>Asked once. It is kept for your next windows.</p>
           </div>
         )}
 
@@ -2151,7 +2180,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
 
       {tab === "material"
         ? <MaterialPanel list={list} shop={shop} items={items} jobName={jobName} onItems={onItems} />
-        : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} />}
+        : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} onItems={onItems} />}
 
       {/* did it match their own sums? — what a new fabricator is checking */}
       <FeedbackCard
@@ -2603,19 +2632,21 @@ function baseRole(role: string): string {
 
 /** Same length → one row ("57\" × 5", not five rows), longest first. */
 function cutRows(bars: PackedBar[]) {
-  const map = new Map<number, { count: number; roles: Set<string>; items: Set<string> }>();
+  const map = new Map<string, { len: number; angle?: 90 | 45; count: number; roles: Set<string>; items: Set<string> }>();
   for (const p of bars.flatMap((b) => b.pieces)) {
-    const e = map.get(p.length) ?? { count: 0, roles: new Set<string>(), items: new Set<string>() };
+    const key = `${p.length}|${p.angle === 45 ? 45 : ""}`;
+    const e = map.get(key) ?? { len: p.length, angle: p.angle === 45 ? 45 : undefined, count: 0, roles: new Set<string>(), items: new Set<string>() };
     // "W1.3" (third unit of W1) → "W1", so a 5-off window reads as one opening.
     e.count += 1; e.roles.add(baseRole(p.role)); e.items.add(p.itemId.replace(/\.\d+$/, ""));
-    map.set(p.length, e);
+    map.set(key, e);
   }
-  return [...map.entries()]
-    .sort((a, b) => b[0] - a[0])
-    .map(([len, e]) => {
+  return [...map.values()]
+    .sort((a, b) => b.len - a.len)
+    .map((e) => {
       const roles = [...e.roles];
+      const len = e.len;
       return {
-        len,
+        len, angle: e.angle,
         count: e.count,
         forWhat: `${roles.slice(0, 3).join(" · ")}${roles.length > 3 ? ` +${roles.length - 3}` : ""} — ${[...e.items].join(", ")}`,
       };
@@ -2635,10 +2666,21 @@ function packLine(pieces: CutPiece[]) {
 /** Sliding-window sections — the only ones the parts guide describes. */
 const SLIDING_PARTS = new Set(["handle_std", "interlock", "bearing", "handle_60", "interlock_60", "bearing_60"]);
 
-function CuttingPanel({ list, shop, items, jobName }: {
-  list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string;
+function CuttingPanel({ list, shop, items, jobName, onItems }: {
+  list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string; onItems: (next: JobItem[]) => void;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  // Normal frames: 90° (tracks between the sides) or 45° (all four full length) — chosen here (founder 2026-11-17)
+  const isNormal = (it: JobItem) => it.type === "window" && (it.system === "normal_2t" || it.system === "normal_3t"
+    || (it.system === "studio" && /^normal-18/.test(systemOfItem(it)?.basedOn?.id ?? systemOfItem(it)?.id ?? "")));
+  const normals = items.filter(isNormal);
+  const joint = normals.length && normals.every((it) => it.meta.joint === "45") ? "45" : "90";
+  const setJoint = (v: "90" | "45") => onItems(items.map((it) => {
+    if (!isNormal(it)) return it;
+    const meta = { ...it.meta };
+    if (v === "45") meta.joint = "45"; else delete meta.joint;
+    return { ...it, meta };
+  }));
   const sectionGroups = useMemo(() => {
     const map = new Map<string, PackedBar[]>();
     for (const b of list.bars) map.set(b.sectionId, [...(map.get(b.sectionId) ?? []), b]);
@@ -2674,6 +2716,21 @@ function CuttingPanel({ list, shop, items, jobName }: {
 
   return (
     <div ref={sheetRef} className="print-sheet flex flex-col gap-3">
+      {normals.length > 0 && (
+        <div className="no-print card flex items-center justify-between gap-3 px-4 py-3">
+          <span className="min-w-0">
+            <span className="block text-sm font-bold">Frame corners</span>
+            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{joint === "45" ? "45°: all four sides full length" : "90°: top and bottom fit between the sides"}</span>
+          </span>
+          <div className="flex shrink-0 gap-1 rounded-[var(--radius)] p-1" style={{ background: "var(--surface-3)" }} role="radiogroup" aria-label="Frame corners">
+            {(["90", "45"] as const).map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={joint === v} onClick={() => setJoint(v)}
+                className="rounded-[8px] px-4 py-1.5 text-sm font-bold"
+                style={joint === v ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" } : { color: "var(--ink-3)" }}>{v}°</button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="card p-4">
         {/* letterhead, like the order PDFs: the shop on the left, what this
             paper is on the right */}
@@ -2735,8 +2792,8 @@ function CuttingPanel({ list, shop, items, jobName }: {
               </thead>
               <tbody>
                 {cutRows(bars).map((r) => (
-                  <tr key={r.len} style={{ borderTop: "1px solid var(--line)" }}>
-                    <td className="mono px-3 py-2.5 text-base font-bold">{formatFtInSut(r.len)}</td>
+                  <tr key={`${r.len}-${r.angle ?? 90}`} style={{ borderTop: "1px solid var(--line)" }}>
+                    <td className="mono px-3 py-2.5 text-base font-bold">{formatFtInSut(r.len)}{r.angle === 45 && <span className="ml-1.5 align-middle text-[11px] font-bold" style={{ color: "var(--glass)" }}>45°</span>}</td>
                     <td className="px-3 py-2.5 text-center text-lg font-extrabold tabnum">{r.count}</td>
                     <td className="px-3 py-2.5 text-xs" style={{ color: "var(--ink-2)" }}>{r.forWhat}</td>
                   </tr>

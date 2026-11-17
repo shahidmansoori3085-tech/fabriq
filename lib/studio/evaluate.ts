@@ -146,7 +146,8 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
       pieces.push({ sectionId, length, itemId: wId, role, angle, label: `${wId}${job.sizeLabel ? ` ${job.sizeLabel}` : ""} — ${role}` });
 
     for (const p of parts.filter((x) => x.scope === "window")) {
-      for (let c = 0; c < p.count; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(c + 1)), p.angle);
+      // a Normal frame chosen 45° on the cutting sheet: its four sides cut at 45°
+      for (let c = 0; c < p.count; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(c + 1)), vars.joint === "45" && p.place?.startsWith("frame") ? 45 : p.angle);
     }
     kinds.forEach((kind, i) => {
       for (const p of parts.filter((x) => x.scope === "shutter")) {

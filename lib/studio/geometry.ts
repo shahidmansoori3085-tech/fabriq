@@ -119,7 +119,8 @@ export function windowGeometry(
 
   const fT = face("frame-top"), fB = face("frame-bottom"), fL = face("frame-left"), fR = face("frame-right");
   const t = fT.mm, b = fB.mm || t, l = fL.mm || t, r = fR.mm || t;
-  const mitre = (fT.part?.angle ?? 45) === 45;
+  // a Normal frame cut 45° on the cutting sheet (founder 2026-11-17) is drawn mitred too
+  const mitre = vars.joint === "45" || (vars.joint !== "90" && (fT.part?.angle ?? 45) === 45);
 
   const frame: Member[] = [];
   const add = (f: { part?: PartDef; known: boolean; stops?: Stop[]; shape?: Shape; mm: number; depth: number }, poly: Pt[], vertical: boolean, axis: [number, number, number, number]) =>

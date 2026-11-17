@@ -21,6 +21,7 @@ worked out by the shutter layout, so a plain `W` there means "the share".
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
+  - Frame joint (`joint`): 90° (default) · 45°
 
 Pieces:
 
@@ -39,6 +40,7 @@ Size rules:
 
 | Size | When | Rule | Evidence | Why |
 |---|---|---|---|---|
+| Top / bottom track (`trackW`) | joint=45 | W | verified | Founder job: 45° frame: all four pieces full length, mitred (2026-11-17) |
 | Top / bottom track (`trackW`) | always | W − 19.1 | verified | Founder job: 90° frame, track sits between the sides (W − 6 sut) |
 | Frame side (`sideH`) | always | H | verified | Founder job: sides run full height |
 | Shutter width (`shutterW`) | mode=equal, glass=3 | (W − 190.5) ÷ 3 + 80 | observed | Shop videos: 3 glass share: (W − 7½″) ÷ 3, + 80 mm handle/interlock |
@@ -72,6 +74,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
+  - Frame joint (`joint`): 90° (default) · 45°
 
 Pieces:
 
@@ -90,6 +93,7 @@ Size rules:
 
 | Size | When | Rule | Evidence | Why |
 |---|---|---|---|---|
+| Top / bottom track (`trackW`) | joint=45 | W | verified | Founder job: 45° frame: all four pieces full length, mitred (2026-11-17) |
 | Top / bottom track (`trackW`) | always | W − 19.1 | verified | Founder job: 90° frame, track sits between the sides (W − 6 sut) |
 | Frame side (`sideH`) | always | H | verified | Founder job: sides run full height |
 | Shutter width (`shutterW`) | mode=equal, glass=3 | (W − 190.5) ÷ 3 + 80 | observed | Shop videos: 3 glass share: (W − 7½″) ÷ 3, + 80 mm handle/interlock |
@@ -1215,6 +1219,7 @@ Still unknown here: Frame top / bottom, Frame side, Shutter width, Shutter heigh
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
+  - Frame joint (`joint`): 90° (default) · 45°
 
 Pieces:
 

@@ -51,6 +51,18 @@ export const MODE_SWITCH = {
   default: "half",
 };
 
+/** Normal frame corners: 90° (tracks between the sides) or 45° — chosen on the cutting sheet, not asked. */
+export const JOINT_SWITCH = { id: "joint", label: "Frame joint", options: [{ value: "90", label: "90°" }, { value: "45", label: "45°" }], default: "90" };
+/** A Normal 18 system saved before the 45° choice existed takes it (and its full-length track). */
+export function withJoint(sys: StudioSystem): StudioSystem {
+  const normal = /^normal-18/.test(sys.basedOn?.id ?? sys.id);
+  if (!normal || sys.switches.some((x) => x.id === "joint")) return sys;
+  return {
+    ...sys, switches: [...sys.switches, JOINT_SWITCH],
+    sizes: sys.sizes.map((x) => (x.id !== "trackW" ? x : { ...x, cases: [{ when: { joint: "45" }, base: "W", add: 0, evidence: { status: "verified" as const, source: "Founder job: 45° frame: all four pieces full length, mitred (2026-11-17)" } }, ...x.cases] })),
+  };
+}
+
 const CATALOGUE = (s: string) => ev("verified", s);
 const DRAWING = (s: string) => ev("observed", `${s} — role read from drawing, confirm`);
 const FOUNDER = (s: string) => ev("verified", `Founder job: ${s}`);
@@ -103,7 +115,7 @@ export const NORMAL_18: StudioSystem = {
   blurb: "Top + 2 sides + bottom track at 90°; shutter from handle, interlock and 2 bearings",
   version: 1, status: "verified",
   layouts: [L2(), L3()],
-  switches: [MODE_SWITCH],
+  switches: [MODE_SWITCH, JOINT_SWITCH],
   profiles: [
     prof("2t_top", "2-Track Top/Side", "track", { omeo: "1000", alpro: "1801" }, "62×32", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO catalogue")),
     prof("2t_bottom", "2-Track Bottom", "track", { omeo: "1011", alpro: "1821" }, "62×32", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO catalogue")),
@@ -114,7 +126,9 @@ export const NORMAL_18: StudioSystem = {
     prof("bearing", "Bottom Bearing / Rail 40×18", "bearing", { omeo: "1051" }, "40×18", { value: 1.3, perFt: 16 }, CATALOGUE("OMEO catalogue"), { faceMm: 40 }),
   ],
   sizes: [
-    size("trackW", "Top / bottom track", rule("W", -6 * SUT, FOUNDER("90° frame, track sits between the sides (W − 6 sut)"))),
+    size("trackW", "Top / bottom track",
+      rule("W", 0, FOUNDER("45° frame: all four pieces full length, mitred (2026-11-17)"), { when: { joint: "45" } }),
+      rule("W", -6 * SUT, FOUNDER("90° frame, track sits between the sides (W − 6 sut)"))),
     size("sideH", "Frame side", rule("H", 0, FOUNDER("sides run full height"))),
     size("shutterW", "Shutter width",
       rule("W", mm(80), VIDEO("3 glass share: (W − 7½″) ÷ 3, + 80 mm handle/interlock"), { when: { mode: "equal", glass: "3" }, pre: -inches(7.5), den: 3 }),

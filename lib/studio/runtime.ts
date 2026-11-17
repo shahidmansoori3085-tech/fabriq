@@ -6,7 +6,7 @@
 import type { ProfileDef, StudioSystem } from "./model";
 import type { JobItem } from "../engine/types";
 import { evaluate, type StudioJob } from "./evaluate";
-import { TEMPLATES, WINDOW_SYSTEMS } from "./templates";
+import { TEMPLATES, WINDOW_SYSTEMS, withJoint } from "./templates";
 
 let systems: StudioSystem[] = [];
 let shopProfiles: ProfileDef[] = [];
@@ -30,8 +30,10 @@ export { WINDOW_SYSTEMS };
 
 /** The system an item was built with: its frozen copy, else the live one. */
 export function systemOfItem(item: JobItem): StudioSystem | undefined {
-  try { if (item.meta.studio) return JSON.parse(item.meta.studio) as StudioSystem; } catch { /* fall back */ }
-  return item.meta.studioId ? studioSystem(item.meta.studioId) : undefined;
+  // a frozen copy keeps its cuts; it only learns the 45° frame choice (which changes nothing at 90°)
+  try { if (item.meta.studio) return withJoint(JSON.parse(item.meta.studio) as StudioSystem); } catch { /* fall back */ }
+  const live = item.meta.studioId ? studioSystem(item.meta.studioId) : undefined;
+  return live && withJoint(live);
 }
 
 /** Every section chosen and every cut known for the system's first layout. */
@@ -54,7 +56,7 @@ export function studioJobOf(item: JobItem): StudioJob {
     id: item.id, W: item.width, H: item.height, qty: item.qty,
     tracks: parseInt(item.meta.tracks ?? "", 10) || item.shutters.length || 2,
     mix: item.shutters.map((s) => (s.kind === "jali" ? "J" : s.kind === "sheet" ? "S" : "G")).join(""),
-    switches: { mode: item.meta.shutterSplit === "equal" ? "equal" : "half", ...extraSwitches },
+    switches: { mode: item.meta.shutterSplit === "equal" ? "equal" : "half", joint: item.meta.joint === "45" ? "45" : "90", ...extraSwitches },
     // each shutter's own pick (slim interlock small on one, big on the next)
     perShutter: (() => { try { return item.meta.studioPerShutter ? JSON.parse(item.meta.studioPerShutter) as Record<string, string>[] : undefined; } catch { return undefined; } })(),
   };

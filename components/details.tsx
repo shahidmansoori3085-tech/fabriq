@@ -100,7 +100,7 @@ export function SystemSheet({ sys, title, onClose, onEdit }: { sys: StudioSystem
   const find = (id: string) => findProfile(lib, id) ?? sys.profiles.find((x) => x.id === id);
   const parts = sys.parts.filter((p) => p.enabled !== false);
   const sizeLabel = (id: string) => (id === "W" ? "Window width" : id === "H" ? "Window height" : sys.sizes.find((x) => x.id === id)?.label ?? id);
-  const options = sys.switches.filter((s) => !s.id.startsWith("pick_") && s.options.length > 1);
+  const options = sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "joint" && s.options.length > 1);
   return (
     <Sheet title={title} sub={sys.layouts.map((l) => `${layoutLabel(sys, l.tracks)}: ${l.mixes.map(mixText).join(", ")}`).join(" · ")} onClose={onClose}>
       <div className="rounded-xl bg-white p-2" style={{ border: "1px solid var(--line)" }}>
@@ -190,8 +190,8 @@ export function SectionSheet({ sectionId, pieces, onClose, onEdit }: {
       ))}
       {pieces && pieces.length > 0 && <>
         <Head>Pieces in this job</Head>
-        {pieces.map((r) => (
-          <div key={r.len} className="flex items-baseline justify-between gap-3 py-2 text-sm" style={{ borderTop: "1px solid var(--line)" }}>
+        {pieces.map((r, i) => (
+          <div key={`${r.len}-${i}`} className="flex items-baseline justify-between gap-3 py-2 text-sm" style={{ borderTop: "1px solid var(--line)" }}>
             <span className="mono font-bold">{formatFtInSut(r.len)}</span>
             <span className="min-w-0 flex-1 truncate text-xs" style={{ color: "var(--ink-3)" }}>{r.forWhat}</span>
             <span className="font-bold tabnum">× {r.count}</span>

@@ -6,7 +6,7 @@
  */
 import { registerCustomSections, type Section } from "../engine/sections";
 import type { ProfileDef, StudioSystem } from "./model";
-import { BUILT_IN_PROFILES, LIBRARY_PROFILES, MODE_SWITCH, TEMPLATES } from "./templates";
+import { BUILT_IN_PROFILES, LIBRARY_PROFILES, MODE_SWITCH, TEMPLATES, withJoint } from "./templates";
 import { registerStudioSystems, registerShopProfiles } from "./runtime";
 
 const KEY = "fabriq_studio_v1";
@@ -71,6 +71,8 @@ function migrate(sys: StudioSystem): StudioSystem {
       parts: sys.parts.map((pt) => ({ ...pt, profile: pt.profile.filter((k) => !DROPPED.includes(k.id) || !k.when) })),
     };
   }
+  // Normal 18 frames can be cut 45° (founder 2026-11-17): older copies take the choice and its length
+  sys = withJoint(sys);
   // Gulf 30 got its slim interlocks (founder 2026-11-16): a copy saved before takes the system's
   // pieces, choices and sizes (keeping its own picks), unless the shop taught it its own cuts
   if (sys.basedOn?.id === "gulf-s30" && tpl && !sys.taughtAt && !sys.switches.some((x) => x.id === "meet")) {

@@ -247,7 +247,7 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
     home: { text: "" },
     sections: missingSections ? { text: `${missingSections} piece${missingSections > 1 ? "s" : ""} without a section`, tone: "bad" } : { text: `${groupRows(sys).length} pipes · ${[...new Set(sys.parts.map((p) => ({ window: "frame", shutter: "shutter", meeting: "interlock", between: "mullion" } as const)[p.scope]))].join(", ")}` },
     cuts: unknownCuts ? { text: `${unknownCuts} not known yet`, tone: "warn" } : { text: `${sys.sizes.length} lengths, worked out from the window size` },
-    options: { text: [sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" / "), ...sys.switches.filter((x) => !x.id.startsWith("pick_") && x.options.length > 1).map((x) => SWITCH_NAME[x.id] ?? x.label)].join(" · ") },
+    options: { text: [sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" / "), ...sys.switches.filter((x) => !x.id.startsWith("pick_") && x.id !== "joint" && x.options.length > 1).map((x) => SWITCH_NAME[x.id] ?? x.label)].join(" · ") },
     hardware: { text: sys.extras.length ? sys.extras.slice(0, 3).map((x) => x.name.split(" /")[0]).join(", ") + (sys.extras.length > 3 ? ` +${sys.extras.length - 3}` : "") : "None yet" },
     try: { text: "Type a size, see every cut and pipe" },
     check: pendingCheck ? { text: "Needed: a section or size changed", tone: "warn" }
@@ -524,7 +524,7 @@ function OptionsPage({ sys, onChange }: { sys: StudioSystem; onChange: (s: Studi
       : [...sys.layouts, { tracks: t, mixes: MIXES[t] }].sort((a, b) => a.tracks - b.tracks);
     if (layouts.length) onChange({ ...sys, layouts });
   };
-  const choices = sys.switches.filter((x) => !x.id.startsWith("pick_") && x.id !== "mode" && x.options.length > 1);
+  const choices = sys.switches.filter((x) => !x.id.startsWith("pick_") && x.id !== "mode" && x.id !== "joint" && x.options.length > 1);
   const setDefault = (id: string, v: string) => onChange({ ...sys, switches: sys.switches.map((x) => (x.id === id ? { ...x, default: v } : x)) });
   const mode = sys.switches.find((x) => x.id === "mode");
   const canShare = !!mode && !!sys.sizes.find((x) => x.id === "shutterW")?.cases.some((k) => k.when?.mode === "equal");
@@ -633,7 +633,7 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
             className={`chip px-2.5 py-1 text-xs ${m === mix ? "selected" : ""}`}>{mixText(m)}</button>
         ))}
       </div>
-      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode").map((sw) => (
+      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode" && (s.id !== "joint")).map((sw) => (
         <div key={sw.id} className="mt-3">
           <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{sw.label}</div>
           <Seg small value={switches[sw.id] ?? sw.default} onChange={(v) => onSwitch(sw.id, v)} options={sw.options.map((o) => ({ value: o.value, label: o.label }))} />

@@ -574,12 +574,16 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     // 90° frame (founder 2026-11-08; Aluminium center point ×3): the sides run
     // full height and the top and bottom tracks fit BETWEEN them, sitting in
     // the sides' 9mm lips — so each track is cut W − 6 sut (19mm).
+    // 45° (founder 2026-11-17: some shops mitre the Normal frame): all four
+    // pieces run full length, the corners cut at 45°.
+    const mitre = item.meta.joint === "45";
     const sideH = fx.hasFix ? fx.slidingH : item.height;
-    const trackW = item.width - NORMAL_TRACK_DEDUCTION;
-    push(top, trackW, "Top");
-    push(top, sideH, "Left Side");
-    push(top, sideH, "Right Side");
-    push(bottom, trackW, "Bottom");
+    const trackW = mitre ? item.width : item.width - NORMAL_TRACK_DEDUCTION;
+    const fa: 90 | 45 = mitre ? 45 : 90;
+    pieces.push({ sectionId: top, length: trackW, itemId: wId, role: "Top", label: `${wId} ${sizeLabel} — Top`, angle: fa });
+    pieces.push({ sectionId: top, length: sideH, itemId: wId, role: "Left Side", label: `${wId} ${sizeLabel} — Left Side`, angle: fa });
+    pieces.push({ sectionId: top, length: sideH, itemId: wId, role: "Right Side", label: `${wId} ${sizeLabel} — Right Side`, angle: fa });
+    pieces.push({ sectionId: bottom, length: trackW, itemId: wId, role: "Bottom", label: `${wId} ${sizeLabel} — Bottom`, angle: fa });
     if (fx.hasFix) {
       push(DOMAL_SP, item.width, "Fix Top (SP)");
       push(DOMAL_SP, item.width, "Fix Bottom (SP)");
