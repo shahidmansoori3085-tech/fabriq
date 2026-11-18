@@ -22,6 +22,7 @@ const Window3D = dynamic(() => import("./studio-3d"), { ssr: false, loading: () 
 import SectionSketch from "./section-sketch";
 import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
+import { WindowParts } from "./studio/window-parts";
 import { CutsTab } from "./studio/rules";
 import { TeachPanel } from "./studio/teach";
 import { CutList } from "./studio/cutlist";
@@ -308,6 +309,8 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
           onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); setPick(null); }}
           onSwitch={(id, v) => setSwitches((x) => ({ ...x, [id]: v }))} />
       </div>
+      {/* the same window, part by part: the track, then each shutter */}
+      {!view3d && <WindowParts sys={sys} lib={lib} unit={unit} geo={geo} values={values} vars={vars} mix={mix} pick={pick} onPick={setPick} />}
 
       <div className="card mt-4 overflow-hidden">
         <div className="divide-y" style={{ borderColor: "var(--line)" }}>
