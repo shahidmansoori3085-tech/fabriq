@@ -27,6 +27,10 @@ const b = bumpCut(ownCut(sys, ["handle"]), { ...part("handle"), length: "shutter
 check(cut(b, /S1 Handle/) === cut(sys, /S1 Handle/) - UM_PER_SUT, "own handle −1 sut");
 check(cut(b, /S1 Interlock/) === cut(sys, /S1 Interlock/), "interlock unchanged");
 
+// own size on the top track: the sides (same pipe, other length) keep their length
+const tt = ownCut(sys, ["top", "left", "right", "bottom"].filter((x) => sys.parts.some((q) => q.id === x)));
+check(cut(tt, /^Left Side$/) === cut(sys, /^Left Side$/) && cut(tt, /^Top$/) === cut(sys, /^Top$/), "own top cut leaves the sides alone");
+
 // a piece cut to the full side gets its own size, then moves
 const raw = { ...sys, parts: sys.parts.map((p) => (p.id === "left" || p.id === "right" ? { ...p, length: "H" } : p)) };
 const c = bumpCut(raw, { ...part("left"), length: "H" }, -UM_PER_SUT, vars);

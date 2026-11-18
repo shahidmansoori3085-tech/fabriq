@@ -2160,6 +2160,23 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
     }
     return undefined;
   })();
+  // the first window's main cuts, for the "check your first list" popup
+  const firstWin = items.find((it) => it.type === "window");
+  const keyCuts = (() => {
+    if (!firstWin) return [];
+    const mine = list.bars.flatMap((b) => b.pieces).filter((p) => p.itemId === firstWin.id || p.itemId.startsWith(`${firstWin.id}.`));
+    const out: { name: string; value: string }[] = [];
+    const seen = new Set<string>();
+    for (const pc of mine) {
+      const name = baseRole(pc.role).replace(/^(Left|Right) Side$/, "Side");
+      if (seen.has(name) || out.length >= 4) continue;
+      seen.add(name);
+      out.push({ name, value: formatFtInSut(pc.length) });
+    }
+    const g = list.glass.find((x) => x.itemId === firstWin.id);
+    if (g) out.push({ name: "Glass", value: `${formatFtInSut(g.width)} × ${formatFtInSut(g.height)}` });
+    return out;
+  })();
   // windows made before the shop changed its cuts: offer the newer cuts
   const stale = items.flatMap((it) => {
     if (it.system !== "studio" || !it.meta.studio) return [];
@@ -2230,7 +2247,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
 
       {/* starting over is the last thing on the page, never one slip away at the top */}
       {/* the first list of a series asks, once looked at, whether its cuts match the shop */}
-      <SeriesCheck series={fixLink} />
+      <SeriesCheck series={fixLink} size={firstWin ? `${formatFtInSut(firstWin.width)} × ${formatFtInSut(firstWin.height)}` : undefined} cuts={keyCuts} />
       <button onClick={() => leaveList(onNew)} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
     </div>
   );

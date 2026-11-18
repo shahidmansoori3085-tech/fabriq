@@ -59,6 +59,11 @@ export const SASH_SWITCH = { id: "sash", label: "Shutter cutting", options: [{ v
 export function withJoint(sys: StudioSystem): StudioSystem {
   const normal = /^normal-18/.test(sys.basedOn?.id ?? sys.id);
   if (!normal) return sys;
+  // repair: a frame side once given the track width by "cut this pipe on its own" (2026-11-18 bug)
+  // goes back to the side length — saved systems and windows already in jobs alike
+  if (sys.sizes.some((x) => x.id === "sideH") && sys.parts.some((q) => (q.place === "frame-left" || q.place === "frame-right") && /^trackW_/.test(q.length))) {
+    sys = { ...sys, parts: sys.parts.map((q) => ((q.place === "frame-left" || q.place === "frame-right") && /^trackW_/.test(q.length) ? { ...q, length: "sideH" } : q)) };
+  }
   if (!sys.switches.some((x) => x.id === "joint")) {
     sys = {
       ...sys, switches: [...sys.switches, JOINT_SWITCH],

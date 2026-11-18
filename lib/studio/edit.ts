@@ -94,7 +94,9 @@ export function ownCut(sys: StudioSystem, partIds: string[]): StudioSystem {
   return {
     ...sys,
     sizes: [...sys.sizes.slice(0, at + 1), copy, ...sys.sizes.slice(at + 1)],
-    parts: sys.parts.map((p) => (partIds.includes(p.id) ? { ...p, length: id } : p)),
+    // only the pieces that really share this length move (a side cut from the same pipe as the
+    // top keeps its own length: founder test 2026-11-18 showed sides taking the track width)
+    parts: sys.parts.map((p) => (partIds.includes(p.id) && p.length === first.length ? { ...p, length: id } : p)),
   };
 }
 
