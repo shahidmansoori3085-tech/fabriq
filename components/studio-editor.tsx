@@ -13,7 +13,7 @@ import { withAlternatives, alternativesOf, partLabel } from "../lib/studio/edit"
 import { PART_KIND } from "../lib/studio/templates";
 import { findProfile, newId, type StudioLibrary } from "../lib/studio/store";
 import { HardwareTab } from "./studio/hardware";
-import { layoutLabel, fmtLen, readLen, lenToInput, noMaker, sectionTitle, MIXES, mixText, ruleText, whenText, UNIT_SHORT, type StudioUnit } from "../lib/studio/format";
+import { layoutLabel, fmtLen, readLen, lenToInput, noMaker, sectionTitle, MIXES, mixText, ruleText, whenText, type StudioUnit } from "../lib/studio/format";
 import dynamic from "next/dynamic";
 import WindowDrawing, { type Pick } from "./studio-drawing";
 
@@ -63,10 +63,12 @@ export function nextStep(sys: StudioSystem): { text: string; tab: Tab; tone: "go
 /** time of a change (called from event handlers only) */
 const stamp = () => Date.now();
 
-export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
+export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
   sys: StudioSystem;
   lib: StudioLibrary;
   unit: StudioUnit;
+  /** inch.sut or mm: chosen where the sizes are typed */
+  onUnit: (u: StudioUnit) => void;
   onChange: (s: StudioSystem) => void;
   onAddProfile: (p: ProfileDef) => void;
   onBack: () => void;
@@ -215,7 +217,7 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
         {page === "cuts" && <CutSizesPage sys={sys} unit={unit} onChange={onChange} onCheck={() => open("check")} />}
         {page === "options" && <OptionsPage sys={sys} onChange={onChange} />}
         {page === "hardware" && <div className="mt-2"><HardwareTab sys={sys} onChange={onChange} /></div>}
-        {page === "check" && <div className="mt-2"><TeachPanel sys={sys} lib={lib} unit={unit} job={job} onChange={onChange} /></div>}
+        {page === "check" && <div className="mt-2"><TeachPanel sys={sys} lib={lib} unit={unit} onUnit={onUnit} job={job} onChange={onChange} /></div>}
         {page === "try" && <div className="mt-4"><CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => open(w === "teach" ? "check" : w === "pieces" ? "sections" : "cuts")} /></div>}
         {sectionPicker}
       </div>
@@ -304,7 +306,7 @@ export default function StudioEditor({ sys, lib, unit, onChange: save, onAddProf
       {/* the tapped pipe or pane opens right under the drawing */}
       <div ref={cardRef} style={{ scrollMarginBottom: 16 }}>{pipeCard}{paneCard}</div>
       <div className="card mt-3 overflow-hidden">
-        <WindowBar sys={sys} unit={unit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
+        <WindowBar key={unit} sys={sys} unit={unit} onUnit={onUnit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
           onSize={(w, h) => { setW(w); setH(h); }}
           onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); setPick(null); }}
           onSwitch={(id, v) => setSwitches((x) => ({ ...x, [id]: v }))} />
@@ -604,8 +606,8 @@ function kindFor(lib: StudioLibrary, p: PartDef, slot: "main" | "mesh" | "alt"):
 
 /* ———————————————— window size and layout ———————————————— */
 
-function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, onSwitch }: {
-  sys: StudioSystem; unit: StudioUnit; W: Um; H: Um; tracks: number; mix: string; switches: Record<string, string>;
+function WindowBar({ sys, unit, onUnit, W, H, tracks, mix, switches, onSize, onLayout, onSwitch }: {
+  sys: StudioSystem; unit: StudioUnit; onUnit: (u: StudioUnit) => void; W: Um; H: Um; tracks: number; mix: string; switches: Record<string, string>;
   onSize: (w: Um, h: Um) => void; onLayout: (t: number, m: string) => void; onSwitch: (id: string, v: string) => void;
 }) {
   const [w, setW] = useState(lenToInput(W, unit));
@@ -617,13 +619,17 @@ function WindowBar({ sys, unit, W, H, tracks, mix, switches, onSize, onLayout, o
   const lay = sys.layouts.find((l) => l.tracks === tracks) ?? sys.layouts[0];
   return (
     <div className="border-t px-3 py-3" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-sm font-bold">Window size</span>
+        <Seg small value={unit === "mm" ? "mm" : "in"} onChange={onUnit} options={[{ value: "in", label: "inch.sut" }, { value: "mm", label: "mm" }]} />
+      </div>
       <div className="flex items-end gap-2">
-        <Field label={`Width (${UNIT_SHORT[unit]})`}>
+        <Field label="Width">
           <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={w}
             onChange={(e) => { setW(e.target.value); commit(e.target.value, h); }} />
         </Field>
         <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
-        <Field label={`Height (${UNIT_SHORT[unit]})`}>
+        <Field label="Height">
           <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={h}
             onChange={(e) => { setH(e.target.value); commit(w, e.target.value); }} />
         </Field>

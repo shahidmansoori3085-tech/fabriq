@@ -13,14 +13,14 @@ import WindowDrawing from "../studio-drawing";
 import { teach, check, type TeachResult, type CheckRow } from "../../lib/studio/teach";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { partLabel } from "../../lib/studio/edit";
-import { fmtLen, fmtDelta, readLen, lenToInput, mixText, layoutLabel, sectionTitle, UNIT_HINT, UNIT_SHORT, type StudioUnit } from "../../lib/studio/format";
-import { Badge, Field, SectionTitle } from "../studio-ui";
+import { fmtLen, fmtDelta, readLen, lenToInput, mixText, layoutLabel, sectionTitle, UNIT_HINT, type StudioUnit } from "../../lib/studio/format";
+import { Badge, Field, SectionTitle, Seg } from "../studio-ui";
 
 /** time of a teach (called from event handlers only) */
 const stampNow = () => Date.now();
 
-export function TeachPanel({ sys, lib, unit, job, onChange }: {
-  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; job: StudioJob; onChange: (s: StudioSystem) => void;
+export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
+  sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; onUnit: (u: StudioUnit) => void; job: StudioJob; onChange: (s: StudioSystem) => void;
 }) {
   const [mode, setMode] = useState<"teach" | "check">(sys.jobs.length ? "check" : "teach");
   const [vals, setVals] = useState<Record<string, string>>({});
@@ -66,6 +66,12 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
     if (as === "teach") { const r = teach(sys, t); setMode("teach"); setTaught(r); setChecked(null); onChange({ ...r.system, taughtAt: stampNow() }); }
     else { const r = check(sys, t); setChecked(r); setTaught(null); if (r.allOk) onChange({ ...r.system, taughtAt: stampNow() }); }
   };
+  const switchUnit = (u: StudioUnit) => {
+    const conv = (v: string) => { const x = readLen(v, unit); return x === null ? v : lenToInput(x, u); };
+    setWs(conv(ws)); setHs(conv(hs)); setGw(conv(gw)); setGh(conv(gh));
+    setVals((o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, conv(v)])));
+    onUnit(u);
+  };
   const reset = () => { setVals({}); setGw(""); setGh(""); setTaught(null); setChecked(null); };
   const step = mode === "teach" ? 1 : 2;
 
@@ -92,13 +98,16 @@ export function TeachPanel({ sys, lib, unit, job, onChange }: {
 
       {!taught && !checked && (
         <div className="card mt-3 p-4">
-          <div className="text-sm font-bold">Window {step}: the size you made</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-bold">Window {step}: the size you made</div>
+            <Seg small value={unit === "mm" ? "mm" : "in"} onChange={switchUnit} options={[{ value: "in", label: "inch.sut" }, { value: "mm", label: "mm" }]} />
+          </div>
           <div className="mt-2 flex items-end gap-2">
-            <Field label={`Width (${UNIT_SHORT[unit]})`}>
+            <Field label="Width">
               <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={ws} onChange={(e) => setWs(e.target.value)} />
             </Field>
             <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
-            <Field label={`Height (${UNIT_SHORT[unit]})`}>
+            <Field label="Height">
               <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={hs} onChange={(e) => setHs(e.target.value)} />
             </Field>
           </div>

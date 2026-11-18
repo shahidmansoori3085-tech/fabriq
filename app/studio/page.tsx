@@ -12,13 +12,13 @@ import {
 } from "../../lib/studio/store";
 import { SYSTEM_STATUS, noMaker, type StudioUnit } from "../../lib/studio/format";
 import StudioEditor, { nextStep } from "../../components/studio-editor";
-import { Badge, Seg, SectionTitle } from "../../components/studio-ui";
+import { Badge, SectionTitle } from "../../components/studio-ui";
 import { findProfile } from "../../lib/studio/store";
 import StudioThumb from "../../components/studio-thumb";
 import { SectionLibrary } from "../../components/studio/section-library";
 
-type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string; tab?: "teach" } | { kind: "sections"; open?: string };
 const UNIT_KEY = "fabriq_studio_unit";
+type View = { kind: "home" } | { kind: "new" } | { kind: "system"; id: string; tab?: "teach" } | { kind: "sections"; open?: string };
 
 
 /** A small, real drawing of a system (first layout, 5′ × 4′). */
@@ -29,6 +29,7 @@ function Thumb({ sys, lib }: { sys: StudioSystem; lib: StudioLibrary }) {
 export default function StudioPage() {
   const [lib, setLib] = useState<StudioLibrary | null>(null);
   const [view, setView] = useState<View>({ kind: "home" });
+  // inch.sut or mm, chosen where the sizes are typed (founder 2026-11-18)
   const [unit, setUnit] = useState<StudioUnit>("in");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -68,9 +69,11 @@ export default function StudioPage() {
       window.history.pushState({ ...(window.history.state ?? {}), studio: to }, "", "/studio");
       setView(to);
     }
+    try { const u = localStorage.getItem(UNIT_KEY); if (u === "mm") setUnit(u); } catch { /* inch stays */ }
     /* eslint-enable react-hooks/set-state-in-effect */
-    try { const u = localStorage.getItem(UNIT_KEY); if (u === "mm" || u === "ft") setUnit(u); } catch { /* inch stays */ }
   }, []);
+
+  const changeUnit = (u: StudioUnit) => { setUnit(u); try { localStorage.setItem(UNIT_KEY, u); } catch { /* session only */ } };
 
   if (!lib) return <main className="mx-auto w-full max-w-xl flex-1 px-4 pt-6" />;
 
@@ -87,7 +90,6 @@ export default function StudioPage() {
   };
   const putSystem = (s: StudioSystem) => commit({ ...lib, systems: lib.systems.map((x) => (x.id === s.id ? s : x)) });
   const addProfile = (p: ProfileDef) => commit({ ...lib, profiles: [...lib.profiles.filter((x) => x.id !== p.id), p] });
-  const changeUnit = (u: StudioUnit) => { setUnit(u); try { localStorage.setItem(UNIT_KEY, u); } catch { /* session only */ } };
 
   const create = (templateId: string) => {
     const s = copyTemplate(templateId);
@@ -130,7 +132,7 @@ export default function StudioPage() {
     <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-32 pt-3">
       {tabs}
       {current ? (
-        <StudioEditor key={current.id + (view.kind === "system" ? view.tab ?? "" : "")} startTab={view.kind === "system" ? view.tab : undefined} sys={current} lib={lib} unit={unit} onChange={putSystem} onAddProfile={addProfile}
+        <StudioEditor key={current.id + (view.kind === "system" ? view.tab ?? "" : "")} startTab={view.kind === "system" ? view.tab : undefined} sys={current} lib={lib} unit={unit} onUnit={changeUnit} onChange={putSystem} onAddProfile={addProfile}
           onBack={() => go({ kind: "home" })}
           onDuplicate={() => {
             const c: StudioSystem = { ...structuredClone(current), id: newId("sys"), name: `${current.name} (copy)` };
@@ -157,9 +159,8 @@ export default function StudioPage() {
         <>
           <header className="flex items-center justify-between gap-2">
             <Link href="/" className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>← FabriQ</Link>
-            <Seg small value={unit} onChange={changeUnit} options={[{ value: "ft", label: "feet" }, { value: "in", label: "inch" }, { value: "mm", label: "mm" }]} />
           </header>
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Systems</h1>
+          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Window series</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
             Every window system in the app. Open one to see or change its sections, cut formulas, hardware and bar lengths. Saved on this phone.
           </p>
