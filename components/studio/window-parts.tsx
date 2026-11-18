@@ -20,6 +20,15 @@ const PLACE: Record<string, string> = {
 };
 const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
 
+/** the pencil that says "you can change this" */
+function Pen() {
+  return (
+    <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: "var(--surface-2)", color: "var(--accent)" }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" /></svg>
+    </span>
+  );
+}
+
 export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPick }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; geo: WindowGeo;
   values: Record<string, Um | null>; vars: Record<string, string>; mix: string;
@@ -32,7 +41,27 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
     const id = mesh && p.meshProfile ? p.meshProfile : (p.profile.find((c) => matches(c.when, vars)) ?? p.profile[p.profile.length - 1])?.id;
     return findProfile(lib, id ?? "");
   };
-  const rows = (ms: Member[], mesh: boolean) => {
+  // the shop's name for the pipe (Handle, Interlock, Bearing…), whatever the catalogue calls it
+  const KIND_NAME: Record<string, string> = {
+    handle: "Handle", interlock: "Interlock", "slim-interlock": "Slim interlock", bearing: "Bearing", track: "Track",
+    shutter: "Shutter pipe", "shutter-rail": "Shutter top / bottom", "mesh-shutter": "Mesh shutter pipe", "interlock-patti": "Interlock patti",
+    rail: "Rail", bead: "Glazing clip", mullion: "Mullion", frame: "Frame",
+  };
+  const SIDE: Record<string, string> = { "sash-lock": "Outer side", "sash-meet": "Meeting side", "sash-top": "Top", "sash-bottom": "Bottom", meeting: "Where glass meets" };
+  const code = (pr?: { codes?: Record<string, string>; size?: string }) =>
+    [[...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / "), pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ");
+  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string) => (
+    <button key={key} type="button" onClick={onClick} aria-label={`Change ${title}`}
+      className="flex w-full items-center gap-3 px-4 py-2.5 text-left" style={{ background: on ? "var(--surface-2)" : undefined }}>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold leading-tight">{title}{badge && <span className="ml-1.5 text-[11px] font-bold" style={{ color: "var(--accent)" }}>{badge}</span>}</span>
+        <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+      </span>
+      <span className="mono shrink-0 text-[15px] font-bold">{value}</span>
+      <Pen />
+    </button>
+  );
+  const rows = (ms: Member[], mesh: boolean, frame: boolean) => {
     const seen = new Set<string>();
     return ms
       .filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true)))
@@ -41,43 +70,40 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         const p = sys.parts.find((x) => x.id === m.partId);
         const pr = sectionOf(m.partId, mesh);
         const on = pick?.type === "part" && pick.id === m.partId;
-        return (
-          <button key={m.partId} type="button" onClick={() => onPick({ type: "part", id: m.partId })}
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-left" style={{ background: on ? "var(--surface-2)" : undefined }}>
-            <span className="w-[92px] shrink-0 text-sm font-semibold">{PLACE[m.place] ?? "Piece"}</span>
-            <span className="min-w-0 flex-1 truncate text-xs" style={{ color: "var(--ink-3)" }}>{pr ? sectionTitle(pr.name) : "No section"}</span>
-            <span className="mono shrink-0 text-[15px] font-bold">{len(p ? values[p.length] : null)}</span>
-            {m.angle === 45 && <span className="shrink-0 text-[11px] font-bold" style={{ color: "var(--accent)" }}>45°</span>}
-          </button>
-        );
+        const value = len(p ? values[p.length] : null);
+        const badge = m.angle === 45 ? "45°" : undefined;
+        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
+        const name = (pr?.kind && KIND_NAME[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
+        return line(m.partId, name, [SIDE[m.place] ?? "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
       });
   };
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
   const pane = `${len(values[sys.infill.w])} × ${len(values[sys.infill.h])}`;
-  const head = (title: string, right?: React.ReactNode, onClick?: () => void, on?: boolean) => (
-    <button type="button" onClick={onClick} disabled={!onClick} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-      style={{ background: on ? "var(--surface-2)" : undefined }}>
+  const head = (title: string, right?: React.ReactNode) => (
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
       <span className="text-[15px] font-bold">{title}</span>
       {right}
-    </button>
+    </div>
   );
 
   return (
     <div className="mt-3 flex flex-col gap-3">
+      <p className="flex items-center gap-2 px-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
+        <Pen /> Tap any line to change its pipe or its cut.
+      </p>
       <div className="card overflow-hidden">
         {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{geo.frame.some((m) => m.angle === 45) ? "45° cut" : "90° cut"}</span>)}
-        <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>{rows(geo.frame, false)}</div>
+        <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>{rows(geo.frame, false, true)}</div>
       </div>
       {geo.shutters.map((s) => {
         const mesh = s.kind === "J";
         const on = pick?.type === "shutter" && pick.index === s.index;
         return (
           <div key={s.index} className="card overflow-hidden">
-            {head(`Shutter ${s.index + 1} · ${fill(mix[s.index] ?? s.kind)}`,
-              <span className="mono text-sm font-bold" style={{ color: "var(--ink-2)" }}>{pane}</span>,
-              () => onPick({ type: "shutter", index: s.index }), on)}
+            {head(`Shutter ${s.index + 1} · ${fill(mix[s.index] ?? s.kind)}`)}
             <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>
-              {rows([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh)}
+              {rows([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh, false)}
+              {line(`pane${s.index}`, fill(mix[s.index] ?? s.kind), mesh ? "Mesh, width × height" : "Glass, width × height", pane, on, () => onPick({ type: "shutter", index: s.index }))}
             </div>
           </div>
         );
