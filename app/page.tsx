@@ -3011,8 +3011,24 @@ function SettingsModal({ shop, onSave, onClose }: {
           <h2 className="text-lg font-bold">Settings</h2>
           <button onClick={onClose} aria-label="Close" className="text-2xl leading-none" style={{ color: "var(--ink-3)" }}>×</button>
         </div>
-        <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
-          Your business name and number are printed on order PDFs. All fields are optional.
+        {/* the shop's window series and sections: the two things a fabricator opens here most */}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {([["/studio", "Window series", "Every system, its cuts", "M3 4h18v16H3z M12 4v16 M3 12h9"], ["/studio?view=sections", "Sections", "Every pipe, its size", "M5 9h5v11H5z M14 6h5v14h-5z M5 9l2-3h5l-2 3 M14 6l2-3h4"]] as const).map(([href, title, sub, d]) => (
+            <a key={href} href={href} className="card flex flex-col gap-2 p-3">
+              <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: "var(--surface-2)", color: "var(--accent)" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+              </span>
+              <span>
+                <span className="block text-sm font-bold">{title}</span>
+                <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <h3 className="mt-5 text-sm font-bold">Your business</h3>
+        <p className="mt-0.5 text-xs" style={{ color: "var(--ink-3)" }}>
+          Printed on order PDFs. All fields are optional.
         </p>
 
         <div className="mt-4 flex flex-col gap-3">
@@ -3022,14 +3038,6 @@ function SettingsModal({ shop, onSave, onClose }: {
         </div>
 
         <CloudCard />
-
-        <a href="/studio" className="card mt-5 flex items-center justify-between gap-3 p-3">
-          <span className="min-w-0">
-            <span className="block text-sm font-bold">Systems &amp; Section Library</span>
-            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Sections, cut formulas, hardware and bar lengths of every window system.</span>
-          </span>
-          <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
-        </a>
 
         <button onClick={() => onSave({ ...s, name: s.name.trim() })} className="btn-primary mt-6 w-full py-3.5">
           Save

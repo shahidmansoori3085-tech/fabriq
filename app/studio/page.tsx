@@ -61,6 +61,7 @@ export default function StudioPage() {
         to = { kind: "system", id: c.id };
       }
     } else if (openSec) to = { kind: "sections", open: openSec };
+    else if (q.get("view") === "sections") to = { kind: "sections" };
     if (to) {
       // the list sits under it, so Back goes to the list and then back to the job
       window.history.replaceState({ ...(window.history.state ?? {}), studio: undefined }, "", "/studio");
@@ -110,8 +111,24 @@ export default function StudioPage() {
 
   const current = view.kind === "system" ? lib.systems.find((s) => s.id === view.id) : undefined;
 
+  // Series | Sections: the two lists of the library, side by side at the top
+  const tabs = (view.kind === "home" || view.kind === "sections") && (
+    <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: "var(--surface-3)" }} role="tablist">
+      {([["home", "Window series"], ["sections", "Sections"]] as const).map(([k, label]) => {
+        const on = view.kind === k;
+        return (
+          <button key={k} type="button" role="tab" aria-selected={on}
+            onClick={() => { if (!on) go(k === "home" ? { kind: "home" } : { kind: "sections" }); }}
+            className="rounded-[10px] py-2.5 text-sm font-bold"
+            style={on ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" } : { color: "var(--ink-3)" }}>{label}</button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-32 pt-3">
+      {tabs}
       {current ? (
         <StudioEditor key={current.id + (view.kind === "system" ? view.tab ?? "" : "")} startTab={view.kind === "system" ? view.tab : undefined} sys={current} lib={lib} unit={unit} onChange={putSystem} onAddProfile={addProfile}
           onBack={() => go({ kind: "home" })}
