@@ -86,9 +86,12 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   const [pick, setPick] = useState<Pick>(null);
   // "Change" on a pipe: size + 90° / 45° + Save (founder 2026-11-18)
   const [changeId, setChangeId] = useState<string | null>(null);
+
   // the system page is a short menu; each topic opens on its own screen (founder 2026-11-16:
   // one clean thing at a time, so a fabricator new to it understands it at once)
   const [page, setPage] = useState<Page>("home");
+  const pageRef = useRef<Page>("home");
+  useEffect(() => { pageRef.current = page; }, [page]);
   // every change is saved and used from the next window on, right here (founder 2026-11-18:
   // no 2-window process — the shop changes a cut or a section on this page and is done)
   const onChange = (next: StudioSystem, _note?: string) => { void _note; save({ ...next, changed: undefined }); };
@@ -105,7 +108,13 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
 
   // each screen is a history entry: the phone's Back returns to the system page
   useEffect(() => {
-    const onPop = () => { setPage((window.history.state?.sysPage as Page | undefined) ?? "home"); setPick(null); };
+    // only a real page change closes the open pipe: a sheet closing also steps back once, and
+    // "More options" hands its pipe over to the card at that moment
+    const onPop = () => {
+      const pg = (window.history.state?.sysPage as Page | undefined) ?? "home";
+      if (pg !== pageRef.current) setPick(null);
+      setPage(pg);
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
