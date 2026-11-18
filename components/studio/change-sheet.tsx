@@ -70,7 +70,7 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, more, on
         <p className="mt-1.5 text-xs" style={{ color: bad ? "var(--bad)" : "var(--ink-3)" }}>
           {bad ? "Type it like 46.5 (inch.sut), 1180 mm or 3'10.5 (feet)."
             : um !== null ? <>= <b className="mono" style={{ color: "var(--ink)" }}>{fmtLen(um, "in").replace(/~/g, "")}</b> · {Math.round(um / 1000)} mm</>
-            : <>Write sut after a dot: <b style={{ color: "var(--ink)" }}>48.7</b> = 48 inch 7 sut. Or type mm, cm or feet.</>}
+            : <><b style={{ color: "var(--ink)" }}>48.7</b> = 48 inch 7 sut</>}
         </p>
       </Step>
 
