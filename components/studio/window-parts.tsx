@@ -198,7 +198,11 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
             className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[var(--surface-2)]" style={i ? { borderTop: "1px solid var(--line)" } : undefined}>
             <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{r.name}</span>
             <span className="mono shrink-0 text-[15px] font-semibold">{r.value}</span>
-            <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-3)" }}><path d="M9 6l6 6-6 6" /></svg>
+            {/* a plain, visible Change: neutral colours, the whole line taps (founder 2026-11-18) */}
+            <span className="flex shrink-0 items-center gap-0.5 rounded-lg px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
+              Change
+              <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </span>
           </button>
         ))}
       </div>
