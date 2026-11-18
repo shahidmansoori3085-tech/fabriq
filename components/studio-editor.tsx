@@ -692,16 +692,21 @@ function WindowBar({ sys, unit, onUnit, W, H, tracks, mix, switches, onSize, onL
       </div>
       <div className="flex items-end gap-2">
         <Field label="Width">
-          <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={w}
-            onChange={(e) => { setW(e.target.value); commit(e.target.value, h); }} />
+          <span className="relative block">
+            <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={w}
+              onChange={(e) => { setW(e.target.value); commit(e.target.value, h); }} />
+            {unit !== "mm" && <span aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "var(--ink-3)" }}>48.7 = 48 inch 7 sut</span>}
+          </span>
         </Field>
         <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
         <Field label="Height">
-          <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={h}
-            onChange={(e) => { setH(e.target.value); commit(w, e.target.value); }} />
+          <span className="relative block">
+            <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={h}
+              onChange={(e) => { setH(e.target.value); commit(w, e.target.value); }} />
+            {unit !== "mm" && <span aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "var(--ink-3)" }}>48.7 = 48 inch 7 sut</span>}
+          </span>
         </Field>
       </div>
-      {unit !== "mm" && <p className="mt-1.5 text-xs" style={{ color: "var(--ink-3)" }}><b style={{ color: "var(--ink)" }}>48.7</b> = 48 inch 7 sut</p>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {sys.layouts.map((l) => (
           <button key={l.tracks} onClick={() => onLayout(l.tracks, l.mixes[0])} aria-pressed={l.tracks === tracks}
