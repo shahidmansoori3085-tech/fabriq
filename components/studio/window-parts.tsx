@@ -11,7 +11,7 @@ import type { StudioSystem } from "../../lib/studio/model";
 import type { WindowGeo, Member } from "../../lib/studio/geometry";
 import { matches } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, sectionTitle, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, type StudioUnit } from "../../lib/studio/format";
 import type { Pick } from "../studio-drawing";
 
 
@@ -184,29 +184,22 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   onChangePipe: (partId: string) => void;
 }) {
   const labels = pipeLabels(sys, lib, vars, values, unit, geo);
-  /** The sections of these pipes: pipe name, then the section's name, code and size in mm; a tap opens the pipe. */
-  const sections = (ms: Member[], mesh: boolean) => {
+  /** These pipes as a plain list: name and cut, a tap opens Change. */
+  const sections = (ms: Member[]) => {
     const seen = new Set<string>();
     const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
     const rowsOf = ms.filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true))).sort((x, y) => ORDER.indexOf(x.place) - ORDER.indexOf(y.place)).map((m) => {
-      const q = sys.parts.find((x) => x.id === m.partId);
-      const id = mesh && q?.meshProfile ? q.meshProfile : (q?.profile.find((c) => matches(c.when, vars)) ?? q?.profile[q.profile.length - 1])?.id;
-      const pr = findProfile(lib, id ?? "");
-      const code = [...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / ");
-      return { m, name: labels[m.partId]?.name ?? "Pipe", sec: pr ? sectionTitle(pr.name) : "No section", info: [code, pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ") };
+      return { m, name: labels[m.partId]?.name ?? "Pipe", value: labels[m.partId]?.value ?? "—" };
     });
     return (
-      <div className="border-t px-4 py-2" style={{ borderColor: "var(--line)" }}>
-        <div className="py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>Sections</div>
-        {rowsOf.map((r) => (
-          <div key={r.m.partId} className="flex items-center gap-3 py-2" style={{ borderTop: "1px solid var(--line)" }}>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold leading-tight">{r.name}</span>
-              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{r.sec}{r.info ? ` · ${r.info}` : ""}</span>
-            </span>
-            <button type="button" onClick={() => onChangePipe(r.m.partId)}
-              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "var(--accent-soft, var(--surface-2))", color: "var(--accent)", border: "1px solid var(--accent)" }}>Change</button>
-          </div>
+      <div className="border-t" style={{ borderColor: "var(--line)" }}>
+        {rowsOf.map((r, i) => (
+          <button key={r.m.partId} type="button" onClick={() => onChangePipe(r.m.partId)} aria-label={`Change ${r.name}`}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[var(--surface-2)]" style={i ? { borderTop: "1px solid var(--line)" } : undefined}>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{r.name}</span>
+            <span className="mono shrink-0 text-[15px] font-semibold">{r.value}</span>
+            <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-3)" }}><path d="M9 6l6 6-6 6" /></svg>
+          </button>
         ))}
       </div>
     );
@@ -259,8 +252,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
       <div className="overflow-hidden" style={CARD}>
         {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="border-t px-2 py-1" style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--surface-2), var(--surface) 70%)" }}><TrackSketch geo={geo} labels={labels} pick={pick} onPick={onPick} /></div>
-        {sections(geo.frame, false)}
-        <p className="border-t px-4 py-2.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>Tap a size to change it.</p>
+        {sections(geo.frame)}
       </div>
 
       {/* the shutters, one card each, side by side: swipe to the next (founder 2026-11-18) */}
@@ -287,7 +279,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
               <div key={s.index} className="w-[86%] shrink-0 snap-center overflow-hidden motion-safe:transition-[transform,opacity] motion-safe:duration-300"
                 style={{ ...CARD, transform: at === s.index ? "scale(1)" : "scale(0.94)", opacity: at === s.index ? 1 : 0.55, transformOrigin: "center top" }}>
                 <div className="flex items-center gap-3 px-4 pb-2 pt-4">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: "var(--accent)", color: "#fff" }}>{s.index + 1}</span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: "var(--surface-3)", color: "var(--ink)" }}>{s.index + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[16px] font-bold leading-tight">Shutter {s.index + 1}</span>
                     <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{s.index + 1} of {geo.shutters.length} · {fill(k)}</span>
@@ -319,7 +311,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                 {/* a mesh shutter: the shop's own way, plain to see and one tap to change */}
                 {mesh && (bombay || clip) && (
                   <div className="flex flex-col gap-2 border-t px-4 py-3" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
-                    <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--accent)" }}>How you make the mesh shutter</div>
+                    <div className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Mesh shutter</div>
                     {bombay && lockId && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold">Meeting side pipe</span>
@@ -347,8 +339,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                     <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Applies to every mesh shutter of this system.</p>
                   </div>
                 )}
-                {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh)}
-                <p className="border-t px-4 py-2.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>Tap a size to change it. Tap the {fill(k).toLowerCase()} for its size.</p>
+                {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)])}
               </div>
             );
           })}

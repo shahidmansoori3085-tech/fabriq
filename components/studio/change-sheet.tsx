@@ -11,7 +11,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   return (
     <div className="mt-4">
       <div className="mb-2 flex items-center gap-2">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ background: "var(--accent)", color: "#fff" }}>{n}</span>
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ background: "var(--surface-3)", color: "var(--ink)" }}>{n}</span>
         <span className="text-[15px] font-bold">{title}</span>
       </div>
       {children}
