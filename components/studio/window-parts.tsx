@@ -90,7 +90,9 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         const pr = sectionOf(m.partId, mesh);
         const on = pick?.type === "part" && pick.id === m.partId;
         const value = len(p ? values[p.length] : null);
-        const badge = m.angle === 45 ? "45°" : undefined;
+        // a Normal window cut 45° on its track or shutter shows it on every piece
+        const cut45 = frame ? vars.joint === "45" || (vars.joint !== "90" && m.angle === 45) : vars.sash === "45" || (vars.sash !== "90" && m.angle === 45);
+        const badge = cut45 ? "45°" : undefined;
         if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
         const name = (pr?.kind && KIND_NAMES[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
         return line(m.partId, name, [SIDE[m.place] ?? "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
@@ -111,7 +113,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         <Pen /> Tap any line to change its pipe or its cut.
       </p>
       <div className="card overflow-hidden">
-        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{geo.frame.some((m) => m.angle === 45) ? "45° cut" : "90° cut"}</span>)}
+        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>{rows(geo.frame, false, true)}</div>
       </div>
       {geo.shutters.map((s) => {

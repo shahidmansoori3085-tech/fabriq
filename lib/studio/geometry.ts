@@ -173,7 +173,7 @@ export function windowGeometry(
     const sT = face("sash-top", i), sB = face("sash-bottom", i), sL0 = face("sash-lock", i), sM0 = face("sash-meet", i);
     const left = lockSide === "left" ? sL0 : sM0, right = lockSide === "left" ? sM0 : sL0;
     const st = sT.mm || 50, sb = sB.mm || st, sl = left.mm || st, sr = right.mm || st;
-    const sashMitre = (sT.part?.angle ?? 45) === 45;
+    const sashMitre = vars.sash === "45" || (vars.sash !== "90" && (sT.part?.angle ?? 45) === 45);
     const push = (f: typeof sT, poly: Pt[], vertical: boolean, axis: [number, number, number, number]) =>
       f.part && sash.push({ partId: f.part.id, place: f.part.place!, shutter: i, poly, known: f.known, vertical, stops: f.stops, axis, shape: f.shape, flip: f.part.flipSection, angle: f.part.angle, face: f.mm, depth: f.depth });
     if (sashMitre) {

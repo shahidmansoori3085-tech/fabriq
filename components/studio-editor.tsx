@@ -264,7 +264,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         <span className="mt-1.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: toneBg(state.tone), color: toneFg(state.tone) }}>{state.label}</span>
       </div>
       <p className="mt-0.5 text-sm" style={{ color: "var(--ink-3)" }}>
-        {sys.layouts.length > 2 ? `${layoutLabel(sys, sys.layouts[0].tracks).replace(/ sash(es)?$/, "")} to ${layoutLabel(sys, sys.layouts[sys.layouts.length - 1].tracks)}` : sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" and ")} · {sys.parts.some((p) => p.place?.startsWith("frame") && p.angle === 45) ? "45° frame" : "90° frame"}
+        {sys.layouts.length > 2 ? `${layoutLabel(sys, sys.layouts[0].tracks).replace(/ sash(es)?$/, "")} to ${layoutLabel(sys, sys.layouts[sys.layouts.length - 1].tracks)}` : sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" and ")}{sys.switches.some((x) => x.id === "joint") ? " · 90° or 45° cutting" : sys.parts.some((p) => p.place?.startsWith("frame") && p.angle === 45) ? " · 45° frame" : " · 90° frame"}
       </p>
 
       {(() => {
@@ -642,7 +642,7 @@ function WindowBar({ sys, unit, onUnit, W, H, tracks, mix, switches, onSize, onL
             className={`chip px-2.5 py-1 text-xs ${m === mix ? "selected" : ""}`}>{mixText(m)}</button>
         ))}
       </div>
-      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode" && s.id !== "joint" && s.id !== "sash").map((sw) => (
+      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode").map((sw) => (
         <div key={sw.id} className="mt-3">
           <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{sw.label}</div>
           <Seg small value={switches[sw.id] ?? sw.default} onChange={(v) => onSwitch(sw.id, v)} options={sw.options.map((o) => ({ value: o.value, label: o.label }))} />
