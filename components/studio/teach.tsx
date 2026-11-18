@@ -52,6 +52,16 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
   const appText = (id: string) => { const v = app[id]; return v != null ? fmtLen(v, unit).replace(/~/g, "") : "—"; };
   const geo = windowGeometry(sys, win, (id) => findProfile(lib, id));
   const labels = pipeLabels(sys, lib, winVars, app, unit);
+  // "Track · top, bottom" — the track pieces say they are track, the shutter ones say their pipe (founder 2026-11-18)
+  const TRACK_SIDE: Record<string, string> = { "frame-top": "top", "frame-bottom": "bottom", "frame-left": "left side", "frame-right": "right side" };
+  const rowName = (ps: typeof sys.parts) => {
+    if (ps.every((p) => p.place && TRACK_SIDE[p.place])) return `${sys.family === "casement" ? "Frame" : "Track"} · ${[...new Set(ps.map((p) => TRACK_SIDE[p.place!]))].join(", ")}`;
+    const names = [...new Set(ps.map((p) => labels[p.id]?.name ?? partLabel(p)))];
+    // "Bearing · top" + "Bearing · bottom" → "Bearing · top, bottom"
+    const head = names[0]?.split(" · ")[0];
+    if (names.length > 1 && names.every((n) => n.startsWith(`${head} · `))) return `${head} · ${names.map((n) => n.slice(head.length + 3)).join(", ")}`;
+    return names.join(", ");
+  };
   const diffOf = (id: string, typed: string) => { const t = readLen(typed, unit), a = app[id]; return t !== null && a != null ? t - a : null; };
   const ready = sizeOk && rows.some((r) => readLen(vals[r.size.id] ?? "", unit) !== null) || readLen(gw, unit) !== null || readLen(gh, unit) !== null;
 
@@ -184,14 +194,14 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
           <div className="card mt-4 p-4" style={{ borderColor: "var(--accent)" }}>
             <div className="text-[15px] font-bold">Type your cuts here</div>
             <div className="mt-0.5 text-xs leading-snug" style={{ color: "var(--ink-3)" }}>
-              For each pipe, type the length you cut on this window. The app&apos;s cut is shown in grey. Leave a box empty if you do not know it.
+              Har pipe ka naap apni shop ke hisaab se daaliye. Aage se app aapke yahi naap use karega. Grey mein app ka abhi ka naap dikh raha hai. Jo naap pata nahi, woh box khaali chhod dijiye.
             </div>
           </div>
           <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
             {rows.map((r) => (
               <label key={r.size.id} className="flex items-center gap-3 px-3 py-2.5">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{r.parts.map((p) => partLabel(p)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}</span>
+                  <span className="block truncate text-sm font-semibold">{rowName(r.parts)}</span>
                   <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
                     App: <b className="mono" style={{ color: "var(--ink-2)" }}>{appText(r.size.id)}</b>
                     {(() => { const vars = jobVars(sys, win); const spec = r.parts[0].profile.find((x) => matches(x.when, vars)); const pr = findProfile(lib, spec?.id ?? ""); return pr ? ` · ${sectionTitle(pr.name)}` : ""; })()}
