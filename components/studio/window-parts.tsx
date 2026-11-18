@@ -11,7 +11,7 @@ import type { StudioSystem } from "../../lib/studio/model";
 import type { WindowGeo, Member } from "../../lib/studio/geometry";
 import { matches } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, sectionTitle, type StudioUnit } from "../../lib/studio/format";
 import type { Pick } from "../studio-drawing";
 
 
@@ -182,6 +182,30 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   onKind: (index: number, k: "G" | "J" | "S") => void;
 }) {
   const labels = pipeLabels(sys, lib, vars, values, unit, geo);
+  /** The sections of these pipes: pipe name, then the section's name, code and size in mm; a tap opens the pipe. */
+  const sections = (ms: Member[], mesh: boolean) => {
+    const seen = new Set<string>();
+    const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
+    const rowsOf = ms.filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true))).sort((x, y) => ORDER.indexOf(x.place) - ORDER.indexOf(y.place)).map((m) => {
+      const q = sys.parts.find((x) => x.id === m.partId);
+      const id = mesh && q?.meshProfile ? q.meshProfile : (q?.profile.find((c) => matches(c.when, vars)) ?? q?.profile[q.profile.length - 1])?.id;
+      const pr = findProfile(lib, id ?? "");
+      const code = [...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / ");
+      return { m, name: labels[m.partId]?.name ?? "Pipe", sec: pr ? sectionTitle(pr.name) : "No section", info: [code, pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ") };
+    });
+    return (
+      <div className="border-t px-4 py-2" style={{ borderColor: "var(--line)" }}>
+        <div className="py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>Sections</div>
+        {rowsOf.map((r) => (
+          <button key={r.m.partId} type="button" onClick={() => onPick({ type: "part", id: r.m.partId })}
+            className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left">
+            <span className="shrink-0 text-sm font-semibold">{r.name}</span>
+            <span className="min-w-0 truncate text-right text-xs" style={{ color: "var(--ink-2)" }}>{r.sec}{r.info ? <span style={{ color: "var(--ink-3)" }}> · {r.info}</span> : null}</span>
+          </button>
+        ))}
+      </div>
+    );
+  };
   const strip = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
   const [hint, setHint] = useState(false);
@@ -230,6 +254,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
       <div className="overflow-hidden" style={CARD}>
         {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="border-t px-2 py-1" style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--surface-2), var(--surface) 70%)" }}><TrackSketch geo={geo} labels={labels} pick={pick} onPick={onPick} /></div>
+        {sections(geo.frame, false)}
         <p className="border-t px-4 py-2.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>Tap a size to change it.</p>
       </div>
 
@@ -317,7 +342,8 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                     <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Applies to every mesh shutter of this system.</p>
                   </div>
                 )}
-                <p className="px-4 py-2.5 text-xs" style={{ color: "var(--ink-3)" }}>Tap a size to change it. Tap the {fill(k).toLowerCase()} for its size.</p>
+                {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh)}
+                <p className="border-t px-4 py-2.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>Tap a size to change it. Tap the {fill(k).toLowerCase()} for its size.</p>
               </div>
             );
           })}
