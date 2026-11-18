@@ -51,7 +51,7 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
   const app = computeSizes(sys, win).values;
   const appText = (id: string) => { const v = app[id]; return v != null ? fmtLen(v, unit).replace(/~/g, "") : "—"; };
   const geo = windowGeometry(sys, win, (id) => findProfile(lib, id));
-  const labels = pipeLabels(sys, lib, winVars, app, unit);
+  const labels = pipeLabels(sys, lib, winVars, app, unit, geo);
   // "Track · top, bottom" — the track pieces say they are track, the shutter ones say their pipe (founder 2026-11-18)
   const TRACK_SIDE: Record<string, string> = { "frame-top": "top", "frame-bottom": "bottom", "frame-left": "left side", "frame-right": "right side" };
   const rowName = (ps: typeof sys.parts) => {

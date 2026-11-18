@@ -15,7 +15,7 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
   g: WindowGeo; unit: StudioUnit; pick: Pick; onPick?: (p: Pick) => void; compact?: boolean;
   /** each pipe's name and cut (part id → { name: "Handle", value: "46″ 3s" }), written beside the
    *  window with an arrow to the pipe, like a shop drawing (founder 2026-11-18) */
-  labels?: Record<string, { name: string; value: string }>;
+  labels?: Record<string, { name: string; value: string; inside?: string }>;
   /** glass / mesh size written on the panes */
   infill?: string;
 }) {
@@ -148,12 +148,12 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
       {!compact && labels && (() => {
         const lf = fs * 1.12;
         const ctr = (m: Member) => { const xs = m.poly.map((q) => q[0]), ys = m.poly.map((q) => q[1]); return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2]; };
-        type Call = { id: string; name: string; value: string; ax: number; ay: number; x: number; y: number };
+        type Call = { id: string; name: string; value: string; inside?: string; ax: number; ay: number; x: number; y: number };
         const calls: Call[] = [];
         const add = (m: Member | undefined, ax: number, ay: number, x: number, y: number, name?: string) => {
           const l = m && labels[m.partId];
           if (!m || !l) return;
-          calls.push({ id: m.partId, name: name ?? l.name, value: l.value.replace(/~/g, ""), ax, ay, x, y });
+          calls.push({ id: m.partId, name: name ?? l.name, value: l.value.replace(/~/g, ""), inside: l.inside, ax, ay, x, y });
         };
         const fr = (pl: string) => g.frame.find((m) => m.place === pl);
         const top = fr("frame-top"), bot = fr("frame-bottom"), lft = fr("frame-left"), rgt = fr("frame-right");
@@ -175,7 +175,7 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
           const side = (m: Member) => (ctr(m)[0] < pn.x + pn.w / 2 ? -1 : 1);
           if (st) add(st, pn.x + pn.w * 0.64, ctr(st)[1], pn.x + pn.w * 0.64, pn.y + pn.h * 0.13);
           if (sb) add(sb, pn.x + pn.w * 0.36, ctr(sb)[1], pn.x + pn.w * 0.36, pn.y + pn.h * 0.87);
-          if (sl) add(sl, ctr(sl)[0], pn.y + pn.h * 0.3, pn.x + pn.w * (side(sl) < 0 ? 0.32 : 0.68), pn.y + pn.h * 0.3);
+          if (sl) add(sl, ctr(sl)[0], pn.y + pn.h * 0.36, pn.x + pn.w * (side(sl) < 0 ? 0.32 : 0.68), pn.y + pn.h * 0.36);
           const meet = sM ?? g.patti.find((m) => m.shutter === 0);
           if (meet) {
             const d = side(meet), mx = ctr(meet)[0];
@@ -185,8 +185,8 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
           }
         }
         const box = (c: Call) => {
-          const w = Math.max(c.name.length * lf * 0.62 * 0.72, c.value.length * lf * 0.62) + lf * 0.9;
-          return { w, h: lf * 2.35 };
+          const w = Math.max(c.name.length * lf * 0.62 * 0.72, c.value.length * lf * 0.62, c.inside ? (c.inside.length + 7) * lf * 0.62 * 0.72 : 0) + lf * 0.9;
+          return { w, h: lf * (c.inside ? 3.2 : 2.35) };
         };
         // where the arrow leaves the box: on its edge, towards the pipe
         const edge = (c: Call) => {
@@ -208,12 +208,15 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
               </marker>
             </defs>
             {infill && pane && (() => { const inf = infill.replace(/~/g, ""); return (
-              <g pointerEvents="none" transform={`translate(${pane.x + pane.w / 2} ${pane.y + pane.h / 2})`}>
+              <g pointerEvents="none" transform={`translate(${pane.x + pane.w / 2} ${pane.y + pane.h * 0.6})`}>
                 <text textAnchor="middle" y={-lf * 0.15} fontSize={lf * 0.72} fontWeight={600} fill="#5b7a9a" fontFamily="ui-sans-serif, system-ui">{g.shutters[0]?.kind === "J" ? "Mesh" : "Glass"}</text>
                 <text textAnchor="middle" y={lf * 0.85} fontSize={Math.min(lf * 0.9, pane.w / (inf.length * 0.62))} fontWeight={700} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e3a5f">{inf}</text>
               </g>
             ); })()}
-            {calls.map((c) => {
+            {calls.map((c0) => {
+              // keep every box inside the picture (a 3-line box is taller)
+              const hh = box(c0).h / 2;
+              const c = { ...c0, y: Math.min(Math.max(c0.y, -pad + hh + lf * 0.15), H + pad + fs * 1.6 - hh - lf * 0.15) };
               const on = pick?.type === "part" && pick.id === c.id;
               const [ex, ey] = edge(c);
               const { w, h } = box(c);
@@ -223,10 +226,12 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
                     markerEnd={`url(#${id(on ? "arrowOn" : "arrow")})`} />
                   <rect x={c.x - w / 2} y={c.y - h / 2} width={w} height={h} rx={lf * 0.45}
                     fill={on ? "var(--accent)" : "#ffffff"} stroke={on ? "none" : "#cbd2da"} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
-                  <text x={c.x} y={c.y - lf * 0.18} textAnchor="middle" fontSize={lf * 0.72} fontWeight={600} fontFamily="ui-sans-serif, system-ui"
+                  <text x={c.x} y={c.y - lf * (c.inside ? 0.6 : 0.18)} textAnchor="middle" fontSize={lf * 0.72} fontWeight={600} fontFamily="ui-sans-serif, system-ui"
                     fill={on ? "#ffffff" : "#64748b"}>{c.name}</text>
-                  <text x={c.x} y={c.y + lf * 0.82} textAnchor="middle" fontSize={lf} fontWeight={800} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  <text x={c.x} y={c.y + lf * (c.inside ? 0.4 : 0.82)} textAnchor="middle" fontSize={lf} fontWeight={800} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                     fill={on ? "#ffffff" : "#0f172a"}>{c.value}</text>
+                  {c.inside && <text x={c.x} y={c.y + lf * 1.2} textAnchor="middle" fontSize={lf * 0.66} fontWeight={600} fontFamily="ui-sans-serif, system-ui"
+                    fill={on ? "#ffffff" : "#64748b"}>inside {c.inside}</text>}
                 </g>
               );
             })}

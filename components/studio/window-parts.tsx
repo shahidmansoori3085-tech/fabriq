@@ -28,9 +28,31 @@ export const KIND_NAMES: Record<string, string> = {
 };
 const FRAME_NAME: Record<string, string> = { "frame-top": "Top track", "frame-bottom": "Bottom track", "frame-left": "Left side", "frame-right": "Right side" };
 
+/** How much a 45° pipe loses on its inside edge (µm): the faces of the two pipes it meets at its
+ *  corners — a side meets the top and bottom, a top or bottom meets the two sides. */
+export function insideLoss(m: Member, geo: WindowGeo): number {
+  const pool = m.place.startsWith("frame") ? geo.frame : geo.sash.filter((x) => x.shutter === m.shutter);
+  const fam = m.place.startsWith("frame") ? "frame" : "sash";
+  const ends = m.vertical ? [`${fam}-top`, `${fam}-bottom`] : fam === "frame" ? ["frame-left", "frame-right"] : ["sash-lock", "sash-meet"];
+  // a shutter top / bottom: the interlock takes as much of the width as the handle (its hook only
+  // laps over), so both ends lose the handle's face — the same as the 90° bearing (shutter − 80 mm)
+  const lock = pool.find((x) => x.place === "sash-lock")?.face;
+  const faces = ends.map((pl) => (fam === "sash" && !m.vertical && lock ? lock : pool.find((x) => x.place === pl)?.face ?? m.face ?? 0));
+  return Math.round((faces[0] + faces[1]) * 1000);
+}
+
 /** Each pipe's name and cut on this window, for the drawing (part id → { name, value }). */
-export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<string, string>, values: Record<string, Um | null>, unit: StudioUnit) {
-  const out: Record<string, { name: string; value: string }> = {};
+/** A pipe is cut 45° at both ends: on a Normal window by its track / shutter choice, else by its own angle. */
+export function cut45(m: Member, vars: Record<string, string>): boolean {
+  const key = m.place.startsWith("frame") ? "joint" : m.place.startsWith("sash") ? "sash" : "";
+  return key && vars[key] ? vars[key] === "45" : m.angle === 45;
+}
+
+/** Each pipe's name and cut on this window, for the drawing (part id → { name, value, inside }).
+ *  A 45° pipe also gives its inside length: outside − its face at each end. */
+export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<string, string>, values: Record<string, Um | null>, unit: StudioUnit, geo?: WindowGeo) {
+  const out: Record<string, { name: string; value: string; inside?: string }> = {};
+  const member = (id: string) => geo && [...geo.frame, ...geo.sash].find((m) => m.partId === id);
   for (const q of sys.parts) {
     const v = values[q.length];
     if (q.enabled === false || v == null) continue;
@@ -39,7 +61,9 @@ export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<s
     const frame = q.place ? FRAME_NAME[q.place] : undefined;
     const name = frame ? (sys.family === "casement" ? frame.replace("track", "frame") : frame)
       : kind ? `${kind}${q.place === "sash-top" ? " · top" : q.place === "sash-bottom" ? " · bottom" : ""}` : q.role.replace(/\{[a-z]+\}/g, "").trim();
-    out[q.id] = { name, value: fmtLen(v, unit).replace(/~/g, "") };
+    const m = member(q.id);
+    const inside = m && geo && cut45(m, vars) ? fmtLen(v - insideLoss(m, geo), unit).replace(/~/g, "") : undefined;
+    out[q.id] = { name, value: fmtLen(v, unit).replace(/~/g, ""), inside };
   }
   return out;
 }
@@ -68,7 +92,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   // the shop's name for the pipe (Handle, Interlock, Bearing…), whatever the catalogue calls it
   const code = (pr?: { codes?: Record<string, string>; size?: string }) =>
     [[...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / "), pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ");
-  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string, hint?: string) => (
+  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string, hint?: string, inside?: string) => (
     <button key={key} type="button" onClick={onClick} aria-label={`Change ${title}`}
       className="flex w-full items-center gap-3 px-4 py-2.5 text-left" style={{ background: on ? "var(--surface-2)" : undefined }}>
       <span className="min-w-0 flex-1">
@@ -76,7 +100,10 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         {hint && <span className="block text-xs leading-snug" style={{ color: "var(--ink-2)" }}>{hint}</span>}
         <span className="block truncate text-[11px]" style={{ color: "var(--ink-3)" }}>{sub}</span>
       </span>
-      <span className="mono shrink-0 text-[15px] font-bold">{value}</span>
+      <span className="shrink-0 text-right">
+        <span className="mono block text-[15px] font-bold">{value}</span>
+        {inside && <span className="block text-[11px]" style={{ color: "var(--ink-3)" }}>inside {inside}</span>}
+      </span>
       <Pen />
     </button>
   );
@@ -90,12 +117,12 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         const pr = sectionOf(m.partId, mesh);
         const on = pick?.type === "part" && pick.id === m.partId;
         const value = len(p ? values[p.length] : null);
+        const ins = p && cut45(m, vars) && values[p.length] != null ? len(values[p.length]! - insideLoss(m, geo)) : undefined;
         // a Normal window cut 45° on its track or shutter shows it on every piece
-        const cut45 = frame ? vars.joint === "45" || (vars.joint !== "90" && m.angle === 45) : vars.sash === "45" || (vars.sash !== "90" && m.angle === 45);
-        const badge = cut45 ? "45°" : undefined;
-        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
+        const badge = cut45(m, vars) ? "45°" : undefined;
+        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, undefined, ins);
         const name = (pr?.kind && KIND_NAMES[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
-        return line(m.partId, name, [pr ? sectionTitle(pr.name) : "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
+        return line(m.partId, name, [pr ? sectionTitle(pr.name) : "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, undefined, ins);
       });
   };
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");

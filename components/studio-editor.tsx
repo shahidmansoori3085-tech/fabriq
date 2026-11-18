@@ -188,7 +188,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       onSys={onChange} onCheck={() => open("check")} onClose={() => setPick(null)} />
   );
   // every pipe carries its cut on the drawing; the glass its size
-  const labels = useMemo(() => pipeLabels(sys, lib, vars, values, unit), [sys, lib, vars, values, unit]);
+  const labels = useMemo(() => pipeLabels(sys, lib, vars, values, unit, geo), [sys, lib, vars, values, unit, geo]);
   const iw = values[sys.infill.w], ih = values[sys.infill.h];
   const infillText = iw != null && ih != null ? `${fmtLen(iw, unit)} × ${fmtLen(ih, unit)}` : undefined;
   const sectionPicker = picker && pickerPart && (
@@ -299,6 +299,32 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
             : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} labels={labels} infill={infillText} />}
         </div>
       </div>
+      {/* 90° or 45°: big and plain, right under the drawing (founder 2026-11-18: the small switch was not seen) */}
+      {sys.switches.some((x) => x.id === "joint" || x.id === "sash") && (
+        <div className="card mt-3 flex flex-col px-4 py-1">
+          {sys.switches.filter((x) => x.id === "joint" || x.id === "sash").map((sw, i) => {
+            const val = switches[sw.id] ?? sw.default;
+            return (
+              <div key={sw.id} className="flex items-center justify-between gap-3 py-2.5" style={i ? { borderTop: "1px solid var(--line)" } : undefined}>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold">{sw.id === "joint" ? "Track cutting" : "Shutter cutting"}</span>
+                  <span className="block text-xs" style={{ color: "var(--ink-3)" }}>
+                    {sw.id === "joint" ? (val === "45" ? "45°: all four sides full length" : "90°: top and bottom fit between the sides")
+                      : (val === "45" ? "45°: handle pipe on all four sides" : "90°: bearings fit between handle and interlock")}
+                  </span>
+                </span>
+                <div className="flex shrink-0 gap-1 rounded-[var(--radius)] p-1" style={{ background: "var(--surface-3)" }} role="radiogroup" aria-label={sw.label}>
+                  {(["90", "45"] as const).map((v) => (
+                    <button key={v} type="button" role="radio" aria-checked={val === v} onClick={() => setSwitches((x) => ({ ...x, [sw.id]: v }))}
+                      className="rounded-[8px] px-4 py-1.5 text-sm font-bold"
+                      style={val === v ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17, 24, 39, 0.08)" } : { color: "var(--ink-3)" }}>{v}°</button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {/* the tapped pipe or pane opens right under the drawing */}
       <div ref={cardRef} style={{ scrollMarginBottom: 16 }}>{pipeCard}{paneCard}</div>
       <div className="card mt-3 overflow-hidden">
@@ -642,7 +668,7 @@ function WindowBar({ sys, unit, onUnit, W, H, tracks, mix, switches, onSize, onL
             className={`chip px-2.5 py-1 text-xs ${m === mix ? "selected" : ""}`}>{mixText(m)}</button>
         ))}
       </div>
-      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode").map((sw) => (
+      {sys.switches.filter((s) => !s.id.startsWith("pick_") && s.id !== "mode" && s.id !== "joint" && s.id !== "sash").map((sw) => (
         <div key={sw.id} className="mt-3">
           <div className="mb-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{sw.label}</div>
           <Seg small value={switches[sw.id] ?? sw.default} onChange={(v) => onSwitch(sw.id, v)} options={sw.options.map((o) => ({ value: o.value, label: o.label }))} />
