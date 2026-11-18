@@ -13,8 +13,17 @@ export function useBackClose(onClose: () => void) {
     const key = Math.random().toString(36).slice(2);
     let pushed = false, popped = false;
     // pushed a moment later, so a quick mount / unmount (development) leaves no entry behind
-    const t = window.setTimeout(() => { window.history.pushState({ ...(window.history.state ?? {}), sheet: key }, ""); pushed = true; }, 0);
-    const onPop = () => { if (pushed && window.history.state?.sheet !== key && !popped) { popped = true; close.current(); } };
+    // every open sheet is listed in the entry, so closing a sheet on top (one step back) never closes
+    // the one under it: a sheet closes only when the entry no longer lists it
+    const t = window.setTimeout(() => {
+      const st = window.history.state ?? {};
+      window.history.pushState({ ...st, sheet: key, sheets: [...((st.sheets as string[] | undefined) ?? []), key] }, "");
+      pushed = true;
+    }, 0);
+    const onPop = () => {
+      const open = (window.history.state?.sheets as string[] | undefined) ?? [];
+      if (pushed && !open.includes(key) && !popped) { popped = true; close.current(); }
+    };
     window.addEventListener("popstate", onPop);
     return () => {
       window.clearTimeout(t);

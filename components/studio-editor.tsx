@@ -24,7 +24,7 @@ import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
 import { WindowParts, pipeLabels } from "./studio/window-parts";
 import { ChangeSheet } from "./studio/change-sheet";
-import { setCut, ownCut, pickSwitchId } from "../lib/studio/edit";
+import { setCut, ownCut } from "../lib/studio/edit";
 import { CutsTab } from "./studio/rules";
 import { CutList } from "./studio/cutlist";
 import { Seg, Field, SectionTitle } from "./studio-ui";
@@ -194,8 +194,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
     const bombay = p.place === "sash-meet" && kindOf(p) === "interlock" && kindOf(lockP) === "handle";
     const meshMode = !p.meshProfile ? "same" : p.meshProfile === lockId ? "handle" : "other";
     const sharing = p.length !== "W" && p.length !== "H" && sys.parts.some((x) => x.enabled !== false && x.length === p.length && !ids.includes(x.id));
-    const on = p.enabled !== false;
-    const row = "flex w-full items-center justify-between gap-3 border-t py-3 text-left text-sm";
+    const row = "flex w-full items-center justify-between gap-3 border-t px-4 py-4 text-left text-[15px] first:border-t-0";
     const seg = (opts: [string, string][], cur: string, set: (v: string) => void) => (
       <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-3)" }}>
         {opts.map(([v, l]) => (
@@ -213,7 +212,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         </button>
         {bombay && lockId && (
           <div className={row} style={{ borderColor: "var(--line)" }}>
-            <span className="font-semibold">On mesh shutters</span>
+            <span className="font-semibold">On mesh shutters use</span>
             {seg([["same", "Interlock"], ["handle", "Handle"]], meshMode === "handle" ? "handle" : "same", (v) => patch({ meshProfile: v === "handle" ? lockId : undefined }))}
           </div>
         )}
@@ -225,30 +224,10 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         )}
         {sharing && (
           <button type="button" className={row} style={{ borderColor: "var(--line)" }} onClick={() => onChange(ownCut(sys, ids))}>
-            <span><span className="block font-semibold">Give this pipe its own size</span><span className="block text-xs" style={{ color: "var(--ink-3)" }}>Now it moves with {[...new Set(sys.parts.filter((x) => x.length === p.length && !ids.includes(x.id)).map(partLabel))].join(", ")}</span></span>
+            <span><span className="block font-semibold">Cut this pipe on its own</span><span className="block text-xs" style={{ color: "var(--ink-3)" }}>Now it moves with {[...new Set(sys.parts.filter((x) => x.length === p.length && !ids.includes(x.id)).map(partLabel))].join(", ")}</span></span>
             <span aria-hidden style={{ color: "var(--ink-3)" }}>›</span>
           </button>
         )}
-        <div className={row} style={{ borderColor: "var(--line)" }}>
-          <span className="font-semibold">Pieces {p.scope === "window" ? "per window" : p.scope === "shutter" ? "per shutter" : "each place"}</span>
-          <span className="flex items-center gap-2">
-            <button type="button" className="btn-ghost h-9 w-9" aria-label="Fewer" onClick={() => onChange({ ...sys, parts: sys.parts.map((x) => (x.id === p.id ? { ...x, count: Math.max(1, x.count - 1) } : x)) })}>−</button>
-            <b className="w-5 text-center tabnum">{p.count}</b>
-            <button type="button" className="btn-ghost h-9 w-9" aria-label="More" onClick={() => onChange({ ...sys, parts: sys.parts.map((x) => (x.id === p.id ? { ...x, count: Math.min(8, x.count + 1) } : x)) })}>+</button>
-          </span>
-        </div>
-        <div className={row} style={{ borderColor: "var(--line)" }}>
-          <span className="font-semibold">Use this pipe</span>
-          {seg([["yes", "Yes"], ["no", "No"]], on ? "yes" : "no", (v) => patch({ enabled: v === "yes" }))}
-        </div>
-        <button type="button" className={row} style={{ borderColor: "var(--line)" }} onClick={() => patch({ flipSection: !p.flipSection })}>
-          <span className="font-semibold">Turn the section round</span>
-          <span className="text-xs" style={{ color: "var(--ink-3)" }}>{p.flipSection ? "Turned" : "As drawn"}</span>
-        </button>
-        <button type="button" className={row} style={{ borderColor: "var(--line)", color: "var(--bad)" }}
-          onClick={() => { if (window.confirm(`Remove ${partLabel(p)} from this system?`)) { setChangeId(null); onChange({ ...sys, parts: sys.parts.filter((x) => x.id !== p.id), switches: sys.switches.filter((x) => x.id !== pickSwitchId(p.id)) }); } }}>
-          <span className="font-semibold">Remove this pipe</span>
-        </button>
       </>
     );
   };

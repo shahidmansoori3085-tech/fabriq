@@ -5,7 +5,25 @@
  */
 import { useState } from "react";
 import { readAnyLen, fmtLen, type StudioUnit } from "../../lib/studio/format";
-import { Sheet } from "../studio-ui";
+import { Sheet, useBackClose } from "../studio-ui";
+
+/** A whole screen for the pipe's other changes; Back (or the phone's back) returns to the sheet. */
+function MoreScreen({ title, onBack, children }: { title: string; onBack: () => void; children: React.ReactNode }) {
+  useBackClose(onBack);
+  return (
+    <div className="fixed inset-0 z-[70] overflow-y-auto" style={{ background: "var(--bg, var(--surface-2))" }}>
+      <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-3">
+        <button type="button" onClick={onBack} className="flex items-center gap-1 py-2 text-sm font-semibold" style={{ color: "var(--ink-3)" }}>
+          <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+          Back
+        </button>
+        <h2 className="mt-2 text-[24px] font-bold leading-tight">{title}</h2>
+        <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>More changes for this pipe.</p>
+        <div className="card mt-4 overflow-hidden">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
@@ -70,9 +88,9 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, more, on
         className="mt-4 flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
         More options
         <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: open ? "rotate(90deg)" : undefined, transition: "transform .15s" }}><path d="M9 6l6 6-6 6" /></svg>
+          ><path d="M9 6l6 6-6 6" /></svg>
       </button>
-      {open && <div className="mt-1 flex flex-col">{more}</div>}
+      {open && <MoreScreen title={title} onBack={() => setOpen(false)}>{more}</MoreScreen>}
     </Sheet>
   );
 }
