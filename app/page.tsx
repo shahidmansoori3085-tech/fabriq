@@ -21,6 +21,7 @@ import { PieceTooLongError, stockGroups } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
 import { systemOfItem, studioSystems, studioSystem, studioReady, systemForWindow, WINDOW_SYSTEMS } from "@/lib/studio/runtime";
+import { withJoint } from "@/lib/studio/templates";
 import type { StudioSystem } from "@/lib/studio/model";
 import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
@@ -2073,6 +2074,9 @@ function timeAgo(ts: number): string {
 
 type Tab = "material" | "cutting";
 
+/** The cuts that matter in a system (what moves a piece or a pane). */
+const cutsKey = (s: StudioSystem) => JSON.stringify([s.sizes, s.parts.map((p) => [p.id, p.profile, p.meshProfile, p.length, p.count, p.enabled, p.angle])]);
+
 function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
   items: JobItem[];
   /** the material list changes the job (a pipe length, another section) */
@@ -2145,6 +2149,27 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
     );
   }
 
+  // the window system of this job, to fix a wrong cut on its drawing
+  const fixLink = (() => {
+    for (const it of items) {
+      if (it.type !== "window") continue;
+      const sys = it.system === "studio" ? systemOfItem(it) : it.system === "domal" ? systemForWindow("domal-27") : it.system.startsWith("normal") ? systemForWindow(it.meta.shutterSection === "60" ? "normal-18-60" : "normal-18") : undefined;
+      const id = sys?.basedOn?.id ?? sys?.id;
+      if (id) return { href: `/studio?open=${encodeURIComponent(id)}`, name: sys!.name };
+    }
+    return undefined;
+  })();
+  // windows made before the shop changed its cuts: offer the newer cuts
+  const stale = items.flatMap((it) => {
+    if (it.system !== "studio" || !it.meta.studio) return [];
+    const frozen = systemOfItem(it);
+    if (!frozen) return [];
+    const latest = systemForWindow(frozen.basedOn?.id ?? frozen.id) ?? studioSystem(frozen.id);
+    // only the shop's own changed copy (a built-in is never "your new cuts")
+    if (!latest || !studioSystems().some((x) => x.id === latest.id)) return [];
+    return cutsKey(withJoint(latest)) !== cutsKey(frozen) ? [{ id: it.id, latest: withJoint(latest) }] : [];
+  });
+
   const openings = items.reduce((a, it) => a + it.qty, 0);
 
   return (
@@ -2176,6 +2201,19 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
         </div>
       </div>
 
+      {stale.length > 0 && (
+        <div className="no-print card flex items-center gap-3 p-3" style={{ borderColor: "var(--accent)" }}>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Your new cuts are saved</span>
+            <span className="block text-xs leading-snug" style={{ color: "var(--ink-3)" }}>{[...new Set(stale.map((x) => x.latest.name))].join(", ")} changed after this job was made. Use the new cuts here too?</span>
+          </span>
+          <button type="button" className="btn-primary shrink-0 px-4 py-2.5 text-sm" onClick={() => onItems(items.map((it) => {
+            const st = stale.find((x) => x.id === it.id);
+            return st ? { ...it, meta: { ...it.meta, studio: JSON.stringify(st.latest), studioId: st.latest.id } } : it;
+          }))}>Update</button>
+        </div>
+      )}
+
       {tab === "material" && <ShareAppBanner />}
 
       {tab === "material"
@@ -2183,7 +2221,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
         : <CuttingPanel list={list} shop={shop} items={items} jobName={jobName} onItems={onItems} />}
 
       {/* did it match their own sums? — what a new fabricator is checking */}
-      <FeedbackCard
+      <FeedbackCard fix={fixLink}
         system={[...new Set(items.map((it) => `${it.type}-${it.system}`))].join("+")}
         jobKey={String([...JSON.stringify(items)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))} />
 

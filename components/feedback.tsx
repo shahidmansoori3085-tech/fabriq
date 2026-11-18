@@ -16,19 +16,41 @@ const REASONS: [string, string][] = [
   ["other", "Kuch aur"],
 ];
 
-export function FeedbackCard({ system, jobKey }: { system: string; jobKey: string }) {
+/** A wrong cut can be fixed in a minute on the window drawing (founder 2026-11-18). */
+function FixYourself({ href, name }: { href: string; name: string }) {
+  return (
+    <a href={href} className="mt-3 flex items-center gap-3 rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
+      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: "var(--accent)", color: "#fff" }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" /></svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">Fix the cuts yourself</span>
+        <span className="block text-xs leading-snug" style={{ color: "var(--ink-3)" }}>Open {name}, tap the pipe on the drawing, press − or +. Every next job uses your cut.</span>
+      </span>
+      <span aria-hidden className="text-lg" style={{ color: "var(--ink-3)" }}>›</span>
+    </a>
+  );
+}
+
+export function FeedbackCard({ system, jobKey, fix }: {
+  system: string; jobKey: string;
+  /** the window system of this job, to fix its cuts on the drawing */
+  fix?: { href: string; name: string };
+}) {
   const key = `fabriq.fb.${jobKey}`;
   const [state, setState] = useState<"ask" | "why" | "done">(() => {
     try { return sessionStorage.getItem(key) ? "done" : "ask"; } catch { return "ask"; }
   });
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [wrong, setWrong] = useState(false);
   const finish = () => { try { sessionStorage.setItem(key, "1"); } catch { /* fine */ } setState("done"); };
 
   if (state === "done") {
     return (
-      <div className="no-print card px-4 py-3 text-center text-sm" style={{ color: "var(--ink-2)" }}>
-        🙏 Shukriya! Aapki baat se FabriQ aur sahi banega.
+      <div className="no-print card px-4 py-3 text-sm" style={{ color: "var(--ink-2)" }}>
+        <div className="text-center">🙏 Shukriya! Aapki baat se FabriQ aur sahi banega.</div>
+        {wrong && fix && <FixYourself {...fix} />}
       </div>
     );
   }
@@ -52,6 +74,7 @@ export function FeedbackCard({ system, jobKey }: { system: string; jobKey: strin
         </div>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
+          {fix && <div className="-mt-1 mb-1"><FixYourself {...fix} /></div>}
           <div className="text-sm font-semibold">Kya galat laga?</div>
           <div className="flex flex-wrap gap-2">
             {REASONS.map(([v, label]) => (
@@ -66,7 +89,7 @@ export function FeedbackCard({ system, jobKey }: { system: string; jobKey: strin
           {reason && note.trim().length < 3 && (
             <div className="text-xs" style={{ color: "var(--ink-3)" }}>Kaunsa piece aur kitna fark, ek line likhein — tabhi hum theek kar paayenge</div>
           )}
-          <button disabled={!reason || note.trim().length < 3} onClick={() => { markFeedback("wrong", system, reason ?? "other", note); finish(); }}
+          <button disabled={!reason || note.trim().length < 3} onClick={() => { markFeedback("wrong", system, reason ?? "other", note); setWrong(true); finish(); }}
             className="btn-primary w-full py-3 disabled:opacity-50">Bhejo</button>
         </div>
       )}
