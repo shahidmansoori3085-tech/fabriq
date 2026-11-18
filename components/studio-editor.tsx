@@ -75,7 +75,8 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   /** kept for old links: the system page always opens on its drawing */
   startTab?: Tab;
 }) {
-  const lay0 = sys.layouts[0] ?? { tracks: 2, mixes: ["GG"] };
+  // the page opens on 3 tracks when the system has them (founder 2026-11-18)
+  const lay0 = sys.layouts.find((l) => l.tracks === 3) ?? sys.layouts[0] ?? { tracks: 2, mixes: ["GG"] };
   const [W, setW] = useState<Um>(inches(60));
   const [H, setH] = useState<Um>(inches(48));
   const [tracks, setTracks] = useState(lay0.tracks);
