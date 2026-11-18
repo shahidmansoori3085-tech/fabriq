@@ -194,7 +194,7 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
           <div className="card mt-4 p-4" style={{ borderColor: "var(--accent)" }}>
             <div className="text-[15px] font-bold">Type your cuts here</div>
             <div className="mt-0.5 text-xs leading-snug" style={{ color: "var(--ink-3)" }}>
-              Aap apne hisaab se {fmtLen(win.W, unit).replace(/~/g, "")} × {fmtLen(win.H, unit).replace(/~/g, "")} ki window ka naap daaliye. App isi se aapka formula banayega. Aage ki material list aur cutting list isi formule se banegi.
+              Aap apne hisaab se {fmtLen(win.W, unit).replace(/~/g, "")} × {fmtLen(win.H, unit).replace(/~/g, "")} ki window ka naap daaliye. FabriQ isi se aapka formula banayega. Aage ki material list aur cutting list isi formule se banegi.
             </div>
           </div>
           <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
