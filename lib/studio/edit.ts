@@ -97,3 +97,22 @@ export function ownCut(sys: StudioSystem, partIds: string[]): StudioSystem {
     parts: sys.parts.map((p) => (partIds.includes(p.id) ? { ...p, length: id } : p)),
   };
 }
+
+/**
+ * Set a piece to an exact cut on this window (the shop types its own length; founder 2026-11-18:
+ * no 2-window process, change it right here). Works when the rule had no number yet too.
+ */
+export function setCut(sys: StudioSystem, part: PartDef, target: number, vars: Record<string, string>, values: Record<string, number | null>): StudioSystem {
+  const cur = values[part.length];
+  if (cur != null) return bumpCut(sys, part, target - cur, vars);
+  const size = sys.sizes.find((x) => x.id === part.length);
+  const i = caseIndex(sys, part.length, vars);
+  const c = size?.cases[i];
+  const base = c ? values[c.base] : null;
+  if (!size || !c || base == null) return sys;
+  const raw = Math.round((base * (c.num ?? 1) + (c.pre ?? 0)) / (c.den ?? 1));
+  return {
+    ...sys,
+    sizes: sys.sizes.map((s) => (s.id !== size.id ? s : { ...s, cases: s.cases.map((k, j) => (j === i ? { ...k, add: target - raw, evidence: SHOP } : k)) })),
+  };
+}

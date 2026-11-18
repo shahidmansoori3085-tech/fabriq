@@ -24,7 +24,6 @@ import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
 import { WindowParts } from "./studio/window-parts";
 import { CutsTab } from "./studio/rules";
-import { TeachPanel } from "./studio/teach";
 import { CutList } from "./studio/cutlist";
 import { Seg, Field, SectionTitle } from "./studio-ui";
 
@@ -54,16 +53,13 @@ export function nextStep(sys: StudioSystem): { text: string; tab: Tab; tone: "go
   const r = evaluate(sys, { id: "W1", W: 1524000, H: 1219200, qty: 1, tracks: lay?.tracks ?? 2, mix: lay?.mixes[0] ?? "GG" }, { allowUnknown: true });
   const sections = r.missing.filter((m) => m.startsWith("Section for"));
   if (sections.length) return { text: `Choose ${sections.length === 1 ? "a section" : `${sections.length} sections`} — tap the red pieces`, tab: "pieces", tone: "bad" };
-  if (r.missing.length) return { text: `${r.missing.length} cut formula${r.missing.length > 1 ? "s" : ""} missing. Measure one finished window to complete them.`, tab: "teach", tone: "warn" };
-  if (sys.jobs.length === 0) return { text: "Cut formulas ready. Verify once with a window you have made.", tab: "teach", tone: "good" };
-  if (sys.status === "teaching") return { text: "Formulas set from your window. Confirm with a second window.", tab: "teach", tone: "warn" };
+  // a cut with no number yet: the shop types it on the drawing (founder 2026-11-18: no 2-window process)
+  if (r.missing.length) return { text: `${r.missing.length} cut${r.missing.length > 1 ? "s" : ""} not set. Tap the pipe and type your cut.`, tab: "cut", tone: "warn" };
   return { text: "Ready to use.", tab: "cut", tone: "good" };
 }
 
-/** time of a change (called from event handlers only) */
-const stamp = () => Date.now();
 
-export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, onAddProfile, onBack, onDuplicate, onDelete, startTab }: {
+export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, onAddProfile, onBack, onDuplicate, onDelete }: {
   sys: StudioSystem;
   lib: StudioLibrary;
   unit: StudioUnit;
@@ -74,7 +70,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   onBack: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  /** open on this tab (e.g. "teach" after a section size changed) */
+  /** kept for old links: the system page always opens on its drawing */
   startTab?: Tab;
 }) {
   const lay0 = sys.layouts[0] ?? { tracks: 2, mixes: ["GG"] };
@@ -87,21 +83,10 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   const [pick, setPick] = useState<Pick>(null);
   // the system page is a short menu; each topic opens on its own screen (founder 2026-11-16:
   // one clean thing at a time, so a fabricator new to it understands it at once)
-  const [page, setPage] = useState<Page>(startTab === "teach" ? "check" : "home");
-  // A piece given another section moves the cuts: go straight to the 2-window check —
-  // a fabricator will not look for it later (founder).
-  const onChange = (next: StudioSystem, cutMoved?: string) => {
-    if (cutMoved) { save({ ...next, changed: { what: cutMoved, at: stamp() } }); return; }
-    const sec = (s: StudioSystem) => new Map(s.parts.map((p) => [p.id, [...p.profile.map((c) => c.id), p.meshProfile ?? ""].join(",")]));
-    const before = sec(sys), after = sec(next);
-    const swapped = next.parts.filter((p) => before.has(p.id) && before.get(p.id) !== after.get(p.id) && p.profile.some((c) => c.id));
-    if (swapped.length && page !== "check") {
-      save({ ...next, changed: { what: `Section changed: ${swapped.map((p) => partLabel(p)).join(", ")}`, at: stamp() } });
-      open("check");
-      return;
-    }
-    save(next);
-  };
+  const [page, setPage] = useState<Page>("home");
+  // every change is saved and used from the next window on, right here (founder 2026-11-18:
+  // no 2-window process — the shop changes a cut or a section on this page and is done)
+  const onChange = (next: StudioSystem, _note?: string) => { void _note; save({ ...next, changed: undefined }); };
   const [menu, setMenu] = useState(false);
   const [view3d, setView3d] = useState(false);
   const [picker, setPicker] = useState<{ partId: string; partIds?: string[]; slot: "main" | "mesh" | "alt"; idx?: number } | null>(null);
@@ -142,9 +127,6 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   const values = useMemo(() => computeSizes(sys, job).values, [sys, job]);
   const vars = useMemo(() => jobVars(sys, job), [sys, job]);
   const step = useMemo(() => nextStep(sys), [sys]);
-  // a change that moves the cuts and is not checked with 2 windows yet
-  const pendingCheck = (sys.changed?.at ?? 0) > (sys.taughtAt ?? 0) || sys.parts.some((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]
-    .some((id) => { const pr = id ? findProfile(lib, id) : undefined; return !!pr?.sizeChanged && pr.sizeChanged.at > (sys.taughtAt ?? 0); }));
 
   const selectPart = (id: string) => { setPick({ type: "part", id }); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
@@ -178,14 +160,14 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
     <PipeCard key={pickedPart.id} sys={sys} lib={lib} unit={unit} part={pickedPart} group={partGroup.length ? partGroup : [pickedPart]}
       values={values} vars={vars} tracks={tracks} hasMesh={hasMesh} onSys={onChange}
       onPickSection={(slot, idx) => setPicker({ partId: pickedPart.id, partIds: partGroup.map((g) => g.id), slot, idx })}
-      onCheck={() => open("check")} onClose={() => setPick(null)} />
+      onClose={() => setPick(null)} />
   );
   const paneCard = pick?.type === "shutter" && (
     <PaneCard key={pick.index} sys={sys} lib={lib} unit={unit} index={pick.index} mix={mix} values={values} vars={vars} perShutter={perShutter}
       meetClip={(switches.meet ?? sys.switches.find((x) => x.id === "meet")?.default) === "clip"}
       onKind={(k) => setMix((m) => m.slice(0, pick.index) + k + m.slice(pick.index + 1))}
       onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
-      onSys={onChange} onCheck={() => open("check")} onClose={() => setPick(null)} />
+      onSys={onChange} onClose={() => setPick(null)} />
   );
   const sectionPicker = picker && pickerPart && (
     <SectionPicker lib={lib} kind={kindFor(lib, pickerPart, picker.slot)}
@@ -206,11 +188,10 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
           {pipeCard}
           <SectionsPage sys={sys} lib={lib} tracks={tracks} vars={vars} onChange={onChange} onSelect={selectPart} />
         </>}
-        {page === "cuts" && <CutSizesPage sys={sys} unit={unit} onChange={onChange} onCheck={() => open("check")} />}
+        {page === "cuts" && <CutSizesPage sys={sys} unit={unit} onChange={onChange} />}
         {page === "options" && <OptionsPage sys={sys} onChange={onChange} />}
         {page === "hardware" && <div className="mt-2"><HardwareTab sys={sys} onChange={onChange} /></div>}
-        {page === "check" && <div className="mt-2"><TeachPanel sys={sys} lib={lib} unit={unit} onUnit={onUnit} job={job} onChange={onChange} /></div>}
-        {page === "try" && <div className="mt-4"><CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => open(w === "teach" ? "check" : w === "pieces" ? "sections" : "cuts")} /></div>}
+        {page === "try" && <div className="mt-4"><CutList sys={sys} lib={lib} unit={unit} job={job} onFix={(w) => open(w === "pieces" ? "sections" : "cuts")} /></div>}
         {sectionPicker}
       </div>
     );
@@ -221,8 +202,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   // only lengths that cannot be worked out for this system as usually made (not a spare fallback line)
   const unknownCuts = sys.sizes.filter((s) => values[s.id] === null || values[s.id] === undefined).length;
   const state = missingSections ? { label: "Sections missing", tone: "bad" as const }
-    : pendingCheck ? { label: "Check needed", tone: "warn" as const }
-    : step.tone === "warn" ? { label: "Check needed", tone: "warn" as const }
+    : step.tone === "warn" ? { label: "Cuts to set", tone: "warn" as const }
     : { label: "Ready", tone: "good" as const };
   const toneFg = (t: "good" | "warn" | "bad") => (t === "good" ? "var(--good)" : t === "warn" ? "var(--warn)" : "var(--bad)");
   const toneBg = (t: "good" | "warn" | "bad") => (t === "good" ? "var(--good-soft)" : t === "warn" ? "var(--warn-soft)" : "var(--bad-soft)");
@@ -233,9 +213,6 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
     options: { text: [sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" / "), ...sys.switches.filter((x) => !x.id.startsWith("pick_") && x.id !== "joint" && x.id !== "sash" && x.options.length > 1).map((x) => SWITCH_NAME[x.id] ?? x.label)].join(" · ") },
     hardware: { text: sys.extras.length ? sys.extras.slice(0, 3).map((x) => x.name.split(" /")[0]).join(", ") + (sys.extras.length > 3 ? ` +${sys.extras.length - 3}` : "") : "None yet" },
     try: { text: `For ${fmtLen(W, unit)} × ${fmtLen(H, unit)}` },
-    check: pendingCheck ? { text: "Needed: a section or size changed", tone: "warn" }
-      : sys.jobs.length ? { text: `Checked with ${sys.jobs.length} window${sys.jobs.length > 1 ? "s" : ""}`, tone: "good" }
-      : { text: "Not done yet · enter 2 windows you made" },
   };
 
   return (
@@ -263,23 +240,6 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         {sys.layouts.length > 2 ? `${layoutLabel(sys, sys.layouts[0].tracks).replace(/ sash(es)?$/, "")} to ${layoutLabel(sys, sys.layouts[sys.layouts.length - 1].tracks)}` : sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" and ")}{sys.switches.some((x) => x.id === "joint") ? " · 90° or 45° cutting" : sys.parts.some((p) => p.place?.startsWith("frame") && p.angle === 45) ? " · 45° frame" : " · 90° frame"}
       </p>
 
-      {(() => {
-        // sections whose size the shop changed after these cuts were last checked
-        const ids = new Set(sys.parts.flatMap((p) => [...p.profile.map((c) => c.id), p.meshProfile ?? ""]).filter(Boolean));
-        const changed = [...ids].map((id) => findProfile(lib, id)).filter((p): p is ProfileDef => !!p?.sizeChanged && p.sizeChanged.at > (sys.taughtAt ?? 0));
-        const notes = [
-          ...changed.map((p) => `Size of ${sectionTitle(p.name)} changed (${p.sizeChanged!.from} → ${p.size})`),
-          ...(sys.changed && sys.changed.at > (sys.taughtAt ?? 0) ? [sys.changed.what] : []),
-        ];
-        if (!notes.length) return null;
-        return (
-          <button onClick={() => open("check")} className="mt-3 w-full rounded-xl px-3 py-2.5 text-left text-sm"
-            style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
-            <b>Cuts need checking.</b> {notes.join(". ")}.
-            <span className="mt-1 block font-semibold">Enter 2 windows you have made ›</span>
-          </button>
-        );
-      })()}
 
       {/* the window, drawn to scale with every cut on it: tap a pipe or a pane to change it
           (founder 2026-11-17: the drawing is the page — like the big window software) */}
@@ -336,8 +296,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         {PAGES.map((x) => (
           <button key={x.id} onClick={() => open(x.id)} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left">
             <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-              style={{ background: x.id === "check" && sub.check.tone ? (sub.check.tone === "good" ? "var(--good-soft)" : "var(--warn-soft)") : "var(--surface-2)",
-                color: x.id === "check" && sub.check.tone ? toneFg(sub.check.tone) : "var(--ink-2)" }}>
+              style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
               <PageIcon id={x.id} />
             </span>
             <span className="min-w-0 flex-1">
@@ -368,19 +327,17 @@ function PageIcon({ id }: { id: Exclude<Page, "home"> }) {
     // a calculator
     try: <><rect x="4" y="3" width="16" height="18" rx="2" /><rect x="8" y="7" width="8" height="3" rx="1" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01M16 17h.01" /></>,
     // checked
-    check: <><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" /></>,
   };
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d[id]}</svg>;
 }
 
-type Page = "home" | "sections" | "cuts" | "options" | "hardware" | "try" | "check";
+type Page = "home" | "sections" | "cuts" | "options" | "hardware" | "try";
 const PAGES: { id: Exclude<Page, "home">; title: string; help: string }[] = [
   { id: "sections", title: "Sections", help: "Which pipe goes where. Tap a pipe to change it." },
   { id: "cuts", title: "Cut sizes", help: "How each length is worked out from the window size." },
   { id: "options", title: "Options", help: "What this system can be made as, and its usual choice." },
   { id: "hardware", title: "Hardware", help: "Rollers, lock, cleats and the rest — counted for every window." },
   { id: "try", title: "Cut list", help: "Every cut and the pipes to buy for the size on the drawing." },
-  { id: "check", title: "Match your cuts", help: "Type the cuts of 2 windows you already made. The app learns your cuts and uses them from then on." },
 ];
 /** the shop's words for a choice */
 const SWITCH_NAME: Record<string, string> = { meet: "Interlock", mode: "Shutter width", track: "Track", rollerClip: "Track clip" };
@@ -506,7 +463,7 @@ function SectionsPage({ sys, lib, tracks, vars, onChange, onSelect }: {
 
 /* ———————————————— Cut sizes: each length in one line ———————————————— */
 
-function CutSizesPage({ sys, unit, onChange, onCheck }: { sys: StudioSystem; unit: StudioUnit; onChange: (s: StudioSystem) => void; onCheck: () => void }) {
+function CutSizesPage({ sys, unit, onChange }: { sys: StudioSystem; unit: StudioUnit; onChange: (s: StudioSystem) => void }) {
   const [edit, setEdit] = useState(false);
   if (edit) return (
     <div className="mt-3">
@@ -532,10 +489,7 @@ function CutSizesPage({ sys, unit, onChange, onCheck }: { sys: StudioSystem; uni
         ))}
       </div>
       <p className="mt-3 text-xs" style={{ color: "var(--ink-3)" }}>Width and height are the window size. To change a cut, tap its pipe on the drawing.</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button onClick={onCheck} className="btn-primary py-3 text-sm">Check with your window</button>
-        <button onClick={() => setEdit(true)} className="btn-ghost py-3 text-sm">Change a formula</button>
-      </div>
+      <button onClick={() => setEdit(true)} className="btn-ghost mt-4 w-full py-3 text-sm">Change a formula</button>
     </div>
   );
 }

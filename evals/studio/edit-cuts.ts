@@ -3,9 +3,9 @@
  * "Change only this pipe" splits a shared length, and the mesh shutter can take
  * the handle pipe on its meeting side.
  */
-import { evaluate, jobVars } from "../../lib/studio/evaluate";
+import { evaluate, jobVars, computeSizes } from "../../lib/studio/evaluate";
 import { NORMAL_18, DOMAL_27, withJoint } from "../../lib/studio/templates";
-import { bumpCut, bumpSize, ownCut } from "../../lib/studio/edit";
+import { bumpCut, bumpSize, ownCut, setCut } from "../../lib/studio/edit";
 import { UM_PER_SUT, inches } from "../../lib/engine/units";
 
 let fails = 0;
@@ -41,6 +41,12 @@ const e = { ...sys, parts: sys.parts.map((p) => (p.id === "interlock" ? { ...p, 
 const s2 = evaluate(e, job).pieces.filter((p) => /^S2/.test(p.role));
 check(s2.filter((p) => p.sectionId === "handle_std").length === 2 && !s2.some((p) => p.sectionId === "interlock"), "mesh shutter: handle on both sides");
 check(evaluate(e, job).pieces.some((p) => /^S1 Interlock/.test(p.role) && p.sectionId === "interlock"), "glass shutter keeps its interlock");
+
+// a typed cut: the rule gives exactly that cut on this window, and moves with the size after
+const vals = computeSizes(sys, job).values;
+const t = setCut(sys, part("handle"), inches(46) + 5 * UM_PER_SUT, vars, vals);
+check(cut(t, /S1 Handle/) === inches(46) + 5 * UM_PER_SUT, "typed handle 46.5");
+check(evaluate(t, { ...job, H: inches(60) }).pieces.find((x) => /S1 Handle/.test(x.role))!.length === inches(58) + 5 * UM_PER_SUT, "typed cut follows a taller window");
 
 // interlock clip on a mesh shutter: off by default (glass meetings only), on when the shop clips it too
 const dj = { id: "D1", W: inches(72), H: inches(60), qty: 1, tracks: 3, mix: "GGJ" };

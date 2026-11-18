@@ -10,8 +10,8 @@ import type { Um } from "../../lib/engine/units";
 import { UM_PER_SUT } from "../../lib/engine/units";
 import type { PartDef, StudioSystem } from "../../lib/studio/model";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { alternativesOf, partLabel, bumpCut, bumpSize, ownCut, caseIndex, pickSwitchId } from "../../lib/studio/edit";
-import { fmtLen, ruleText, noMaker, sectionTitle, type StudioUnit } from "../../lib/studio/format";
+import { alternativesOf, partLabel, bumpCut, bumpSize, ownCut, caseIndex, pickSwitchId, setCut } from "../../lib/studio/edit";
+import { fmtLen, ruleText, noMaker, sectionTitle, readLen, lenToInput, type StudioUnit } from "../../lib/studio/format";
 import SectionSketch from "../section-sketch";
 import { Seg, Toggle } from "../studio-ui";
 
@@ -68,18 +68,31 @@ function CardHead({ over, title, onClose }: { over: string; title: string; onClo
   );
 }
 
-/** The "check with 2 windows" call after a cut moved. */
-function MovedNote({ moved, onCheck }: { moved: number; onCheck: () => void }) {
+/** After a change: it is saved, and every next window uses it (founder 2026-11-18: no 2-window check). */
+function MovedNote({ moved }: { moved: number }) {
   if (!moved) return null;
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3" style={{ background: "var(--warn-soft)" }}>
-      <span className="text-sm" style={{ color: "var(--warn)" }}><b>{sutText(moved)}</b> from before. Check it on 2 windows you made.</span>
-      <button type="button" onClick={onCheck} className="btn-primary shrink-0 px-3 py-2 text-sm">Check</button>
+    <div className="mt-3 rounded-2xl px-4 py-2.5 text-sm" style={{ background: "var(--good-soft)", color: "var(--good)" }}>
+      Saved: <b>{sutText(moved)}</b> from before. Every next window uses this cut.
     </div>
   );
 }
 
-export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks, hasMesh, onSys, onPickSection, onCheck, onClose }: {
+/** Type the shop's own cut for this window; the rule is set to give exactly that. */
+function TypeCut({ unit, placeholder, onSet, disabled }: { unit: StudioUnit; placeholder: string; onSet: (um: number) => void; disabled?: boolean }) {
+  const [v, setV] = useState("");
+  const um = readLen(v, unit);
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <input className="field min-w-0 flex-1 px-3 py-2.5 text-base font-semibold" inputMode="decimal" value={v} disabled={disabled}
+        onChange={(e) => setV(e.target.value)} placeholder={`Your cut, e.g. ${placeholder}`} aria-label="Your cut" />
+      <button type="button" className="btn-primary shrink-0 px-4 py-2.5 text-sm" disabled={disabled || um === null}
+        onClick={() => { if (um !== null) { onSet(um); setV(""); } }}>Set</button>
+    </div>
+  );
+}
+
+export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks, hasMesh, onSys, onPickSection, onClose }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; part: PartDef;
   /** the pieces cut from the same pipe as this one (top and bottom track…) */
   group: PartDef[];
@@ -88,7 +101,7 @@ export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks,
   hasMesh: boolean;
   onSys: (s: StudioSystem, cutMoved?: string) => void;
   onPickSection: (slot: "main" | "mesh" | "alt", idx?: number) => void;
-  onCheck: () => void; onClose: () => void;
+  onClose: () => void;
 }) {
   const [moved, setMoved] = useState(0);
   const [more, setMore] = useState(false);
@@ -115,7 +128,7 @@ export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks,
     const next = bumpCut(sys, p, d * UM_PER_SUT, vars);
     setMoved((m) => m + d);
     if (moved + d === 0) onSys({ ...next, changed: before });
-    else onSys(next, `${(PLACE[p.place ?? "other"] ?? partLabel(p)).replace(" · ", " ")}: ${sutText(moved + d)}`);
+    else onSys(next);
   };
   const patchGroup = (q: Partial<PartDef>) => onSys({ ...sys, parts: sys.parts.map((x) => (ids.includes(x.id) ? { ...x, ...q } : x)) });
 
@@ -148,7 +161,8 @@ export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks,
         <Stepper value={len != null ? cutText(len, unit) : "Not known"} disabled={!known || !on}
           sub={rule ? `${sizeName(sys, p.length)} = ${ruleText(rule, sizeName(sys, rule.base), unit).replace(/~/g, "")}` : p.length === "W" || p.length === "H" ? `Full ${sizeName(sys, p.length).toLowerCase()}` : undefined}
           onStep={step} />
-        {!known && <button type="button" onClick={onCheck} className="mt-3 w-full rounded-xl py-2.5 text-sm font-semibold" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>Not known yet. Measure it on 2 windows you made</button>}
+        <TypeCut unit={unit} placeholder={len != null ? lenToInput(len, unit) : "46.3"} disabled={!on}
+          onSet={(um) => { const d = len != null ? Math.round((um - len) / UM_PER_SUT) : 0; setMoved((m) => m + d); onSys(setCut(sys, p, um, vars, values)); }} />
         {known && shareNames.length > 0 && (
           <p className="mt-3 text-center text-xs" style={{ color: "var(--ink-3)" }}>
             Also moves: {shareNames.join(", ")}.{" "}
@@ -156,7 +170,7 @@ export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks,
           </p>
         )}
       </div>
-      <MovedNote moved={moved} onCheck={onCheck} />
+      <MovedNote moved={moved} />
 
       {/* on a mesh shutter */}
       {hasMesh && p.scope === "shutter" && (
@@ -209,11 +223,11 @@ export function PipeCard({ sys, lib, unit, part: p, group, values, vars, tracks,
 }
 
 /** A tapped pane: what fills it and its size. */
-export function PaneCard({ sys, lib, unit, index, mix, values, vars, perShutter, meetClip, onKind, onChoice, onSys, onCheck, onClose }: {
+export function PaneCard({ sys, lib, unit, index, mix, values, vars, perShutter, meetClip, onKind, onChoice, onSys, onClose }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; index: number; mix: string;
   values: Record<string, Um | null>; vars: Record<string, string>; perShutter: Record<string, string>[]; meetClip: boolean;
   onKind: (k: "G" | "J" | "S") => void; onChoice: (swId: string, v: string) => void;
-  onSys: (s: StudioSystem, cutMoved?: string) => void; onCheck: () => void; onClose: () => void;
+  onSys: (s: StudioSystem, cutMoved?: string) => void; onClose: () => void;
 }) {
   const [moved, setMoved] = useState(0);
   const kind = (mix[index] ?? "G") as "G" | "J" | "S";
@@ -226,7 +240,7 @@ export function PaneCard({ sys, lib, unit, index, mix, values, vars, perShutter,
     setMoved((m) => m + d);
     const next = bumpSize(sys, id, d * UM_PER_SUT, vars);
     if (moved + d === 0) onSys({ ...next, changed: before });
-    else onSys(next, `${fill} size ${sutText(moved + d)}`);
+    else onSys(next);
   };
   const row = (id: string, label: string) => {
     const r = ruleOf(id);
@@ -235,6 +249,8 @@ export function PaneCard({ sys, lib, unit, index, mix, values, vars, perShutter,
         <div className="mb-2 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{fill} {label}</div>
         <Stepper value={v(id) != null ? cutText(v(id)!, unit) : "Not known"} disabled={v(id) == null || r?.add == null}
           sub={r ? ruleText(r, sizeName(sys, r.base), unit).replace(/~/g, "") : undefined} onStep={(d) => step(id, d)} />
+        <TypeCut unit={unit} placeholder={v(id) != null ? lenToInput(v(id)!, unit) : "27.4"}
+          onSet={(um) => onSys(setCut(sys, { id, role: id, profile: [], scope: "window", count: 1, length: id, angle: 90 }, um, vars, values))} />
       </div>
     );
   };
@@ -252,7 +268,7 @@ export function PaneCard({ sys, lib, unit, index, mix, values, vars, perShutter,
       </p>
       {row(sys.infill.w, "width")}
       {row(sys.infill.h, "height")}
-      <MovedNote moved={moved} onCheck={onCheck} />
+      <MovedNote moved={moved} />
 
       {choiceParts.map((p) => {
         const swId = pickSwitchId(p.id);

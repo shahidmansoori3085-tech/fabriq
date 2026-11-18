@@ -186,7 +186,7 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         <Field label="Code"><input className="field px-3 py-2.5" value={code} onChange={(e) => setCode(e.target.value)} placeholder="2051" /></Field>
       </div>
       <Step n={2} title="Its size" sub="Width × height in mm, as the catalogue prints it" />
-      <Field label="Size (mm)" hint="A new size changes the cuts: check them again with 2 windows after saving."><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
+      <Field label="Size (mm)" hint="A new size can change the cuts of the systems that use it."><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
       <div className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
         <div className="flex items-center gap-3">
           <span className="h-20 w-24 shrink-0 overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)" }}>

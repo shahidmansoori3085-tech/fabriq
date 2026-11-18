@@ -145,7 +145,7 @@ export function SystemSheet({ sys, title, onClose, onEdit }: { sys: StudioSystem
         return (
           <div key={s.id} className="flex items-baseline justify-between gap-3 py-2 text-sm" style={{ borderTop: "1px solid var(--line)" }}>
             <span>{s.label}</span>
-            <span className="mono text-right text-xs font-semibold">{c ? (c.add === null ? "Measure 2 windows" : ruleText(c, sizeLabel(c.base), "in")) : "—"}{s.cases.length > 1 ? ` (+${s.cases.length - 1} more)` : ""}</span>
+            <span className="mono text-right text-xs font-semibold">{c ? (c.add === null ? "Not set yet" : ruleText(c, sizeLabel(c.base), "in")) : "—"}{s.cases.length > 1 ? ` (+${s.cases.length - 1} more)` : ""}</span>
           </div>
         );
       })}
