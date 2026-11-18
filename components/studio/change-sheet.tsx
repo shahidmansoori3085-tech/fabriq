@@ -19,7 +19,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   );
 }
 
-export function ChangeSheet({ title, section, now, angle, unit, onSave, onMore, onClose }: {
+export function ChangeSheet({ title, section, now, angle, unit, onSave, more, onClose }: {
   /** the pipe: "Handle", "Top track" */
   title: string;
   /** its section: "Handle 3/4″×1.5″ · 1041 · 40×18 mm" */
@@ -29,12 +29,13 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, onMore, 
   angle: 90 | 45;
   unit: StudioUnit;
   onSave: (um: number | null, angle: 90 | 45) => void;
-  /** the full card (section, mesh pipe…) */
-  onMore: () => void;
+  /** every other change of this pipe (section, mesh pipe, pieces…), shown under "More options" */
+  more: React.ReactNode;
   onClose: () => void;
 }) {
   const [raw, setRaw] = useState("");
   const [deg, setDeg] = useState<90 | 45>(angle);
+  const [open, setOpen] = useState(false);
   const um = readAnyLen(raw);
   const bad = raw.trim() !== "" && um === null;
   const changed = um !== null || deg !== angle;
@@ -65,7 +66,13 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, onMore, 
       </Step>
 
       <button type="button" className="btn-primary mt-6 w-full py-3.5 text-base" disabled={!changed || bad} onClick={() => onSave(um, deg)}>Save</button>
-      <button type="button" className="mt-3 w-full py-2 text-sm font-semibold" style={{ color: "var(--accent)" }} onClick={onMore}>More options: section, mesh pipe…</button>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        className="mt-4 flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
+        More options
+        <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: open ? "rotate(90deg)" : undefined, transition: "transform .15s" }}><path d="M9 6l6 6-6 6" /></svg>
+      </button>
+      {open && <div className="mt-1 flex flex-col">{more}</div>}
     </Sheet>
   );
 }
