@@ -352,7 +352,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                     )}
                     {clip && (
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold">Interlock clip on mesh</span>
+                        <span className="text-sm font-semibold">Interlock clip on mesh shutter</span>
                         <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-3)" }}>
                           {([["yes", "Yes", true], ["no", "No", false]] as const).map(([v, label, yes]) => (
                             <button key={v} type="button" aria-pressed={!!clip.onMesh === yes}
