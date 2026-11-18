@@ -54,6 +54,7 @@ import { loadShop, saveShop, type ShopProfile } from "@/lib/shop";
 import { InstallButton } from "@/components/install";
 import { ShareAppBanner, ShareAppCard, ShareHomeBanner } from "@/components/share-app";
 import { FeedbackCard } from "@/components/feedback";
+import { SeriesCheck, leaveList } from "@/components/series-check";
 
 /* ————————————————— item options ————————————————— */
 
@@ -2155,7 +2156,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
       if (it.type !== "window") continue;
       const sys = it.system === "studio" ? systemOfItem(it) : it.system === "domal" ? systemForWindow("domal-27") : it.system.startsWith("normal") ? systemForWindow(it.meta.shutterSection === "60" ? "normal-18-60" : "normal-18") : undefined;
       const id = sys?.basedOn?.id ?? sys?.id;
-      if (id) return { href: `/studio?open=${encodeURIComponent(id)}`, name: sys!.name };
+      if (id) return { id, href: `/studio?open=${encodeURIComponent(id)}`, name: sys!.name };
     }
     return undefined;
   })();
@@ -2175,7 +2176,7 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
   return (
     <div className="result-view flex flex-col gap-3">
       <div className="no-print flex items-center justify-between gap-2 py-1">
-        <button onClick={onBack} className="btn-ghost flex items-center gap-1 px-3 py-2 text-sm">
+        <button onClick={() => leaveList(onBack)} className="btn-ghost flex items-center gap-1 px-3 py-2 text-sm">
           <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
           Sizes
         </button>
@@ -2228,7 +2229,9 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
       <ShareAppCard />
 
       {/* starting over is the last thing on the page, never one slip away at the top */}
-      <button onClick={onNew} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
+      {/* the first list of a series asks, once looked at, whether its cuts match the shop */}
+      <SeriesCheck series={fixLink} />
+      <button onClick={() => leaveList(onNew)} className="no-print btn-ghost mt-2 w-full py-3 text-sm">Start a new job</button>
     </div>
   );
 }
