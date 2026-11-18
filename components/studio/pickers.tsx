@@ -47,12 +47,13 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
   lib: StudioLibrary; kind?: ProfileKind; title: string;
   onPick: (id: string) => void; onAdd: (p: ProfileDef) => void; onClose: () => void;
 }) {
-  const [all, setAll] = useState(!kind);
+  // every section is offered (founder 2026-11-18: any pipe can be used anywhere); the
+  // ones of the same kind come first
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
   const list = allProfiles(lib)
-    .filter((p) => all || !kind || p.kind === kind)
-    .filter((p) => !q || `${p.name} ${Object.values(p.codes ?? {}).join(" ")} ${p.size}`.toLowerCase().includes(q.toLowerCase()));
+    .filter((p) => !q || `${p.name} ${Object.values(p.codes ?? {}).join(" ")} ${p.size} ${p.kind ?? ""}`.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => Number(b.kind === kind) - Number(a.kind === kind));
 
   if (adding) return <Sheet title="New section" sub="From your catalogue or dealer bill. Only the name is needed." onClose={onClose}>
     <ProfileForm initial={{ kind }} onSave={(p) => onAdd(p)} onCancel={() => setAdding(false)} />
@@ -61,12 +62,7 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
   return (
     <Sheet title={title} onClose={onClose}>
       <input className="field w-full px-3 py-2.5" placeholder="Search name, code or size" value={q} onChange={(e) => setQ(e.target.value)} />
-      {kind && (
-        <div className="mt-2 flex items-center justify-between text-xs" style={{ color: "var(--ink-3)" }}>
-          <span>{all ? "Showing all sections" : `Showing: ${PROFILE_KINDS.find((k) => k.id === kind)?.label}`}</span>
-          <button className="font-semibold" style={{ color: "var(--accent)" }} onClick={() => setAll(!all)}>{all ? "Only matching" : "Show all"}</button>
-        </div>
-      )}
+      <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>All {list.length} sections. Tap one to use it here.</p>
       <div className="mt-3 flex flex-col gap-1.5">
         {list.map((p) => (
           <button key={p.id} onClick={() => onPick(p.id)} className="card flex items-center justify-between gap-3 px-3 py-2.5 text-left">
@@ -74,7 +70,7 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{sectionTitle(p.name)}</span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>
-                {[p.codes ? [...new Set(Object.values(p.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", p.size, `${p.stockFt[0] ?? 16} ft pipe`].filter(Boolean).join(" · ")}
+                {[PROFILE_KINDS.find((k) => k.id === p.kind)?.label.split(" (")[0] ?? "", p.codes ? [...new Set(Object.values(p.codes).map((v) => noMaker(v)).filter(Boolean))].join(" / ") : "", p.size, `${p.stockFt[0] ?? 16} ft pipe`].filter(Boolean).join(" · ")}
               </span>
             </span>
             {p.mine && <span className="badge" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Yours</span>}
@@ -84,6 +80,18 @@ export function SectionPicker({ lib, kind, title, onPick, onAdd, onClose }: {
       </div>
       <button onClick={() => setAdding(true)} className="btn-primary mt-4 w-full py-3">+ Add a new section</button>
     </Sheet>
+  );
+}
+
+function Step({ n, title, sub }: { n: number; title: string; sub?: string }) {
+  return (
+    <div className="mt-2 flex items-start gap-2.5">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ background: "var(--accent)", color: "#fff" }}>{n}</span>
+      <span>
+        <span className="block text-[15px] font-bold leading-tight">{title}</span>
+        {sub && <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>}
+      </span>
+    </div>
   );
 }
 
@@ -163,8 +171,12 @@ export function ProfileForm({ initial, onSave, onCancel }: {
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="rounded-xl px-3 py-2 text-sm" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
+        Change only what is wrong, then press <b>Save section</b>. Empty boxes are fine.
+      </p>
+      <Step n={1} title="Which pipe is it" sub="Its name, type and catalogue code" />
       <Field label="Name"><input className="field px-3 py-2.5" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Slim interlock big" autoFocus /></Field>
-      <Field label="What is it">
+      <Field label="Pipe type">
         <select className="field px-3 py-2.5" value={kind} onChange={(e) => setKind(e.target.value as ProfileKind)}>
           {PROFILE_KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
         </select>
@@ -173,7 +185,8 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         <Field label="Company"><input className="field px-3 py-2.5" value={maker} onChange={(e) => setMaker(e.target.value)} placeholder="Jindal" /></Field>
         <Field label="Code"><input className="field px-3 py-2.5" value={code} onChange={(e) => setCode(e.target.value)} placeholder="2051" /></Field>
       </div>
-      <Field label="Size (mm)" hint="Width × height, as the catalogue prints it"><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
+      <Step n={2} title="Its size" sub="Width × height in mm, as the catalogue prints it" />
+      <Field label="Size (mm)" hint="A new size changes the cuts: check them again with 2 windows after saving."><input className="field px-3 py-2.5" value={size} onChange={(e) => setSize(e.target.value)} placeholder="45×45" /></Field>
       <div className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
         <div className="flex items-center gap-3">
           <span className="h-20 w-24 shrink-0 overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)" }}>
@@ -249,13 +262,7 @@ export function ProfileForm({ initial, onSave, onCancel }: {
         {shape && !seen && <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>Reading the shape…</p>}
         {shape && <button type="button" className="mt-2 text-xs font-semibold" style={{ color: "var(--bad)" }} onClick={() => { setShape(undefined); setPic(null); setTraceMsg(""); setSeen(null); }}>Remove drawing</button>}
       </div>
-      <Field label="Width seen from the front (mm)" hint="Optional. Used for the drawing. Empty = taken from the size.">
-        <input className="field px-3 py-2.5" inputMode="decimal" value={face} onChange={(e) => setFace(e.target.value)} placeholder="auto" />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Weight (kg)"><input className="field px-3 py-2.5" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="3.2" /></Field>
-        <Field label="per (feet)" hint="The length the catalogue weight is for"><input className="field px-3 py-2.5" inputMode="decimal" value={kgPer} onChange={(e) => setKgPer(e.target.value)} /></Field>
-      </div>
+      <Step n={3} title="Buying" sub="The pipe length your dealer sells, and its weight" />
       <Field label="Pipe length" hint="The length your dealer sells. What is left is bought as one piece cut to the feet needed.">
         <div className="flex flex-wrap items-center gap-2">
           {[12, 15, 16, 20].map((ft) => (
@@ -265,6 +272,18 @@ export function ProfileForm({ initial, onSave, onCancel }: {
           <input className="field w-20 px-2 py-1.5 text-sm" inputMode="decimal" placeholder="Other" value={other} onChange={(e) => setOther(e.target.value)} />
         </div>
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Weight (kg)"><input className="field px-3 py-2.5" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="3.2" /></Field>
+        <Field label="per (feet)" hint="The length the catalogue weight is for"><input className="field px-3 py-2.5" inputMode="decimal" value={kgPer} onChange={(e) => setKgPer(e.target.value)} /></Field>
+      </div>
+      <details className="rounded-xl px-3 py-2" style={{ background: "var(--surface-2)" }}>
+        <summary className="cursor-pointer text-sm font-semibold" style={{ color: "var(--ink-2)" }}>More (for the drawing only)</summary>
+        <div className="mt-2">
+          <Field label="Width seen from the front (mm)" hint="Empty = taken from the size.">
+            <input className="field px-3 py-2.5" inputMode="decimal" value={face} onChange={(e) => setFace(e.target.value)} placeholder="auto" />
+          </Field>
+        </div>
+      </details>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button className="btn-ghost py-3" onClick={onCancel}>Cancel</button>
         <button className="btn-primary py-3" disabled={!name.trim()} onClick={save}>Save section</button>

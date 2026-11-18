@@ -44,6 +44,20 @@ export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<s
   return out;
 }
 
+/** where a pipe goes, in plain words (founder 2026-11-18: a hint under each pipe) */
+const USE: Record<string, string> = {
+  "frame-top": "Top of the window. The shutters hang in it.",
+  "frame-bottom": "Bottom of the window. The shutters roll on it.",
+  "frame-left": "Left side of the window.",
+  "frame-right": "Right side of the window.",
+  "sash-lock": "Outer side of the shutter. The lock goes here.",
+  "sash-meet": "Where two shutters meet and lock together.",
+  "sash-top": "Top of the shutter.",
+  "sash-bottom": "Bottom of the shutter. The rollers sit in it.",
+  meeting: "Fixed on the glass shutter where two shutters meet.",
+  mullion: "Between two sashes.",
+};
+
 /** the pencil that says "you can change this" */
 function Pen() {
   return (
@@ -66,15 +80,15 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
     return findProfile(lib, id ?? "");
   };
   // the shop's name for the pipe (Handle, Interlock, Bearing…), whatever the catalogue calls it
-  const SIDE: Record<string, string> = { "sash-lock": "Outer side", "sash-meet": "Meeting side", "sash-top": "Top", "sash-bottom": "Bottom", meeting: "Where glass meets" };
   const code = (pr?: { codes?: Record<string, string>; size?: string }) =>
     [[...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / "), pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ");
-  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string) => (
+  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string, hint?: string) => (
     <button key={key} type="button" onClick={onClick} aria-label={`Change ${title}`}
       className="flex w-full items-center gap-3 px-4 py-2.5 text-left" style={{ background: on ? "var(--surface-2)" : undefined }}>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-semibold leading-tight">{title}{badge && <span className="ml-1.5 text-[11px] font-bold" style={{ color: "var(--accent)" }}>{badge}</span>}</span>
-        <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>
+        {hint && <span className="block text-xs leading-snug" style={{ color: "var(--ink-2)" }}>{hint}</span>}
+        <span className="block truncate text-[11px]" style={{ color: "var(--ink-3)" }}>{sub}</span>
       </span>
       <span className="mono shrink-0 text-[15px] font-bold">{value}</span>
       <Pen />
@@ -93,9 +107,9 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         // a Normal window cut 45° on its track or shutter shows it on every piece
         const cut45 = frame ? vars.joint === "45" || (vars.joint !== "90" && m.angle === 45) : vars.sash === "45" || (vars.sash !== "90" && m.angle === 45);
         const badge = cut45 ? "45°" : undefined;
-        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
+        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, USE[m.place]);
         const name = (pr?.kind && KIND_NAMES[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
-        return line(m.partId, name, [SIDE[m.place] ?? "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
+        return line(m.partId, name, [pr ? sectionTitle(pr.name) : "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, USE[m.place]);
       });
   };
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
@@ -124,7 +138,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
             {head(`Shutter ${s.index + 1} · ${fill(mix[s.index] ?? s.kind)}`)}
             <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>
               {rows([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh, false)}
-              {line(`pane${s.index}`, fill(mix[s.index] ?? s.kind), mesh ? "Mesh, width × height" : "Glass, width × height", pane, on, () => onPick({ type: "shutter", index: s.index }))}
+              {line(`pane${s.index}`, fill(mix[s.index] ?? s.kind), "Width × height", pane, on, () => onPick({ type: "shutter", index: s.index }), undefined, mesh ? "The mesh fits inside the shutter." : "The glass fits inside the shutter.")}
             </div>
           </div>
         );

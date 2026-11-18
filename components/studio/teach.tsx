@@ -98,23 +98,8 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
 
       {!taught && !checked && (
         <div className="card mt-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-bold">Window {step}: the size you made</div>
-            <Seg small value={unit === "mm" ? "mm" : "in"} onChange={switchUnit} options={[{ value: "in", label: "inch.sut" }, { value: "mm", label: "mm" }]} />
-          </div>
-          <div className="mt-2 flex items-end gap-2">
-            <Field label="Width">
-              <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={ws} onChange={(e) => setWs(e.target.value)} />
-            </Field>
-            <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
-            <Field label="Height">
-              <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={hs} onChange={(e) => setHs(e.target.value)} />
-            </Field>
-          </div>
-          {!sizeOk && <p className="mt-1 text-xs" style={{ color: "var(--warn)" }}>Type the size as {UNIT_HINT[unit]}.</p>}
-          {sizeOk && <div className="mt-3 rounded-xl border bg-white px-1" style={{ borderColor: "var(--line)" }}>
-            <WindowDrawing g={geo} unit={unit} pick={null} labels={labels} infill={app[sys.infill.w] != null && app[sys.infill.h] != null ? `${fmtLen(app[sys.infill.w]!, unit)} × ${fmtLen(app[sys.infill.h]!, unit)}` : undefined} />
-          </div>}
+          <div className="text-[15px] font-bold">Window {step}: a window you already made</div>
+          <div className="text-xs" style={{ color: "var(--ink-3)" }}>Choose its tracks and shutters, then type its size under the drawing.</div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {sys.layouts.map((l) => (
               <button key={l.tracks} onClick={() => { setTracks(l.tracks); setMix(l.mixes[0]); }} aria-pressed={l.tracks === tracks}
@@ -126,6 +111,25 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
               <button key={m} onClick={() => setMix(m)} aria-pressed={m === mix}
                 className={`chip px-2.5 py-1 text-xs ${m === mix ? "selected" : ""}`}>{mixText(m)}</button>
             ))}
+          </div>
+          {sizeOk && <div className="mt-3 rounded-xl border bg-white px-1" style={{ borderColor: "var(--line)" }}>
+            <WindowDrawing g={geo} unit={unit} pick={null} labels={labels} infill={app[sys.infill.w] != null && app[sys.infill.h] != null ? `${fmtLen(app[sys.infill.w]!, unit)} × ${fmtLen(app[sys.infill.h]!, unit)}` : undefined} />
+          </div>}
+          <div className="mt-3 rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-sm font-bold">Window size</span>
+              <Seg small value={unit === "mm" ? "mm" : "in"} onChange={switchUnit} options={[{ value: "in", label: "inch.sut" }, { value: "mm", label: "mm" }]} />
+            </div>
+            <div className="flex items-end gap-2">
+              <Field label="Width">
+                <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={ws} onChange={(e) => setWs(e.target.value)} />
+              </Field>
+              <span className="pb-2.5 text-lg" style={{ color: "var(--ink-3)" }}>×</span>
+              <Field label="Height">
+                <input className="field w-full px-3 py-2 text-base font-semibold" inputMode="decimal" value={hs} onChange={(e) => setHs(e.target.value)} />
+              </Field>
+            </div>
+            {!sizeOk && <p className="mt-1 text-xs" style={{ color: "var(--warn)" }}>Type the size as {UNIT_HINT[unit]}.</p>}
           </div>
         </div>
       )}
@@ -177,10 +181,12 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
 
       {!taught && !checked && (
         <>
-          <SectionTitle>What you cut on this window</SectionTitle>
-          <p className="-mt-1 mb-2 text-xs" style={{ color: "var(--ink-3)" }}>
-            The app&apos;s cut is shown on each line. Type yours where you know it ({UNIT_HINT[unit]}).
-          </p>
+          <div className="card mt-4 p-4" style={{ borderColor: "var(--accent)" }}>
+            <div className="text-[15px] font-bold">Type your cuts here</div>
+            <div className="mt-0.5 text-xs leading-snug" style={{ color: "var(--ink-3)" }}>
+              For each pipe, type the length you cut on this window. The app&apos;s cut is shown in grey. Leave a box empty if you do not know it.
+            </div>
+          </div>
           <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
             {rows.map((r) => (
               <label key={r.size.id} className="flex items-center gap-3 px-3 py-2.5">

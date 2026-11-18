@@ -359,7 +359,7 @@ const PAGES: { id: Exclude<Page, "home">; title: string; help: string }[] = [
   { id: "options", title: "Options", help: "What this system can be made as, and its usual choice." },
   { id: "hardware", title: "Hardware", help: "Rollers, lock, cleats and the rest — counted for every window." },
   { id: "try", title: "Cut list", help: "Every cut and the pipes to buy for the size on the drawing." },
-  { id: "check", title: "Check with your window", help: "Enter 2 windows you have made. The app learns your shop's cuts." },
+  { id: "check", title: "Match your cuts", help: "Type the cuts of 2 windows you already made. The app learns your cuts and uses them from then on." },
 ];
 /** the shop's words for a choice */
 const SWITCH_NAME: Record<string, string> = { meet: "Interlock", mode: "Shutter width", track: "Track", rollerClip: "Track clip" };
