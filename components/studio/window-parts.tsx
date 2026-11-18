@@ -172,7 +172,7 @@ function SwipeHand() {
   );
 }
 
-export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPick, onSys, onKind }: {
+export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPick, onSys, onKind, onChangePipe }: {
   sys: StudioSystem; lib: StudioLibrary; unit: StudioUnit; geo: WindowGeo;
   values: Record<string, Um | null>; vars: Record<string, string>; mix: string;
   pick: Pick; onPick: (p: Pick) => void;
@@ -180,6 +180,8 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   onSys: (s: StudioSystem, note?: string) => void;
   /** a shutter became glass, mesh or sheet */
   onKind: (index: number, k: "G" | "J" | "S") => void;
+  /** "Change" on a pipe: its size and its cut, in one small sheet */
+  onChangePipe: (partId: string) => void;
 }) {
   const labels = pipeLabels(sys, lib, vars, values, unit, geo);
   /** The sections of these pipes: pipe name, then the section's name, code and size in mm; a tap opens the pipe. */
@@ -197,11 +199,14 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
       <div className="border-t px-4 py-2" style={{ borderColor: "var(--line)" }}>
         <div className="py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>Sections</div>
         {rowsOf.map((r) => (
-          <button key={r.m.partId} type="button" onClick={() => onPick({ type: "part", id: r.m.partId })}
-            className="flex w-full items-baseline justify-between gap-3 py-1.5 text-left">
-            <span className="shrink-0 text-sm font-semibold">{r.name}</span>
-            <span className="min-w-0 truncate text-right text-xs" style={{ color: "var(--ink-2)" }}>{r.sec}{r.info ? <span style={{ color: "var(--ink-3)" }}> · {r.info}</span> : null}</span>
-          </button>
+          <div key={r.m.partId} className="flex items-center gap-3 py-2" style={{ borderTop: "1px solid var(--line)" }}>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold leading-tight">{r.name}</span>
+              <span className="block truncate text-xs" style={{ color: "var(--ink-3)" }}>{r.sec}{r.info ? ` · ${r.info}` : ""}</span>
+            </span>
+            <button type="button" onClick={() => onChangePipe(r.m.partId)}
+              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold" style={{ background: "var(--accent-soft, var(--surface-2))", color: "var(--accent)", border: "1px solid var(--accent)" }}>Change</button>
+          </div>
         ))}
       </div>
     );

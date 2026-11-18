@@ -22,7 +22,9 @@ const Window3D = dynamic(() => import("./studio-3d"), { ssr: false, loading: () 
 import SectionSketch from "./section-sketch";
 import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
-import { WindowParts } from "./studio/window-parts";
+import { WindowParts, pipeLabels } from "./studio/window-parts";
+import { ChangeSheet } from "./studio/change-sheet";
+import { setCut } from "../lib/studio/edit";
 import { CutsTab } from "./studio/rules";
 import { CutList } from "./studio/cutlist";
 import { Seg, Field, SectionTitle } from "./studio-ui";
@@ -81,6 +83,8 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
   const [switches, setSwitches] = useState<Record<string, string>>({});
   const [perShutter, setPerShutter] = useState<Record<string, string>[]>([]);
   const [pick, setPick] = useState<Pick>(null);
+  // "Change" on a pipe: size + 90° / 45° + Save (founder 2026-11-18)
+  const [changeId, setChangeId] = useState<string | null>(null);
   // the system page is a short menu; each topic opens on its own screen (founder 2026-11-16:
   // one clean thing at a time, so a fabricator new to it understands it at once)
   const [page, setPage] = useState<Page>("home");
@@ -169,6 +173,36 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
       onSys={onChange} onClose={() => setPick(null)} />
   );
+  // the Change sheet: one pipe, its size and its cut
+  const changePart = changeId ? sys.parts.find((x) => x.id === changeId) : undefined;
+  const changeSheet = changePart && (() => {
+    const lab = pipeLabels(sys, lib, vars, values, unit, geo)[changePart.id];
+    const sw = changePart.place?.startsWith("frame") ? "joint" : changePart.place?.startsWith("sash") ? "sash" : "";
+    const hasSw = !!sw && sys.switches.some((x) => x.id === sw);
+    const angle: 90 | 45 = hasSw ? (vars[sw] === "45" ? 45 : 90) : changePart.angle;
+    const prof = findProfile(lib, (changePart.profile.find((c) => matches(c.when, vars)) ?? changePart.profile[changePart.profile.length - 1])?.id ?? "");
+    const section = prof ? [sectionTitle(prof.name), ...new Set(Object.values(prof.codes ?? {}).filter(Boolean)), prof.size ? `${prof.size} mm` : ""].filter(Boolean).join(" · ") : "No section";
+    return (
+      <ChangeSheet key={changePart.id} title={lab?.name ?? partLabel(changePart)} section={section} now={values[changePart.length] ?? null} angle={angle} unit={unit}
+        onClose={() => setChangeId(null)}
+        onMore={() => { setChangeId(null); setPick({ type: "part", id: changePart.id }); }}
+        onSave={(um, deg) => {
+          let next = sys;
+          let sws = switches;
+          if (deg !== angle) {
+            if (hasSw) { sws = { ...switches, [sw]: String(deg) }; setSwitches(sws); next = { ...next, switches: next.switches.map((x) => (x.id === sw ? { ...x, default: String(deg) } : x)) }; }
+            else { const ids = groupOf(sys, changePart).map((g) => g.id); next = { ...next, parts: next.parts.map((x) => (ids.includes(x.id) ? { ...x, angle: deg } : x)) }; }
+          }
+          if (um !== null) {
+            // the size is set on the window as it now is (a 45° track is full length first)
+            const j: StudioJob = { ...job, switches: sws };
+            next = setCut(next, changePart, um, jobVars(next, j), computeSizes(next, j).values);
+          }
+          onChange(next);
+          setChangeId(null);
+        }} />
+    );
+  })();
   const sectionPicker = picker && pickerPart && (
     <SectionPicker lib={lib} kind={kindFor(lib, pickerPart, picker.slot)}
       title={picker.slot === "alt" ? `Another section for ${partLabel(pickerPart)}` : `Section for ${(picker.partIds && picker.partIds.length > 1 ? groupName(sys, sys.parts.filter((x) => picker.partIds!.includes(x.id))) : partLabel(pickerPart))}${picker.slot === "mesh" ? " (mesh shutter)" : ""}`}
@@ -289,7 +323,8 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       <div ref={cardRef} style={{ scrollMarginBottom: 16 }}>{pipeCard}{paneCard}</div>
       {/* the same window, part by part: the track, then each shutter */}
       {!view3d && <WindowParts sys={sys} lib={lib} unit={unit} geo={geo} values={values} vars={vars} mix={mix} pick={pick} onPick={setPick}
-        onSys={(next, note) => onChange(next, note)} onKind={(i, k) => setMix((m) => m.slice(0, i) + k + m.slice(i + 1))} />}
+        onSys={(next, note) => onChange(next, note)} onKind={(i, k) => setMix((m) => m.slice(0, i) + k + m.slice(i + 1))}
+        onChangePipe={setChangeId} />}
 
       <div className="card mt-4 overflow-hidden">
         <div className="divide-y" style={{ borderColor: "var(--line)" }}>
@@ -309,6 +344,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         </div>
       </div>
       {sectionPicker}
+      {changeSheet}
     </div>
   );
 }

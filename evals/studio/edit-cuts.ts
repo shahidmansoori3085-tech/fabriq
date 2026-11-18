@@ -7,6 +7,7 @@ import { evaluate, jobVars, computeSizes } from "../../lib/studio/evaluate";
 import { NORMAL_18, DOMAL_27, withJoint } from "../../lib/studio/templates";
 import { bumpCut, bumpSize, ownCut, setCut } from "../../lib/studio/edit";
 import { UM_PER_SUT, inches } from "../../lib/engine/units";
+import { readAnyLen } from "../../lib/studio/format";
 
 let fails = 0;
 const check = (ok: boolean, msg: string) => { if (!ok) { fails++; console.error("FAIL", msg); } };
@@ -47,6 +48,12 @@ const vals = computeSizes(sys, job).values;
 const t = setCut(sys, part("handle"), inches(46) + 5 * UM_PER_SUT, vars, vals);
 check(cut(t, /S1 Handle/) === inches(46) + 5 * UM_PER_SUT, "typed handle 46.5");
 check(evaluate(t, { ...job, H: inches(60) }).pieces.find((x) => /S1 Handle/.test(x.role))!.length === inches(58) + 5 * UM_PER_SUT, "typed cut follows a taller window");
+
+// a size typed any way: inch.sut, mm, cm, feet
+const h465 = inches(46) + 5 * UM_PER_SUT;
+for (const [t, want] of [["46.5", h465], ["46 5s", h465], ["46″ 5s", h465], ["3'10.5", h465], ["1180 mm", 1180000], ["118 cm", 1180000], ["1180", 1180000], ["48", inches(48)]] as const)
+  check(readAnyLen(t) === want, `read "${t}"`);
+check(readAnyLen("46.9") === null && readAnyLen("abc") === null, "bad sizes are refused");
 
 // interlock clip on a mesh shutter: off by default (glass meetings only), on when the shop clips it too
 const dj = { id: "D1", W: inches(72), H: inches(60), qty: 1, tracks: 3, mix: "GGJ" };

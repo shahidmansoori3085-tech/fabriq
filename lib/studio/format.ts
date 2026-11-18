@@ -162,3 +162,33 @@ export function noSize(t: string): string {
 }
 /** How a section's name is shown: no company, no mm size. */
 export const sectionTitle = (t: string) => noSize(noMaker(t));
+
+/**
+ * A length typed any way a shop types it (founder 2026-11-18: "unit kuch bhi daal sake"):
+ * "46.5" or "46 5s" or 46″ 5s (inch.sut), "1180 mm", "118 cm", "3'10.5" or "3 ft 10" (feet).
+ * A plain number over 300 is taken as mm (no pipe is 300 inches).
+ */
+export function readAnyLen(raw: string): Um | null {
+  const t = raw.trim().toLowerCase().replace(/[″"]/g, " in ").replace(/[′']/g, " ft ").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  let m = /^(\d+(?:\.\d+)?) ?mm$/.exec(t);
+  if (m) return Math.round(parseFloat(m[1]) * 1000);
+  m = /^(\d+(?:\.\d+)?) ?cm$/.exec(t);
+  if (m) return Math.round(parseFloat(m[1]) * 10000);
+  m = /^(\d+) ?(?:ft|feet) ?(?:(\d+)(?:[. ](\d))?)? ?(?:in|inch)? ?(?:(\d) ?(?:s|sut))?$/.exec(t);
+  if (m) {
+    const sut = parseInt(m[3] ?? m[4] ?? "0", 10);
+    if (sut > 7) return null;
+    return parseInt(m[1], 10) * 304800 + parseInt(m[2] ?? "0", 10) * UM_PER_INCH + sut * UM_PER_SUT;
+  }
+  m = /^(\d+) ?(?:in|inch)? ?(\d) ?(?:s|sut)$/.exec(t);
+  if (m) return parseInt(m[2], 10) > 7 ? null : parseInt(m[1], 10) * UM_PER_INCH + parseInt(m[2], 10) * UM_PER_SUT;
+  m = /^(\d+)(?:\.(\d))? ?(?:in|inch)?$/.exec(t);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    if (!m[2] && n > 300) return n * 1000; // a big plain number is mm
+    const sut = m[2] ? parseInt(m[2], 10) : 0;
+    return sut > 7 ? null : n * UM_PER_INCH + sut * UM_PER_SUT;
+  }
+  return null;
+}
