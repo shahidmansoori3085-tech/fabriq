@@ -22,7 +22,7 @@ const Window3D = dynamic(() => import("./studio-3d"), { ssr: false, loading: () 
 import SectionSketch from "./section-sketch";
 import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
-import { WindowParts } from "./studio/window-parts";
+import { WindowParts, pipeLabels } from "./studio/window-parts";
 import { CutsTab } from "./studio/rules";
 import { TeachPanel } from "./studio/teach";
 import { CutList } from "./studio/cutlist";
@@ -188,11 +188,7 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       onSys={onChange} onCheck={() => open("check")} onClose={() => setPick(null)} />
   );
   // every pipe carries its cut on the drawing; the glass its size
-  const labels = useMemo(() => {
-    const out: Record<string, string> = {};
-    for (const q of sys.parts) { const v = values[q.length]; if (q.enabled !== false && v != null) out[q.id] = fmtLen(v, unit); }
-    return out;
-  }, [sys.parts, values, unit]);
+  const labels = useMemo(() => pipeLabels(sys, lib, vars, values, unit), [sys, lib, vars, values, unit]);
   const iw = values[sys.infill.w], ih = values[sys.infill.h];
   const infillText = iw != null && ih != null ? `${fmtLen(iw, unit)} × ${fmtLen(ih, unit)}` : undefined;
   const sectionPicker = picker && pickerPart && (

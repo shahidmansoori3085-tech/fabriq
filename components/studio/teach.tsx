@@ -10,6 +10,7 @@ import type { StudioSystem, TaughtJob } from "../../lib/studio/model";
 import { jobVars, matches, computeSizes, type StudioJob } from "../../lib/studio/evaluate";
 import { windowGeometry } from "../../lib/studio/geometry";
 import WindowDrawing from "../studio-drawing";
+import { pipeLabels } from "./window-parts";
 import { teach, check, type TeachResult, type CheckRow } from "../../lib/studio/teach";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { partLabel } from "../../lib/studio/edit";
@@ -50,8 +51,7 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
   const app = computeSizes(sys, win).values;
   const appText = (id: string) => { const v = app[id]; return v != null ? fmtLen(v, unit).replace(/~/g, "") : "—"; };
   const geo = windowGeometry(sys, win, (id) => findProfile(lib, id));
-  const labels: Record<string, string> = {};
-  for (const q of sys.parts) { const v = app[q.length]; if (q.enabled !== false && v != null) labels[q.id] = fmtLen(v, unit); }
+  const labels = pipeLabels(sys, lib, winVars, app, unit);
   const diffOf = (id: string, typed: string) => { const t = readLen(typed, unit), a = app[id]; return t !== null && a != null ? t - a : null; };
   const ready = sizeOk && rows.some((r) => readLen(vals[r.size.id] ?? "", unit) !== null) || readLen(gw, unit) !== null || readLen(gh, unit) !== null;
 

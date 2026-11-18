@@ -20,6 +20,30 @@ const PLACE: Record<string, string> = {
 };
 const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
 
+/** the shop's name for a pipe by what it is (Handle, Interlock, Bearing…), whatever the catalogue calls it */
+export const KIND_NAMES: Record<string, string> = {
+  handle: "Handle", interlock: "Interlock", "slim-interlock": "Slim interlock", bearing: "Bearing", track: "Track",
+  shutter: "Shutter pipe", "shutter-rail": "Shutter top / bottom", "mesh-shutter": "Mesh shutter pipe", "interlock-patti": "Interlock patti",
+  rail: "Rail", bead: "Glazing clip", mullion: "Mullion", frame: "Frame",
+};
+const FRAME_NAME: Record<string, string> = { "frame-top": "Top track", "frame-bottom": "Bottom track", "frame-left": "Left side", "frame-right": "Right side" };
+
+/** Each pipe's name and cut on this window, for the drawing (part id → { name, value }). */
+export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<string, string>, values: Record<string, Um | null>, unit: StudioUnit) {
+  const out: Record<string, { name: string; value: string }> = {};
+  for (const q of sys.parts) {
+    const v = values[q.length];
+    if (q.enabled === false || v == null) continue;
+    const pr = findProfile(lib, (q.profile.find((c) => matches(c.when, vars)) ?? q.profile[q.profile.length - 1])?.id ?? "");
+    const kind = pr?.kind && KIND_NAMES[pr.kind];
+    const frame = q.place ? FRAME_NAME[q.place] : undefined;
+    const name = frame ? (sys.family === "casement" ? frame.replace("track", "frame") : frame)
+      : kind ? `${kind}${q.place === "sash-top" ? " · top" : q.place === "sash-bottom" ? " · bottom" : ""}` : q.role.replace(/\{[a-z]+\}/g, "").trim();
+    out[q.id] = { name, value: fmtLen(v, unit).replace(/~/g, "") };
+  }
+  return out;
+}
+
 /** the pencil that says "you can change this" */
 function Pen() {
   return (
@@ -42,11 +66,6 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
     return findProfile(lib, id ?? "");
   };
   // the shop's name for the pipe (Handle, Interlock, Bearing…), whatever the catalogue calls it
-  const KIND_NAME: Record<string, string> = {
-    handle: "Handle", interlock: "Interlock", "slim-interlock": "Slim interlock", bearing: "Bearing", track: "Track",
-    shutter: "Shutter pipe", "shutter-rail": "Shutter top / bottom", "mesh-shutter": "Mesh shutter pipe", "interlock-patti": "Interlock patti",
-    rail: "Rail", bead: "Glazing clip", mullion: "Mullion", frame: "Frame",
-  };
   const SIDE: Record<string, string> = { "sash-lock": "Outer side", "sash-meet": "Meeting side", "sash-top": "Top", "sash-bottom": "Bottom", meeting: "Where glass meets" };
   const code = (pr?: { codes?: Record<string, string>; size?: string }) =>
     [[...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / "), pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ");
@@ -73,7 +92,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
         const value = len(p ? values[p.length] : null);
         const badge = m.angle === 45 ? "45°" : undefined;
         if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
-        const name = (pr?.kind && KIND_NAME[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
+        const name = (pr?.kind && KIND_NAMES[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/(Top|Bottom)/g, "").trim() : "Piece");
         return line(m.partId, name, [SIDE[m.place] ?? "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge);
       });
   };

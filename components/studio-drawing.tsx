@@ -13,8 +13,9 @@ const pts = (poly: Pt[]) => poly.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)
 
 export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, infill }: {
   g: WindowGeo; unit: StudioUnit; pick: Pick; onPick?: (p: Pick) => void; compact?: boolean;
-  /** cut length written on each pipe (part id → "59″ 2s"), once per pipe */
-  labels?: Record<string, string>;
+  /** each pipe's name and cut (part id → { name: "Handle", value: "46″ 3s" }), written beside the
+   *  window with an arrow to the pipe, like a shop drawing (founder 2026-11-18) */
+  labels?: Record<string, { name: string; value: string }>;
   /** glass / mesh size written on the panes */
   infill?: string;
 }) {
@@ -22,7 +23,7 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
   const { W, H } = g;
   const big = Math.max(W, H);
   const fs = compact ? 0 : big / 21;          // label size, mm
-  const pad = compact ? big * 0.02 : big * (labels ? 0.13 : 0.17);
+  const pad = compact ? big * 0.02 : big * (labels ? 0.24 : 0.17);
   const vb = `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad + (compact ? 0 : fs * 1.6)}`;
   const isPart = (m: Member) => pick?.type === "part" && pick.id === m.partId;
   const isShutter = (i: number) => pick?.type === "shutter" && pick.index === i;
@@ -143,50 +144,92 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
           fill="none" stroke="#6b7280" strokeWidth={0.8} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
       )))}
 
-      {/* every pipe carries its cut, like a shop drawing (founder 2026-11-17) */}
+      {/* every pipe's cut beside it, an arrow to the pipe (founder 2026-11-18: not written on the pipe) */}
       {!compact && labels && (() => {
-        const seen = new Set<string>();
-        // the same cut on both sides of the frame (or top and bottom) is written once: the right
-        // side and the top, away from the shutter labels; each shutter upright keeps its own
-        const shown = new Set<string>();
-        const tags: React.ReactNode[] = [];
-        const lf = fs * 0.95;
-        const put = (m: Member, key: string) => {
-          const txt = labels[m.partId]?.replace(/^~/, "");
-          if (!txt || seen.has(m.partId)) return;
-          const fam = m.place.startsWith("frame") ? "f" : "s";
-          const key2 = `${fam}|${m.vertical}|${txt}`;
-          if (!(fam === "s" && m.vertical) && shown.has(key2)) return;
-          seen.add(m.partId); shown.add(key2);
-          const xs = m.poly.map((q) => q[0]), ys = m.poly.map((q) => q[1]);
-          const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-          const w = txt.length * lf * 0.6 + lf * 0.9, h = lf * 1.5;
-          const on = pick?.type === "part" && pick.id === m.partId;
-          tags.push(
-            <g key={key} transform={m.vertical ? `translate(${cx} ${cy}) rotate(-90)` : `translate(${cx} ${cy})`}
-              onClick={tap({ type: "part", id: m.partId })} style={{ cursor: onPick ? "pointer" : undefined }}>
-              <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={on ? "var(--accent)" : "#ffffff"} fillOpacity={on ? 1 : 0.94}
-                stroke={on ? "none" : "#cbd2da"} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
-              <text textAnchor="middle" y={lf * 0.36} fontSize={lf} fontWeight={700} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                fill={on ? "#ffffff" : "#1f2937"}>{txt}</text>
-            </g>,
-          );
+        const lf = fs * 1.12;
+        const ctr = (m: Member) => { const xs = m.poly.map((q) => q[0]), ys = m.poly.map((q) => q[1]); return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2]; };
+        type Call = { id: string; name: string; value: string; ax: number; ay: number; x: number; y: number };
+        const calls: Call[] = [];
+        const add = (m: Member | undefined, ax: number, ay: number, x: number, y: number, name?: string) => {
+          const l = m && labels[m.partId];
+          if (!m || !l) return;
+          calls.push({ id: m.partId, name: name ?? l.name, value: l.value.replace(/~/g, ""), ax, ay, x, y });
         };
-        const first = (pl: string) => (pl === "frame-right" || pl === "frame-top" || pl === "sash-top" ? 0 : 1);
-        [...g.frame].sort((a, b) => first(a.place) - first(b.place)).forEach((m, k) => put(m, `lf${k}`));
-        // shutter pipes: on the first shutter (they are the same on every shutter)
-        g.sash.filter((m) => m.shutter === 0).sort((a, b) => first(a.place) - first(b.place)).forEach((m, k) => put(m, `ls${k}`));
-        g.patti.forEach((m, k) => put(m, `lp${k}`));
+        const fr = (pl: string) => g.frame.find((m) => m.place === pl);
+        const top = fr("frame-top"), bot = fr("frame-bottom"), lft = fr("frame-left"), rgt = fr("frame-right");
+        // the track: top above the window, bottom and sides below it
+        if (top) add(top, W * 0.74, ctr(top)[1], W * 0.74, -pad * 0.8);
+        if (bot) add(bot, W * 0.74, ctr(bot)[1], W * 0.74, H + pad * 0.6);
+        const same = lft && rgt && labels[lft.partId]?.value === labels[rgt.partId]?.value;
+        if (lft) add(lft, ctr(lft)[0], H * 0.86, W * 0.2, H + pad * 0.6, same ? "Sides" : undefined);
+        if (rgt && !same) add(rgt, ctr(rgt)[0], H * 0.86, W * 0.47, H + pad * 0.6);
+        // the first shutter: its pipes inside its pane (they are the same on every shutter)
+        const s0 = g.shutters[0];
+        if (s0) {
+          const pn = s0.pane;
+          const sm = (pl: string) => g.sash.find((m) => m.shutter === 0 && m.place === pl);
+          const st = sm("sash-top"), sb = sm("sash-bottom"), sl = sm("sash-lock"), sM = sm("sash-meet");
+          // spread out, each beside its own pipe (founder 2026-11-18: "door door, pipe ke paas"):
+          // top and bottom near their rails, the handle beside its upright, the interlock
+          // over in the next shutter beside the meeting upright
+          const side = (m: Member) => (ctr(m)[0] < pn.x + pn.w / 2 ? -1 : 1);
+          if (st) add(st, pn.x + pn.w * 0.64, ctr(st)[1], pn.x + pn.w * 0.64, pn.y + pn.h * 0.13);
+          if (sb) add(sb, pn.x + pn.w * 0.36, ctr(sb)[1], pn.x + pn.w * 0.36, pn.y + pn.h * 0.87);
+          if (sl) add(sl, ctr(sl)[0], pn.y + pn.h * 0.3, pn.x + pn.w * (side(sl) < 0 ? 0.32 : 0.68), pn.y + pn.h * 0.3);
+          const meet = sM ?? g.patti.find((m) => m.shutter === 0);
+          if (meet) {
+            const d = side(meet), mx = ctr(meet)[0];
+            // beside the meeting upright, in the next shutter when there is one
+            const x = g.shutters.length > 1 ? mx + d * pn.w * 0.36 : pn.x + pn.w * (d > 0 ? 0.68 : 0.32);
+            add(meet, mx, pn.y + pn.h * 0.7, x, pn.y + pn.h * 0.7);
+          }
+        }
+        const box = (c: Call) => {
+          const w = Math.max(c.name.length * lf * 0.62 * 0.72, c.value.length * lf * 0.62) + lf * 0.9;
+          return { w, h: lf * 2.35 };
+        };
+        // where the arrow leaves the box: on its edge, towards the pipe
+        const edge = (c: Call) => {
+          const { w, h } = box(c);
+          const dx = c.ax - c.x, dy = c.ay - c.y;
+          if (!dx && !dy) return [c.x, c.y];
+          const t = Math.min(dx ? (w / 2) / Math.abs(dx) : Infinity, dy ? (h / 2) / Math.abs(dy) : Infinity);
+          return [c.x + dx * t, c.y + dy * t];
+        };
         const pane = g.shutters[0]?.pane;
         return (
           <g>
-            {tags}
+            <defs>
+              <marker id={id("arrow")} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0L10 5L0 10z" fill="#334155" />
+              </marker>
+              <marker id={id("arrowOn")} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0L10 5L0 10z" fill="var(--accent)" />
+              </marker>
+            </defs>
             {infill && pane && (() => { const inf = infill.replace(/~/g, ""); return (
               <g pointerEvents="none" transform={`translate(${pane.x + pane.w / 2} ${pane.y + pane.h / 2})`}>
-                <rect x={-(inf.length * lf * 0.6 + lf) / 2} y={-lf * 0.85} width={inf.length * lf * 0.6 + lf} height={lf * 1.7} rx={lf * 0.4} fill="#ffffff" fillOpacity={0.9} />
-                <text textAnchor="middle" y={lf * 0.36} fontSize={lf} fontWeight={600} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e3a5f">{inf}</text>
+                <text textAnchor="middle" y={-lf * 0.15} fontSize={lf * 0.72} fontWeight={600} fill="#5b7a9a" fontFamily="ui-sans-serif, system-ui">{g.shutters[0]?.kind === "J" ? "Mesh" : "Glass"}</text>
+                <text textAnchor="middle" y={lf * 0.85} fontSize={Math.min(lf * 0.9, pane.w / (inf.length * 0.62))} fontWeight={700} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e3a5f">{inf}</text>
               </g>
             ); })()}
+            {calls.map((c) => {
+              const on = pick?.type === "part" && pick.id === c.id;
+              const [ex, ey] = edge(c);
+              const { w, h } = box(c);
+              return (
+                <g key={`${c.id}-${c.name}`} onClick={tap({ type: "part", id: c.id })} style={{ cursor: onPick ? "pointer" : undefined }}>
+                  <line x1={ex} y1={ey} x2={c.ax} y2={c.ay} stroke={on ? "var(--accent)" : "#334155"} strokeWidth={1.1} vectorEffect="non-scaling-stroke"
+                    markerEnd={`url(#${id(on ? "arrowOn" : "arrow")})`} />
+                  <rect x={c.x - w / 2} y={c.y - h / 2} width={w} height={h} rx={lf * 0.45}
+                    fill={on ? "var(--accent)" : "#ffffff"} stroke={on ? "none" : "#cbd2da"} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+                  <text x={c.x} y={c.y - lf * 0.18} textAnchor="middle" fontSize={lf * 0.72} fontWeight={600} fontFamily="ui-sans-serif, system-ui"
+                    fill={on ? "#ffffff" : "#64748b"}>{c.name}</text>
+                  <text x={c.x} y={c.y + lf * 0.82} textAnchor="middle" fontSize={lf} fontWeight={800} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                    fill={on ? "#ffffff" : "#0f172a"}>{c.value}</text>
+                </g>
+              );
+            })}
           </g>
         );
       })()}
@@ -194,13 +237,13 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
       {/* dimensions */}
       {!compact && (
         <g fontSize={fs} fontFamily="ui-sans-serif, system-ui" fill="#374151" pointerEvents="none">
-          <Dim x1={0} y1={-pad * 0.45} x2={W} y2={-pad * 0.45} label={fmtLen(W * 1000, unit)} fs={fs} />
-          <Dim x1={-pad * 0.45} y1={0} x2={-pad * 0.45} y2={H} label={fmtLen(H * 1000, unit)} fs={fs} vertical />
-          {g.sizesKnown && g.shutters.length > 0 && (
+          <Dim x1={0} y1={-pad * (labels ? 0.32 : 0.45)} x2={W} y2={-pad * (labels ? 0.32 : 0.45)} label={fmtLen(W * 1000, unit)} fs={fs} />
+          <Dim x1={-pad * (labels ? 0.32 : 0.45)} y1={0} x2={-pad * (labels ? 0.32 : 0.45)} y2={H} label={fmtLen(H * 1000, unit)} fs={fs} vertical />
+          {!labels && g.sizesKnown && g.shutters.length > 0 && (
             <Dim x1={g.shutters[0].x} y1={H + pad * 0.42} x2={g.shutters[0].x + g.shutters[0].w} y2={H + pad * 0.42}
               label={`${g.casement ? "Sash" : "Shutter"} ${fmtLen(g.shutterW * 1000, unit)}`} fs={fs * 0.85} muted />
           )}
-          {g.sizesKnown && g.shutters.length > 0 && (
+          {!labels && g.sizesKnown && g.shutters.length > 0 && (
             <Dim x1={W + pad * 0.45} y1={g.shutters[0].y} x2={W + pad * 0.45} y2={g.shutters[0].y + g.shutters[0].h}
               label={fmtLen(g.shutterH * 1000, unit)} fs={fs * 0.85} vertical muted />
           )}
