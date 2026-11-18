@@ -22,7 +22,7 @@ const Window3D = dynamic(() => import("./studio-3d"), { ssr: false, loading: () 
 import SectionSketch from "./section-sketch";
 import { SectionPicker } from "./studio/pickers";
 import { PipeCard, PaneCard } from "./studio/pipe-card";
-import { WindowParts, pipeLabels } from "./studio/window-parts";
+import { WindowParts } from "./studio/window-parts";
 import { CutsTab } from "./studio/rules";
 import { TeachPanel } from "./studio/teach";
 import { CutList } from "./studio/cutlist";
@@ -187,10 +187,6 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       onChoice={(swId, v) => setPerShutter((ps) => { const next = [...ps]; next[pick.index] = { ...(next[pick.index] ?? {}), [swId]: v }; return next; })}
       onSys={onChange} onCheck={() => open("check")} onClose={() => setPick(null)} />
   );
-  // every pipe carries its cut on the drawing; the glass its size
-  const labels = useMemo(() => pipeLabels(sys, lib, vars, values, unit, geo), [sys, lib, vars, values, unit, geo]);
-  const iw = values[sys.infill.w], ih = values[sys.infill.h];
-  const infillText = iw != null && ih != null ? `${fmtLen(iw, unit)} × ${fmtLen(ih, unit)}` : undefined;
   const sectionPicker = picker && pickerPart && (
     <SectionPicker lib={lib} kind={kindFor(lib, pickerPart, picker.slot)}
       title={picker.slot === "alt" ? `Another section for ${partLabel(pickerPart)}` : `Section for ${(picker.partIds && picker.partIds.length > 1 ? groupName(sys, sys.parts.filter((x) => picker.partIds!.includes(x.id))) : partLabel(pickerPart))}${picker.slot === "mesh" ? " (mesh shutter)" : ""}`}
@@ -296,8 +292,12 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
         </div>
         <div className="px-1 pb-1">
           {view3d ? <Window3D g={geo} pick={pick} onPick={setPick} tracks={tracks} />
-            : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} labels={labels} infill={infillText} />}
+            : <WindowDrawing g={geo} unit={unit} pick={pick} onPick={setPick} />}
         </div>
+        <WindowBar key={unit} sys={sys} unit={unit} onUnit={onUnit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
+          onSize={(w, h) => { setW(w); setH(h); }}
+          onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); setPick(null); }}
+          onSwitch={(id, v) => setSwitches((x) => ({ ...x, [id]: v }))} />
       </div>
       {/* 90° or 45°: big and plain, right under the drawing (founder 2026-11-18: the small switch was not seen) */}
       {sys.switches.some((x) => x.id === "joint" || x.id === "sash") && (
@@ -327,12 +327,6 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       )}
       {/* the tapped pipe or pane opens right under the drawing */}
       <div ref={cardRef} style={{ scrollMarginBottom: 16 }}>{pipeCard}{paneCard}</div>
-      <div className="card mt-3 overflow-hidden">
-        <WindowBar key={unit} sys={sys} unit={unit} onUnit={onUnit} W={W} H={H} tracks={tracks} mix={mix} switches={switches}
-          onSize={(w, h) => { setW(w); setH(h); }}
-          onLayout={(t, m) => { setTracks(t); setMix(m); setPerShutter([]); setPick(null); }}
-          onSwitch={(id, v) => setSwitches((x) => ({ ...x, [id]: v }))} />
-      </div>
       {/* the same window, part by part: the track, then each shutter */}
       {!view3d && <WindowParts sys={sys} lib={lib} unit={unit} geo={geo} values={values} vars={vars} mix={mix} pick={pick} onPick={setPick}
         onSys={(next, note) => onChange(next, note)} onKind={(i, k) => setMix((m) => m.slice(0, i) + k + m.slice(i + 1))} />}

@@ -11,15 +11,9 @@ import type { StudioSystem } from "../../lib/studio/model";
 import type { WindowGeo, Member } from "../../lib/studio/geometry";
 import { matches } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, sectionTitle, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, type StudioUnit } from "../../lib/studio/format";
 import type { Pick } from "../studio-drawing";
 
-const PLACE: Record<string, string> = {
-  "frame-top": "Top", "frame-bottom": "Bottom", "frame-left": "Left side", "frame-right": "Right side",
-  "sash-lock": "Handle side", "sash-meet": "Meeting side", "sash-top": "Top", "sash-bottom": "Bottom",
-  meeting: "Interlock patti", mullion: "Mullion",
-};
-const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
 
 /** the shop's name for a pipe by what it is (Handle, Interlock, Bearing…), whatever the catalogue calls it */
 export const KIND_NAMES: Record<string, string> = {
@@ -76,13 +70,20 @@ function Bar({ x, y, w, h, on, onTap }: { x: number; y: number; w: number; h: nu
   return <rect x={x} y={y} width={w} height={h} rx={2} fill={on ? "var(--accent)" : "#cfd5dc"} stroke={on ? "var(--accent)" : "#8b95a1"} strokeWidth={1}
     style={{ cursor: "pointer" }} onClick={onTap} />;
 }
-function Tag({ x, y, l, anchor = "middle", on }: { x: number; y: number; l?: { name: string; value: string; inside?: string }; anchor?: "start" | "middle" | "end"; on?: boolean }) {
+function Tag({ x, y, l, anchor = "middle", on, onTap }: {
+  x: number; y: number; l?: { name: string; value: string; inside?: string }; anchor?: "start" | "middle" | "end"; on?: boolean; onTap?: () => void;
+}) {
   if (!l) return null;
+  const w = Math.max(l.name.length * 5.6, l.value.length * 8.4, l.inside ? (l.inside.length + 7) * 5.1 : 0) + 16;
+  const h = l.inside ? 46 : 34;
+  const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
+  const cx = left + w / 2;
   return (
-    <g pointerEvents="none">
-      <text x={x} y={y} textAnchor={anchor} fontSize={10} fontWeight={600} fill={on ? "var(--accent)" : "#64748b"} fontFamily="ui-sans-serif, system-ui">{l.name}</text>
-      <text x={x} y={y + 14} textAnchor={anchor} fontSize={13} fontWeight={800} fill={on ? "var(--accent)" : "#0f172a"} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">{l.value}</text>
-      {l.inside && <text x={x} y={y + 26} textAnchor={anchor} fontSize={9.5} fill="#64748b" fontFamily="ui-sans-serif, system-ui">inside {l.inside}</text>}
+    <g onClick={onTap} style={{ cursor: onTap ? "pointer" : undefined }}>
+      <rect x={left} y={y - 12} width={w} height={h} rx={8} fill={on ? "var(--accent)" : "#ffffff"} stroke={on ? "var(--accent)" : "#d5dbe2"} strokeWidth={1} />
+      <text x={cx} y={y} textAnchor="middle" fontSize={10} fontWeight={600} fill={on ? "#ffffff" : "#64748b"} fontFamily="ui-sans-serif, system-ui">{l.name}</text>
+      <text x={cx} y={y + 15} textAnchor="middle" fontSize={13} fontWeight={800} fill={on ? "#ffffff" : "#0f172a"} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">{l.value}</text>
+      {l.inside && <text x={cx} y={y + 28} textAnchor="middle" fontSize={9.5} fill={on ? "#ffffff" : "#64748b"} fontFamily="ui-sans-serif, system-ui">inside {l.inside}</text>}
     </g>
   );
 }
@@ -97,15 +98,16 @@ function TrackSketch({ geo, labels, pick, onPick }: { geo: WindowGeo; labels: La
   };
   const lab = (pl: string) => { const m = at(pl); return m ? labels[m.partId] : undefined; };
   const on = (pl: string) => { const m = at(pl); return !!m && pick?.type === "part" && pick.id === m.partId; };
+  const tap = (pl: string) => () => { const m = at(pl); if (m) onPick({ type: "part", id: m.partId }); };
   return (
-    <svg viewBox="0 0 340 210" className="block h-auto w-full select-none" role="img" aria-label="Track">
+    <svg viewBox="-10 0 360 214" className="block h-auto w-full select-none" role="img" aria-label="Track">
       <rect x={X} y={Y} width={W} height={H} fill="#f1f5f9" />
       {one("frame-top", X, Y, W, t)}{one("frame-bottom", X, Y + H - t, W, t)}
       {one("frame-left", X, Y, t, H)}{one("frame-right", X + W - t, Y, t, H)}
-      <Tag x={X + W / 2} y={Y - 20} l={lab("frame-top")} on={on("frame-top")} />
-      <Tag x={X + W / 2} y={Y + H + 14} l={lab("frame-bottom")} on={on("frame-bottom")} />
-      <Tag x={X - 8} y={Y + H / 2 - 10} l={lab("frame-left")} anchor="end" on={on("frame-left")} />
-      <Tag x={X + W + 8} y={Y + H / 2 - 10} l={lab("frame-right")} anchor="start" on={on("frame-right")} />
+      <Tag x={X + W / 2} y={Y - 24} l={lab("frame-top")} on={on("frame-top")} onTap={tap("frame-top")} />
+      <Tag x={X + W / 2} y={Y + H + 16} l={lab("frame-bottom")} on={on("frame-bottom")} onTap={tap("frame-bottom")} />
+      <Tag x={X - 6} y={Y + H / 2 - 10} l={lab("frame-left")} anchor="end" on={on("frame-left")} onTap={tap("frame-left")} />
+      <Tag x={X + W + 6} y={Y + H / 2 - 10} l={lab("frame-right")} anchor="start" on={on("frame-right")} onTap={tap("frame-right")} />
     </svg>
   );
 }
@@ -128,8 +130,9 @@ function ShutterSketch({ geo, index, kind, labels, pane, pick, onPick }: {
   const on = (pl: string) => { const m = at(pl); return !!m && pick?.type === "part" && pick.id === m.partId; };
   const patti = geo.patti.find((m) => m.shutter === index);
   const meetLeft = !lockLeft;
+  const tap = (pl: string) => () => { const m = at(pl); if (m) onPick({ type: "part", id: m.partId }); };
   return (
-    <svg viewBox="0 0 340 250" className="block h-auto w-full select-none" role="img" aria-label={`Shutter ${index + 1}`}>
+    <svg viewBox="0 -4 340 262" className="block h-auto w-full select-none" role="img" aria-label={`Shutter ${index + 1}`}>
       <defs>
         <pattern id={`mesh${index}`} width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 0L6 6M6 0L0 6" stroke="#a3acb7" strokeWidth="0.6" /></pattern>
       </defs>
@@ -141,10 +144,14 @@ function ShutterSketch({ geo, index, kind, labels, pane, pick, onPick }: {
         style={{ cursor: "pointer" }} onClick={() => onPick({ type: "part", id: patti.partId })} />}
       <text x={X + W / 2} y={Y + H / 2 - 4} textAnchor="middle" fontSize={10} fontWeight={600} fill="#5b7a9a" pointerEvents="none">{kind === "J" ? "Mesh" : kind === "S" ? "Sheet" : "Glass"}</text>
       <text x={X + W / 2} y={Y + H / 2 + 11} textAnchor="middle" fontSize={11.5} fontWeight={800} fill="#1e3a5f" fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" pointerEvents="none">{pane}</text>
-      <Tag x={X + W / 2} y={Y - 16} l={lab("sash-top")} on={on("sash-top")} />
-      <Tag x={X + W / 2} y={Y + H + 12} l={lab("sash-bottom")} on={on("sash-bottom")} />
-      <Tag x={lockLeft ? X - 10 : X + W + 10} y={Y + H / 2 - 30} l={lab("sash-lock")} anchor={lockLeft ? "end" : "start"} on={on("sash-lock")} />
-      <Tag x={lockLeft ? X + W + 10 : X - 10} y={Y + H / 2 + 6} l={patti ? labels[patti.partId] ? { ...labels[patti.partId] } : lab("sash-meet") : lab("sash-meet")} anchor={lockLeft ? "start" : "end"} on={on("sash-meet")} />
+      <Tag x={X + W / 2} y={Y - 22} l={lab("sash-top")} on={on("sash-top")} onTap={tap("sash-top")} />
+      <Tag x={X + W / 2} y={Y + H + 16} l={lab("sash-bottom")} on={on("sash-bottom")} onTap={tap("sash-bottom")} />
+      <Tag x={lockLeft ? X - 8 : X + W + 8} y={Y + H / 2 - 40} l={lab("sash-lock")} anchor={lockLeft ? "end" : "start"} on={on("sash-lock")} onTap={tap("sash-lock")} />
+      <Tag x={lockLeft ? X + W + 8 : X - 8} y={Y + H / 2 + 8} l={lab("sash-meet")} anchor={lockLeft ? "start" : "end"} on={on("sash-meet")} onTap={tap("sash-meet")} />
+      {patti && labels[patti.partId] && (
+        <Tag x={lockLeft ? X + W + 8 : X - 8} y={Y + H / 2 + 62} l={labels[patti.partId]} anchor={lockLeft ? "start" : "end"}
+          on={pick?.type === "part" && pick.id === patti.partId} onTap={() => onPick({ type: "part", id: patti.partId })} />
+      )}
     </svg>
   );
 }
@@ -162,15 +169,6 @@ function SwipeHand() {
         <span className="text-xs font-bold">Swipe for the next shutter</span>
       </div>
     </div>
-  );
-}
-
-/** the pencil that says "you can change this" */
-function Pen() {
-  return (
-    <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: "var(--surface-2)", color: "var(--accent)" }}>
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" /></svg>
-    </span>
   );
 }
 
@@ -213,51 +211,9 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   const lockId = lockP?.profile[lockP.profile.length - 1]?.id;
   const clip = sys.parts.find((x) => x.scope === "meeting" && x.enabled !== false);
   const meetIsHandle = !!meet && !!lockId && meet.meshProfile === lockId;
+  const kindOf = (q?: typeof meet) => findProfile(lib, q?.profile[q.profile.length - 1]?.id ?? "")?.kind;
+  const bombay = !!meet && !!lockP && kindOf(meet) === "interlock" && kindOf(lockP) === "handle";
   const len = (um: Um | null | undefined) => (um != null ? fmtLen(um, unit).replace(/~/g, "") : "—");
-  const sectionOf = (partId: string, mesh: boolean) => {
-    const p = sys.parts.find((x) => x.id === partId);
-    if (!p) return undefined;
-    const id = mesh && p.meshProfile ? p.meshProfile : (p.profile.find((c) => matches(c.when, vars)) ?? p.profile[p.profile.length - 1])?.id;
-    return findProfile(lib, id ?? "");
-  };
-  // the shop's name for the pipe (Handle, Interlock, Bearing…), whatever the catalogue calls it
-  const code = (pr?: { codes?: Record<string, string>; size?: string }) =>
-    [[...new Set(Object.values(pr?.codes ?? {}).filter(Boolean))].join(" / "), pr?.size ? `${pr.size} mm` : ""].filter(Boolean).join(" · ");
-  const line = (key: string, title: string, sub: string, value: string, on: boolean, onClick: () => void, badge?: string, hint?: string, inside?: string) => (
-    <button key={key} type="button" onClick={onClick} aria-label={`Change ${title}`}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-left" style={{ background: on ? "var(--surface-2)" : undefined }}>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold leading-tight">{title}{badge && <span className="ml-1.5 text-[11px] font-bold" style={{ color: "var(--accent)" }}>{badge}</span>}</span>
-        {hint && <span className="block text-xs leading-snug" style={{ color: "var(--ink-2)" }}>{hint}</span>}
-        <span className="block truncate text-[11px]" style={{ color: "var(--ink-3)" }}>{sub}</span>
-      </span>
-      <span className="shrink-0 text-right">
-        <span className="mono block text-[15px] font-bold">{value}</span>
-        {inside && <span className="block text-[11px]" style={{ color: "var(--ink-3)" }}>inside {inside}</span>}
-      </span>
-      <Pen />
-    </button>
-  );
-  const rows = (ms: Member[], mesh: boolean, frame: boolean) => {
-    const seen = new Set<string>();
-    return ms
-      .filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true)))
-      .sort((a, b) => ORDER.indexOf(a.place) - ORDER.indexOf(b.place))
-      .map((m) => {
-        const p = sys.parts.find((x) => x.id === m.partId);
-        const pr = sectionOf(m.partId, mesh);
-        const on = pick?.type === "part" && pick.id === m.partId;
-        const value = len(p ? values[p.length] : null);
-        const ins = p && cut45(m, vars) && values[p.length] != null ? len(values[p.length]! - insideLoss(m, geo)) : undefined;
-        // a Normal window cut 45° on its track or shutter shows it on every piece
-        const badge = cut45(m, vars) ? "45°" : undefined;
-        if (frame) return line(m.partId, PLACE[m.place] ?? "Piece", [pr ? sectionTitle(pr.name) : "No section", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, undefined, ins);
-        // "Bearing · top" / "Handle": the same names as on the drawings
-        const base = (pr?.kind && KIND_NAMES[pr.kind]) || (p ? p.role.replace(/{[a-z]+}/g, "").replace(/\b(Top|Bottom)\b/g, "").trim() : "Piece");
-        const name = base + (m.place === "sash-top" ? " · top" : m.place === "sash-bottom" ? " · bottom" : "");
-        return line(m.partId, name, [pr ? sectionTitle(pr.name) : "", code(pr)].filter(Boolean).join(" · "), value, on, () => onPick({ type: "part", id: m.partId }), badge, undefined, ins);
-      });
-  };
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
   const pane = `${len(values[sys.infill.w])} × ${len(values[sys.infill.h])}`;
   const CARD: React.CSSProperties = { borderRadius: 22, background: "var(--surface)", border: "1px solid var(--line)",
@@ -271,13 +227,10 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
 
   return (
     <div className="mt-3 flex flex-col gap-3">
-      <p className="flex items-center gap-2 px-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
-        <Pen /> Tap any line to change its pipe or its cut.
-      </p>
       <div className="overflow-hidden" style={CARD}>
         {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="border-t px-2 py-1" style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--surface-2), var(--surface) 70%)" }}><TrackSketch geo={geo} labels={labels} pick={pick} onPick={onPick} /></div>
-        <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>{rows(geo.frame, false, true)}</div>
+        <p className="border-t px-4 py-2.5 text-xs" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>Tap a size to change it.</p>
       </div>
 
       {/* the shutters, one card each, side by side: swipe to the next (founder 2026-11-18) */}
@@ -300,7 +253,6 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
           {geo.shutters.map((s) => {
             const k = mix[s.index] ?? s.kind;
             const mesh = k === "J";
-            const on = pick?.type === "shutter" && pick.index === s.index;
             return (
               <div key={s.index} className="w-[86%] shrink-0 snap-center overflow-hidden motion-safe:transition-[transform,opacity] motion-safe:duration-300"
                 style={{ ...CARD, transform: at === s.index ? "scale(1)" : "scale(0.94)", opacity: at === s.index ? 1 : 0.55, transformOrigin: "center top" }}>
@@ -335,10 +287,10 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                   <ShutterSketch geo={geo} index={s.index} kind={k} labels={labels} pane={pane} pick={pick} onPick={onPick} />
                 </div>
                 {/* a mesh shutter: the shop's own way, plain to see and one tap to change */}
-                {mesh && (meet || clip) && (
+                {mesh && (bombay || clip) && (
                   <div className="flex flex-col gap-2 border-t px-4 py-3" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
                     <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--accent)" }}>How you make the mesh shutter</div>
-                    {meet && lockId && meet.id !== lockP?.id && (
+                    {bombay && lockId && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold">Meeting side pipe</span>
                         <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-3)" }}>
@@ -350,7 +302,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                         </div>
                       </div>
                     )}
-                    {clip && (
+                    {!bombay && clip && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold">Interlock clip on mesh shutter</span>
                         <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-3)" }}>
@@ -365,10 +317,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                     <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Applies to every mesh shutter of this system.</p>
                   </div>
                 )}
-                <div className="divide-y border-t" style={{ borderColor: "var(--line)" }}>
-                  {rows([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh, false)}
-                  {line(`pane${s.index}`, fill(k), "Width × height", pane, on, () => onPick({ type: "shutter", index: s.index }))}
-                </div>
+                <p className="px-4 py-2.5 text-xs" style={{ color: "var(--ink-3)" }}>Tap a size to change it. Tap the {fill(k).toLowerCase()} for its size.</p>
               </div>
             );
           })}
