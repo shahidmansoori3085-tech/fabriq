@@ -66,11 +66,11 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, more, on
 
       <Step n={1} title="Your size">
         <input autoFocus className="field w-full px-3 py-3 text-lg font-semibold" inputMode="text" value={raw} onChange={(e) => setRaw(e.target.value)}
-          placeholder="46.5  or  1180 mm  or  3'10.5" aria-label="Your size" />
+          placeholder="48.7  or  1180 mm  or  3'10.5" aria-label="Your size" />
         <p className="mt-1.5 text-xs" style={{ color: bad ? "var(--bad)" : "var(--ink-3)" }}>
           {bad ? "Type it like 46.5 (inch.sut), 1180 mm or 3'10.5 (feet)."
             : um !== null ? <>= <b className="mono" style={{ color: "var(--ink)" }}>{fmtLen(um, "in").replace(/~/g, "")}</b> · {Math.round(um / 1000)} mm</>
-            : "Any unit: inch.sut, mm, cm or feet. Leave empty to keep the size."}
+            : <>Write sut after a dot: <b style={{ color: "var(--ink)" }}>48.7</b> = 48 inch 7 sut. Or type mm, cm or feet.</>}
         </p>
       </Step>
 

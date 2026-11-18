@@ -701,6 +701,7 @@ function WindowBar({ sys, unit, onUnit, W, H, tracks, mix, switches, onSize, onL
             onChange={(e) => { setH(e.target.value); commit(w, e.target.value); }} />
         </Field>
       </div>
+      {unit !== "mm" && <p className="mt-1.5 text-xs" style={{ color: "var(--ink-3)" }}>Write sut after a dot: <b style={{ color: "var(--ink)" }}>48.7</b> = 48 inch 7 sut.</p>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {sys.layouts.map((l) => (
           <button key={l.tracks} onClick={() => onLayout(l.tracks, l.mixes[0])} aria-pressed={l.tracks === tracks}
