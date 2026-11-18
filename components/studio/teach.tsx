@@ -194,7 +194,7 @@ export function TeachPanel({ sys, lib, unit, onUnit, job, onChange }: {
           <div className="card mt-4 p-4" style={{ borderColor: "var(--accent)" }}>
             <div className="text-[15px] font-bold">Type your cuts here</div>
             <div className="mt-0.5 text-xs leading-snug" style={{ color: "var(--ink-3)" }}>
-              {fmtLen(win.W, unit).replace(/~/g, "")} × {fmtLen(win.H, unit).replace(/~/g, "")} ki window banane mein aap har pipe ki jo cutting size rakhte hain, woh neeche daaliye. Isi se formula banega, aur aage material list aur cutting list isi hisaab se banegi.
+              {fmtLen(win.W, unit).replace(/~/g, "")} × {fmtLen(win.H, unit).replace(/~/g, "")} ki window mein har pipe kitne naap ka katta hai, woh neeche daaliye. App isi se aapka formula banayega. Aage ki material list aur cutting list isi formule se banegi.
             </div>
           </div>
           <div className="card divide-y" style={{ borderColor: "var(--line)" }}>
