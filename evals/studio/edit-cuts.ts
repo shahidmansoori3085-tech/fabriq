@@ -4,7 +4,7 @@
  * the handle pipe on its meeting side.
  */
 import { evaluate, jobVars } from "../../lib/studio/evaluate";
-import { NORMAL_18, withJoint } from "../../lib/studio/templates";
+import { NORMAL_18, DOMAL_27, withJoint } from "../../lib/studio/templates";
 import { bumpCut, bumpSize, ownCut } from "../../lib/studio/edit";
 import { UM_PER_SUT, inches } from "../../lib/engine/units";
 
@@ -41,6 +41,13 @@ const e = { ...sys, parts: sys.parts.map((p) => (p.id === "interlock" ? { ...p, 
 const s2 = evaluate(e, job).pieces.filter((p) => /^S2/.test(p.role));
 check(s2.filter((p) => p.sectionId === "handle_std").length === 2 && !s2.some((p) => p.sectionId === "interlock"), "mesh shutter: handle on both sides");
 check(evaluate(e, job).pieces.some((p) => /^S1 Interlock/.test(p.role) && p.sectionId === "interlock"), "glass shutter keeps its interlock");
+
+// interlock clip on a mesh shutter: off by default (glass meetings only), on when the shop clips it too
+const dj = { id: "D1", W: inches(72), H: inches(60), qty: 1, tracks: 3, mix: "GGJ" };
+const clips = (s: typeof DOMAL_27) => evaluate(s, dj).pieces.filter((x) => s.parts.find((q) => q.scope === "meeting" && x.role.startsWith(q.role.replace(/s*{k}/, ""))) ).length;
+const meetId = DOMAL_27.parts.find((q) => q.scope === "meeting")!.id;
+const on = { ...DOMAL_27, parts: DOMAL_27.parts.map((q) => (q.id === meetId ? { ...q, onMesh: true } : q)) };
+check(clips(on) === clips(DOMAL_27) * 2, `clip on mesh: ${clips(DOMAL_27)} → ${clips(on)}`);
 
 if (fails) process.exit(1);
 console.log("drawing edits: − / + by the sut, own length, mesh handle ✓");

@@ -134,7 +134,7 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     .map((id) => trace.find((t) => t.id === id)?.label ?? id);
   // a part with no section chosen cannot be bought or packed
   for (const p of parts) {
-    const used = p.scope === "meeting" ? meetings > 0 : p.scope === "between" ? kinds.length > 1 : p.scope === "shutter" ? kinds.length > 0 : true;
+    const used = p.scope === "meeting" ? (p.onMesh ? kinds.length > 1 : meetings > 0) : p.scope === "between" ? kinds.length > 1 : p.scope === "shutter" ? kinds.length > 0 : true;
     if (used && !profileFor(p)) missing.push(`Section for ${p.role.replace(/\{.\}/g, "").trim()}`);
   }
   if (missing.length && !opts.allowUnknown) throw new StudioUnknownError(missing);
@@ -174,7 +174,9 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
     }
     let k = 0;
     for (const p of parts.filter((x) => x.scope === "meeting")) {
-      for (let c = 0; c < p.count * meetings; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(++k)), p.angle);
+      // meetings of glass shutters only, or of every two shutters when the shop clips the mesh one too
+      const m = p.onMesh ? Math.max(0, kinds.length - 1) : meetings;
+      for (let c = 0; c < p.count * m; c++) push(profileFor(p), len(p.length), p.role.replace("{k}", String(++k)), p.angle);
     }
   }
 

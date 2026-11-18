@@ -78,6 +78,9 @@ export interface PartDef {
   place?: Place;
   /** cut only for glass shutters (glazing clip) */
   onlyGlass?: boolean;
+  /** a meeting piece (interlock clip / patti) the shop also fits where a mesh shutter meets
+   *  (founder 2026-11-18: some shops do, some do not; default not) */
+  onMesh?: boolean;
   /** true = the shop picks this part's section per SHUTTER (e.g. slim interlock small on one, big on another) */
   perShutter?: boolean;
   /** draw / build the section turned the other way round (its face mirrored) */

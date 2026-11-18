@@ -201,7 +201,7 @@ export function windowGeometry(
     const pw = Math.max(6, f.mm);
     for (let i = 0; i < n - 1; i++) {
       const a = shutters[i], c = shutters[i + 1];
-      if (a.kind === "J" || c.kind === "J") continue;
+      if (!pp.onMesh && (a.kind === "J" || c.kind === "J")) continue;
       const ax = a.x + a.w, cx = c.x;
       patti.push({ partId: pp.id, place: "meeting", shutter: i, known: f.known, vertical: true, poly: [[ax - pw, a.y + 8], [ax, a.y + 8], [ax, a.y + a.h - 8], [ax - pw, a.y + a.h - 8]] });
       patti.push({ partId: pp.id, place: "meeting", shutter: i + 1, known: f.known, vertical: true, poly: [[cx, c.y + 8], [cx + pw, c.y + 8], [cx + pw, c.y + c.h - 8], [cx, c.y + c.h - 8]] });

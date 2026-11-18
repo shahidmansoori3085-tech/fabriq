@@ -334,7 +334,8 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
           onSwitch={(id, v) => setSwitches((x) => ({ ...x, [id]: v }))} />
       </div>
       {/* the same window, part by part: the track, then each shutter */}
-      {!view3d && <WindowParts sys={sys} lib={lib} unit={unit} geo={geo} values={values} vars={vars} mix={mix} pick={pick} onPick={setPick} />}
+      {!view3d && <WindowParts sys={sys} lib={lib} unit={unit} geo={geo} values={values} vars={vars} mix={mix} pick={pick} onPick={setPick}
+        onSys={(next, note) => onChange(next, note)} onKind={(i, k) => setMix((m) => m.slice(0, i) + k + m.slice(i + 1))} />}
 
       <div className="card mt-4 overflow-hidden">
         <div className="divide-y" style={{ borderColor: "var(--line)" }}>
