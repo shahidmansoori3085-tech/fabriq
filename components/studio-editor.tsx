@@ -279,9 +279,11 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
       {/* the window, drawn to scale with every cut on it: tap a pipe or a pane to change it
           (founder 2026-11-17: the drawing is the page — like the big window software) */}
       <div ref={top} className="card mt-4 overflow-hidden" style={{ scrollMarginTop: 8 }}>
-        <div className="flex items-center justify-between gap-2 px-4 pt-3">
-          <span className="text-[13px] font-semibold" style={{ color: pick ? "var(--accent)" : "var(--ink-3)" }}>
-            {view3d ? "Drag to turn it" : pick ? "Tap empty space to close" : "Tap any pipe or the glass"}
+        <div className="flex items-start justify-between gap-2 px-4 pt-3">
+          <span className="min-w-0">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>Window</span>
+            <span className="mono block text-[22px] font-bold leading-tight">{fmtLen(W, unit).replace(/~/g, "")} × {fmtLen(H, unit).replace(/~/g, "")}</span>
+            <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{layoutLabel(sys, tracks)} · {mixText(mix)}</span>
           </span>
           <Seg small value={view3d ? "3d" : "2d"} onChange={(v) => { setView3d(v === "3d"); setPick(null); }} options={[{ value: "2d", label: "Drawing" }, { value: "3d", label: "3D" }]} />
         </div>

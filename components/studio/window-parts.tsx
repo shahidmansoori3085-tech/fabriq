@@ -241,6 +241,8 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   const bombay = !!meet && !!lockP && kindOf(meet) === "interlock" && kindOf(lockP) === "handle";
   const len = (um: Um | null | undefined) => (um != null ? fmtLen(um, unit).replace(/~/g, "") : "—");
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
+  // every card says which window its cuts are for
+  const forWin = `for ${values.W != null ? fmtLen(values.W, unit).replace(/~/g, "") : "?"} × ${values.H != null ? fmtLen(values.H, unit).replace(/~/g, "") : "?"} window`;
   const pane = `${len(values[sys.infill.w])} × ${len(values[sys.infill.h])}`;
   const CARD: React.CSSProperties = { borderRadius: 22, background: "var(--surface)", border: "1px solid var(--line)",
     boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 8px 24px -8px rgba(15,23,42,.14)" };
@@ -254,7 +256,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="overflow-hidden" style={CARD}>
-        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
+        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-right text-xs" style={{ color: "var(--ink-3)" }}><span className="block font-semibold" style={{ color: "var(--ink-2)" }}>{forWin}</span>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="border-t px-2 py-1" style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--surface-2), var(--surface) 70%)" }}><TrackSketch geo={geo} labels={labels} pick={pick} onPick={onPick} /></div>
         {sections(geo.frame)}
       </div>
@@ -286,7 +288,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: "var(--surface-3)", color: "var(--ink)" }}>{s.index + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[16px] font-bold leading-tight">Shutter {s.index + 1}</span>
-                    <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{s.index + 1} of {geo.shutters.length} · {fill(k)}</span>
+                    <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{s.index + 1} of {geo.shutters.length} · {fill(k)} · {forWin}</span>
                   </span>
                   {geo.shutters.length > 1 && (
                     <span className="flex shrink-0 gap-1">
