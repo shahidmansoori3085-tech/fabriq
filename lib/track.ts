@@ -110,6 +110,9 @@ export function markInstalls(): void {
     sendWhenReady("/from/home-screen", () => sessionStorage.setItem("fabriq.home", "1"));
     const v = via();
     if (v) sendWhenReady(`/via/${v}/home-screen`);
+    // tie the opening to the phone's code, so the report can say which of
+    // the people who made lists or sent orders came in through the icon
+    sendWhenReady(`/u/${ensureUid()}/home-screen`);
   } catch {
     /* storage or analytics blocked — the app works the same */
   }
@@ -161,6 +164,15 @@ const UID_KEY = "fabriq.uid";
 function uid(): string | null {
   try { return localStorage.getItem(UID_KEY); } catch { return null; }
 }
+/** this phone's code, made on first need (storage errors are the caller's) */
+function ensureUid(): string {
+  let id = localStorage.getItem(UID_KEY);
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(UID_KEY, id);
+  }
+  return id;
+}
 /** today in India, YYYY-MM-DD */
 const istDay = (t: number) => new Date(t + 5.5 * 3600_000).toISOString().slice(0, 10);
 
@@ -168,11 +180,7 @@ export function markVisitor(): void {
   try {
     const today = istDay(Date.now());
     if (localStorage.getItem("fabriq.seen") === today) return; // counted today already
-    let id = localStorage.getItem(UID_KEY);
-    if (!id) {
-      id = Math.random().toString(36).slice(2, 8);
-      localStorage.setItem(UID_KEY, id);
-    }
+    const id = ensureUid();
     // first day: kept from the first visit after this change; for a phone that
     // was here before, its oldest saved job says when it started
     let first = localStorage.getItem("fabriq.first");
