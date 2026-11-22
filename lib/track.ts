@@ -248,3 +248,25 @@ export function markFeedback(what: "ok" | "wrong", system: string, reason?: stri
   const n = (note ?? "").trim().toLowerCase().replace(/[^a-z0-9\u0900-\u097f.x]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
   if (n) view(`/feedback/note/${sys}/${n}`);
 }
+
+/* —— shops changing their own systems (System Studio) ——
+ * Counted once per visit for each system and kind of change, so a shop typing
+ * a size letter by letter is still one change:
+ *   /done/system/<kind>                 how many changed anything
+ *   /done/system/<kind>/<built-in>      which built-in series it started from
+ *   /u/<code>/system-<kind>             who: the same code as their lists and orders
+ * Nothing about the sizes or the shop is sent.
+ */
+export type SystemEdit = "cut-changed" | "changed" | "new" | "section-added" | "deleted";
+
+export function markSystem(kind: SystemEdit, sysId: string, basedOn?: string): void {
+  try {
+    const key = `fabriq.sys.${kind}.${sysId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch { /* storage blocked — count it anyway */ }
+  view(`/done/system/${kind}`);
+  if (basedOn) view(`/done/system/${kind}/${slug(basedOn)}`);
+  const u = uid();
+  if (u) view(`/u/${u}/system-${kind}`);
+}
