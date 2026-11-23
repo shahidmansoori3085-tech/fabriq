@@ -550,13 +550,19 @@ export function shutterSize(item: JobItem, d: { shutterHeightDeduction: Um }) {
   return { shutterW, shutterH };
 }
 
+/** Domal and Z frames and shutters are joined at 45° — the cutting sheet says so, as the
+ *  same systems do in the Studio (the lengths are already the long-point lengths). */
+function mitred(pieces: CutPiece[], sections: RegExp): CutPiece[] {
+  return pieces.map((p) => (sections.test(p.sectionId) && !p.angle ? { ...p, angle: 45 as const } : p));
+}
+
 /** Expand one item (×qty) into cut pieces */
 export function expandItem(item: JobItem): CutPiece[] {
   if (item.system === "studio") return studioResult(item).r.pieces;
-  if (item.system === "domal") return expandDomalItem(item);
+  if (item.system === "domal") return mitred(expandDomalItem(item), /^domal_(frame|frame_2t|glass_shutter|jali_shutter)$/);
   if (item.system === "door_single") return expandDoorItem(item);
   if (item.system === "partition") return expandPartitionItem(item);
-  if (item.system === "z_section") return expandZSectionItem(item);
+  if (item.system === "z_section") return mitred(expandZSectionItem(item), /^z_(outer|pipe)_/);
   return expandNormalItem(item);
 }
 

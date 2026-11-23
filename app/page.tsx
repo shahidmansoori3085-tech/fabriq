@@ -33,7 +33,7 @@ import { evaluate } from "@/lib/studio/evaluate";
 import { markInstalls, markMade, markSource, markStep, markVisitor } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
-import { getSection, setJobBarLengths, jobBarLengths, pipeMeta, usualBarFt } from "@/lib/engine/sections";
+import { getSection, setJobBarLengths, jobBarLengths, jobMeta, usualBarFt } from "@/lib/engine/sections";
 import { PIPE_MAX_FT, pipeMark, pipeText } from "@/lib/engine/pipe";
 import { PipeLength } from "@/components/pipe-length";
 import { Sheet } from "@/components/studio-ui";
@@ -325,6 +325,8 @@ function optsFromItem(it: JobItem): Opts {
     pick("tracks", m.tracks); pick("mix", m.mix); pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
     o.normalSection = m.shutterSection === "60" ? "60" : "40";
   }
+  // its opening, so an edit does not put it back to the system's default
+  if (it.type === "window" && m.shutterSplit) o.opening = m.shutterSplit === "equal" ? "66" : "50";
   o.kind = kindOfSys(o.sys);
   return o;
 }
@@ -606,7 +608,7 @@ export default function FabriQ() {
       // Next free number, not length+1 — deleting W2 must not make two W3s.
       const n = prev.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0) + 1;
       const it = buildJobItem(n, type, w, h, qty, withShopChoices(meta));
-      return [...prev, { ...it, meta: { ...it.meta, ...pipeMeta(prev) } }];
+      return [...prev, { ...it, meta: { ...it.meta, ...jobMeta(prev) } }];
     });
   };
 
@@ -615,7 +617,10 @@ export default function FabriQ() {
     const n = parseInt(id.slice(1), 10) || 1;
     setItems((prev) => {
       const next = buildJobItem(n, type, w, h, qty, withShopChoices(meta));
-      const kept = { ...next, meta: { ...next.meta, ...pipeMeta(prev) } };
+      const old = prev.find((it) => it.id === id)?.meta ?? {};
+      // the job's pipes, and this window's own 90° / 45° cutting, stay as they were
+      const own = Object.fromEntries((["joint", "sash"] as const).flatMap((k) => (old[k] ? [[k, old[k]]] : [])));
+      const kept = { ...next, meta: { ...next.meta, ...jobMeta(prev), ...own } };
       return prev.map((it) => (it.id === id ? kept : it));
     });
   };
@@ -2374,19 +2379,8 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
     onItems(next);
     return null;
   };
-  /** the other sections this piece can be, as the window's own system offers them */
-  const swapsOf = (sid: string) => {
-    const out = new Map<string, string>();
-    for (const it of items) {
-      const sys = it.system === "studio" ? systemOfItem(it) : undefined;
-      for (const sw of sys?.switches ?? []) if (sw.id.startsWith("pick_") && sw.options.some((op) => op.value === sid))
-        // a big slim goes with a small one only (founder): it is chosen in the window steps, not here
-        for (const op of sw.options) if (op.value !== sid && !/\bbig\b/i.test(op.label)) out.set(op.value, op.label);
-    }
-    return [...out.entries()];
-  };
-  const swapTo = (sid: string, to: string) => {
-    onItems(items.map((it) => {
+  /** the job with one section changed for another, in every window that offers both */
+  const swapped = (sid: string, to: string) => items.map((it) => {
       const sys = it.system === "studio" ? systemOfItem(it) : undefined;
       const sw = sys?.switches.find((x) => x.id.startsWith("pick_") && x.options.some((op) => op.value === sid) && x.options.some((op) => op.value === to));
       if (!sw) return it;
@@ -2395,7 +2389,21 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
       const meta: Record<string, string> = { ...it.meta, studioSwitches: JSON.stringify({ ...cur, [sw.id]: to }) };
       if (meta.studioPerShutter) meta.studioPerShutter = meta.studioPerShutter.split(`"${sid}"`).join(`"${to}"`);
       return { ...it, meta };
-    }));
+    });
+  /** the other sections this piece can be, as the window's own system offers them — only those
+   *  the job can really be cut with (a section with no sizes taught yet would stop the whole list) */
+  const swapsOf = (sid: string) => {
+    const out = new Map<string, string>();
+    for (const it of items) {
+      const sys = it.system === "studio" ? systemOfItem(it) : undefined;
+      for (const sw of sys?.switches ?? []) if (sw.id.startsWith("pick_") && sw.options.some((op) => op.value === sid))
+        // a big slim goes with a small one only (founder): it is chosen in the window steps, not here
+        for (const op of sw.options) if (op.value !== sid && !/\bbig\b/i.test(op.label)) out.set(op.value, op.label);
+    }
+    return [...out.entries()].filter(([to]) => { try { estimate(swapped(sid, to)); return true; } catch { return false; } });
+  };
+  const swapTo = (sid: string, to: string) => {
+    onItems(swapped(sid, to));
     setSecSwap(null);
   };
   const aluDocRef = useRef<HTMLDivElement>(null);
@@ -2769,16 +2777,18 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
   const isNormal = (it: JobItem) => it.type === "window" && (it.system === "normal_2t" || it.system === "normal_3t"
     || (it.system === "studio" && /^normal-18/.test(systemOfItem(it)?.basedOn?.id ?? systemOfItem(it)?.id ?? "")));
   const normals = items.filter(isNormal);
-  const joint = normals.length && normals.every((it) => it.meta.joint === "45") ? "45" : "90";
+  const cornerOf = (it: JobItem, key: "joint" | "sash") =>
+    it.meta[key] ?? (it.system === "studio" ? systemOfItem(it)?.switches.find((s) => s.id === key)?.default : undefined) ?? "90";
+  const joint = normals.length && normals.every((it) => cornerOf(it, "joint") === "45") ? "45" : "90";
   const setCorner = (key: "joint" | "sash") => (v: "90" | "45") => onItems(items.map((it) => {
     if (!isNormal(it)) return it;
     const meta = { ...it.meta };
-    if (v === "45") meta[key] = "45"; else delete meta[key];
+    meta[key] = v;
     return { ...it, meta };
   }));
   const setJoint = setCorner("joint");
   // shutter corners (founder 2026-11-17): 45° = handle pipe on all four sides, mitred
-  const sash = normals.length && normals.every((it) => it.meta.sash === "45") ? "45" : "90";
+  const sash = normals.length && normals.every((it) => cornerOf(it, "sash") === "45") ? "45" : "90";
   const setSash = setCorner("sash");
   const sectionGroups = useMemo(() => {
     const map = new Map<string, PackedBar[]>();
@@ -2807,7 +2817,7 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
   const guideOf = (sys: "normal" | "domal") => {
     const ws = items.filter((it) => it.type === "window" && (sys === "domal" ? it.system === "domal" : it.system !== "domal" && it.system !== "z_section"));
     const it = ws.find((w) => w.meta.domalFix === "yes") ?? ws[0];
-    return it ? { panes: it.meta.mix || undefined, fixTop: it.meta.domalFix === "yes", sash45: it.meta.sash === "45" } : {};
+    return it ? { panes: it.meta.mix || undefined, fixTop: it.meta.domalFix === "yes", sash45: cornerOf(it, "sash") === "45" } : {};
   };
   const totalPieces = list.bars.reduce((a, b) => a + b.pieces.length, 0);
   const groups = barGroups(list.sections);

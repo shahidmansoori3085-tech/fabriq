@@ -247,6 +247,16 @@ export function jobBarLengths(items: { meta: Record<string, string> }[]): Record
 export function usualBarFt(id: string): number {
   return (SECTIONS[id] ?? CUSTOM_SECTIONS[id])?.barLengthFt ?? 16;
 }
+/** The job's pipe lengths and its 90° / 45° cutting (chosen on the cutting sheet, for every
+ *  window of the job), to keep on an item that is added or edited. */
+export function jobMeta(items: { meta: Record<string, string> }[]): Record<string, string> {
+  const m = pipeMeta(items);
+  for (const k of ["joint", "sash"]) {
+    const v = [...new Set(items.map((it) => it.meta[k]).filter(Boolean))];
+    if (v.length === 1) m[k] = v[0];
+  }
+  return m;
+}
 /** The job's pipe lengths, to keep on an item that is added or edited. */
 export function pipeMeta(items: { meta: Record<string, string> }[]): Record<string, string> {
   return Object.fromEntries(Object.entries(jobBarLengths(items)).map(([id, ft]) => [`pipe_${id}`, String(ft)]));
