@@ -10,14 +10,27 @@ import type {
 import { packAllSections, summarize } from "./cutting";
 import { getSection } from "./sections";
 import { evaluate as studioEvaluate, StudioUnknownError } from "../studio/evaluate";
-import { systemOfItem, studioJobOf } from "../studio/runtime";
+import { systemOfItem, studioJobOf, takesFixTop } from "../studio/runtime";
 
 /** A System Studio window: pieces, panels and hardware from the shop's own system. */
 function studioResult(item: JobItem) {
   const sys = systemOfItem(item);
   if (!sys) throw new ImpossibleLayoutError(item.id, "system not found on this phone", 0);
   try {
-    return { sys, r: studioEvaluate(sys, { ...studioJobOf(item), sizeLabel: `${formatFtInSut(item.width)}×${formatFtInSut(item.height)}` }) };
+    const sizeLabel = `${formatFtInSut(item.width)}×${formatFtInSut(item.height)}`;
+    const fx = domalFix(item);
+    if (!fx.hasFix || !takesFixTop(sys)) return { sys, r: studioEvaluate(sys, { ...studioJobOf(item), sizeLabel }) };
+    // fixed glass on top: the window below is the sliding zone, the band above is the same SP
+    // frame, clip and glass as the built-in Domal / Normal fixed top
+    const r = studioEvaluate(sys, { ...studioJobOf(item), H: fx.slidingH, sizeLabel });
+    for (let q = 0; q < item.qty; q++) {
+      const wId = `${item.id}${item.qty > 1 ? `.${q + 1}` : ""}`;
+      for (const [sectionId, length, role] of fixTopPieces(item.width, fx)) {
+        r.pieces.push({ sectionId, length, itemId: wId, role, angle: 90, label: `${wId} ${sizeLabel} — ${role}` });
+      }
+    }
+    r.panels.push({ kind: "glass", w: fx.fixedGlassW, h: fx.fixedGlassH, count: item.qty });
+    return { sys, r };
   } catch (e) {
     // a layout the shop has not taught: refuse by name, never guess a cut
     if (e instanceof StudioUnknownError) throw new ImpossibleLayoutError(item.id, `not taught yet in ${sys.name}: ${e.missing.join(", ")}`, 0);
@@ -85,6 +98,16 @@ interface DomalFix {
   slidingH: Um;      // height available to the sliding zone
   fixedGlassW: Um;
   fixedGlassH: Um;
+}
+
+/** The fixed-top band: a full SP frame on the window's frame top, glazing clip on all 4 sides. */
+function fixTopPieces(width: Um, fx: DomalFix): [string, Um, string][] {
+  return [
+    [DOMAL_SP, width, "Fix Top (SP)"], [DOMAL_SP, width, "Fix Bottom (SP)"],
+    [DOMAL_SP, fx.fixRaw, "Fix Left (SP)"], [DOMAL_SP, fx.fixRaw, "Fix Right (SP)"],
+    ["glazing_clip", fx.fixedGlassW, "Fix Clip Top"], ["glazing_clip", fx.fixedGlassW, "Fix Clip Bottom"],
+    ["glazing_clip", fx.fixedGlassH, "Fix Clip Left"], ["glazing_clip", fx.fixedGlassH, "Fix Clip Right"],
+  ];
 }
 
 /** Split an item into its sliding zone + optional fixed-top band. */
@@ -587,16 +610,7 @@ function expandNormalItem(item: JobItem): CutPiece[] {
     pieces.push({ sectionId: top, length: sideH, itemId: wId, role: "Left Side", label: `${wId} ${sizeLabel} — Left Side`, angle: fa });
     pieces.push({ sectionId: top, length: sideH, itemId: wId, role: "Right Side", label: `${wId} ${sizeLabel} — Right Side`, angle: fa });
     pieces.push({ sectionId: bottom, length: trackW, itemId: wId, role: "Bottom", label: `${wId} ${sizeLabel} — Bottom`, angle: fa });
-    if (fx.hasFix) {
-      push(DOMAL_SP, item.width, "Fix Top (SP)");
-      push(DOMAL_SP, item.width, "Fix Bottom (SP)");
-      push(DOMAL_SP, fx.fixRaw, "Fix Left (SP)");
-      push(DOMAL_SP, fx.fixRaw, "Fix Right (SP)");
-      push("glazing_clip", fx.fixedGlassW, "Fix Clip Top");
-      push("glazing_clip", fx.fixedGlassW, "Fix Clip Bottom");
-      push("glazing_clip", fx.fixedGlassH, "Fix Clip Left");
-      push("glazing_clip", fx.fixedGlassH, "Fix Clip Right");
-    }
+    if (fx.hasFix) for (const [sec, len, role] of fixTopPieces(item.width, fx)) push(sec, len, role);
 
     // Shutters — Normal Sliding: glass aur jali dono mein same sections
     item.shutters.forEach((sh, i) => {
@@ -653,16 +667,7 @@ function expandDomalItem(item: JobItem): CutPiece[] {
     // Fixed top band (optional): a full SP frame (top, bottom, 2 sides) sitting
     // on the Domal frame top — the clip cannot hold on the Domal frame, so the
     // band has its own SP bottom (founder-confirmed). Glazing clip on all 4 sides.
-    if (fx.hasFix) {
-      push(DOMAL_SP, item.width, "Fix Top (SP)");
-      push(DOMAL_SP, item.width, "Fix Bottom (SP)");
-      push(DOMAL_SP, fx.fixRaw, "Fix Left (SP)");
-      push(DOMAL_SP, fx.fixRaw, "Fix Right (SP)");
-      push("glazing_clip", fx.fixedGlassW, "Fix Clip Top");
-      push("glazing_clip", fx.fixedGlassW, "Fix Clip Bottom");
-      push("glazing_clip", fx.fixedGlassH, "Fix Clip Left");
-      push("glazing_clip", fx.fixedGlassH, "Fix Clip Right");
-    }
+    if (fx.hasFix) for (const [sec, len, role] of fixTopPieces(item.width, fx)) push(sec, len, role);
 
     // Sliding shutters — each a 4-side mini-frame from one profile.
     item.shutters.forEach((sh, i) => {

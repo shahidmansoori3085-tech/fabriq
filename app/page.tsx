@@ -20,7 +20,7 @@ import {
 import { PieceTooLongError, stockGroups } from "@/lib/engine/cutting";
 import { estimate, ImpossibleLayoutError, partitionLayout, KEEP_OFFCUT } from "@/lib/engine/estimator";
 import { buildJobItem, idPrefix } from "@/lib/engine/quick-item";
-import { systemOfItem, studioSystems, studioSystem, studioReady, systemForWindow, WINDOW_SYSTEMS } from "@/lib/studio/runtime";
+import { systemOfItem, studioSystems, studioSystem, studioReady, systemForWindow, takesFixTop, WINDOW_SYSTEMS } from "@/lib/studio/runtime";
 import { withJoint } from "@/lib/studio/templates";
 import type { StudioSystem } from "@/lib/studio/model";
 import { loadLibrary } from "@/lib/studio/store";
@@ -185,6 +185,7 @@ function metaFor(type: OpeningType, o: Opts): Record<string, string> {
     if (o.studioSw !== "{}") m.studioSwitches = o.studioSw;
     if (o.studioPer !== "[]") m.studioPerShutter = o.studioPer;
     if (o.opening && glassOf(o.mix) >= 3) m.shutterSplit = o.opening === "66" ? "equal" : "half";
+    if (o.domalFix === "yes" && takesFixTop(studioSystem(o.sys.slice(7)))) { m.domalFix = "yes"; m.domalFixFt = o.domalFixFt; }
     return m;
   }
   const m: Record<string, string> = { system: o.sys, tracks: o.tracks, mix: o.mix };
@@ -314,6 +315,7 @@ function optsFromItem(it: JobItem): Opts {
   } else if (it.system === "studio") {
     o.sys = `studio:${m.studioId}`;
     pick("tracks", m.tracks); pick("mix", m.mix); pick("studioSw", m.studioSwitches); pick("studioPer", m.studioPerShutter);
+    pick("domalFix", m.domalFix); pick("domalFixFt", m.domalFixFt);
   } else if (it.system === "z_section") {
     o.sys = "z_section";
     pick("zType", m.zType); pick("zComboDir", m.zComboDir); pick("zFixedFt", m.zFixedFt); pick("zSash", m.zSashCount);
@@ -362,7 +364,8 @@ function itemLabel(it: JobItem): string {
     const s = systemOfItem(it);
     const n = parseInt(m.tracks ?? "", 10) || it.shutters.length;
     const share = m.shutterSplit === "equal" && [...(m.mix ?? "")].filter((k) => k !== "J").length >= 3 ? " · 66% opening" : "";
-    return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}${share}`;
+    const top = m.domalFix === "yes" && takesFixTop(s) ? ` · ${formatFtIn(feet(parseFloat(m.domalFixFt ?? "2") || 2))} fixed top` : "";
+    return `${s?.name ?? "My system"} · ${s ? layoutLabel(s, n) : `${n}`} · ${studioMixText(m.mix ?? "")}${share}${top}`;
   }
   const name = it.system === "domal" ? "Domal" : m.shutterSection === "60" ? 'Normal Sliding 2½"' : "Normal Sliding";
   const mix = labelOf(MIXES[m.tracks ?? "2"] ?? [], m.mix);
@@ -775,7 +778,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
     const meet: StepId[] = st && meetChoices(st, o.tracks, o.mix, parseSw(o.studioSw)).length > 1 ? ["meet"] : [];
     const opening: StepId[] = st && glassOf(o.mix) >= 3 && canShare(st) && !o.opening ? ["opening"] : [];
-    return [...head, ...opts, "tracks", "mix", ...opening, ...meet, "size"];
+    return [...head, ...opts, "tracks", "mix", ...opening, ...meet, ...(takesFixTop(st) ? ["domalFix" as const] : []), "size"];
   }
   if (o.sys === "z_section") {
     return [
@@ -856,7 +859,7 @@ type BoxKey = "w" | "h" | "fix";
  *  differs window to window, so it is typed with each size, not picked once. */
 function fixedPart(type: OpeningType, o: Opts): string | null {
   if (type !== "window") return null;
-  if ((o.sys === "domal" || o.sys === "normal") && o.domalFix === "yes") return "Fixed top";
+  if ((o.sys === "domal" || o.sys === "normal" || (o.sys.startsWith("studio:") && takesFixTop(studioSystem(o.sys.slice(7))))) && o.domalFix === "yes") return "Fixed top";
   if (o.sys === "z_section" && o.zType === "combo") return o.zComboDir === "top" ? "Fixed top" : o.zComboDir === "both" ? "Each fixed side" : o.zComboDir === "center" ? "Fixed middle" : "Fixed side";
   return null;
 }
@@ -2472,27 +2475,6 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
         </div>
       </div>
 
-      {/* the two jobs this screen is for: send the orders */}
-      <div className="no-print flex flex-col gap-2">
-        <div className="px-1 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>Send to dealer on WhatsApp</div>
-        <SendOrder
-          label="Aluminium order"
-          sub={`${total} ${groupsWord(groups)} · ${plural(list.sections.length, "section")}`}
-          filename={pdfName(jobName, "aluminium-order")}
-          text={aluminiumWaText(list, shop.name, jobName)}
-          build={() => elementToPdfBlob(aluDocRef.current!)}
-        />
-        {panels.length > 0 && (
-          <SendOrder
-            label={panelTitle.replace(/ Order$/, " order")}
-            sub={`${plural(panelCount, "piece")} · ${panelSqft.toFixed(1)} sq ft`}
-            filename={pdfName(jobName, "glass-order")}
-            text={glassWaText(list, shop.name, jobName)}
-            build={() => elementToPdfBlob(glassDocRef.current!)}
-          />
-        )}
-      </div>
-
       {secView && <SectionSheet sectionId={secView} pieces={cutRows(list.bars.filter((b) => b.sectionId === secView))} onClose={() => setSecView(null)}
         onEdit={findStudioProfile(loadStudioLibrary(), secView) ? () => { window.location.href = `/studio?section=${encodeURIComponent(secView)}`; } : undefined} />}
       {secSwap && (
@@ -2510,9 +2492,17 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
       )}
       {/* aluminium: one row per section — drawing first, that is what he recognises */}
       <div className="card overflow-hidden">
-        <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
+        {/* the order to the dealer is sent from here, beside the list it sends (founder 2026-11-23) */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2 pl-4 pr-2" style={{ background: "var(--surface-2)" }}>
           <span className="text-sm font-bold">Aluminium</span>
-          <span className="text-xs tabnum" style={{ color: "var(--ink-3)" }}>{plural(list.sections.length, "section")}</span>
+          <span className="min-w-0 flex-1 text-xs tabnum" style={{ color: "var(--ink-3)" }}>{plural(list.sections.length, "section")}</span>
+          <SendOrder compact
+            label="Aluminium order"
+            sub={`${total} ${groupsWord(groups)} · ${plural(list.sections.length, "section")}`}
+            filename={pdfName(jobName, "aluminium-order")}
+            text={aluminiumWaText(list, shop.name, jobName)}
+            build={() => elementToPdfBlob(aluDocRef.current!)}
+          />
         </div>
         {list.sections.map((s) => {
           const sec = getSection(s.sectionId);
@@ -2541,11 +2531,21 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
         })}
       </div>
 
-      {panels.map((r) => (
+      {panels.map((r, ri) => (
         <div key={r.title} className="card overflow-hidden">
-          <div className="flex items-baseline justify-between px-4 py-2.5" style={{ background: "var(--surface-2)" }}>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2 pl-4 pr-2" style={{ background: "var(--surface-2)" }}>
             <span className="text-sm font-bold">{r.title}</span>
-            <span className="text-xs tabnum" style={{ color: "var(--ink-3)" }}>{r.sub}</span>
+            <span className="min-w-0 flex-1 text-xs tabnum" style={{ color: "var(--ink-3)" }}>{r.sub}</span>
+            {/* one order for glass, mesh and sheet together, on the first of them */}
+            {ri === 0 ? (
+              <SendOrder compact
+                label={panelTitle.replace(/ Order$/, " order")}
+                sub={`${plural(panelCount, "piece")} · ${panelSqft.toFixed(1)} sq ft`}
+                filename={pdfName(jobName, "glass-order")}
+                text={glassWaText(list, shop.name, jobName)}
+                build={() => elementToPdfBlob(glassDocRef.current!)}
+              />
+            ) : <span className="h-9" aria-hidden />}
           </div>
           <div className="flex items-center justify-between px-4 py-1.5 text-[11px] font-semibold"
             style={{ borderTop: "1px solid var(--line)", color: "var(--ink-3)" }}>
@@ -2566,9 +2566,9 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
 }
 
 /** WhatsApp's speech-bubble mark, white on the green button. */
-function WhatsAppMark() {
+function WhatsAppMark({ size = 20 }: { size?: number }) {
   return (
-    <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+    <svg aria-hidden width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
       <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
     </svg>
   );
@@ -2579,8 +2579,10 @@ function WhatsAppMark() {
  * truthfully: sent, cancelled (nothing said), "tap again" when the phone
  * wants a fresh tap, saved-with-a-chat-link on desktop, or failed.
  */
-function SendOrder({ label, sub, filename, text, build }: {
+function SendOrder({ label, sub, filename, text, build, compact }: {
   label: string; sub: string; filename: string; text: string; build: () => Blob | Promise<Blob>;
+  /** a small green button beside a list's title */
+  compact?: boolean;
 }) {
   const [state, setState] = useState<ShareResult | "idle" | "working" | "error">("idle");
   /** Instagram's browser cannot hand a PDF on: that tap goes to Chrome first. */
@@ -2614,6 +2616,40 @@ function SendOrder({ label, sub, filename, text, build }: {
     }
   };
 
+  const said = (
+    <>
+      {state === "downloaded" && (
+        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--ink-3)" }}>
+          PDF saved.{" "}
+          <a href={whatsAppLink(text)} target="_blank" rel="noopener noreferrer" className="font-semibold underline"
+            style={{ color: "var(--wa)" }}>Open WhatsApp</a>{" "}
+          and attach the file.
+        </p>
+      )}
+      {state === "shared" && (
+        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--good)" }}>✓ PDF shared</p>
+      )}
+      {state === "error" && (
+        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--bad)" }}>Could not create the PDF. Please try again.</p>
+      )}
+    </>
+  );
+
+  if (compact) return (
+    <>
+      <button onClick={go} disabled={state === "working"} aria-label={`Send ${label} on WhatsApp · ${sub} · PDF`}
+        className="no-print flex h-9 shrink-0 items-center gap-1.5 rounded-full pl-2.5 pr-3.5 text-sm font-bold text-white disabled:opacity-60"
+        style={{ background: "var(--wa)" }}>
+        <WhatsAppMark size={16} />
+        {state === "working" ? "Preparing…" : state === "needs-tap" ? "Tap to send" : "Send"}
+      </button>
+      {toChrome && inApp && <OpenInChromeSheet app={inApp} what="Sending a PDF" onClose={() => setToChrome(false)} />}
+      {(state === "downloaded" || state === "shared" || state === "error") && (
+        <div className="no-print basis-full [&>p]:mt-0 [&>p]:text-right">{said}</div>
+      )}
+    </>
+  );
+
   return (
     <div className="no-print">
       <button onClick={go} disabled={state === "working"}
@@ -2629,20 +2665,7 @@ function SendOrder({ label, sub, filename, text, build }: {
         <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 6l6 6-6 6" /></svg>
       </button>
       {toChrome && inApp && <OpenInChromeSheet app={inApp} what="Sending a PDF" onClose={() => setToChrome(false)} />}
-      {state === "downloaded" && (
-        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--ink-3)" }}>
-          PDF saved.{" "}
-          <a href={whatsAppLink(text)} target="_blank" rel="noopener noreferrer" className="font-semibold underline"
-            style={{ color: "var(--wa)" }}>Open WhatsApp</a>{" "}
-          and attach the file.
-        </p>
-      )}
-      {state === "shared" && (
-        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--good)" }}>✓ PDF shared</p>
-      )}
-      {state === "error" && (
-        <p className="mt-1.5 text-center text-xs" style={{ color: "var(--bad)" }}>Could not create the PDF. Please try again.</p>
-      )}
+      {said}
     </div>
   );
 }

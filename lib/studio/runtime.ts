@@ -28,6 +28,13 @@ export function systemForWindow(templateId: string): StudioSystem | undefined {
 
 export { WINDOW_SYSTEMS };
 
+/** Systems built like Domal 27 and Normal 18, whose fixed glass on top is the founder-checked
+ *  SP band (founder 2026-11-23: a shop's changed Domal 27 lost the choice). */
+const FIX_TOP = new Set(["domal-27", "normal-18", "normal-18-60"]);
+export function takesFixTop(sys: StudioSystem | undefined): boolean {
+  return !!sys && sys.family !== "casement" && FIX_TOP.has(sys.basedOn?.id ?? sys.id);
+}
+
 /** The system an item was built with: its frozen copy, else the live one. */
 export function systemOfItem(item: JobItem): StudioSystem | undefined {
   // a frozen copy keeps its cuts; it only learns the 45° frame choice (which changes nothing at 90°)

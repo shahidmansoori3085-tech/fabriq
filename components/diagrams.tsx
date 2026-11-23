@@ -3,7 +3,7 @@
  * FabriQ visual language (D12): the fabricator SEES what is being asked.
  * Deterministic SVG renderers — dimensions always come from engine data.
  */
-import { systemOfItem, studioJobOf, shopProfile } from "@/lib/studio/runtime";
+import { systemOfItem, studioJobOf, shopProfile, takesFixTop } from "@/lib/studio/runtime";
 import { windowGeometry } from "@/lib/studio/geometry";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import WindowDrawing from "./studio-drawing";
@@ -11,7 +11,7 @@ import { Um, formatFtInSut, formatFtIn, toFeet } from "@/lib/engine/units";
 import type { ShutterConfig, PackedBar, JobItem } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
 import { pipeMark } from "@/lib/engine/pipe";
-import { partitionLayout } from "@/lib/engine/estimator";
+import { partitionLayout, domalFix } from "@/lib/engine/estimator";
 
 /* ——— fills shared by elevations ——— */
 function glassFill(x: number, y: number, w: number, h: number, key: string) {
@@ -42,8 +42,21 @@ export function MiniElevation({ item, size = 60 }: { item: JobItem; size?: numbe
   if (item.system === "studio") {
     const sys = systemOfItem(item);
     if (sys) {
-      const g = windowGeometry(sys, studioJobOf(item), (id) => shopProfile(id) ?? BUILT_IN_PROFILES.find((p) => p.id === id));
-      return <span className="inline-block" style={{ width: size }}><WindowDrawing g={g} unit="in" pick={null} compact /></span>;
+      const fx = domalFix(item);
+      const fix = fx.hasFix && takesFixTop(sys);
+      const g = windowGeometry(sys, { ...studioJobOf(item), ...(fix && { H: fx.slidingH }) }, (id) => shopProfile(id) ?? BUILT_IN_PROFILES.find((p) => p.id === id));
+      const band = fix ? Math.max(10, Math.round((size * fx.fixRaw) / item.width)) : 0;
+      return (
+        <span className="inline-flex flex-col" style={{ width: size }}>
+          {fix && (
+            <svg width={size} height={band} viewBox={`0 0 ${size} ${band}`} aria-hidden className="block">
+              <rect x={0.75} y={0.75} width={size - 1.5} height={band - 0.75} rx={1.5} fill="#dde1e7" stroke="#5a5f6a" strokeWidth={1.5} />
+              {glassFill(3, 3, size - 6, band - 4.5, "fix")}
+            </svg>
+          )}
+          <WindowDrawing g={g} unit="in" pick={null} compact />
+        </span>
+      );
     }
   }
   const ar = item.height / item.width;
