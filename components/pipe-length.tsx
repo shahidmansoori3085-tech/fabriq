@@ -20,26 +20,24 @@ export function PipeLength({ name, ft, usual, onSet }: { name: string; ft: numbe
     <button type="button" disabled={stepPipeFt(ft, d) === ft}
       onClick={() => { const no = onSet(stepPipeFt(ft, d)); setWhy(no ? { at: ft, text: no } : null); }}
       aria-label={`${name}: pipe 1 ft ${d < 0 ? "shorter" : "longer"}`}
-      className="no-print grid h-10 w-10 shrink-0 place-items-center text-xl disabled:opacity-30" style={{ color: "var(--ink-2)" }}>
+      className="no-print grid h-10 w-7 shrink-0 place-items-center text-lg disabled:opacity-30" style={{ color: "var(--ink-2)" }}>
       {d < 0 ? "−" : "+"}
     </button>
   );
   return (
-    <div className="mt-1.5">
-      <div className="flex w-44 max-w-full items-center rounded-[10px]" style={{ border: "1px solid var(--line)" }}>
+    <>
+      <div className="flex w-full items-center rounded-[10px]" style={{ border: "1px solid var(--line)" }}>
         {button(-1)}
-        {/* "pipe" is inside the box, so the length is not taken for the cut piece's */}
         <button type="button" onClick={() => { setWhy(null); setOpen(true); }} aria-label={`${name}: type the pipe length`}
-          className="flex h-10 min-w-0 flex-1 flex-col items-center justify-center whitespace-nowrap leading-none tabnum"
+          className="h-10 min-w-0 flex-1 px-0.5 text-[13px] font-semibold leading-tight tabnum"
           style={{ borderLeft: "1px solid var(--line)", borderRight: "1px solid var(--line)" }}>
-          <span className="text-sm font-semibold">{pipeText(ft)}</span>
-          <span className="mt-0.5 text-[10px]" style={{ color: "var(--ink-3)" }}>pipe</span>
+          {pipeText(ft)}
         </button>
         {button(1)}
       </div>
-      {why?.at === ft && <p role="status" className="no-print mt-1 text-xs leading-snug" style={{ color: "var(--bad)" }}>{why.text}</p>}
+      {why?.at === ft && <p role="status" className="no-print text-right text-xs leading-snug" style={{ color: "var(--bad)", gridColumn: "1 / -1", order: 1 }}>{why.text}</p>}
       {open && <TypeLength name={name} ft={ft} usual={usual} onSet={onSet} onClose={() => setOpen(false)} />}
-    </div>
+    </>
   );
 }
 
