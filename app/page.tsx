@@ -2328,7 +2328,7 @@ function pipeQty(groups: BarGroup[]): string {
 }
 /** The same on the material list: the pipes big, the cut piece's size small (founder 2026-11-22). */
 /** The material list's columns: section, pipe length, what to buy, ⋯ */
-const SECTION_COLS = "minmax(0,1fr) clamp(92px, 29vw, 104px) clamp(60px, 19vw, 72px) 36px";
+const SECTION_COLS = "clamp(60px, 22vw, 96px) minmax(0,1fr) clamp(64px, 21vw, 88px)";
 
 function PipeQty({ groups }: { groups: BarGroup[] }) {
   const full = groups.reduce((a, g) => a + g.full, 0);
@@ -2511,26 +2511,27 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
           <span>Section</span>
           <span className="text-center">Pipe length</span>
           <span className="text-right">Buy</span>
-          <span />
         </div>
         {list.sections.map((s) => {
           const sec = getSection(s.sectionId);
           return (
-            <div key={s.sectionId} className="grid items-center gap-x-1.5 gap-y-1 py-2.5 pl-3 pr-1" style={{ gridTemplateColumns: SECTION_COLS, borderTop: "1px solid var(--line)" }}>
+            <div key={s.sectionId} className="grid items-center gap-x-1.5 gap-y-1 py-2.5 pl-3 pr-3" style={{ gridTemplateColumns: SECTION_COLS, borderTop: "1px solid var(--line)" }}>
               <div className="min-w-0 [&>span]:!w-full [&>span]:max-w-[80px] [&_img]:!w-full">
                 <SectionProfile sectionId={s.sectionId} w={72} h={44} />
                 <div className="mt-0.5 break-words text-xs font-semibold leading-tight">{sec.label}</div>
               </div>
               <PipeLength name={sec.label} ft={sec.barLengthFt ?? 16} usual={usualBarFt(s.sectionId)} onSet={(ft) => setPipe(s.sectionId, ft)} />
-              <div className="text-right">
+              <div className="flex flex-col items-end text-right">
                 <PipeQty groups={s.stock} />
                 <div className="mt-1 text-[10px] leading-tight" style={{ color: "var(--ink-3)" }}>{groupsWord(s.stock)}</div>
-              </div>
+                <div className="-mb-2 -mr-2">
               <DotsMenu label={`${sec.label} options`} items={[
                 { label: "View details", onClick: () => setSecView(s.sectionId) },
                 ...(findStudioProfile(loadStudioLibrary(), s.sectionId) ? [{ label: "Edit section", onClick: () => { window.location.href = `/studio?section=${encodeURIComponent(s.sectionId)}`; } }] : []),
                 ...(swapsOf(s.sectionId).length ? [{ label: "Change section", onClick: () => setSecSwap(s.sectionId) }] : []),
               ]} />
+                </div>
+              </div>
             </div>
           );
         })}

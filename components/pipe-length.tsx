@@ -20,18 +20,19 @@ export function PipeLength({ name, ft, usual, onSet }: { name: string; ft: numbe
     <button type="button" disabled={stepPipeFt(ft, d) === ft}
       onClick={() => { const no = onSet(stepPipeFt(ft, d)); setWhy(no ? { at: ft, text: no } : null); }}
       aria-label={`${name}: pipe 1 ft ${d < 0 ? "shorter" : "longer"}`}
-      className="no-print grid h-10 w-7 shrink-0 place-items-center text-lg disabled:opacity-30" style={{ color: "var(--ink-2)" }}>
+      className="no-print grid h-10 w-7 shrink-0 place-items-center text-lg max-[340px]:w-6 disabled:opacity-30" style={{ color: "var(--ink-2)" }}>
       {d < 0 ? "−" : "+"}
     </button>
   );
   return (
     <>
-      <div className="flex w-full items-center rounded-[10px]" style={{ border: "1px solid var(--line)" }}>
+      <div className="mx-auto flex w-full max-w-[112px] items-center rounded-[10px]" style={{ border: "1px solid var(--line)" }}>
         {button(-1)}
         <button type="button" onClick={() => { setWhy(null); setOpen(true); }} aria-label={`${name}: type the pipe length`}
-          className="h-10 min-w-0 flex-1 px-0.5 text-[13px] font-semibold leading-tight tabnum"
+          className="h-10 min-w-0 flex-1 whitespace-nowrap px-0.5 text-[13px] font-semibold leading-tight tabnum"
           style={{ borderLeft: "1px solid var(--line)", borderRight: "1px solid var(--line)" }}>
-          {pipeText(ft)}
+          {/* feet on one line; inches, if any, under it */}
+          {pipeText(ft).split(/(?<= ft) /).map((p, i) => <span key={i} className={i ? "block text-[11px] font-medium" : "block"}>{p}</span>)}
         </button>
         {button(1)}
       </div>
