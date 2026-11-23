@@ -1285,7 +1285,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=2, mix=GG": [
   "buy domal_frame_2t full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:9",
+  "buy domal_glass_shutter full:1 piece:8",
   "buy domal_interlock full:0 piece:8",
   "cut domal_frame_2t 1219200 Frame Bottom",
   "cut domal_frame_2t 1219200 Frame Left",
@@ -1333,7 +1333,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=2, mix=JJ": [
   "buy domal_frame_2t full:1 piece:0",
-  "buy domal_jali_shutter full:1 piece:9",
+  "buy domal_jali_shutter full:1 piece:8",
   "cut domal_frame_2t 1219200 Frame Bottom",
   "cut domal_frame_2t 1219200 Frame Left",
   "cut domal_frame_2t 1219200 Frame Right",
@@ -1355,7 +1355,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=3, mix=GGJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:9",
+  "buy domal_glass_shutter full:1 piece:8",
   "buy domal_interlock full:0 piece:8",
   "buy domal_jali_shutter full:0 piece:12",
   "cut domal_frame 1219200 Frame Bottom",
@@ -1386,7 +1386,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=3, mix=GGG": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:2 piece:5",
+  "buy domal_glass_shutter full:2 piece:4",
   "buy domal_interlock full:1 piece:0",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
@@ -1417,7 +1417,7 @@
  "Domal 1219200x1219200 | domalFix=no, tracks=3, mix=GJJ": [
   "buy domal_frame full:1 piece:0",
   "buy domal_glass_shutter full:0 piece:12",
-  "buy domal_jali_shutter full:1 piece:9",
+  "buy domal_jali_shutter full:1 piece:8",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
   "cut domal_frame 1219200 Frame Right",
@@ -1444,7 +1444,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=3, mix=GG": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:9",
+  "buy domal_glass_shutter full:1 piece:8",
   "buy domal_interlock full:0 piece:8",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
@@ -1468,7 +1468,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=4, mix=GGGJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:2 piece:5",
+  "buy domal_glass_shutter full:2 piece:4",
   "buy domal_interlock full:1 piece:0",
   "buy domal_jali_shutter full:0 piece:12",
   "cut domal_frame 1219200 Frame Bottom",
@@ -1505,9 +1505,9 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=4, mix=GGJJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:9",
+  "buy domal_glass_shutter full:1 piece:8",
   "buy domal_interlock full:0 piece:8",
-  "buy domal_jali_shutter full:1 piece:9",
+  "buy domal_jali_shutter full:1 piece:8",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
   "cut domal_frame 1219200 Frame Right",
@@ -1540,7 +1540,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=no, tracks=4, mix=GGGG": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:3 piece:2",
+  "buy domal_glass_shutter full:3 piece:0",
   "buy domal_interlock full:1 piece:8",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
@@ -1577,7 +1577,7 @@
  "Domal 1219200x1219200 | domalFix=no, tracks=4, mix=GJJJ": [
   "buy domal_frame full:1 piece:0",
   "buy domal_glass_shutter full:0 piece:12",
-  "buy domal_jali_shutter full:2 piece:5",
+  "buy domal_jali_shutter full:2 piece:4",
   "cut domal_frame 1219200 Frame Bottom",
   "cut domal_frame 1219200 Frame Left",
   "cut domal_frame 1219200 Frame Right",
@@ -1962,7 +1962,7 @@
  ],
  "Domal 1219200x1219200 | domalFix=yes, domalFixFt=1, tracks=4, mix=GGGG": [
   "buy domal_frame full:0 piece:15",
-  "buy domal_glass_shutter full:2 piece:9",
+  "buy domal_glass_shutter full:2 piece:7",
   "buy domal_interlock full:1 piece:3",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:11",
@@ -2971,7 +2971,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=no, tracks=3, mix=GGG": [
   "buy domal_frame full:1 piece:7",
-  "buy domal_glass_shutter full:3 piece:4",
+  "buy domal_glass_shutter full:3 piece:0",
   "buy domal_interlock full:1 piece:5",
   "cut domal_frame 1397000 Frame Left",
   "cut domal_frame 1397000 Frame Right",
@@ -3123,7 +3123,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=no, tracks=4, mix=GGGJ": [
   "buy domal_frame full:1 piece:7",
-  "buy domal_glass_shutter full:3 piece:4",
+  "buy domal_glass_shutter full:3 piece:0",
   "buy domal_interlock full:1 piece:5",
   "buy domal_jali_shutter full:1 piece:0",
   "cut domal_frame 1397000 Frame Left",
@@ -3195,7 +3195,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=no, tracks=4, mix=GGGG": [
   "buy domal_frame full:1 piece:7",
-  "buy domal_glass_shutter full:4 piece:4",
+  "buy domal_glass_shutter full:4 piece:0",
   "buy domal_interlock full:1 piece:14",
   "cut domal_frame 1397000 Frame Left",
   "cut domal_frame 1397000 Frame Right",
@@ -3232,7 +3232,7 @@
  "Domal 1908175x1397000 | domalFix=no, tracks=4, mix=GJJJ": [
   "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:1 piece:0",
-  "buy domal_jali_shutter full:3 piece:4",
+  "buy domal_jali_shutter full:3 piece:0",
   "cut domal_frame 1397000 Frame Left",
   "cut domal_frame 1397000 Frame Right",
   "cut domal_frame 1908175 Frame Bottom",
@@ -3262,7 +3262,7 @@
   "pane mesh 852088x1228300 x3"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=3, mix=GGJ": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:1 piece:11",
   "buy domal_interlock full:0 piece:7",
   "buy domal_jali_shutter full:0 piece:14",
@@ -3304,7 +3304,7 @@
   "pane mesh 852088x923500 x1"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=3, mix=GGG": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:2 piece:10",
   "buy domal_interlock full:0 piece:14",
   "buy glazing_clip full:2 piece:0",
@@ -3345,7 +3345,7 @@
   "pane glass 852088x923500 x3"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=3, mix=GJJ": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:0 piece:14",
   "buy domal_jali_shutter full:1 piece:11",
   "buy glazing_clip full:2 piece:0",
@@ -3384,7 +3384,7 @@
   "pane mesh 852088x923500 x2"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=3, mix=GG": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:1 piece:11",
   "buy domal_interlock full:0 piece:7",
   "buy glazing_clip full:2 piece:0",
@@ -3419,7 +3419,7 @@
   "pane glass 852088x923500 x2"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=2, mix=GG": [
-  "buy domal_frame_2t full:1 piece:8",
+  "buy domal_frame_2t full:1 piece:7",
   "buy domal_glass_shutter full:1 piece:11",
   "buy domal_interlock full:0 piece:7",
   "buy glazing_clip full:2 piece:0",
@@ -3454,7 +3454,7 @@
   "pane glass 852088x923500 x2"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=2, mix=GJ": [
-  "buy domal_frame_2t full:1 piece:8",
+  "buy domal_frame_2t full:1 piece:7",
   "buy domal_glass_shutter full:0 piece:14",
   "buy domal_jali_shutter full:0 piece:14",
   "buy glazing_clip full:2 piece:0",
@@ -3489,7 +3489,7 @@
   "pane mesh 852088x923500 x1"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=2, mix=JJ": [
-  "buy domal_frame_2t full:1 piece:8",
+  "buy domal_frame_2t full:1 piece:7",
   "buy domal_jali_shutter full:1 piece:11",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:0 piece:15",
@@ -3522,7 +3522,7 @@
   "pane mesh 852088x923500 x2"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=4, mix=GGGJ": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:2 piece:10",
   "buy domal_interlock full:0 piece:14",
   "buy domal_jali_shutter full:0 piece:14",
@@ -3570,7 +3570,7 @@
   "pane mesh 852088x923500 x1"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=4, mix=GGJJ": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:1 piece:11",
   "buy domal_interlock full:0 piece:7",
   "buy domal_jali_shutter full:1 piece:11",
@@ -3616,7 +3616,7 @@
   "pane mesh 852088x923500 x2"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=4, mix=GGGG": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:3 piece:7",
   "buy domal_interlock full:1 piece:7",
   "buy glazing_clip full:2 piece:0",
@@ -3663,7 +3663,7 @@
   "pane glass 852088x923500 x4"
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=1, tracks=4, mix=GJJJ": [
-  "buy domal_frame full:1 piece:8",
+  "buy domal_frame full:1 piece:7",
   "buy domal_glass_shutter full:0 piece:14",
   "buy domal_jali_shutter full:2 piece:10",
   "buy glazing_clip full:2 piece:0",
@@ -4151,7 +4151,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=3, mix=GGJ": [
   "buy domal_frame full:1 piece:3",
-  "buy domal_glass_shutter full:1 piece:8",
+  "buy domal_glass_shutter full:1 piece:7",
   "buy domal_interlock full:0 piece:5",
   "buy domal_jali_shutter full:0 piece:12",
   "buy glazing_clip full:2 piece:0",
@@ -4235,7 +4235,7 @@
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=3, mix=GJJ": [
   "buy domal_frame full:1 piece:3",
   "buy domal_glass_shutter full:0 piece:12",
-  "buy domal_jali_shutter full:1 piece:8",
+  "buy domal_jali_shutter full:1 piece:7",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:2",
   "cut domal_frame 1908175 Frame Bottom",
@@ -4273,7 +4273,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=3, mix=GG": [
   "buy domal_frame full:1 piece:3",
-  "buy domal_glass_shutter full:1 piece:8",
+  "buy domal_glass_shutter full:1 piece:7",
   "buy domal_interlock full:0 piece:5",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:2",
@@ -4308,7 +4308,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=2, mix=GG": [
   "buy domal_frame_2t full:1 piece:3",
-  "buy domal_glass_shutter full:1 piece:8",
+  "buy domal_glass_shutter full:1 piece:7",
   "buy domal_interlock full:0 piece:5",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:2",
@@ -4378,7 +4378,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=2, mix=JJ": [
   "buy domal_frame_2t full:1 piece:3",
-  "buy domal_jali_shutter full:1 piece:8",
+  "buy domal_jali_shutter full:1 piece:7",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:2",
   "cut domal_frame_2t 1908175 Frame Bottom",
@@ -4459,9 +4459,9 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2, tracks=4, mix=GGJJ": [
   "buy domal_frame full:1 piece:3",
-  "buy domal_glass_shutter full:1 piece:8",
+  "buy domal_glass_shutter full:1 piece:7",
   "buy domal_interlock full:0 piece:5",
-  "buy domal_jali_shutter full:1 piece:8",
+  "buy domal_jali_shutter full:1 piece:7",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:2",
   "cut domal_frame 1908175 Frame Bottom",
@@ -4949,7 +4949,7 @@
  ],
  "Domal 1908175x1397000 | domalFix=yes, domalFixFt=2.5, tracks=4, mix=GGGG": [
   "buy domal_frame full:1 piece:3",
-  "buy domal_glass_shutter full:2 piece:10",
+  "buy domal_glass_shutter full:2 piece:9",
   "buy domal_interlock full:0 piece:12",
   "buy glazing_clip full:2 piece:0",
   "buy partition_frame full:1 piece:3",
@@ -6694,7 +6694,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=2, mix=GG": [
   "buy domal_frame_2t full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:10",
+  "buy domal_glass_shutter full:1 piece:9",
   "buy domal_interlock full:0 piece:9",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
@@ -6764,7 +6764,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=2, mix=JJ": [
   "buy domal_frame_2t full:1 piece:0",
-  "buy domal_jali_shutter full:1 piece:10",
+  "buy domal_jali_shutter full:1 piece:9",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
   "cut domal_frame_2t 1371600 Frame Left",
@@ -6797,7 +6797,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=3, mix=GGJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:10",
+  "buy domal_glass_shutter full:1 piece:9",
   "buy domal_interlock full:0 piece:9",
   "buy domal_jali_shutter full:0 piece:12",
   "buy glazing_clip full:1 piece:0",
@@ -6839,7 +6839,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=3, mix=GGG": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:2 piece:7",
+  "buy domal_glass_shutter full:2 piece:6",
   "buy domal_interlock full:1 piece:5",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
@@ -6881,7 +6881,7 @@
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=3, mix=GJJ": [
   "buy domal_frame full:1 piece:0",
   "buy domal_glass_shutter full:0 piece:12",
-  "buy domal_jali_shutter full:1 piece:10",
+  "buy domal_jali_shutter full:1 piece:9",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
   "cut domal_frame 1371600 Frame Left",
@@ -6919,7 +6919,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=3, mix=GG": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:10",
+  "buy domal_glass_shutter full:1 piece:9",
   "buy domal_interlock full:0 piece:9",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
@@ -6954,7 +6954,7 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=4, mix=GGGJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:2 piece:7",
+  "buy domal_glass_shutter full:2 piece:6",
   "buy domal_interlock full:1 piece:5",
   "buy domal_jali_shutter full:0 piece:12",
   "buy glazing_clip full:1 piece:0",
@@ -7002,9 +7002,9 @@
  ],
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=4, mix=GGJJ": [
   "buy domal_frame full:1 piece:0",
-  "buy domal_glass_shutter full:1 piece:10",
+  "buy domal_glass_shutter full:1 piece:9",
   "buy domal_interlock full:0 piece:9",
-  "buy domal_jali_shutter full:1 piece:10",
+  "buy domal_jali_shutter full:1 piece:9",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
   "cut domal_frame 1371600 Frame Left",
@@ -7096,7 +7096,7 @@
  "Domal 965200x2133600 | domalFix=yes, domalFixFt=2.5, tracks=4, mix=GJJJ": [
   "buy domal_frame full:1 piece:0",
   "buy domal_glass_shutter full:0 piece:12",
-  "buy domal_jali_shutter full:2 piece:7",
+  "buy domal_jali_shutter full:2 piece:6",
   "buy glazing_clip full:1 piece:0",
   "buy partition_frame full:0 piece:12",
   "cut domal_frame 1371600 Frame Left",
@@ -9309,7 +9309,7 @@
  ],
  "Z 1219200x1219200 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=2": [
   "buy z_center_55 full:0 piece:4",
-  "buy z_clip full:1 piece:7",
+  "buy z_clip full:1 piece:6",
   "buy z_outer_40 full:1 piece:0",
   "buy z_pipe_40 full:0 piece:12",
   "cut z_center_55 1139200 Transom 1",
@@ -9359,9 +9359,9 @@
  ],
  "Z 1219200x1219200 | zType=combo, zComboDir=top, zSashCount=2, zFixedFt=1": [
   "buy z_center_55 full:0 piece:7",
-  "buy z_clip full:1 piece:11",
+  "buy z_clip full:1 piece:10",
   "buy z_outer_40 full:1 piece:0",
-  "buy z_pipe_40 full:1 piece:4",
+  "buy z_pipe_40 full:1 piece:3",
   "cut z_center_55 1139200 Transom 1",
   "cut z_center_55 854400 Mullion 1",
   "cut z_clip 1139200 Fix Clip Bottom",
@@ -9419,7 +9419,7 @@
  ],
  "Z 1219200x1219200 | zType=combo, zComboDir=side, zSashCount=1, zFixedFt=2": [
   "buy z_center_55 full:0 piece:4",
-  "buy z_clip full:1 piece:7",
+  "buy z_clip full:1 piece:6",
   "buy z_outer_40 full:1 piece:0",
   "buy z_pipe_40 full:0 piece:12",
   "cut z_center_55 1139200 Mullion 1",
@@ -9520,7 +9520,7 @@
   "buy z_center_55 full:0 piece:5",
   "buy z_clip full:1 piece:13",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:2 piece:3",
+  "buy z_pipe_40 full:1 piece:15",
   "cut z_center_55 1317000 Mullion 1",
   "cut z_clip 1247000 S1 Clip Left",
   "cut z_clip 1247000 S1 Clip Right",
@@ -9723,7 +9723,7 @@
   "buy z_center_55 full:0 piece:12",
   "buy z_clip full:2 piece:10",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:15",
+  "buy z_pipe_40 full:1 piece:14",
   "cut z_center_55 1828175 Transom 1",
   "cut z_center_55 879800 Mullion 1",
   "cut z_center_55 879800 Mullion 2",
@@ -9868,7 +9868,7 @@
   "buy z_center_55 full:0 piece:9",
   "buy z_clip full:2 piece:4",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:12",
+  "buy z_pipe_40 full:1 piece:11",
   "cut z_center_55 1317000 Mullion 1",
   "cut z_center_55 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -9936,9 +9936,9 @@
  ],
  "Z 1908175x1397000 | zType=combo, zComboDir=side, zSashCount=2, zFixedFt=2.5": [
   "buy z_center_55 full:0 piece:9",
-  "buy z_clip full:2 piece:6",
+  "buy z_clip full:2 piece:5",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:10",
+  "buy z_pipe_40 full:1 piece:9",
   "cut z_center_55 1317000 Mullion 1",
   "cut z_center_55 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -10082,7 +10082,7 @@
  ],
  "Z 1908175x1397000 | zType=combo, zComboDir=both, zSashCount=1, zFixedFt=2": [
   "buy z_center_55 full:0 piece:9",
-  "buy z_clip full:2 piece:8",
+  "buy z_clip full:2 piece:6",
   "buy z_outer_40 full:1 piece:7",
   "buy z_pipe_40 full:0 piece:14",
   "cut z_center_55 1317000 Mullion 1",
@@ -10113,7 +10113,7 @@
  ],
  "Z 1908175x1397000 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=1.5": [
   "buy z_center_55 full:0 piece:13",
-  "buy z_clip full:2 piece:14",
+  "buy z_clip full:2 piece:13",
   "buy z_outer_40 full:1 piece:7",
   "buy z_pipe_40 full:1 piece:9",
   "cut z_center_55 1317000 Mullion 1",
@@ -10156,7 +10156,7 @@
   "buy z_center_55 full:0 piece:9",
   "buy z_clip full:2 piece:4",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:12",
+  "buy z_pipe_40 full:1 piece:11",
   "cut z_center_55 1317000 Mullion 1",
   "cut z_center_55 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -10224,9 +10224,9 @@
  ],
  "Z 1908175x1397000 | zType=combo, zComboDir=center, zSashCount=1, zFixedFt=2.5": [
   "buy z_center_55 full:0 piece:9",
-  "buy z_clip full:2 piece:6",
+  "buy z_clip full:2 piece:5",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:10",
+  "buy z_pipe_40 full:1 piece:9",
   "cut z_center_55 1317000 Mullion 1",
   "cut z_center_55 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -10308,7 +10308,7 @@
  "Z 1908175x1397000 | zType=door": [
   "buy z_clip full:1 piece:5",
   "buy z_outer_40 full:1 piece:7",
-  "buy z_pipe_40 full:1 piece:9",
+  "buy z_pipe_40 full:1 piece:7",
   "cut z_clip 1224300 S1 Clip Left",
   "cut z_clip 1224300 S1 Clip Right",
   "cut z_clip 1773575 S1 Clip Bottom",
@@ -10372,7 +10372,7 @@
  ],
  "Z 965200x2133600 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=1.5": [
   "buy z_center_55 full:0 piece:3",
-  "buy z_clip full:1 piece:9",
+  "buy z_clip full:1 piece:8",
   "buy z_outer_40 full:1 piece:7",
   "buy z_pipe_40 full:1 piece:3",
   "cut z_center_55 885200 Transom 1",
@@ -10397,7 +10397,7 @@
  ],
  "Z 965200x2133600 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=2": [
   "buy z_center_55 full:0 piece:3",
-  "buy z_clip full:1 piece:10",
+  "buy z_clip full:1 piece:9",
   "buy z_outer_40 full:1 piece:7",
   "buy z_pipe_40 full:1 piece:0",
   "cut z_center_55 885200 Transom 1",
@@ -10959,7 +10959,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=2, zFixedFt=3": [
   "buy z_center_55 full:0 piece:15",
-  "buy z_clip full:4 piece:6",
+  "buy z_clip full:4 piece:5",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:2 piece:10",
   "cut z_center_55 1464000 Mullion 1",
@@ -10994,7 +10994,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=1.5": [
   "buy z_center_55 full:1 piece:10",
-  "buy z_clip full:4 piece:15",
+  "buy z_clip full:4 piece:14",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:3 piece:10",
   "cut z_center_55 1921200 Mullion 1",
@@ -11084,7 +11084,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=2.5": [
   "buy z_center_55 full:1 piece:6",
-  "buy z_clip full:4 piece:12",
+  "buy z_clip full:4 piece:11",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:3 piece:4",
   "cut z_center_55 1616400 Mullion 1",
@@ -11129,7 +11129,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=3": [
   "buy z_center_55 full:1 piece:5",
-  "buy z_clip full:4 piece:14",
+  "buy z_clip full:4 piece:10",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:3 piece:4",
   "cut z_center_55 1464000 Mullion 1",
@@ -11276,7 +11276,7 @@
   "buy z_center_55 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_40 full:2 piece:10",
-  "buy z_pipe_40 full:3 piece:5",
+  "buy z_pipe_40 full:3 piece:0",
   "cut z_center_55 2358400 Mullion 1",
   "cut z_center_55 2358400 Mullion 2",
   "cut z_clip 1175400 S1 Clip Bottom",
@@ -11416,7 +11416,7 @@
   "buy z_center_55 full:1 piece:8",
   "buy z_clip full:5 piece:3",
   "buy z_outer_40 full:2 piece:10",
-  "buy z_pipe_40 full:4 piece:3",
+  "buy z_pipe_40 full:4 piece:0",
   "cut z_center_55 2358400 Mullion 1",
   "cut z_center_55 2358400 Mullion 2",
   "cut z_center_55 2358400 Mullion 3",
@@ -11759,7 +11759,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=2": [
   "buy z_center_55 full:1 piece:8",
-  "buy z_clip full:5 piece:4",
+  "buy z_clip full:5 piece:2",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:2 piece:12",
   "cut z_center_55 2358400 Mullion 1",
@@ -11841,7 +11841,7 @@
  ],
  "Z 3048000x2438400 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=3": [
   "buy z_center_55 full:1 piece:8",
-  "buy z_clip full:5 piece:4",
+  "buy z_clip full:5 piece:2",
   "buy z_outer_40 full:2 piece:10",
   "buy z_pipe_40 full:2 piece:8",
   "cut z_center_55 2358400 Mullion 1",
@@ -12037,7 +12037,7 @@
   "buy z_center_55 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_40 full:2 piece:10",
-  "buy z_pipe_40 full:3 piece:5",
+  "buy z_pipe_40 full:3 piece:0",
   "cut z_center_55 2358400 Mullion 1",
   "cut z_center_55 2358400 Mullion 2",
   "cut z_clip 1165400 S1 Clip Bottom",
@@ -12177,7 +12177,7 @@
   "buy z_center_55 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_40 full:2 piece:10",
-  "buy z_pipe_40 full:3 piece:5",
+  "buy z_pipe_40 full:3 piece:0",
   "cut z_center_55 2358400 Mullion 1",
   "cut z_center_55 2358400 Mullion 2",
   "cut z_clip 1165400 S1 Clip Bottom",
@@ -12418,7 +12418,7 @@
  ],
  "Z heavy 1219200x1219200 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=2": [
   "buy z_center_70 full:0 piece:4",
-  "buy z_clip full:1 piece:7",
+  "buy z_clip full:1 piece:6",
   "buy z_outer_55 full:1 piece:0",
   "buy z_pipe_55 full:0 piece:12",
   "cut z_center_70 1139200 Transom 1",
@@ -12468,9 +12468,9 @@
  ],
  "Z heavy 1219200x1219200 | zType=combo, zComboDir=top, zSashCount=2, zFixedFt=1": [
   "buy z_center_70 full:0 piece:7",
-  "buy z_clip full:1 piece:11",
+  "buy z_clip full:1 piece:10",
   "buy z_outer_55 full:1 piece:0",
-  "buy z_pipe_55 full:1 piece:4",
+  "buy z_pipe_55 full:1 piece:3",
   "cut z_center_70 1139200 Transom 1",
   "cut z_center_70 854400 Mullion 1",
   "cut z_clip 1139200 Fix Clip Bottom",
@@ -12528,7 +12528,7 @@
  ],
  "Z heavy 1219200x1219200 | zType=combo, zComboDir=side, zSashCount=1, zFixedFt=2": [
   "buy z_center_70 full:0 piece:4",
-  "buy z_clip full:1 piece:7",
+  "buy z_clip full:1 piece:6",
   "buy z_outer_55 full:1 piece:0",
   "buy z_pipe_55 full:0 piece:12",
   "cut z_center_70 1139200 Mullion 1",
@@ -12629,7 +12629,7 @@
   "buy z_center_70 full:0 piece:5",
   "buy z_clip full:1 piece:13",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:2 piece:3",
+  "buy z_pipe_55 full:1 piece:15",
   "cut z_center_70 1317000 Mullion 1",
   "cut z_clip 1247000 S1 Clip Left",
   "cut z_clip 1247000 S1 Clip Right",
@@ -12832,7 +12832,7 @@
   "buy z_center_70 full:0 piece:12",
   "buy z_clip full:2 piece:10",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:15",
+  "buy z_pipe_55 full:1 piece:14",
   "cut z_center_70 1828175 Transom 1",
   "cut z_center_70 879800 Mullion 1",
   "cut z_center_70 879800 Mullion 2",
@@ -12977,7 +12977,7 @@
   "buy z_center_70 full:0 piece:9",
   "buy z_clip full:2 piece:4",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:12",
+  "buy z_pipe_55 full:1 piece:11",
   "cut z_center_70 1317000 Mullion 1",
   "cut z_center_70 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -13045,9 +13045,9 @@
  ],
  "Z heavy 1908175x1397000 | zType=combo, zComboDir=side, zSashCount=2, zFixedFt=2.5": [
   "buy z_center_70 full:0 piece:9",
-  "buy z_clip full:2 piece:6",
+  "buy z_clip full:2 piece:5",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:10",
+  "buy z_pipe_55 full:1 piece:9",
   "cut z_center_70 1317000 Mullion 1",
   "cut z_center_70 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -13191,7 +13191,7 @@
  ],
  "Z heavy 1908175x1397000 | zType=combo, zComboDir=both, zSashCount=1, zFixedFt=2": [
   "buy z_center_70 full:0 piece:9",
-  "buy z_clip full:2 piece:8",
+  "buy z_clip full:2 piece:6",
   "buy z_outer_55 full:1 piece:7",
   "buy z_pipe_55 full:0 piece:14",
   "cut z_center_70 1317000 Mullion 1",
@@ -13222,7 +13222,7 @@
  ],
  "Z heavy 1908175x1397000 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=1.5": [
   "buy z_center_70 full:0 piece:13",
-  "buy z_clip full:2 piece:14",
+  "buy z_clip full:2 piece:13",
   "buy z_outer_55 full:1 piece:7",
   "buy z_pipe_55 full:1 piece:9",
   "cut z_center_70 1317000 Mullion 1",
@@ -13265,7 +13265,7 @@
   "buy z_center_70 full:0 piece:9",
   "buy z_clip full:2 piece:4",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:12",
+  "buy z_pipe_55 full:1 piece:11",
   "cut z_center_70 1317000 Mullion 1",
   "cut z_center_70 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -13333,9 +13333,9 @@
  ],
  "Z heavy 1908175x1397000 | zType=combo, zComboDir=center, zSashCount=1, zFixedFt=2.5": [
   "buy z_center_70 full:0 piece:9",
-  "buy z_clip full:2 piece:6",
+  "buy z_clip full:2 piece:5",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:10",
+  "buy z_pipe_55 full:1 piece:9",
   "cut z_center_70 1317000 Mullion 1",
   "cut z_center_70 1317000 Mullion 2",
   "cut z_clip 1247000 S1 Clip Left",
@@ -13417,7 +13417,7 @@
  "Z heavy 1908175x1397000 | zType=door": [
   "buy z_clip full:1 piece:5",
   "buy z_outer_55 full:1 piece:7",
-  "buy z_pipe_55 full:1 piece:9",
+  "buy z_pipe_55 full:1 piece:7",
   "cut z_clip 1224300 S1 Clip Left",
   "cut z_clip 1224300 S1 Clip Right",
   "cut z_clip 1773575 S1 Clip Bottom",
@@ -13481,7 +13481,7 @@
  ],
  "Z heavy 965200x2133600 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=1.5": [
   "buy z_center_70 full:0 piece:3",
-  "buy z_clip full:1 piece:9",
+  "buy z_clip full:1 piece:8",
   "buy z_outer_55 full:1 piece:7",
   "buy z_pipe_55 full:1 piece:3",
   "cut z_center_70 885200 Transom 1",
@@ -13506,7 +13506,7 @@
  ],
  "Z heavy 965200x2133600 | zType=combo, zComboDir=top, zSashCount=1, zFixedFt=2": [
   "buy z_center_70 full:0 piece:3",
-  "buy z_clip full:1 piece:10",
+  "buy z_clip full:1 piece:9",
   "buy z_outer_55 full:1 piece:7",
   "buy z_pipe_55 full:1 piece:0",
   "cut z_center_70 885200 Transom 1",
@@ -14068,7 +14068,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=2, zFixedFt=3": [
   "buy z_center_70 full:0 piece:15",
-  "buy z_clip full:4 piece:6",
+  "buy z_clip full:4 piece:5",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:2 piece:10",
   "cut z_center_70 1464000 Mullion 1",
@@ -14103,7 +14103,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=1.5": [
   "buy z_center_70 full:1 piece:10",
-  "buy z_clip full:4 piece:15",
+  "buy z_clip full:4 piece:14",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:3 piece:10",
   "cut z_center_70 1921200 Mullion 1",
@@ -14193,7 +14193,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=2.5": [
   "buy z_center_70 full:1 piece:6",
-  "buy z_clip full:4 piece:12",
+  "buy z_clip full:4 piece:11",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:3 piece:4",
   "cut z_center_70 1616400 Mullion 1",
@@ -14238,7 +14238,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=top, zSashCount=3, zFixedFt=3": [
   "buy z_center_70 full:1 piece:5",
-  "buy z_clip full:4 piece:14",
+  "buy z_clip full:4 piece:10",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:3 piece:4",
   "cut z_center_70 1464000 Mullion 1",
@@ -14385,7 +14385,7 @@
   "buy z_center_70 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_55 full:2 piece:10",
-  "buy z_pipe_55 full:3 piece:5",
+  "buy z_pipe_55 full:3 piece:0",
   "cut z_center_70 2358400 Mullion 1",
   "cut z_center_70 2358400 Mullion 2",
   "cut z_clip 1175400 S1 Clip Bottom",
@@ -14525,7 +14525,7 @@
   "buy z_center_70 full:1 piece:8",
   "buy z_clip full:5 piece:3",
   "buy z_outer_55 full:2 piece:10",
-  "buy z_pipe_55 full:4 piece:3",
+  "buy z_pipe_55 full:4 piece:0",
   "cut z_center_70 2358400 Mullion 1",
   "cut z_center_70 2358400 Mullion 2",
   "cut z_center_70 2358400 Mullion 3",
@@ -14868,7 +14868,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=2": [
   "buy z_center_70 full:1 piece:8",
-  "buy z_clip full:5 piece:4",
+  "buy z_clip full:5 piece:2",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:2 piece:12",
   "cut z_center_70 2358400 Mullion 1",
@@ -14950,7 +14950,7 @@
  ],
  "Z heavy 3048000x2438400 | zType=combo, zComboDir=both, zSashCount=2, zFixedFt=3": [
   "buy z_center_70 full:1 piece:8",
-  "buy z_clip full:5 piece:4",
+  "buy z_clip full:5 piece:2",
   "buy z_outer_55 full:2 piece:10",
   "buy z_pipe_55 full:2 piece:8",
   "cut z_center_70 2358400 Mullion 1",
@@ -15146,7 +15146,7 @@
   "buy z_center_70 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_55 full:2 piece:10",
-  "buy z_pipe_55 full:3 piece:5",
+  "buy z_pipe_55 full:3 piece:0",
   "cut z_center_70 2358400 Mullion 1",
   "cut z_center_70 2358400 Mullion 2",
   "cut z_clip 1165400 S1 Clip Bottom",
@@ -15286,7 +15286,7 @@
   "buy z_center_70 full:1 piece:0",
   "buy z_clip full:4 piece:3",
   "buy z_outer_55 full:2 piece:10",
-  "buy z_pipe_55 full:3 piece:5",
+  "buy z_pipe_55 full:3 piece:0",
   "cut z_center_70 2358400 Mullion 1",
   "cut z_center_70 2358400 Mullion 2",
   "cut z_clip 1165400 S1 Clip Bottom",
@@ -19238,7 +19238,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=2.5, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:5",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:15",
   "buy partition_frame full:2 piece:4",
   "cut door_center_60 704850 Door Middle",
@@ -19438,7 +19438,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=3.5": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:6",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:15",
   "buy partition_frame full:2 piece:3",
   "cut door_center_60 857250 Door Middle",
@@ -19490,7 +19490,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2, partRowFt=4": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:6",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:15",
   "buy partition_frame full:2 piece:3",
   "cut door_center_60 857250 Door Middle",
@@ -19609,7 +19609,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=3.5": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:6",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:15",
   "buy partition_frame full:2 piece:3",
   "cut door_center_60 857250 Door Middle",
@@ -19661,7 +19661,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=2.5, partRowFt=4": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:6",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:15",
   "buy partition_frame full:2 piece:3",
   "cut door_center_60 857250 Door Middle",
@@ -19713,7 +19713,7 @@
  "Partition 3048000x2438400 | partDoor=yes, partDoorW=3, partBayFt=3, partRowFt=3": [
   "buy door_center_60 full:0 piece:3",
   "buy door_palla_60 full:1 piece:6",
-  "buy glazing_clip full:7 piece:0",
+  "buy glazing_clip full:6 piece:0",
   "buy partition_divider full:1 piece:14",
   "buy partition_frame full:2 piece:4",
   "cut door_center_60 857250 Door Middle",

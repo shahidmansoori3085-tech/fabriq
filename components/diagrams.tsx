@@ -10,6 +10,7 @@ import WindowDrawing from "./studio-drawing";
 import { Um, formatFtInSut, formatFtIn, toFeet } from "@/lib/engine/units";
 import type { ShutterConfig, PackedBar, JobItem } from "@/lib/engine/types";
 import { getSection } from "@/lib/engine/sections";
+import { pipeMark } from "@/lib/engine/pipe";
 import { partitionLayout } from "@/lib/engine/estimator";
 
 /* ——— fills shared by elevations ——— */
@@ -607,7 +608,7 @@ export function BarDiagram({ bar }: { bar: PackedBar }) {
           </>
         )}
         <text x={0} y={9} fontSize={11} fontWeight={800} fill="#16181d">
-          BAR {bar.barNo} — {section.label} ({section.size}mm) — {barFt}&apos;
+          BAR {bar.barNo} — {section.label} ({section.size}mm) — {pipeMark(barFt)}
         </text>
         <defs>
           <pattern id="wasteHatch" patternUnits="userSpaceOnUse" width="6" height="6"

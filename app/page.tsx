@@ -33,7 +33,9 @@ import { evaluate } from "@/lib/studio/evaluate";
 import { markInstalls, markMade, markSource, markStep, markVisitor } from "@/lib/track";
 import { takeCarriedJob } from "@/lib/inapp";
 import { InAppNotice, OpenInChromeSheet, useInApp } from "@/components/open-in-browser";
-import { getSection, setJobBarLengths, jobBarLengths } from "@/lib/engine/sections";
+import { getSection, setJobBarLengths, jobBarLengths, pipeMeta, usualBarFt } from "@/lib/engine/sections";
+import { PIPE_MAX_FT, pipeMark, pipeText } from "@/lib/engine/pipe";
+import { PipeLength } from "@/components/pipe-length";
 import { Sheet } from "@/components/studio-ui";
 import { reviewEstimate } from "@/lib/engine/review";
 import type {
@@ -600,14 +602,19 @@ export default function FabriQ() {
     setItems((prev) => {
       // Next free number, not length+1 — deleting W2 must not make two W3s.
       const n = prev.reduce((a, it) => Math.max(a, parseInt(it.id.slice(1), 10) || 0), 0) + 1;
-      return [...prev, buildJobItem(n, type, w, h, qty, withShopChoices(meta))];
+      const it = buildJobItem(n, type, w, h, qty, withShopChoices(meta));
+      return [...prev, { ...it, meta: { ...it.meta, ...pipeMeta(prev) } }];
     });
   };
 
   /** Edited in place: same id, same position in the list. */
   const replaceItem = (id: string, type: OpeningType, w: Um, h: Um, qty: number, meta: Record<string, string>) => {
     const n = parseInt(id.slice(1), 10) || 1;
-    setItems((prev) => prev.map((it) => (it.id === id ? buildJobItem(n, type, w, h, qty, withShopChoices(meta)) : it)));
+    setItems((prev) => {
+      const next = buildJobItem(n, type, w, h, qty, withShopChoices(meta));
+      const kept = { ...next, meta: { ...next.meta, ...pipeMeta(prev) } };
+      return prev.map((it) => (it.id === id ? kept : it));
+    });
   };
 
   const forgetJob = () => {
@@ -2106,33 +2113,41 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
     window.scrollTo({ top: 0 });
   };
 
-  const { list, error } = useMemo(() => {
+  const { list, error, longer } = useMemo(() => {
     try {
       // the pipe lengths this job asks for hold while it is open
       setJobBarLengths(jobBarLengths(items));
-      return { list: estimate(items), error: null as string | null };
+      return { list: estimate(items), error: null as string | null, longer: null };
     } catch (e) {
       if (e instanceof ImpossibleLayoutError) {
-        return { list: null, error: `${e.itemId}: ${layoutError(e)}` };
+        return { list: null, error: `${e.itemId}: ${layoutError(e)}`, longer: null };
       }
       if (e instanceof PieceTooLongError) {
         // A multi-unit opening carries a per-unit id ("W1.3") — strip it back.
         const baseId = e.piece.itemId.replace(/\.\d+$/, "");
+        const sid = e.piece.sectionId;
+        const need = Math.max(usualBarFt(sid), Math.ceil(toFeet(e.piece.length)));
         return {
           list: null,
+          longer: need <= PIPE_MAX_FT ? { sid, ft: need } : null,
           error:
             `${baseId}: the ${e.piece.role} needs a ${toFeet(e.piece.length).toFixed(1)} ft (${formatFtInSut(e.piece.length)}) piece, ` +
-            `but this section comes in ${toFeet(e.barLength).toFixed(0)} ft pipes.\n\n` +
-            `If the opening really is this large, it has to be joined — enter it as two separate sizes.\n\n` +
-            `If the size was in inches, add " after the number (for example 66").`,
+            `but this section comes in ${pipeText(toFeet(e.barLength))} pipes.` +
+            // only the job's shorter pipe is in the way: the button below is the whole fix
+            (e.piece.length <= feet(usualBarFt(sid)) ? ""
+              : `\n\nIf the opening really is this large, it has to be joined — enter it as two separate sizes.\n\n` +
+                `If the size was in inches, add " after the number (for example 66").`),
         };
       }
-      return { list: null, error: e instanceof Error ? e.message : "Something went wrong" };
+      return { list: null, error: e instanceof Error ? e.message : "Something went wrong", longer: null };
     }
   }, [items]);
 
   // leaving the job: other screens go back to each section's own pipe length
-  useEffect(() => () => setJobBarLengths({}), []);
+  useEffect(() => {
+    setJobBarLengths(jobBarLengths(items));
+    return () => setJobBarLengths({});
+  }, [items]);
   const scrap = list?.totals.wastePct;
   useEffect(() => {
     if (scrap !== undefined) onScrap(scrap);
@@ -2145,7 +2160,12 @@ function Result({ items, shop, jobName, onBack, onNew, onScrap, onItems }: {
       <div className="card mt-6 p-5">
         <div className="text-base font-bold" style={{ color: "var(--bad)" }}>This size cannot be built</div>
         <p className="mt-2 whitespace-pre-line text-sm">{error}</p>
-        <button onClick={onBack} className="btn-primary mt-4 w-full py-3">← Edit sizes</button>
+        {longer && (
+          <button type="button" className="btn-primary mt-4 w-full py-3" onClick={() => onItems(withPipe(items, longer.sid, longer.ft))}>
+            Use {pipeText(longer.ft)} pipe
+          </button>
+        )}
+        <button onClick={onBack} className={`${longer ? "btn-ghost mt-2" : "btn-primary mt-4"} w-full py-3`}>← Edit sizes</button>
       </div>
     );
   }
@@ -2275,7 +2295,7 @@ function barGroups(sections: MaterialList["sections"]): BarGroup[] {
 
 /** "4 × 16' + 6' piece" — what the dealer actually hands over. */
 function barsText(g: BarGroup): string {
-  return [g.full ? `${g.full} × ${g.ft}'` : "", ...g.pieces.map((p) => `${p}' piece`)].filter(Boolean).join(" + ") || "—";
+  return [g.full ? `${g.full} × ${pipeMark(g.ft)}` : "", ...g.pieces.map((p) => `${p}' piece`)].filter(Boolean).join(" + ") || "—";
 }
 
 function groupsText(groups: BarGroup[]): string {
@@ -2287,7 +2307,7 @@ function groupsText(groups: BarGroup[]): string {
 function totalLines(groups: BarGroup[]): string[] {
   const pieces = groups.flatMap((g) => g.pieces);
   return [
-    ...groups.filter((g) => g.full).map((g) => `${g.full} × ${g.ft}'`),
+    ...groups.filter((g) => g.full).map((g) => `${g.full} × ${pipeMark(g.ft)}`),
     ...(pieces.length ? [`${plural(pieces.length, "cut piece")} · ${pieces.reduce((a, p) => a + p, 0)} ft`] : []),
   ];
 }
@@ -2303,12 +2323,24 @@ function pipeQty(groups: BarGroup[]): string {
   const ft = groups.reduce((a, g) => a + g.pieces.reduce((x, y) => x + y, 0), 0);
   return full && ft ? `${full} + ${ft} ft` : full ? String(full) : `${ft} ft`;
 }
-/** Under it: "16′ pipe + piece", "16′ pipes", "piece". */
-function pipeQtyWord(groups: BarGroup[]): string {
+/** The same on the material list: the pipes big, the cut piece's size small (founder 2026-11-22). */
+function PipeQty({ groups }: { groups: BarGroup[] }) {
   const full = groups.reduce((a, g) => a + g.full, 0);
-  const pieces = groups.reduce((a, g) => a + g.pieces.length, 0);
-  const len = groups.find((g) => g.full)?.ft;
-  return [full ? `${len}′ ${full > 1 ? "pipes" : "pipe"}` : "", pieces ? (full ? "piece" : "cut piece") : ""].filter(Boolean).join(" + ") || "pipes";
+  const ft = groups.reduce((a, g) => a + g.pieces.reduce((x, y) => x + y, 0), 0);
+  return (
+    <div className="whitespace-nowrap leading-none tabnum">
+      {full > 0 && <span className="text-2xl font-extrabold">{full}</span>}
+      {ft > 0 && <span className="text-sm font-semibold" style={{ color: "var(--ink-2)" }}>{full > 0 ? " + " : ""}{ft} ft</span>}
+    </div>
+  );
+}
+/** The items with one section bought in another pipe length (its usual length is not stored). */
+function withPipe(items: JobItem[], sid: string, ft: number): JobItem[] {
+  return items.map((it) => {
+    const meta = { ...it.meta };
+    if (ft === usualBarFt(sid)) delete meta[`pipe_${sid}`]; else meta[`pipe_${sid}`] = String(ft);
+    return { ...it, meta };
+  });
 }
 const pipeWord = (full: number, pieces: number) =>
   [full ? (full > 1 ? "pipes" : "pipe") : "", pieces ? (pieces > 1 ? "pieces" : "piece") : ""].filter(Boolean).join(" + ") || "pipes";
@@ -2322,23 +2354,19 @@ const groupsWord = (groups: BarGroup[]) =>
 function MaterialPanel({ list, shop, items, jobName, onItems }: {
   list: MaterialList; shop: ShopProfile; items: JobItem[]; jobName: string; onItems: (next: JobItem[]) => void;
 }) {
-  /** the ⋮ sheets: pipe length or another section for one section of this job */
-  const [secPipe, setSecPipe] = useState<string | null>(null);
+  /** the ⋮ sheet: another section for one section of this job */
   const [secSwap, setSecSwap] = useState<string | null>(null);
-  const setPipe = (sid: string, ft: number | null) => {
-    const next = items.map((it) => {
-      const meta = { ...it.meta };
-      if (ft) meta[`pipe_${sid}`] = String(ft); else delete meta[`pipe_${sid}`];
-      return { ...it, meta };
-    });
+  const setPipe = (sid: string, ft: number): string | null => {
+    const next = withPipe(items, sid, ft);
     // a piece longer than the pipe cannot be cut: say so and keep the job as it is
     try { setJobBarLengths(jobBarLengths(next)); estimate(next); }
     catch (e) {
       setJobBarLengths(jobBarLengths(items));
-      if (e instanceof PieceTooLongError) { window.alert(`One piece is ${formatFtInSut(e.piece.length)} long. A ${ft} ft pipe is too short for it.`); return; }
+      if (e instanceof PieceTooLongError) return `One piece is ${formatFtInSut(e.piece.length)}. It needs a longer pipe.`;
       throw e;
     }
-    onItems(next); setSecPipe(null);
+    onItems(next);
+    return null;
   };
   /** the other sections this piece can be, as the window's own system offers them */
   const swapsOf = (sid: string) => {
@@ -2467,25 +2495,6 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
 
       {secView && <SectionSheet sectionId={secView} pieces={cutRows(list.bars.filter((b) => b.sectionId === secView))} onClose={() => setSecView(null)}
         onEdit={findStudioProfile(loadStudioLibrary(), secView) ? () => { window.location.href = `/studio?section=${encodeURIComponent(secView)}`; } : undefined} />}
-      {secPipe && (() => {
-        const now = getSection(secPipe).barLengthFt ?? 16;
-        setJobBarLengths({});
-        const own = getSection(secPipe).barLengthFt ?? 16;
-        setJobBarLengths(jobBarLengths(items));
-        return (
-          <Sheet title="Pipe length" sub={`${getSection(secPipe).name} · this job only`} onClose={() => setSecPipe(null)}>
-            <div className="flex flex-col gap-2">
-              {[...new Set([12, 15, 16, own])].sort((x, y) => x - y).map((ft) => (
-                <button key={ft} type="button" aria-pressed={now === ft} onClick={() => setPipe(secPipe, ft === own ? null : ft)}
-                  className={`chip flex items-center justify-between px-4 py-3 text-left ${now === ft ? "selected" : ""}`}>
-                  <span className="text-base font-bold">{ft} ft</span>
-                  <span className="text-xs" style={{ color: "var(--ink-3)" }}>{ft === own ? "Usual" : ""}</span>
-                </button>
-              ))}
-            </div>
-          </Sheet>
-        );
-      })()}
       {secSwap && (
         <Sheet title="Change section" sub={`Instead of ${getSection(secSwap).name}, in every window of this job`} onClose={() => setSecSwap(null)}>
           <div className="flex flex-col gap-2">
@@ -2508,26 +2517,25 @@ function MaterialPanel({ list, shop, items, jobName, onItems }: {
         {list.sections.map((s) => {
           const sec = getSection(s.sectionId);
           return (
-            <div key={s.sectionId} className="flex items-center gap-3 px-3 py-2.5" style={{ borderTop: "1px solid var(--line)" }}>
-              <span className="shrink-0" style={{ width: 100 }}>
-                <SectionProfile sectionId={s.sectionId} w={92} h={62} />
+            <div key={s.sectionId} className="flex items-center gap-2 px-3 py-2.5" style={{ borderTop: "1px solid var(--line)" }}>
+              <span className="shrink-0" style={{ width: 80 }}>
+                <SectionProfile sectionId={s.sectionId} w={78} h={56} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold leading-tight">{sec.label}</div>
-                <div className="mt-0.5 text-xs tabnum" style={{ color: "var(--ink-3)" }}>
-                  {groupsText(s.stock)}
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 text-sm font-semibold leading-tight [overflow-wrap:anywhere]">{sec.label}</div>
+                  <div className="shrink-0 text-right">
+                    <PipeQty groups={s.stock} />
+                    <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{groupsWord(s.stock)}</div>
+                  </div>
+                  <DotsMenu label={`${sec.label} options`} items={[
+                    { label: "View details", onClick: () => setSecView(s.sectionId) },
+                    ...(findStudioProfile(loadStudioLibrary(), s.sectionId) ? [{ label: "Edit section", onClick: () => { window.location.href = `/studio?section=${encodeURIComponent(s.sectionId)}`; } }] : []),
+                    ...(swapsOf(s.sectionId).length ? [{ label: "Change section", onClick: () => setSecSwap(s.sectionId) }] : []),
+                  ]} />
                 </div>
+                <PipeLength name={sec.label} ft={sec.barLengthFt ?? 16} usual={usualBarFt(s.sectionId)} onSet={(ft) => setPipe(s.sectionId, ft)} />
               </div>
-              <div className="shrink-0 text-right">
-                <div className="text-2xl font-extrabold leading-none tabnum">{pipeQty(s.stock)}</div>
-                <div className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>{pipeQtyWord(s.stock)}</div>
-              </div>
-              <DotsMenu label={`${sec.label} options`} items={[
-                { label: "View details", onClick: () => setSecView(s.sectionId) },
-                ...(findStudioProfile(loadStudioLibrary(), s.sectionId) ? [{ label: "Edit section", onClick: () => { window.location.href = `/studio?section=${encodeURIComponent(s.sectionId)}`; } }] : []),
-                { label: "Pipe length", onClick: () => setSecPipe(s.sectionId) },
-                ...(swapsOf(s.sectionId).length ? [{ label: "Change section", onClick: () => setSecSwap(s.sectionId) }] : []),
-              ]} />
             </div>
           );
         })}
@@ -2875,7 +2883,7 @@ function CuttingPanel({ list, shop, items, jobName, onItems }: {
                 {bars.map((bar, bi) => (
                   <div key={bi} className="flex flex-wrap items-baseline gap-x-2 text-xs">
                     <span className="font-bold" style={{ color: "var(--ink-2)" }}>
-                      {toFeet(bar.barLength) < (sec.barLengthFt ?? 16) - 0.01 ? "Piece" : `Pipe ${bi + 1}`} ({Math.round(toFeet(bar.barLength))}&apos;)
+                      {toFeet(bar.barLength) < (sec.barLengthFt ?? 16) - 0.01 ? "Piece" : `Pipe ${bi + 1}`} ({pipeMark(toFeet(bar.barLength))})
                     </span>
                     <span className="mono">{packLine(bar.pieces)}</span>
                     {bar.waste > 0 && shortLen(bar.waste) !== '0"' && (

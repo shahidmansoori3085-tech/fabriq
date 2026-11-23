@@ -243,6 +243,15 @@ export function jobBarLengths(items: { meta: Record<string, string> }[]): Record
   return m;
 }
 
+/** The pipe length a section comes in when the job asks for no other. */
+export function usualBarFt(id: string): number {
+  return (SECTIONS[id] ?? CUSTOM_SECTIONS[id])?.barLengthFt ?? 16;
+}
+/** The job's pipe lengths, to keep on an item that is added or edited. */
+export function pipeMeta(items: { meta: Record<string, string> }[]): Record<string, string> {
+  return Object.fromEntries(Object.entries(jobBarLengths(items)).map(([id, ft]) => [`pipe_${id}`, String(ft)]));
+}
+
 export function getSection(id: string): Section {
   const s = SECTIONS[id] ?? CUSTOM_SECTIONS[id];
   if (!s) throw new Error(`Unknown section: ${id}`);

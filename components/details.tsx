@@ -15,6 +15,7 @@ import { getSection } from "@/lib/engine/sections";
 import { formatFtInSut } from "@/lib/engine/units";
 import { Sheet } from "@/components/studio-ui";
 import StudioThumb, { MiniSection } from "@/components/studio-thumb";
+import { pipeText } from "@/lib/engine/pipe";
 import { SectionProfile } from "@/components/section-profiles";
 
 /**
@@ -179,7 +180,7 @@ export function SectionSheet({ sectionId, pieces, onClose, onEdit }: {
       <Head>Details</Head>
       {[
         ["Size", sec.size ? `${sec.size} mm` : "Not known"],
-        ["Pipe length", `${sec.barLengthFt ?? 16} ft`],
+        ["Pipe length", pipeText(sec.barLengthFt ?? 16)],
         ["Last piece", sec.sellsPiece === false ? "Full pipe only" : "Cut to the feet needed"],
         ...(p?.kg ? [["Weight", `${p.kg.value} kg per ${p.kg.perFt} ft`]] : []),
         ...(p?.stockFt?.length ? [["Pipes you buy", p.stockFt.map((f) => `${f} ft`).join(", ")]] : []),

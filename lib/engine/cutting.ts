@@ -94,6 +94,105 @@ function seeded(key: string): () => number {
   return () => ((x = Math.imul(x ^ (x >>> 15), 2246822507) ^ Math.imul(x ^ (x >>> 13), 3266489909)) >>> 0) / 4294967296;
 }
 
+/** How much work the search below may do for one section (it stays instant on a phone). */
+const SEARCH_STEPS = 200_000;
+const SEARCH_STATES = 200_000;
+
+/**
+ * The least stock there is, searched over lengths instead of single pieces: a job cuts many
+ * pieces of a few lengths, and nudged orders miss mixes such as four 48″ on one pipe and three
+ * 57″ on the next (found 2026-11-22: 3 pipes + 9 ft where 3 + 5 ft does it).
+ * Returns only a packing that buys less than `beat`. On a job too varied to finish it gives
+ * back the best it completed, or null.
+ */
+function searchLeast(sorted: CutPiece[], full: Um, cap: Um, piece: boolean, beat: Um): OpenBar[] | null {
+  const kinds: Um[] = [], count: number[] = [];
+  for (const p of sorted) {
+    if (kinds[kinds.length - 1] === p.length) count[count.length - 1]++;
+    else { kinds.push(p.length); count.push(1); }
+  }
+  const radix: number[] = [];
+  let states = 1;
+  for (const c of count) {
+    radix.push(states);
+    states *= c + 1;
+    if (states > SEARCH_STATES) return null;
+  }
+  const keyOf = (left: number[]) => left.reduce((a, c, i) => a + c * radix[i], 0);
+
+  let steps = 0;
+  /** Every load one bar takes from `left`. A full pipe takes the longest piece left and is filled
+   *  until nothing more fits (that never costs a pipe); the cut piece may hold any load. */
+  const eachLoad = (left: number[], pipe: boolean, visit: (take: number[], used: Um) => void) => {
+    const first = left.findIndex((c) => c > 0);
+    const take = left.map(() => 0);
+    const at = (i: number, used: Um, n: number) => {
+      if (++steps > SEARCH_STEPS) return;
+      if (i === kinds.length) {
+        if (!n) return;
+        if (pipe) for (let j = kinds.length - 1; j >= 0; j--) {
+          if (take[j] < left[j]) { if (used + KERF + kinds[j] <= cap) return; break; }
+        }
+        visit(take, used);
+        return;
+      }
+      const room = cap - used + (n ? 0 : KERF);
+      const most = Math.min(left[i], Math.floor(room / (kinds[i] + KERF)));
+      for (let c = most; c >= (pipe && i === first ? 1 : 0); c--) {
+        take[i] = c;
+        at(i + 1, c ? used + c * (kinds[i] + KERF) - (n ? 0 : KERF) : used, n + c);
+      }
+      take[i] = 0;
+    };
+    at(Math.max(0, first), 0, 0);
+  };
+  /** The fewest pipes these pieces can possibly need. */
+  const atLeast = (left: number[]) =>
+    Math.ceil(left.reduce((a, c, i) => a + c * (kinds[i] + KERF), 0) / (cap + KERF));
+
+  const memo = new Map<number, number[][] | null>([[0, []]]);
+  /** The fewest full pipes for `left`, as their loads; null when the work ran out. */
+  const pipesFor = (left: number[]): number[][] | null => {
+    const key = keyOf(left);
+    const known = memo.get(key);
+    if (known !== undefined) return known;
+    const floor = atLeast(left);
+    let best: number[][] | null = null;
+    eachLoad(left, true, (take) => {
+      if (best && best.length <= floor) return;
+      const load = [...take];
+      const rest = pipesFor(left.map((c, i) => c - load[i]));
+      if (rest && (!best || rest.length + 1 < best.length)) best = [load, ...rest];
+    });
+    if (steps > SEARCH_STEPS) return null;
+    memo.set(key, best);
+    return best;
+  };
+
+  let bought = beat;
+  let found: number[][] | null = null;
+  if (atLeast(count) * full < bought) {
+    const all = pipesFor(count);
+    if (all && all.length * full < bought) { bought = all.length * full; found = all; }
+  }
+  if (piece) eachLoad(count, false, (take, used) => {
+    const len = Math.min(full, Math.max(FOOT, Math.ceil(used / FOOT) * FOOT));
+    if (len >= full) return;
+    const load = [...take];
+    const left = count.map((c, i) => c - load[i]);
+    if (atLeast(left) * full + len >= bought) return;
+    const rest = pipesFor(left);
+    if (rest && rest.length * full + len < bought) { bought = rest.length * full + len; found = [...rest, load]; }
+  });
+  if (!found) return null;
+
+  const next = kinds.map((k) => sorted.findIndex((p) => p.length === k));
+  return (found as number[][]).map((load) => {
+    const pieces = load.flatMap((c, i) => sorted.slice(next[i], (next[i] += c)));
+    return { pieces, used: pieces.reduce((a, p) => a + p.length, 0) + (pieces.length - 1) * KERF };
+  });
+}
+
 /**
  * Pack one section's pieces onto bars, buying as little stock as possible.
  *
@@ -104,6 +203,8 @@ function seeded(key: string): () => number {
  * sizes nudged at random — and the packing that buys the least stock wins;
  * a tie goes to the one leaving its offcut in longer, reusable pieces. The
  * randomness is seeded by the pieces, so a job always cuts the same way.
+ * Where those orders still buy more than the plain total, the lengths are searched for the
+ * least there is; that packing is taken only when it buys less.
  * The least-used bar is bought as a piece of the feet it needs (if the section sells pieces).
  */
 export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] {
@@ -141,6 +242,7 @@ export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] 
         .map((x) => x.p);
       consider(fill(order, cap, t % 2 === 1));
     }
+    if (bestStock > floor) best = searchLeast(sorted, barFull, cap, piece, bestStock) ?? best;
   }
 
   // Longest pieces first on every bar, as the cutter takes them; the piece last.
