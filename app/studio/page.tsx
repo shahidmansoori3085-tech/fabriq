@@ -14,6 +14,7 @@ import { SYSTEM_STATUS, noMaker, type StudioUnit } from "../../lib/studio/format
 import StudioEditor, { nextStep } from "../../components/studio-editor";
 import { Badge, SectionTitle } from "../../components/studio-ui";
 import { findProfile } from "../../lib/studio/store";
+import { markSystem } from "../../lib/track";
 import StudioThumb from "../../components/studio-thumb";
 import { SectionLibrary } from "../../components/studio/section-library";
 
@@ -88,11 +89,23 @@ export default function StudioPage() {
     if (replace) window.history.replaceState(st, ""); else window.history.pushState(st, "");
     setView(v);
   };
-  const putSystem = (s: StudioSystem) => commit({ ...lib, systems: lib.systems.map((x) => (x.id === s.id ? s : x)) });
-  const addProfile = (p: ProfileDef) => commit({ ...lib, profiles: [...lib.profiles.filter((x) => x.id !== p.id), p] });
+  const putSystem = (s: StudioSystem) => {
+    const was = lib.systems.find((x) => x.id === s.id);
+    if (was) {
+      // a cut, a piece or a size rule is "the cuts"; a name or a choice is a plain change
+      const cuts = (x: StudioSystem) => JSON.stringify([x.parts, x.sizes]);
+      markSystem(cuts(was) !== cuts(s) ? "cut-changed" : "changed", s.id, s.basedOn?.id);
+    }
+    commit({ ...lib, systems: lib.systems.map((x) => (x.id === s.id ? s : x)) });
+  };
+  const addProfile = (p: ProfileDef) => {
+    markSystem("section-added", p.id);
+    commit({ ...lib, profiles: [...lib.profiles.filter((x) => x.id !== p.id), p] });
+  };
 
   const create = (templateId: string) => {
     const s = copyTemplate(templateId);
+    markSystem("new", s.id, templateId);
     commit({ ...lib, systems: [...lib.systems, s] });
     go({ kind: "system", id: s.id }, view.kind === "new");
     window.scrollTo({ top: 0 });
@@ -139,7 +152,7 @@ export default function StudioPage() {
             commit({ ...lib, systems: [...lib.systems, c] });
             go({ kind: "system", id: c.id }, true);
           }}
-          onDelete={() => { commit({ ...lib, systems: lib.systems.filter((s) => s.id !== current.id) }); go({ kind: "home" }); }} />
+          onDelete={() => { markSystem("deleted", current.id, current.basedOn?.id); commit({ ...lib, systems: lib.systems.filter((s) => s.id !== current.id) }); go({ kind: "home" }); }} />
       ) : view.kind === "new" ? (
         <NewSystem lib={lib} onPick={create} onBack={() => go({ kind: "home" })} />
       ) : view.kind === "sections" ? (

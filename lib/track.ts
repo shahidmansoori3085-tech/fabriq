@@ -110,6 +110,9 @@ export function markInstalls(): void {
     sendWhenReady("/from/home-screen", () => sessionStorage.setItem("fabriq.home", "1"));
     const v = via();
     if (v) sendWhenReady(`/via/${v}/home-screen`);
+    // tie the opening to the phone's code, so the report can say which of
+    // the people who made lists or sent orders came in through the icon
+    sendWhenReady(`/u/${ensureUid()}/home-screen`);
   } catch {
     /* storage or analytics blocked — the app works the same */
   }
@@ -161,6 +164,15 @@ const UID_KEY = "fabriq.uid";
 function uid(): string | null {
   try { return localStorage.getItem(UID_KEY); } catch { return null; }
 }
+/** this phone's code, made on first need (storage errors are the caller's) */
+function ensureUid(): string {
+  let id = localStorage.getItem(UID_KEY);
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(UID_KEY, id);
+  }
+  return id;
+}
 /** today in India, YYYY-MM-DD */
 const istDay = (t: number) => new Date(t + 5.5 * 3600_000).toISOString().slice(0, 10);
 
@@ -168,11 +180,7 @@ export function markVisitor(): void {
   try {
     const today = istDay(Date.now());
     if (localStorage.getItem("fabriq.seen") === today) return; // counted today already
-    let id = localStorage.getItem(UID_KEY);
-    if (!id) {
-      id = Math.random().toString(36).slice(2, 8);
-      localStorage.setItem(UID_KEY, id);
-    }
+    const id = ensureUid();
     // first day: kept from the first visit after this change; for a phone that
     // was here before, its oldest saved job says when it started
     let first = localStorage.getItem("fabriq.first");
@@ -239,4 +247,26 @@ export function markFeedback(what: "ok" | "wrong", system: string, reason?: stri
   view(`/feedback/wrong/${slug(reason ?? "other") || "other"}/${sys}`);
   const n = (note ?? "").trim().toLowerCase().replace(/[^a-z0-9\u0900-\u097f.x]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
   if (n) view(`/feedback/note/${sys}/${n}`);
+}
+
+/* —— shops changing their own systems (System Studio) ——
+ * Counted once per visit for each system and kind of change, so a shop typing
+ * a size letter by letter is still one change:
+ *   /done/system/<kind>                 how many changed anything
+ *   /done/system/<kind>/<built-in>      which built-in series it started from
+ *   /u/<code>/system-<kind>             who: the same code as their lists and orders
+ * Nothing about the sizes or the shop is sent.
+ */
+export type SystemEdit = "cut-changed" | "changed" | "new" | "section-added" | "deleted";
+
+export function markSystem(kind: SystemEdit, sysId: string, basedOn?: string): void {
+  try {
+    const key = `fabriq.sys.${kind}.${sysId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch { /* storage blocked — count it anyway */ }
+  view(`/done/system/${kind}`);
+  if (basedOn) view(`/done/system/${kind}/${slug(basedOn)}`);
+  const u = uid();
+  if (u) view(`/u/${u}/system-${kind}`);
 }
