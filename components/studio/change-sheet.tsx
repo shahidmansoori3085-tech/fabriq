@@ -25,18 +25,6 @@ function MoreScreen({ title, onBack, children }: { title: string; onBack: () => 
   );
 }
 
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ background: "var(--surface-3)", color: "var(--ink)" }}>{n}</span>
-        <span className="text-[15px] font-bold">{title}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export function ChangeSheet({ title, section, now, angle, unit, onSave, more, onClose }: {
   /** the pipe: "Handle", "Top track" */
   title: string;
@@ -64,24 +52,29 @@ export function ChangeSheet({ title, section, now, angle, unit, onSave, more, on
         <span className="mono text-lg font-bold">{now != null ? fmtLen(now, unit).replace(/~/g, "") : "Not set"} <span className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>· {angle}°</span></span>
       </div>
 
-      <Step n={1} title="Your size">
+      <div className="mt-4">
+        <div className="mb-2 text-[15px] font-bold">New size</div>
         <input autoFocus className="field w-full px-3 py-3 text-lg font-semibold" inputMode="text" value={raw} onChange={(e) => setRaw(e.target.value)}
+          // Enter saves; the key stops here, so it never reaches the page under the sheet
+          onKeyDown={(e) => { if (e.key !== "Enter") return; e.preventDefault(); e.stopPropagation(); if (changed && !bad) onSave(um, deg); }}
           placeholder="48.7 = 48 inch 7 sut" aria-label="Your size" />
         <p className="mt-1.5 text-xs" style={{ color: bad ? "var(--bad)" : "var(--ink-3)" }}>
           {bad ? "Type it like 46.5 (inch.sut), 1180 mm or 3'10.5 (feet)."
             : um !== null ? <>= <b className="mono" style={{ color: "var(--ink)" }}>{fmtLen(um, "in").replace(/~/g, "")}</b> · {Math.round(um / 1000)} mm</>
             : "Or type mm, cm or feet."}
         </p>
-      </Step>
+      </div>
 
-      <Step n={2} title="Cut">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="text-sm" style={{ color: "var(--ink-3)" }}>Cut</span>
+        <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-3)" }} role="radiogroup" aria-label="Cut">
           {([90, 45] as const).map((d) => (
-            <button key={d} type="button" aria-pressed={deg === d} onClick={() => setDeg(d)}
-              className={`chip py-3 text-base font-bold ${deg === d ? "selected" : ""}`}>{d}°</button>
+            <button key={d} type="button" role="radio" aria-checked={deg === d} onClick={() => setDeg(d)}
+              className="rounded-md px-4 py-1.5 text-sm font-bold"
+              style={deg === d ? { background: "var(--surface)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(17,24,39,.08)" } : { color: "var(--ink-3)" }}>{d}°</button>
           ))}
         </div>
-      </Step>
+      </div>
 
       <button type="button" className="btn-primary mt-6 w-full py-3.5 text-base" disabled={!changed || bad} onClick={() => onSave(um, deg)}>Save</button>
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)}

@@ -192,3 +192,34 @@ export function readAnyLen(raw: string): Um | null {
   }
   return null;
 }
+
+const FRAC: Record<string, number> = { "¼": 0.25, "½": 0.5, "¾": 0.75 };
+const inchVal = (t: string): number => {
+  const m = /^(\d*)([¼½¾])$/.exec(t);
+  if (m) return (m[1] ? +m[1] : 0) + FRAC[m[2]];
+  if (/^\d+\/\d+$/.test(t)) { const [a, b] = t.split("/").map(Number); return a / b; }
+  return parseFloat(t);
+};
+const inchText = (v: number): string => {
+  const w = Math.floor(v + 1e-9), f = Math.round((v - w) * 4) / 4;
+  const ch = f === 0.25 ? "¼" : f === 0.5 ? "½" : f === 0.75 ? "¾" : "";
+  return `${w || ""}${ch}` || "0";
+};
+/**
+ * A section as the shop says it (founder 2026-11-23: "3 Track Top", "Handle 1½ × ¾"): no
+ * company, no mm size, "3-Track Top/Side" → "3 Track Top", inch sizes as 1½ × ¾ (big first).
+ */
+export function shopName(t: string): string {
+  return sectionTitle(t)
+    .replace(/(\d)\s*-\s*Track/gi, "$1 Track")
+    .replace(/\s*\/\s*Side\b/i, "")
+    .replace(/\bStile\b\s*/i, "")
+    .replace(/\bBottom Bearing\s*\/\s*Rail\b/i, "Bearing")
+    .replace(/\s*\((top and bottom|reinforcement)\)/i, "")
+    .replace(/(\d*[¼½¾]|\d+\/\d+|\d+(?:\.\d+)?)\s*["″]?\s*[×x]\s*(\d*[¼½¾]|\d+\/\d+|\d+(?:\.\d+)?)\s*["″]?/, (_m, a: string, b: string) => {
+      const [x, y] = [inchVal(a), inchVal(b)].sort((p, q) => q - p);
+      return `${inchText(x)} × ${inchText(y)}`;
+    })
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}

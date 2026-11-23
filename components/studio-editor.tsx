@@ -328,9 +328,18 @@ export default function StudioEditor({ sys, lib, unit, onUnit, onChange: save, o
           className="min-w-0 flex-1 bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none" />
         <span className="mt-1.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: toneBg(state.tone), color: toneFg(state.tone) }}>{state.label}</span>
       </div>
-      <p className="mt-0.5 text-sm" style={{ color: "var(--ink-3)" }}>
-        {sys.layouts.length > 2 ? `${layoutLabel(sys, sys.layouts[0].tracks).replace(/ sash(es)?$/, "")} to ${layoutLabel(sys, sys.layouts[sys.layouts.length - 1].tracks)}` : sys.layouts.map((l) => layoutLabel(sys, l.tracks)).join(" and ")}{sys.switches.some((x) => x.id === "joint") ? " · 90° or 45° cutting" : sys.parts.some((p) => p.place?.startsWith("frame") && p.angle === 45) ? " · 45° frame" : " · 90° frame"}
-      </p>
+      {/* Normal 18 comes with two shutter sets: which one this is, and the other a tap away (founder 2026-11-23) */}
+      {(() => {
+        const base = sys.basedOn?.id ?? sys.id;
+        if (base !== "normal-18" && base !== "normal-18-60") return null;
+        return (
+          <div className="mt-2 flex items-center gap-3">
+            <span className="text-sm font-semibold" style={{ color: "var(--ink-2)" }}>Shutter</span>
+            <Seg value={base} onChange={(v) => { if (v !== base) window.location.href = `/studio?open=${v}`; }}
+              options={[{ value: "normal-18", label: "1½ × ¾" }, { value: "normal-18-60", label: "2½ × ¾" }]} />
+          </div>
+        );
+      })()}
 
 
       {/* the window, drawn to scale with every cut on it: tap a pipe or a pane to change it

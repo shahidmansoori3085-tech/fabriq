@@ -11,7 +11,7 @@ import type { StudioSystem } from "../../lib/studio/model";
 import type { WindowGeo, Member } from "../../lib/studio/geometry";
 import { matches } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
-import { fmtLen, type StudioUnit } from "../../lib/studio/format";
+import { fmtLen, shopName, type StudioUnit } from "../../lib/studio/format";
 import type { Pick } from "../studio-drawing";
 
 
@@ -21,7 +21,7 @@ export const KIND_NAMES: Record<string, string> = {
   shutter: "Shutter pipe", "shutter-rail": "Shutter top / bottom", "mesh-shutter": "Mesh shutter pipe", "interlock-patti": "Interlock patti",
   rail: "Rail", bead: "Glazing clip", mullion: "Mullion", frame: "Frame",
 };
-const FRAME_NAME: Record<string, string> = { "frame-top": "Top track", "frame-bottom": "Bottom track", "frame-left": "Left side", "frame-right": "Right side" };
+const FRAME_NAME: Record<string, string> = { "frame-top": "Top", "frame-bottom": "Bottom", "frame-left": "Left side", "frame-right": "Right side" };
 
 /** How much a 45° pipe loses on its inside edge (µm): the faces of the two pipes it meets at its
  *  corners — a side meets the top and bottom, a top or bottom meets the two sides. */
@@ -46,24 +46,33 @@ export function cut45(m: Member, vars: Record<string, string>): boolean {
 /** Each pipe's name and cut on this window, for the drawing (part id → { name, value, inside }).
  *  A 45° pipe also gives its inside length: outside − its face at each end. */
 export function pipeLabels(sys: StudioSystem, lib: StudioLibrary, vars: Record<string, string>, values: Record<string, Um | null>, unit: StudioUnit, geo?: WindowGeo) {
-  const out: Record<string, { name: string; value: string; inside?: string }> = {};
+  const out: Record<string, { name: string; value: string; inside?: string; where?: string }> = {};
   const member = (id: string) => geo && [...geo.frame, ...geo.sash].find((m) => m.partId === id);
+  const profileOf = (q: (typeof sys.parts)[number]) => findProfile(lib, (q.profile.find((c) => matches(c.when, vars)) ?? q.profile[q.profile.length - 1])?.id ?? "");
+  // the shutter set's size, as the shop says it ("1½ × ¾"), from the handle's name
+  const lock = sys.parts.find((x) => x.place === "sash-lock" && x.enabled !== false);
+  const shutterSize = lock ? /\d*[¼½¾] × [¼½¾]/.exec(shopName(profileOf(lock)?.name ?? ""))?.[0] : undefined;
   for (const q of sys.parts) {
     const v = values[q.length];
     if (q.enabled === false || v == null) continue;
-    const pr = findProfile(lib, (q.profile.find((c) => matches(c.when, vars)) ?? q.profile[q.profile.length - 1])?.id ?? "");
+    const pr = profileOf(q);
     const kind = pr?.kind && KIND_NAMES[pr.kind];
-    const frame = q.place ? FRAME_NAME[q.place] : undefined;
-    const name = frame ? (sys.family === "casement" ? frame.replace("track", "frame") : frame)
-      : kind ? `${kind}${q.place === "sash-top" ? " · top" : q.place === "sash-bottom" ? " · bottom" : ""}` : q.role.replace(/\{[a-z]+\}/g, "").trim();
+    const at = q.place === "sash-top" ? " · top" : q.place === "sash-bottom" ? " · bottom" : "";
+    // the pipe as the shop calls it (founder 2026-11-23): "3 Track Top", "Handle 1½ × ¾", "Domal Glass Shutter"
+    const name = pr && q.place && FRAME_NAME[q.place] ? shopName(pr.name)
+      : kind && /^(Handle|Interlock|Bearing)$/.test(kind) ? `${kind}${shutterSize ? ` ${shutterSize}` : ""}`
+      : pr ? shopName(pr.name)
+      : kind ?? q.role.replace(/\{[a-z]+\}/g, "").trim();
+    // where it sits, when the name does not say (a track's top, bottom or sides)
+    const where = q.place && FRAME_NAME[q.place] ? FRAME_NAME[q.place] : at ? (at === " · top" ? "Top" : "Bottom") : undefined;
     const m = member(q.id);
     const inside = m && geo && cut45(m, vars) ? fmtLen(v - insideLoss(m, geo), unit).replace(/~/g, "") : undefined;
-    out[q.id] = { name, value: fmtLen(v, unit).replace(/~/g, ""), inside };
+    out[q.id] = { name, value: fmtLen(v, unit).replace(/~/g, ""), inside, where };
   }
   return out;
 }
 
-type Lab = Record<string, { name: string; value: string; inside?: string }>;
+type Lab = Record<string, { name: string; value: string; inside?: string; where?: string }>;
 
 /** One tappable pipe in a small drawing, with its name and cut beside it. */
 function Bar({ x, y, w, h, on, onTap }: { x: number; y: number; w: number; h: number; on: boolean; onTap: () => void }) {
@@ -74,14 +83,22 @@ function Tag({ x, y, l, anchor = "middle", on, onTap }: {
   x: number; y: number; l?: { name: string; value: string; inside?: string }; anchor?: "start" | "middle" | "end"; on?: boolean; onTap?: () => void;
 }) {
   if (!l) return null;
-  const w = Math.max(l.name.length * 5.6, l.value.length * 8.4, l.inside ? (l.inside.length + 7) * 5.1 : 0) + 16;
+  // the drawing has little room: the name without its series or shutter size ("3 Track", "Glass Shutter")
+  // — the list under the drawing says it in full
+  const name = l.name
+    .replace(/\s*\d*[¼½¾] × [¼½¾]/, "")
+    .replace(/^(Domal|Euro|Gulf|Mini domal)(\s+\d{2}(?!\d))?\s+|^\d+ mm\s+/i, "")
+    .replace(/(\d Track) Frame$/, "$1")
+    .replace(/\s*\(.*\)$/, "")
+    .trim();
+  const w = Math.max(name.length * 5.6, l.value.length * 8.4, l.inside ? (l.inside.length + 7) * 5.1 : 0) + 16;
   const h = l.inside ? 46 : 34;
   const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
   const cx = left + w / 2;
   return (
     <g onClick={onTap} style={{ cursor: onTap ? "pointer" : undefined }}>
       <rect x={left} y={y - 12} width={w} height={h} rx={8} fill={on ? "var(--accent)" : "#ffffff"} stroke={on ? "var(--accent)" : "#d5dbe2"} strokeWidth={1} />
-      <text x={cx} y={y} textAnchor="middle" fontSize={10} fontWeight={600} fill={on ? "#ffffff" : "#64748b"} fontFamily="ui-sans-serif, system-ui">{l.name}</text>
+      <text x={cx} y={y} textAnchor="middle" fontSize={10} fontWeight={600} fill={on ? "#ffffff" : "#64748b"} fontFamily="ui-sans-serif, system-ui">{name}</text>
       <text x={cx} y={y + 15} textAnchor="middle" fontSize={13} fontWeight={800} fill={on ? "#ffffff" : "#0f172a"} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">{l.value}</text>
       {l.inside && <text x={cx} y={y + 28} textAnchor="middle" fontSize={9.5} fill={on ? "#ffffff" : "#64748b"} fontFamily="ui-sans-serif, system-ui">inside {l.inside}</text>}
     </g>
@@ -189,14 +206,17 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
     const seen = new Set<string>();
     const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
     const rowsOf = ms.filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true))).sort((x, y) => ORDER.indexOf(x.place) - ORDER.indexOf(y.place)).map((m) => {
-      return { m, name: labels[m.partId]?.name ?? "Pipe", value: labels[m.partId]?.value ?? "—" };
+      return { m, name: labels[m.partId]?.name ?? "Pipe", where: labels[m.partId]?.where, value: labels[m.partId]?.value ?? "—" };
     });
     return (
       <div className="border-t" style={{ borderColor: "var(--line)" }}>
         {rowsOf.map((r, i) => (
           <button key={r.m.partId} type="button" onClick={() => onChangePipe(r.m.partId)} aria-label={`Change ${r.name}`}
             className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-[var(--surface-2)]" style={i ? { borderTop: "1px solid var(--line)" } : undefined}>
-            <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{r.name}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-semibold">{r.name}</span>
+              {r.where && <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{r.where}</span>}
+            </span>
             <span className="mono shrink-0 text-[15px] font-semibold">{r.value}</span>
             {/* a plain, visible Change: neutral colours, the whole line taps (founder 2026-11-18) */}
             <span className="flex shrink-0 items-center gap-0.5 rounded-lg px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--surface-2)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
@@ -241,8 +261,6 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   const bombay = !!meet && !!lockP && kindOf(meet) === "interlock" && kindOf(lockP) === "handle";
   const len = (um: Um | null | undefined) => (um != null ? fmtLen(um, unit).replace(/~/g, "") : "—");
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
-  // every card says which window its cuts are for
-  const forWin = `for ${values.W != null ? fmtLen(values.W, unit).replace(/~/g, "") : "?"} × ${values.H != null ? fmtLen(values.H, unit).replace(/~/g, "") : "?"} window`;
   const pane = `${len(values[sys.infill.w])} × ${len(values[sys.infill.h])}`;
   const CARD: React.CSSProperties = { borderRadius: 22, background: "var(--surface)", border: "1px solid var(--line)",
     boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 8px 24px -8px rgba(15,23,42,.14)" };
@@ -256,21 +274,18 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="overflow-hidden" style={CARD}>
-        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-right text-xs" style={{ color: "var(--ink-3)" }}><span className="block font-semibold" style={{ color: "var(--ink-2)" }}>{forWin}</span>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
+        {head(sys.family === "casement" ? "Frame" : `Track · ${vars.tracks ?? geo.shutters.length}-track`, <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{vars.joint === "45" || (vars.joint !== "90" && geo.frame.some((m) => m.angle === 45)) ? "45° cut" : "90° cut"}</span>)}
         <div className="border-t px-2 py-1" style={{ borderColor: "var(--line)", background: "linear-gradient(180deg, var(--surface-2), var(--surface) 70%)" }}><TrackSketch geo={geo} labels={labels} pick={pick} onPick={onPick} /></div>
         {sections(geo.frame)}
       </div>
 
       {/* the shutters, one card each, side by side: swipe to the next (founder 2026-11-18) */}
       <div className="flex items-center justify-between px-1">
-        <span>
-          <span className="block text-[17px] font-bold leading-tight">Shutters</span>
-          <span className="block text-xs" style={{ color: "var(--ink-3)" }}>Each shutter on its own card</span>
-        </span>
+        <span className="text-[17px] font-bold leading-tight">Shutters</span>
         {geo.shutters.length > 1 && (
           <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--ink-3)" }}>
             <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 7l-5 5 5 5" /><path d="M16 7l5 5-5 5" /><path d="M3 12h18" /></svg>
-            Swipe · {at + 1} of {geo.shutters.length}
+            {at + 1} of {geo.shutters.length}
           </span>
         )}
       </div>
@@ -288,7 +303,6 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: "var(--surface-3)", color: "var(--ink)" }}>{s.index + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[16px] font-bold leading-tight">Shutter {s.index + 1}</span>
-                    <span className="block text-xs" style={{ color: "var(--ink-3)" }}>{s.index + 1} of {geo.shutters.length} · {fill(k)} · {forWin}</span>
                   </span>
                   {geo.shutters.length > 1 && (
                     <span className="flex shrink-0 gap-1">
@@ -342,7 +356,6 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                         </div>
                       </div>
                     )}
-                    <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Applies to every mesh shutter of this system.</p>
                   </div>
                 )}
                 {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)])}
