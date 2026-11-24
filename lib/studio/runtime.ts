@@ -6,7 +6,7 @@
 import type { ProfileDef, StudioSystem } from "./model";
 import type { JobItem } from "../engine/types";
 import { evaluate, type StudioJob } from "./evaluate";
-import { TEMPLATES, WINDOW_SYSTEMS, withJoint } from "./templates";
+import { TEMPLATES, WINDOW_SYSTEMS, withJoint, withDomalSlim, withoutDoubleGlass } from "./templates";
 
 let systems: StudioSystem[] = [];
 let shopProfiles: ProfileDef[] = [];
@@ -15,7 +15,10 @@ let shopProfiles: ProfileDef[] = [];
 export function registerShopProfiles(list: ProfileDef[]): void { shopProfiles = list; }
 export function shopProfile(id: string): ProfileDef | undefined { return shopProfiles.find((p) => p.id === id); }
 
-export function registerStudioSystems(list: StudioSystem[]): void { systems = list; }
+/** a shop's own Domal 27 made before its slim interlock choice gets that choice too; and no
+ *  shop system offers double glass any more */
+const upgrade = (s: StudioSystem) => withoutDoubleGlass(s.basedOn?.id === "domal-27" ? withDomalSlim(s) : s);
+export function registerStudioSystems(list: StudioSystem[]): void { systems = list.map(upgrade); }
 export function studioSystems(): StudioSystem[] { return systems; }
 /** The shop's system, else a built-in one by its id (Window offers built-ins directly). */
 export function studioSystem(id: string): StudioSystem | undefined { return systems.find((s) => s.id === id) ?? TEMPLATES.find((t) => t.id === id); }

@@ -133,6 +133,8 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Shutter width (`mode`): Half each (default) · Share the width
+  - Shutter Right (`pick_shutterMeet`): 27 mm Slim Interlock — small (default) · 27 mm Slim Interlock — big
+  - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
 Pieces:
 
@@ -145,8 +147,8 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
 | Shutter Left | shutter | 1 | shutterH | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
-| Shutter Right | shutter | 1 | shutterH | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
-| Interlock | meeting | 2 | shutterH | 90° | Domal Interlock Patti 39×28 — code 2091 — 39.4×28 mm — interlock-patti |
+| Shutter Right | shutter | 1 | shutterH | 45° | meet=clip: Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter<br>pick_shutterMeet=el27_slim: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_big: 27 mm Slim Interlock — big — code 2729 — 85.2×22.7 mm — slim-interlock<br>always: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock |
+| Interlock (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal Interlock Patti 39×28 — code 2091 — 39.4×28 mm — interlock-patti |
 
 Size rules:
 
@@ -158,6 +160,9 @@ Size rules:
 | Shutter width (`shutterW`) | mode=equal, glass=4 | (W + 101.6) ÷ 4 | observed | Shop videos: 4 glass share: (W + 4″) ÷ 4 |
 | Shutter width (`shutterW`) | always | W ÷ 2 | verified | Founder job: every shutter is half the window |
 | Shutter height (`shutterH`) | always | H − 66.7 | verified | Founder job: 66×58 3-track, shutter side 55⅜″ |
+| Glass width (`glassW`) | meet=slim, pick_shutterMeet=el27_slim | shutterW − 63 | suggested | From the drawings (window built from the sections): 2046 pocket 51.0 + small slim 2728 12.0 (glass goes 14.6 mm into its top slot). Check on one window. |
+| Glass width (`glassW`) | meet=slim, pick_shutterMeet=el27_slim_big | shutterW − 62.9 | suggested | From the drawings (window built from the sections): 2046 pocket 51.0 + big slim 2729 11.9 (its drawing is not to scale: measured on the 27.00 slot and 22.70 height). Check on one window. |
+| Glass width (`glassW`) | meet=slim, pick_shutterMeet=el27_slim_dgu | shutterW − 63.1 | suggested | From the drawings (window built from the sections): 2046 pocket 51.0 + double-glass slim 2730 12.1. Check on one window. |
 | Glass width (`glassW`) | always | shutterW − 102 | verified | Founder job: shutter − 102 mm; videos 4″–4⅛″ |
 | Glass height (`glassH`) | always | shutterH − 102 | verified | Founder job: shutter − 102 mm; videos 4″–4⅛″ |
 
@@ -177,6 +182,20 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 | Interlock 2 | 1152.5 mm | 90° | 1 |
 | Glass/mesh glass | 812.4 × 1050.5 mm | — | 2 |
 
+Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=slim:
+
+| Piece | Length | Cut | Pieces |
+|---|---|---|---|
+| Frame Top | 1828.8 mm | 45° | 1 |
+| Frame Left | 1219.2 mm | 45° | 1 |
+| Frame Right | 1219.2 mm | 45° | 1 |
+| Frame Bottom | 1828.8 mm | 45° | 1 |
+| Shutter Shutter Top | 914.4 mm | 45° | 2 |
+| Shutter Shutter Bottom | 914.4 mm | 45° | 2 |
+| Shutter Shutter Left | 1152.5 mm | 45° | 2 |
+| Shutter Shutter Right | 1152.5 mm | 45° | 2 |
+| Glass/mesh glass | 851.4 × 1050.5 mm | — | 2 |
+
 ---
 
 ## Euro 27 mm
@@ -186,7 +205,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - Layouts: 2 track (GG, GJ, JJ); 3 track (GGJ, GGG, GJJ, GG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - 29 track (`track`): 48.0 mm track (default)
-  - Slim Interlock (`pick_shutterMeet`): 27 mm Slim Interlock — small (default) · 27 mm Slim Interlock — big · 27 mm Slim Interlock — double glass
+  - Slim Interlock (`pick_shutterMeet`): 27 mm Slim Interlock — small (default) · 27 mm Slim Interlock — big
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
 Pieces:
@@ -201,7 +220,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
 | Shutter {lr} | shutter | 1 | shutterH | 45° | Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter<br>pick_shutterMeet=el27_slim: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_big: 27 mm Slim Interlock — big — code 2729 — 85.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_dgu: 27 mm Slim Interlock — double glass — code 2730 — 32.3×22.7 mm — slim-interlock<br>always: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Domal Glass Shutter — code 2046/2047 — 65×27 mm — shutter<br>pick_shutterMeet=el27_slim: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock<br>pick_shutterMeet=el27_slim_big: 27 mm Slim Interlock — big — code 2729 — 85.2×22.7 mm — slim-interlock<br>always: 27 mm Slim Interlock — small — code 2728 — 35.2×22.7 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal Interlock Patti 39×28 — code 2091 — 39.4×28 mm — interlock-patti |
 
 Size rules:
@@ -440,7 +459,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, default choices:
 - In short: 47.7 mm U track with roller clip 914401; shutter 41055 on all sides + interlock clip 41054, or slim interlock; jali 41050
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Interlock Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big · 29 mm Slim Interlock — double glass
+  - Interlock Side (`pick_shutterMeet`): 29 mm Slim Interlock — small (default) · 29 mm Slim Interlock — big
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
 
 Pieces:
@@ -455,7 +474,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
 | Shutter {lr} | shutter | 1 | shutterH | 45° | 29 mm Shutter — code 41055 — 65×29 mm — shutter |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_dgu: 29 mm Slim Interlock — double glass — code 2916 — 34.1×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 29 mm Shutter — code 41055 — 65×29 mm — shutter<br>pick_shutterMeet=el29_slim: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock<br>pick_shutterMeet=el29_slim_big: 29 mm Slim Interlock — big — code 2914 — 80×25 mm — slim-interlock<br>always: 29 mm Slim Interlock — small — code 2913 — 34.3×25 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | 29 mm Interlock Clip — code 41054 — 33.63×38.89 mm — interlock-patti |
 
 Size rules:
@@ -817,7 +836,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 - In short: Gulf: BH-6401 / 6403 top and bottom with roller clip; left and right one-groove BH-6400 / 6402; slim interlock small (6408) or big (6409)
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Slim Interlock (`pick_shutterMeet`): 31 mm Slim Interlock — small (default) · 31 mm Slim Interlock — big (reinforcement) · 31 mm Slim Interlock — small, double glass · 31 mm Slim Interlock — big, double glass
+  - Slim Interlock (`pick_shutterMeet`): 31 mm Slim Interlock — small (default) · 31 mm Slim Interlock — big (reinforcement)
   - Meeting side (`meet`): Slim interlock (default) · Shutter + interlock clip
 
 Pieces:
@@ -832,7 +851,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
 | Shutter {lr} | shutter | 1 | shutterH | 45° | 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_slim_dgu: 31 mm Slim Interlock — small, double glass — code BH-6410 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine_dgu: 31 mm Slim Interlock — big, double glass — code BH-6411 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 31 mm Shutter (single glass) — code BH-6406 — 59×31.4 mm — handle<br>pick_shutterMeet=bh31_slim: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock<br>pick_shutterMeet=bh31_spine: 31 mm Slim Interlock — big (reinforcement) — code BH-6409 — 80.1×20.2 mm — slim-interlock<br>always: 31 mm Slim Interlock — small — code BH-6408 — 38.1×20.2 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Interlock Clip — code BH-6054 — 38×30.3 mm — interlock-patti |
 
 Size rules:
@@ -894,7 +913,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 - In short: Like Euro: BH-6501 / 6503 top and bottom with track rail 6513; left and right one-groove BH-6500 / 6502; slim interlock small (6506) or big (6508)
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
-  - Slim Interlock (`pick_shutterMeet`): 35 mm Slim Interlock — small (default) · 35 mm Slim Interlock — big (reinforcement) · 35 mm Slim Interlock — small, double glass · 35 mm Slim Interlock — big, double glass
+  - Slim Interlock (`pick_shutterMeet`): 35 mm Slim Interlock — small (default) · 35 mm Slim Interlock — big (reinforcement)
   - Meeting side (`meet`): Slim interlock (default) · Shutter + interlock clip
 
 Pieces:
@@ -909,7 +928,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
 | Shutter {lr} | shutter | 1 | shutterH | 45° | 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter<br>pick_shutterMeet=bh35_slim: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine: 35 mm Slim Interlock — big (reinforcement) — code BH-6508 — 96×27 mm — slim-interlock<br>pick_shutterMeet=bh35_slim_dgu: 35 mm Slim Interlock — small, double glass — code BH-6507 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine_dgu: 35 mm Slim Interlock — big, double glass — code BH-6509 — 96×27 mm — slim-interlock<br>always: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: 35 mm Shutter (single glass) — code BH-6510 — 58.9×35.2 mm — shutter<br>pick_shutterMeet=bh35_slim: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock<br>pick_shutterMeet=bh35_spine: 35 mm Slim Interlock — big (reinforcement) — code BH-6508 — 96×27 mm — slim-interlock<br>always: 35 mm Slim Interlock — small — code BH-6506 — 47.2×27.5 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | Domal 35 I/L Clip — code BH-6711 / 3510 — 41×38.9 mm — interlock-patti |
 
 Size rules:
@@ -970,7 +989,7 @@ Worked example: 6′×4′ (1828.8 × 1219.2 mm), 2 track, GG, meet=clip:
 - Layouts: 2 track (GG, GJ); 3 track (GGJ, GGG)  (G glass, J jali/mesh)
 - Choices the shop makes:
   - Track clip (`rollerClip`): U groove (AT-35020) (default) · V groove (AT-35026)
-  - Shutter Right (`pick_shutterMeet`): 30 mm Slim Interlock — small (default) · 30 mm Slim Interlock — big · 30 mm Slim Interlock — double glass · 30 mm Slim Interlock — big, double glass
+  - Shutter Right (`pick_shutterMeet`): 30 mm Slim Interlock — small (default) · 30 mm Slim Interlock — big
   - Meeting side (`meet`): Slim interlock · Shutter + interlock clip (default)
   - Interlock Clip (`pick_meetClip`): Interlock Clip (default) · Double Interlock
 
@@ -986,7 +1005,7 @@ Pieces:
 | Shutter Top | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Bottom | shutter | 1 | shutterW | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
 | Shutter Left | shutter | 1 | shutterH | 45° | Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter |
-| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter<br>pick_shutterMeet=at_slim: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock<br>pick_shutterMeet=at_kpa: 30 mm Slim Interlock — big — code AT-30011 — 86.65×25 mm — slim-interlock<br>pick_shutterMeet=at_slim_dgu: 30 mm Slim Interlock — double glass — code AT-30010 — 36.93×25 mm — slim-interlock<br>pick_shutterMeet=at_kpa_dgu: 30 mm Slim Interlock — big, double glass — code AT-30012 — 86.65×25 mm — slim-interlock<br>always: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock |
+| Interlock Side | shutter | 1 | shutterH | 45° | meet=clip: Single Glass Shutter — code AT-30005 — 67.4×30 mm — shutter<br>pick_shutterMeet=at_slim: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock<br>pick_shutterMeet=at_kpa: 30 mm Slim Interlock — big — code AT-30011 — 86.65×25 mm — slim-interlock<br>always: 30 mm Slim Interlock — small — code AT-30009 — 36.93×25 mm — slim-interlock |
 | Interlock Clip (only if meet=clip) | meeting | 2 | shutterH | 90° | pick_meetClip=at_clip: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti<br>pick_meetClip=at_dbl: Double Interlock — code AT-30008 — 37.1×41.62 mm — interlock<br>always: Interlock Clip — code AT-30007 — 37.1×35.1 mm — interlock-patti |
 
 Size rules:

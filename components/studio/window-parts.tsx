@@ -106,7 +106,7 @@ function Tag({ x, y, l, anchor = "middle", on, onTap }: {
 }
 
 /** The track alone: four pipes round the opening, each with its cut. */
-function TrackSketch({ geo, labels, pick, onPick }: { geo: WindowGeo; labels: Lab; pick: Pick; onPick: (p: Pick) => void }) {
+export function TrackSketch({ geo, labels, pick, onPick }: { geo: WindowGeo; labels: Lab; pick: Pick; onPick: (p: Pick) => void }) {
   const at = (pl: string) => geo.frame.find((m) => m.place === pl);
   const t = 14, X = 70, Y = 34, W = 200, H = 128;
   const one = (pl: string, x: number, y: number, w: number, h: number) => {
@@ -130,7 +130,7 @@ function TrackSketch({ geo, labels, pick, onPick }: { geo: WindowGeo; labels: La
 }
 
 /** One shutter alone: its four pipes round the glass or mesh, each with its cut. */
-function ShutterSketch({ geo, index, kind, labels, pane, pick, onPick }: {
+export function ShutterSketch({ geo, index, kind, labels, pane, pick, onPick }: {
   geo: WindowGeo; index: number; kind: string; labels: Lab; pane: string; pick: Pick; onPick: (p: Pick) => void;
 }) {
   const s = geo.shutters[index];

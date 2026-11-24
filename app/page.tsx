@@ -27,6 +27,7 @@ import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
 import StudioThumb, { MiniSection } from "@/components/studio-thumb";
 import { CloudCard } from "@/components/cloud";
+import { CheckWindow, checkMode } from "@/components/check-window";
 import { shapeOf } from "@/lib/studio/shapes";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import { evaluate } from "@/lib/studio/evaluate";
@@ -102,6 +103,8 @@ interface Opts {
   partBayFt: string;
   partRowFt: string;
   partSheetFt: string;
+  /** "1": show the check-your-window pages again, though the shop saved its choices */
+  checkAgain: string;
 }
 
 const DEFAULT_OPTS: Opts = {
@@ -109,7 +112,7 @@ const DEFAULT_OPTS: Opts = {
   zType: "openable", zComboDir: "top", zFixedFt: "2", zSash: "2", zSize: "light",
   palla: "60", chokhat: "needed", doorMix: "SSS", doorCenters: "2", zDoorCenters: "0",
   doorSys: "normal", partSys: "spdp",
-  partDoor: "no", partDoorW: "3", partDoorH: "7", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0",
+  partDoor: "no", partDoorW: "3", partDoorH: "7", partBayFt: "2.5", partRowFt: "3.5", partSheetFt: "0", checkAgain: "",
 };
 
 type Opt = [value: string, label: string];
@@ -278,7 +281,8 @@ function meetChoices(s: StudioSystem, tracks: string, mix: string, sw: Record<st
     const r = evaluate(s, { id: "Q", W: 1524000, H: 1219200, qty: 1, tracks: parseInt(tracks, 10) || 2, mix, switches: { ...sw, ...c.sw }, perShutter: c.per.length ? c.per : undefined }, { allowUnknown: true });
     if (r.missing.length) return false;
     // a mesh shutter has no interlock (its own mesh section all round): its pieces are not the meeting picture
-    c.pics = [...new Set(r.pieces.filter((p) => /Interlock Side|Meeting Side|Interlock Clip/.test(p.role) && !p.role.includes("(Mesh)")).map((p) => p.sectionId))].slice(0, 2);
+    // (Domal 27 keeps its own names: "Shutter Right" on the meeting side, "Interlock 1" for the patti)
+    c.pics = [...new Set(r.pieces.filter((p) => /Interlock Side|Meeting Side|Interlock Clip|Shutter Right|Interlock \d/.test(p.role) && !p.role.includes("(Mesh)")).map((p) => p.sectionId))].slice(0, 2);
     return true;
   });
 }
@@ -762,7 +766,7 @@ function layoutError(e: unknown): string {
  */
 type StepId =
   | "type" | "kind" | "system" | "normalSection" | "studioOpts" | "meet" | "tracks" | "mix" | "opening" | "domalFix"
-  | "zType" | "zDir" | "zSash" | "zProfile"
+  | "zType" | "zDir" | "zSash" | "zProfile" | "check"
   | "doorSys" | "doorCenters" | "zDoorCenters" | "doorFrame" | "doorSection"
   | "partSys" | "partDoor" | "partDoorSize" | "size" | "partBays" | "partRows";
 
@@ -783,7 +787,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
     const meet: StepId[] = st && meetChoices(st, o.tracks, o.mix, parseSw(o.studioSw)).length > 1 ? ["meet"] : [];
     const opening: StepId[] = st && glassOf(o.mix) >= 3 && canShare(st) && !o.opening ? ["opening"] : [];
-    return [...head, ...opts, "tracks", "mix", ...opening, ...meet, ...(takesFixTop(st) ? ["domalFix" as const] : []), "size"];
+    return [...head, ...opts, "tracks", "mix", ...opening, ...meet, ...(takesFixTop(st) ? ["domalFix" as const] : []), ...checkStep(o), "size"];
   }
   if (o.sys === "z_section") {
     return [
@@ -799,7 +803,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
   const mixStep: StepId[] = o.sys === "domal" || o.tracks === "3" ? ["mix"] : [];
   const opening: StepId[] = mixStep.length && glassOf(o.mix) >= 3 && !o.opening ? ["opening"] : [];
-  return [...head, "tracks", ...mixStep, ...opening, "domalFix", "size"];
+  return [...head, "tracks", ...mixStep, ...opening, "domalFix", ...checkStep(o), "size"];
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -828,6 +832,22 @@ const STEP_TITLE: Record<StepId, string> = {
   size: "Enter your sizes",
   partBays: "Vertical lines (khadi)",
   partRows: "Horizontal lines (leti)",
+  check: "Check your window",
+};
+
+/** The built-in series a sliding window's choice comes from ("normal-18", "domal-27"…), when its
+ *  pipes can be checked before the size (founder 2026-11-24). */
+function checkBase(o: Opts): string | null {
+  if (o.sys === "normal") return o.normalSection === "60" ? "normal-18-60" : "normal-18";
+  if (o.sys === "domal") return "domal-27";
+  if (!o.sys.startsWith("studio:")) return null;
+  const st = studioSystem(o.sys.slice(7));
+  return st ? st.basedOn?.id ?? st.id : null;
+}
+/** The check pages come before the size, unless the shop saved its choices for this series. */
+const checkStep = (o: Opts): StepId[] => {
+  const b = checkBase(o);
+  return b && (o.checkAgain === "1" || checkMode(b) !== "saved") ? ["check"] : [];
 };
 
 /** The size screen names what is measured, so a partition's size never
@@ -1602,8 +1622,27 @@ function JobScreen({
           </div>
         )}
 
+        {flow.step === "check" && (() => {
+          const b = checkBase(o);
+          const sys = o.sys.startsWith("studio:") ? studioSystem(o.sys.slice(7)) : b ? systemForWindow(b) : undefined;
+          if (!b || !sys) return null;
+          return (
+            <CheckWindow key={`${o.sys}-${o.tracks}-${o.mix}`} sys={sys} base={b} tracks={parseInt(o.tracks, 10) || 2} mix={o.mix}
+              switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}}
+              onDone={(sysId) => {
+                // straight on to the size: the steps may have just dropped "check" (choices saved)
+                choose({ ...(sysId ? { sys: sysId as WinSys, studioSw: o.sys.startsWith("studio:") ? o.studioSw : "{}" } : {}), checkAgain: "" }, false);
+                go("size");
+              }} />
+          );
+        })()}
+
         {flow.step === "size" && (
           <div className="flex flex-col gap-2.5">
+            {type === "window" && checkBase(o) && checkMode(checkBase(o)!) === "saved" && !flow.editing && (
+              <button type="button" className="self-start text-sm font-semibold underline" style={{ color: "var(--ink-3)" }}
+                onClick={() => { setO({ ...o, checkAgain: "1" }); go("check"); }}>Check this window&apos;s pipes</button>
+            )}
             <UnitPicker unit={unit} onChange={changeUnit} />
             {rows.map((row, r) => {
               const p = parsed[r];

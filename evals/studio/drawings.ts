@@ -99,7 +99,7 @@ for (const w of WINDOW_SYSTEMS) {
   const get = (code: string) => { const s = [tr, sh, cl].find((x) => x?.code === code)!; return s; };
 
   // 1. shutter height
-  if (!w.engine || sys.heightFrom) {
+  if (!(w.engine || w.fromJobs) || sys.heightFrom) {
     let best: ReturnType<typeof buildSliding> | null = null;
     for (const mouth of ["start", "end"] as const) {
       try {
@@ -113,7 +113,7 @@ for (const w of WINDOW_SYSTEMS) {
       let y = 0; while (y < tr.h && !inside(tr.solid, x, y)) y += 0.05;
       best = { ...best, takeOff: best.tipT + (tr.h - y + cl.h) - 24 };
     }
-    if (w.engine) { rows.push([name, "shutter height H −", ((H - (v.shutterH ?? 0)) / 1000).toFixed(1), best ? best.takeOff.toFixed(1) : "—", "(from real jobs)"]); }
+    if (w.engine || w.fromJobs) { rows.push([name, "shutter height H −", ((H - (v.shutterH ?? 0)) / 1000).toFixed(1), best ? best.takeOff.toFixed(1) : "—", "(from real jobs)"]); }
     else check(name, "shutter height H −", v.shutterH !== null ? (W && H - (v.shutterH ?? 0)) / 1000 : null, best ? best.takeOff : null, best ? "" : "shutter does not stand in the track");
   }
 
@@ -131,7 +131,7 @@ for (const w of WINDOW_SYSTEMS) {
   const meet = sys.switches.find((x) => x.id === "meet");
   // Normal 18 · 2½″ is the 1½″ set (glass from real jobs) with each piece 20 mm wider —
   // the same section shapes widened, so its glass follows the 1½″ jobs + 40, not the probe.
-  const engine = !!w.engine || FROM_CHECKED_SET.has(w.id);
+  const engine = !!(w.engine || w.fromJobs) || FROM_CHECKED_SET.has(w.id);
   if (topOff !== null && v.glassH !== null && v.glassH !== undefined) {
     const app = (v.shutterH! - v.glassH) / 1000, dr = 2 * topOff;
     if (engine) rows.push([name, "glass height shutter −", app.toFixed(1), dr.toFixed(1), "(from real jobs)"]); else check(name, "glass height shutter −", app, dr, `pocket ${topSh.code}`);

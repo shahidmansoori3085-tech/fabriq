@@ -215,7 +215,7 @@ export const DOMAL_27: StudioSystem = {
     part("shutterTop", "{s} Shutter Top{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-top", { meshProfile: "domal_jali_shutter" }),
     part("shutterBottom", "{s} Shutter Bottom{tag}", "domal_glass_shutter", "shutter", "shutterW", 45, "sash-bottom", { meshProfile: "domal_jali_shutter" }),
     part("shutterLeft", "{s} Shutter Left{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-lock", { meshProfile: "domal_jali_shutter" }),
-    part("shutterRight", "{s} Shutter Right{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
+    part("shutterMeet", "{s} Shutter Right{tag}", "domal_glass_shutter", "shutter", "shutterH", 45, "sash-meet", { meshProfile: "domal_jali_shutter" }),
     part("interlock", "Interlock {k}", "domal_interlock", "meeting", "shutterH", 90, "meeting", { count: 2 }),
   ],
   infill: { w: "glassW", h: "glassH" },
@@ -1320,6 +1320,33 @@ EURO_27.sizes = EURO_27.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases:
   unknownFrom("shutterW"),
 ] }));
 
+/** Domal 27 takes the 27 mm slim interlocks on its 2046 shutter, as Euro 27 does (founder
+ *  2026-11-23: "Euro 27 jaisa"). "Interlock clip" stays the default: the shutter on all four
+ *  sides and the patti, exactly as before; with a slim interlock the glass loses what the
+ *  slim's slot takes, from the same drawings as Euro 27. A shop's own Domal 27 made before
+ *  this gets the same choice when it is loaded (its cuts stay as they were). */
+export function withDomalSlim(sys: StudioSystem): StudioSystem {
+  if (sys.switches.some((x) => x.id === "meet")) return sys;
+  const slims = ["el27_slim", "el27_slim_big"];
+  // the meeting side takes the id the slim choice is asked by (a shop copy may still call it shutterRight)
+  const meetPart = sys.parts.find((p) => p.place === "sash-meet");
+  if (!meetPart) return sys;
+  let out: StudioSystem = { ...sys, parts: sys.parts.map((p) => (p === meetPart ? { ...p, id: "shutterMeet" } : p)) };
+  const clipSection = meetPart.profile.at(-1)?.id ?? "domal_glass_shutter";
+  out = { ...out, profiles: [...out.profiles, ...EURO_27.profiles.filter((p) => slims.includes(p.id) && !out.profiles.some((q) => q.id === p.id))] };
+  const alt = withAlternatives(out, "shutterMeet", slims);
+  const slimGlass = EURO_27.sizes.find((s) => s.id === "glassW")!.cases.filter((c) => c.when?.meet === "slim");
+  return {
+    ...out,
+    switches: [...alt.switches, MEET_SWITCH("clip")],
+    parts: alt.parts.map((p) => (p.id === "shutterMeet"
+      ? { ...p, profile: [{ when: { meet: "clip" }, id: clipSection }, ...p.profile] }
+      : p.scope === "meeting" ? { ...p, when: { ...(p.when ?? {}), meet: "clip" } } : p)),
+    sizes: out.sizes.map((x) => (x.id !== "glassW" ? x : { ...x, cases: [...slimGlass, ...x.cases] })),
+  };
+}
+Object.assign(DOMAL_27, withDomalSlim(DOMAL_27));
+
 /** Euro 25 (founder, 2026-11-14): Banu Hashim's 25 mm series — BH-2551 / 2553 on all
  *  four sides at 45°, roller clip 2559, shutter 2554 / 2555, slim interlock small 2556 or
  *  big 2557 (or the shutter with an interlock clip). Built from the drawings: H − 39.5
@@ -1378,6 +1405,29 @@ export const TEMPLATES: StudioSystem[] = [
   BLANK_DOMAL_TYPE, BLANK_SLIDING,
 ];
 
+/** A double-glass (DGU) section or choice: its id ends in _dgu, or its name says double glass. */
+const isDoubleGlass = (s: StudioSystem, id: string) =>
+  /(^|_)dgu($|_)/i.test(id) || /double[ -]?glass|\bDGU\b/i.test(s.profiles.find((p) => p.id === id)?.name ?? "");
+/**
+ * No double glass anywhere (founder 2026-11-24: "jo bhi DGU glass ka hai vo sab hata do"): the
+ * double-glass slim interlocks and shutters leave every choice and question. A choice that was
+ * set to one of them falls back to the first other one; the sections stay known, so an old job
+ * still draws and packs.
+ */
+export function withoutDoubleGlass(sys: StudioSystem): StudioSystem {
+  const switches = sys.switches.map((x) => {
+    const keep = x.options.filter((o) => !isDoubleGlass(sys, o.value) && !/double[ -]?glass|\bDGU\b/i.test(o.label));
+    if (!keep.length || keep.length === x.options.length) return x;
+    return { ...x, options: keep, default: keep.some((o) => o.value === x.default) ? x.default : keep[0].value };
+  });
+  const parts = sys.parts.map((p) => {
+    const keep = p.profile.filter((c) => !isDoubleGlass(sys, c.id));
+    return keep.length && keep.length < p.profile.length ? { ...p, profile: keep } : p;
+  });
+  return { ...sys, switches, parts };
+}
+for (const s of TEMPLATES) Object.assign(s, withoutDoubleGlass(s));
+
 /* ———————————————— what shops call each system ———————————————— */
 // Size in mm + kind, and the ones most shops run (founder, 2026-11-13): 25 Euro and
 // Gulf, 27 Euro and Domal, 29 Euro, 30 Gulf, 31 Gulf, 35 Domal, Euro and Gulf.
@@ -1416,9 +1466,11 @@ const SERIES: Record<string, [number, SeriesType, string, boolean?]> = {
 };
 /** What Window offers: one system per kind and size. Normal 18, Domal 27 and Z run on the
  *  checked engine until the shop changes them in Settings. */
-export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section" }[] = [
+/** engine: built on the checked engine; fromJobs: cuts measured on real jobs (Domal 27 left the
+ *  engine to ask its slim interlock, its cuts did not change) */
+export const WINDOW_SYSTEMS: { id: string; kind: SeriesType; mm: number; engine?: "normal" | "domal" | "z_section"; fromJobs?: boolean }[] = [
   { id: "normal-18", kind: "bombay", mm: 18, engine: "normal" }, { id: "normal-18-60", kind: "bombay", mm: 18 },
-  { id: "mini-domal-20", kind: "domal", mm: 20 }, { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, engine: "domal" }, { id: "domal-35", kind: "domal", mm: 35 },
+  { id: "mini-domal-20", kind: "domal", mm: 20 }, { id: "ample-22", kind: "domal", mm: 22 }, { id: "domal-27", kind: "domal", mm: 27, fromJobs: true }, { id: "domal-35", kind: "domal", mm: 35 },
   { id: "euro-25", kind: "euro", mm: 25 }, { id: "euro-26", kind: "euro", mm: 26 }, { id: "euro-27", kind: "euro", mm: 27 },
   { id: "ample-29", kind: "euro", mm: 29 }, { id: "euro-35", kind: "euro", mm: 35 },
   { id: "gulf-25", kind: "gulf", mm: 25 }, { id: "gulf-s30", kind: "gulf", mm: 30 }, { id: "bh-31", kind: "gulf", mm: 31 }, { id: "bh-35", kind: "gulf", mm: 35 },
