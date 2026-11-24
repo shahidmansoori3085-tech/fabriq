@@ -229,11 +229,12 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     const fill = at.kind === "shutter" ? mix[at.index] ?? "G" : "G";
     const C = !!compact;
     const base = frame ? BUILT.frame : BUILT.shutter;
-    const k = C ? (frame ? 0.4 : 0.62) : 1;
+    // a frame card: the window big, the track sections small (founder 2026-11-24)
+    const k = C ? (frame ? 0.52 : 0.62) : 1;
     const W = base.W * k, H = base.H * k, t = base.t * k;
     // the section drawing, the words and the spacing — smaller on a choice card
-    const sw = C ? (frame ? 42 : 46) : 64, shh = C ? (frame ? 24 : 28) : 42, fName = C ? 10.5 : 11, fWhere = 9.5, lh = 12;
-    const VW = C ? 180 : 340, side = C ? 30 : 46, x0 = (VW - W) / 2;
+    const sw = C ? (frame ? 30 : 46) : 64, shh = C ? (frame ? 17 : 28) : 42, fName = C ? 10.5 : 11, fWhere = 9.5, lh = 12;
+    const VW = C ? 180 : 340, side = C ? (frame ? 22 : 30) : 46, x0 = (VW - W) / 2;
     const y0 = C ? shh + 2 * lh + 16 : shh + 3 * lh + 30, midY = y0 + H / 2, low = y0 + H + (C ? 16 : 26);
     const clipX = lockLeft ? x0 + (base.W + 4.5) * k : x0 - 3.5 * k;
     const VH = C ? low + shh + 2 * lh + 4 : low + shh + 3 * lh + 8;
