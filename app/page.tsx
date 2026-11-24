@@ -27,7 +27,7 @@ import { loadLibrary } from "@/lib/studio/store";
 import { layoutLabel, mixText as studioMixText } from "@/lib/studio/format";
 import StudioThumb, { MiniSection } from "@/components/studio-thumb";
 import { CloudCard } from "@/components/cloud";
-import { CheckWindow, checkMode } from "@/components/check-window";
+import { CheckWindow, checkNeeded } from "@/components/check-window";
 import { shapeOf } from "@/lib/studio/shapes";
 import { BUILT_IN_PROFILES } from "@/lib/studio/templates";
 import { evaluate } from "@/lib/studio/evaluate";
@@ -844,10 +844,11 @@ function checkBase(o: Opts): string | null {
   const st = studioSystem(o.sys.slice(7));
   return st ? st.basedOn?.id ?? st.id : null;
 }
-/** The check pages come before the size, unless the shop saved its choices for this series. */
+/** The check pages come before the size while a question of this series is open (not answered
+ *  yet, or set to ask every time). */
 const checkStep = (o: Opts): StepId[] => {
   const b = checkBase(o);
-  return b && (o.checkAgain === "1" || checkMode(b) !== "saved") ? ["check"] : [];
+  return b && (o.checkAgain === "1" || checkNeeded(b, o.mix)) ? ["check"] : [];
 };
 
 /** The size screen names what is measured, so a partition's size never
@@ -1628,7 +1629,7 @@ function JobScreen({
           if (!b || !sys) return null;
           return (
             <CheckWindow key={`${o.sys}-${o.tracks}-${o.mix}`} sys={sys} base={b} tracks={parseInt(o.tracks, 10) || 2} mix={o.mix}
-              switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}}
+              switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}} all={o.checkAgain === "1"}
               onDone={(sysId) => {
                 // straight on to the size: the steps may have just dropped "check" (choices saved)
                 choose({ ...(sysId ? { sys: sysId as WinSys, studioSw: o.sys.startsWith("studio:") ? o.studioSw : "{}" } : {}), checkAgain: "" }, false);
@@ -1639,7 +1640,7 @@ function JobScreen({
 
         {flow.step === "size" && (
           <div className="flex flex-col gap-2.5">
-            {type === "window" && checkBase(o) && checkMode(checkBase(o)!) === "saved" && !flow.editing && (
+            {type === "window" && checkBase(o) && !checkNeeded(checkBase(o)!, o.mix) && !flow.editing && (
               <button type="button" className="self-start text-sm font-semibold underline" style={{ color: "var(--ink-3)" }}
                 onClick={() => { setO({ ...o, checkAgain: "1" }); go("check"); }}>Check this window&apos;s pipes</button>
             )}

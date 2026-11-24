@@ -6,8 +6,8 @@
  * shops differ (a mesh shutter with or without its interlock clip; Normal: both sides handle on
  * a mesh shutter, a handle on top instead of the bearing, the bottom section on top of a
  * 3-track frame) both ways are drawn side by side and the shop taps its own.
- * What it picks is saved in its own copy of the series, so every list follows it; at the end it
- * chooses to keep these for good or to be asked every time.
+ * What it picks is saved in its own copy of the series, so every list follows it; each question
+ * says for itself whether to remember the answer or ask again next time.
  */
 import { useId, useMemo, useState } from "react";
 import type { PartDef, StudioSystem } from "@/lib/studio/model";
@@ -25,12 +25,28 @@ import { Sheet } from "@/components/studio-ui";
 
 const KEY = "fabriq.checkSeries";
 type Mode = "saved" | "ask";
-/** The shop's choice for a series: keep its checked pipes ("saved") or be asked every time. */
-export function checkMode(base: string): Mode | undefined {
-  try { return (JSON.parse(localStorage.getItem(KEY) ?? "{}") as Record<string, Mode>)[base]; } catch { return undefined; }
+/** A series' questions: the frame's, the glass shutter's and the mesh shutter's. */
+type Group = "frame" | "glass" | "mesh";
+/** For each question of a series: keep the answer ("saved"), ask every time, or no question
+ *  there ("none"). Founder 2026-11-24: each question asks this for itself, not one for all. */
+type Memo = Partial<Record<Group, Mode | "none">>;
+function readMemo(base: string): Memo | undefined {
+  try {
+    const raw = (JSON.parse(localStorage.getItem(KEY) ?? "{}") as Record<string, Memo | Mode>)[base];
+    // the older one answer for the whole series
+    if (raw === "saved") return { frame: "saved", glass: "saved", mesh: "saved" };
+    return raw && typeof raw === "object" ? raw : undefined;
+  } catch { return undefined; }
 }
-function setCheckMode(base: string, mode: Mode) {
-  try { localStorage.setItem(KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(KEY) ?? "{}"), [base]: mode })); } catch { /* fine */ }
+function writeMemo(base: string, memo: Memo) {
+  try { localStorage.setItem(KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(KEY) ?? "{}"), [base]: memo })); } catch { /* fine */ }
+}
+/** The questions a window of this layout meets. */
+const groupsOf = (mix: string): Group[] => ["frame", ...(/[^J]/.test(mix) ? ["glass" as const] : []), ...(mix.includes("J") ? ["mesh" as const] : [])];
+/** Do the check pages come for this window: a question not answered yet, or one set to ask every time. */
+export function checkNeeded(base: string, mix: string): boolean {
+  const m = readMemo(base);
+  return !m || groupsOf(mix).some((g) => m[g] === undefined || m[g] === "ask");
 }
 
 /** The case of a piece's section list that this window uses. */
@@ -43,7 +59,11 @@ const WHERE: Record<string, string> = {
 
 interface Variant { key: string; title: string; apply: (s: StudioSystem) => StudioSystem; on: (s: StudioSystem) => boolean }
 
-export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }: {
+type Page = { kind: "frame" } | { kind: "shutter"; index: number };
+
+export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDone }: {
+  /** every page, also the questions already answered for good ("Check this window's pipes") */
+  all?: boolean;
   /** the series as the shop has it now (its own copy, or the built-in) */
   sys: StudioSystem;
   /** the built-in it comes from: "normal-18", "domal-27"… */
@@ -55,11 +75,13 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   const [lib, setLib] = useState<StudioLibrary>(() => loadLibrary());
   const [draft, setDraft] = useState<StudioSystem>(() => withJoint(structuredClone(start)));
   const [page, setPage] = useState(0);
-  const [mode, setMode] = useState<Mode>(() => checkMode(base) ?? "saved");
+  const [memo] = useState<Memo | undefined>(() => readMemo(base));
+  /** each question's "next time": keep this answer, or ask again */
+  const [asks, setAsks] = useState<Partial<Record<Group, Mode>>>(() => ({
+    frame: memo?.frame === "ask" ? "ask" : "saved", glass: memo?.glass === "ask" ? "ask" : "saved", mesh: memo?.mesh === "ask" ? "ask" : "saved",
+  }));
   const [changing, setChanging] = useState<string[] | null>(null);
   const [picking, setPicking] = useState<PartDef | null>(null);
-  /** the last page: keep these choices, or be asked every time */
-  const [saving, setSaving] = useState(false);
   const tpl = useMemo(() => { const t = TEMPLATES.find((x) => x.id === base); return t ? withJoint(t) : undefined; }, [base]);
 
   // a sample window of this layout, to draw it (the sizes come on the next step)
@@ -77,12 +99,18 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   const vars = jobVars(draft, job);
   const isMesh = (i: number) => mix[i] === "J";
   const firstGlass = [...mix].findIndex((k) => k !== "J");
-  const pages: ({ kind: "frame" } | { kind: "shutter"; index: number })[] = [{ kind: "frame" }, ...[...mix].map((_, i) => ({ kind: "shutter" as const, index: i }))];
+  /** the question a page carries: the frame's, the first glass shutter's, a mesh shutter's */
+  const groupOf = (p: Page): Group | null => p.kind === "frame" ? "frame" : isMesh(p.index) ? "mesh" : p.index === firstGlass ? "glass" : null;
+  const every: Page[] = [{ kind: "frame" }, ...[...mix].map((_, i) => ({ kind: "shutter" as const, index: i }))];
+  // the first time every page; after that only the questions set to ask every time (or new ones)
+  const open = (g: Group | null) => !!g && (memo?.[g] === undefined || memo[g] === "ask");
+  const shown = all || !memo ? every : every.filter((p) => open(groupOf(p)));
+  const pages = shown.length ? shown : every;
   const at = pages[Math.min(page, pages.length - 1)];
   const last = page >= pages.length - 1;
 
-  /** the two ways shops differ on this page, if any */
-  const variants = ((): Variant[] => {
+  /** the two ways shops differ on a page, if any */
+  const variantsFor = (at: Page): Variant[] => {
     const top = placeOf(draft, "frame-top"), bottom = placeOf(draft, "frame-bottom");
     const tplTop = tpl && placeOf(tpl, "frame-top");
     const lock = placeOf(draft, "sash-lock"), meet = placeOf(draft, "sash-meet"), bTop = placeOf(draft, "sash-top");
@@ -120,7 +148,9 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
       { key: "handle", title: "Handle on top", apply: (s) => set(s, bTop!.id, { profile: [{ id: lockId! }] }), on: (s) => !!placeOf(s, "sash-top")?.profile.every((c) => c.id === lockId) },
     ];
     return [];
-  })();
+  };
+  const variants = variantsFor(at);
+  const group = groupOf(at);
 
   /** the pieces drawn on this page */
   const pieces = (s: StudioSystem): PartDef[] => at.kind === "frame"
@@ -149,7 +179,13 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   };
 
   const finish = () => {
-    setCheckMode(base, mode);
+    // each question seen: keep its answer or ask again; a page with no question: nothing to ask
+    const next: Memo = { ...(memo ?? {}) };
+    for (const p of pages) {
+      const g = groupOf(p);
+      if (g) next[g] = variantsFor(p).length ? asks[g] ?? "saved" : "none";
+    }
+    writeMemo(base, next);
     if (JSON.stringify(draft) === JSON.stringify(withJoint(structuredClone(start)))) { onDone(null); return; }
     const fresh = loadLibrary();
     const own = fresh.systems.some((x) => x.id === draft.id);
@@ -193,10 +229,10 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
     const fill = at.kind === "shutter" ? mix[at.index] ?? "G" : "G";
     const C = !!compact;
     const base = frame ? BUILT.frame : BUILT.shutter;
-    const k = C ? (frame ? 0.55 : 0.62) : 1;
+    const k = C ? (frame ? 0.4 : 0.62) : 1;
     const W = base.W * k, H = base.H * k, t = base.t * k;
     // the section drawing, the words and the spacing — smaller on a choice card
-    const sw = C ? 46 : 64, shh = C ? 28 : 42, fName = C ? 10.5 : 11, fWhere = 9.5, lh = 12;
+    const sw = C ? (frame ? 42 : 46) : 64, shh = C ? (frame ? 24 : 28) : 42, fName = C ? 10.5 : 11, fWhere = 9.5, lh = 12;
     const VW = C ? 180 : 340, side = C ? 30 : 46, x0 = (VW - W) / 2;
     const y0 = C ? shh + 2 * lh + 16 : shh + 3 * lh + 30, midY = y0 + H / 2, low = y0 + H + (C ? 16 : 26);
     const clipX = lockLeft ? x0 + (base.W + 4.5) * k : x0 - 3.5 * k;
@@ -255,14 +291,13 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[19px] font-bold">{saving ? "Next time" : title}</h2>
-        <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{saving ? pages.length + 1 : page + 1} of {pages.length + 1}</span>
+        <h2 className="text-[19px] font-bold">{title}</h2>
+        <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{page + 1} of {pages.length}</span>
       </div>
       <p className="-mt-2 text-sm" style={{ color: "var(--ink-3)" }}>
-        {saving ? "For the next windows of this series." : variants.length ? "Shops make this two ways. Tap yours." : "Check the section on every side."}
+        {variants.length ? "Shops make this two ways. Tap yours." : "Check the section on every side."}
       </p>
-
-      {!saving && variants.length > 0 && (
+      {variants.length > 0 && (
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={title}>
           {variants.map((v) => {
             const on = v.on(draft);
@@ -288,7 +323,25 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
           })}
         </div>
       )}
-      {!saving && [0].map(() => {
+      {/* this question's own "next time" (founder 2026-11-24: "har sawal me vo sawal poochhna tha") */}
+      {variants.length > 0 && group && (
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-sm font-semibold" style={{ color: "var(--ink-2)" }}>Next time</span>
+          <div className="flex rounded-full p-0.5" style={{ background: "var(--line)" }} role="radiogroup" aria-label="Next time">
+            {([["saved", "Remember this"], ["ask", "Ask again"]] as const).map(([v, label]) => {
+              const on = (asks[group] ?? "saved") === v;
+              return (
+                <button key={v} type="button" role="radio" aria-checked={on} onClick={() => setAsks((a) => ({ ...a, [group]: v }))}
+                  className="rounded-full px-3 py-1.5 text-[13px] font-semibold"
+                  style={on ? { background: "var(--card, #fff)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(15,23,42,.12)" } : { color: "var(--ink-3)" }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {[0].map(() => {
         const on = true;
         return (
           <div key="board" className="card overflow-hidden">
@@ -307,23 +360,10 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
         );
       })}
 
-      {saving && (
-        <div className="card flex flex-col gap-1 p-3" role="radiogroup" aria-label="Next time">
-          {([["saved", "Save my choices", "Next windows of this series skip these pages."], ["ask", "Ask me every time", "These pages come for every new window."]] as const).map(([v, t, sub]) => (
-            <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className="flex items-start gap-3 rounded-lg px-2 py-2 text-left">
-              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full" style={{ border: `2px solid ${mode === v ? "var(--accent)" : "var(--line)"}` }}>
-                {mode === v && <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--accent)" }} />}
-              </span>
-              <span><span className="block text-sm font-bold">{t}</span><span className="block text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span></span>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="flex gap-2">
-        {(page > 0 || saving) && <button type="button" className="btn-ghost px-4 py-3.5 text-sm" onClick={() => (saving ? setSaving(false) : setPage((p) => p - 1))}>Back</button>}
-        <button type="button" className="btn-primary flex-1 py-3.5 text-base" onClick={() => (saving ? finish() : last ? setSaving(true) : setPage((p) => p + 1))}>
-          {saving ? "Done, go to size" : "Correct, next"}
+        {page > 0 && <button type="button" className="btn-ghost px-4 py-3.5 text-sm" onClick={() => setPage((p) => p - 1)}>Back</button>}
+        <button type="button" className="btn-primary flex-1 py-3.5 text-base" onClick={() => (last ? finish() : setPage((p) => p + 1))}>
+          {last ? "Correct, go to size" : "Correct, next"}
         </button>
       </div>
 

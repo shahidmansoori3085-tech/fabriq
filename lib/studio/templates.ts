@@ -1382,7 +1382,7 @@ export const NORMAL_18_60: StudioSystem = (() => {
     ...n.profiles.filter((p) => !["handle_std", "interlock", "bearing"].includes(p.id)),
     prof("handle_60", 'Handle 2½″×¾″', "handle", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle (no number printed)"), { shapeKey: "60x19-handle" }),
     prof("interlock_60", "Interlock 2½″×¾″", "interlock", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 35, shapeKey: "60x19-interlock" }),
-    prof("bearing_60", "Bearing 2½″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.43 — 3×¾″ handle family"), { faceMm: 60, shapeKey: "60x19-bearing" }),
+    prof("bearing_60", "Bearing 2½″×¾″", "bearing", { omeo: "" }, "60×19", { value: 2.5, perFt: 16 }, CATALOGUE("OMEO p.41 — 59.7 × 19, open roller side 27.1 deep"), { faceMm: 60, shapeKey: "60x19-bearing" }),
   ];
   const swap: Record<string, string> = { handle_std: "handle_60", interlock: "interlock_60", bearing: "bearing_60" };
   n.parts = n.parts.map((p) => ({ ...p, profile: p.profile.map((c) => ({ ...c, id: swap[c.id] ?? c.id })) }));
