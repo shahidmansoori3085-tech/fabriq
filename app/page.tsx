@@ -1660,6 +1660,7 @@ function JobScreen({
           return (
             <CheckWindow key={`${o.sys}-${o.tracks}-${o.mix}`} sys={sys} base={b} tracks={parseInt(o.tracks, 10) || 2} mix={o.mix}
               switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}} all={o.checkAgain === "1"}
+              perShutter={o.sys.startsWith("studio:") ? (() => { try { return JSON.parse(o.studioPer) as Record<string, string>[]; } catch { return []; } })() : []}
               onDone={(sysId) => {
                 // straight on to the size: the steps may have just dropped "check" (choices saved)
                 choose({ ...(sysId ? { sys: sysId as WinSys, studioSw: o.sys.startsWith("studio:") ? o.studioSw : "{}" } : {}), checkAgain: "" }, false);

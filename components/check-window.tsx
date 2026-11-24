@@ -61,7 +61,9 @@ interface Variant { key: string; title: string; apply: (s: StudioSystem) => Stud
 
 type Page = { kind: "frame" } | { kind: "shutter"; index: number };
 
-export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDone }: {
+export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutter, all, onDone }: {
+  /** each shutter's own picks (a small slim interlock on one shutter, a big one on the next) */
+  perShutter?: Record<string, string>[];
   /** every page, also the questions already answered for good ("Check this window's pipes") */
   all?: boolean;
   /** the series as the shop has it now (its own copy, or the built-in) */
@@ -85,7 +87,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
   const tpl = useMemo(() => { const t = TEMPLATES.find((x) => x.id === base); return t ? withJoint(t) : undefined; }, [base]);
 
   // a sample window of this layout, to draw it (the sizes come on the next step)
-  const job = useMemo(() => ({ id: "C", W: inches(60), H: inches(48), qty: 1, tracks, mix, switches }), [tracks, mix, switches]);
+  const job = useMemo(() => ({ id: "C", W: inches(60), H: inches(48), qty: 1, tracks, mix, switches, perShutter: perShutter?.length ? perShutter : undefined }), [tracks, mix, switches, perShutter]);
   const look = (s: StudioSystem) => {
     const find = (id: string) => findProfile(lib, id) ?? shopProfile(id) ?? BUILT_IN_PROFILES.find((p) => p.id === id);
     const geo = windowGeometry(s, job, find);
@@ -97,6 +99,8 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     return { geo, vars, labels: pipeLabels(named, lib, vars, values, "in", geo) };
   };
   const vars = jobVars(draft, job);
+  /** the choices on a page: the window's, and on a shutter page that shutter's own picks */
+  const pageVars = (s: StudioSystem, p: Page) => ({ ...jobVars(s, job), ...(p.kind === "shutter" ? perShutter?.[p.index] ?? {} : {}) });
   const isMesh = (i: number) => mix[i] === "J";
   const firstGlass = [...mix].findIndex((k) => k !== "J");
   /** the question a page carries: the frame's, the first glass shutter's, a mesh shutter's */
@@ -136,7 +140,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
       ];
       // a slim interlock series: the mesh shutter is its mesh section all round, or some shops put the
       // slim interlock on its meeting side too (founder 2026-11-24: "slim me bhi aise hi, 2 drawing")
-      const slimId = meet?.profile[caseOf(meet, vars)]?.id;
+      const slimId = meet?.profile[caseOf(meet, pageVars(draft, at))]?.id;
       if (meet && slimId && kind(meet) === "slim-interlock") {
         const plainMesh = tpl ? placeOf(tpl, "sash-meet")?.meshProfile : undefined;
         const isSlim = (s: StudioSystem) => { const m = placeOf(s, "sash-meet")?.meshProfile; return !!m && findProfile(lib, m)?.kind === "slim-interlock"; };
@@ -183,7 +187,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     setDraft((s) => ({ ...s, parts: s.parts.map((q) => {
       if (q.id !== p.id) return q;
       if (at.kind === "shutter" && isMesh(at.index) && q.scope === "shutter") return { ...q, meshProfile: id };
-      const k = caseOf(q, jobVars(s, job));
+      const k = caseOf(q, pageVars(s, at));
       return { ...q, profile: q.profile.map((c, j) => (j === k ? { ...c, id } : c)) };
     }) }));
     setPicking(null); setChanging(null);
@@ -210,7 +214,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     : `Shutter ${at.index + 1} · ${mix[at.index] === "J" ? "Mesh" : mix[at.index] === "S" ? "Sheet" : "Glass"}`;
   /** the section a piece takes on this page (a mesh shutter: its mesh section) */
   const profOf = (p: PartDef, s: StudioSystem) => {
-    const id = at.kind === "shutter" && isMesh(at.index) && p.scope === "shutter" && p.meshProfile ? p.meshProfile : p.profile[caseOf(p, jobVars(s, job))]?.id ?? "";
+    const id = at.kind === "shutter" && isMesh(at.index) && p.scope === "shutter" && p.meshProfile ? p.meshProfile : p.profile[caseOf(p, pageVars(s, at))]?.id ?? "";
     return { id, prof: findProfile(lib, id) };
   };
   const nameOf = (p: PartDef, s: StudioSystem) => { const { id, prof } = profOf(p, s); return shopName(prof?.name ?? id); };
