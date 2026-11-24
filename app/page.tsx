@@ -942,6 +942,8 @@ function JobScreen({
   /** The exact size of the item being edited, with the boxes it was shown as —
    *  the boxes are rounded to the sut, so an untouched size keeps its real value. */
   const [editDims, setEditDims] = useState<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
+  /** said once when a typed size switched the unit by itself */
+  const [unitNote, setUnitNote] = useState<string | null>(null);
 
   /* —— the phone's back button ——
    * Every screen of the flow is its own history entry, pushed by the tap
@@ -1140,7 +1142,7 @@ function JobScreen({
   };
 
   const startAdd = (step: StepId) => {
-    setRows([emptyRow()]); setEditDims(null);
+    setRows([emptyRow()]); setEditDims(null); setUnitNote(null);
     openFlow(step);
   };
   /** Straight from the home screen's Window / Door / Partition — the type is
@@ -1160,6 +1162,34 @@ function JobScreen({
     setEditDims((d) => d && { ...d, w: conv(d.w, feetBelow), h: conv(d.h, feetBelow) });
     setUnit(u);
     writeUnit(u);
+    setUnitNote(null);
+  };
+  /**
+   * A finished size that is plainly in the other unit switches the unit by itself (founder
+   * 2026-11-24): on Feet, 48 or 45.4 is inches; on Inch, 4.6 is feet. The box keeps what was
+   * typed; the other boxes are rewritten so they still mean the same. Tapping the unit switches back.
+   */
+  const guessUnit = (r: number, k: BoxKey) => {
+    const v = rows[r]?.[k]?.trim() ?? "";
+    const m = /^(\d+)(?:\.\d*)*$/.exec(v);
+    if (!m) return;
+    const n = parseInt(m[1], 10);
+    const to: SizeUnit | null = unit === "ft" && n >= (feetBelow ?? 13) ? "in" : unit === "in" && n > 0 && n < 10 ? "ft" : null;
+    if (!to) return;
+    const conv = (x: string, below?: number) => {
+      const um = parseSizeIn(x, unit, below);
+      return um == null ? x : formatSizeIn(um, to);
+    };
+    setRows((rs) => rs.map((x, i) => ({
+      ...x,
+      w: i === r && k === "w" ? x.w : conv(x.w, feetBelow),
+      h: i === r && k === "h" ? x.h : conv(x.h, feetBelow),
+      fix: i === r && k === "fix" ? x.fix : conv(x.fix),
+    })));
+    setUnit(to);
+    writeUnit(to);
+    setUnitNote(to === "in" ? `Changed to inch — ${v} = ${v.replace(/^(\d+)(?:\.(\d))?.*$/, (_, a, b) => `${a} inch${b && b !== "0" ? ` ${b} sut` : ""}`)}`
+      : `Changed to feet — ${v} = ${v.replace(/^(\d+)(?:\.(\d+))?(?:\.(\d))?.*$/, (_, a, b, c) => `${a} ft${b && b !== "0" ? ` ${b} inch` : ""}${c && c !== "0" ? ` ${c} sut` : ""}`)}`);
   };
   const startEdit = (it: JobItem) => {
     setType(it.type);
@@ -1644,7 +1674,7 @@ function JobScreen({
               <button type="button" className="self-start text-sm font-semibold underline" style={{ color: "var(--ink-3)" }}
                 onClick={() => { setO({ ...o, checkAgain: "1" }); go("check"); }}>Check this window&apos;s pipes</button>
             )}
-            <UnitPicker unit={unit} onChange={changeUnit} />
+            <UnitPicker unit={unit} onChange={changeUnit} note={unitNote} />
             {rows.map((row, r) => {
               const p = parsed[r];
               const waiting = !flow.editing && p.empty && r === rows.length - 1 && r > 0;
@@ -1674,7 +1704,7 @@ function JobScreen({
                       <SizeInput key={k} label={label} unit={UNIT_TAG[unit]} value={row[k]}
                         bad={!!p.warn} last={!!flow.editing && k === keys[keys.length - 1][0]}
                         inputRef={(el) => { boxes.current[`${r}-${k}`] = el; }}
-                        onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} />
+                        onChange={(v) => setBox(r, k, v)} onNext={() => focusNext(r, k)} onBlur={() => guessUnit(r, k)} />
                     ))}
                   </div>
                   <div className="mt-1 min-h-[18px] text-xs font-semibold tabnum"
@@ -2026,9 +2056,11 @@ function DoorSizeStep({ o, unit, onUnit, onChange, onNext }: {
 }
 
 /** One size box on the phone's own number keyboard, its name inside the box. */
-function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onChange, onNext }: {
+function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onChange, onNext, onBlur }: {
   label: string; unit?: string; value: string; placeholder?: string; bad?: boolean; last?: boolean;
   inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void;
+  /** the box is left: its size is typed in full */
+  onBlur?: () => void;
 }) {
   return (
     <label className="dim-input flex min-w-0 flex-1 flex-col px-3 pb-1 pt-1.5 focus-within:border-[color:var(--accent)]"
@@ -2041,7 +2073,7 @@ function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onCha
         // how to type it, inside the empty box (founder 2026-11-24: "45.4 = 45 inch 4 sut")
         placeholder={placeholder ?? (unit === "inch" ? "45.4 = 45 inch 4 sut" : unit === "ft" ? "4.6 = 4 ft 6 inch" : undefined)}
         type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
         className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:text-[13px] max-[360px]:placeholder:text-[11px] placeholder:font-medium placeholder:text-[#9aa1ab]" />
     </label>
@@ -2058,7 +2090,7 @@ const UNIT_HELP: Record<SizeUnit, string> = {
 };
 
 /** Feet · Inch · MM — the unit the sizes are typed in. */
-function UnitPicker({ unit, onChange }: { unit: SizeUnit; onChange: (u: SizeUnit) => void }) {
+function UnitPicker({ unit, onChange, note }: { unit: SizeUnit; onChange: (u: SizeUnit) => void; note?: string | null }) {
   const opts: [SizeUnit, string][] = [["ft", "Feet"], ["in", "Inch"], ["mm", "MM"]];
   return (
     <div className="flex flex-col gap-1.5">
@@ -2075,6 +2107,7 @@ function UnitPicker({ unit, onChange }: { unit: SizeUnit; onChange: (u: SizeUnit
           ))}
         </div>
       </div>
+      {note && <div className="text-xs font-bold tabnum" style={{ color: "var(--accent)" }} role="status">{note}</div>}
       <div className="text-xs font-semibold tabnum" style={{ color: "var(--ink-2)" }}>{UNIT_HELP[unit]}</div>
     </div>
   );
