@@ -2037,11 +2037,13 @@ function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onCha
         <span className="truncate">{label}</span>
         {unit && <span className="shrink-0 rounded px-1 text-[10px] font-bold" style={{ background: "var(--surface-3)", color: "var(--ink-2)" }}>{unit}</span>}
       </span>
-      <input ref={inputRef} value={value} placeholder={placeholder} aria-label={label}
+      <input ref={inputRef} value={value} aria-label={label}
+        // how to type it, inside the empty box (founder 2026-11-24: "45.4 = 45 inch 4 sut")
+        placeholder={placeholder ?? (unit === "inch" ? "45.4 = 45 inch 4 sut" : unit === "ft" ? "4.6 = 4 ft 6 inch" : undefined)}
         type="text" inputMode="decimal" enterKeyHint={last ? "done" : "next"} autoComplete="off"
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onNext(); } }}
-        className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:font-normal placeholder:text-[#c2c7cf]" />
+        className="w-full min-w-0 bg-transparent text-2xl font-semibold tabnum outline-none placeholder:text-[13px] max-[360px]:placeholder:text-[11px] placeholder:font-medium placeholder:text-[#9aa1ab]" />
     </label>
   );
 }
@@ -2049,8 +2051,9 @@ function SizeInput({ label, unit, value, placeholder, bad, last, inputRef, onCha
 const UNIT_TAG: Record<SizeUnit, string> = { ft: "ft", in: "inch", mm: "mm" };
 /** How to type a size in each unit — said once, above the boxes. */
 const UNIT_HELP: Record<SizeUnit, string> = {
-  ft: "4.6 = 4 ft 6 in · 4.6.2 = 4 ft 6 in 2 sut",
-  in: "54 = 54 in · 54.2 = 54 in 2 sut",
+  ft: "4.6 = 4 ft 6 inch · 4.6.2 = 4 ft 6 inch 2 sut",
+  // founder 2026-11-24: "45.4 = 45 inch 4 sut"
+  in: "45 = 45 inch · 45.4 = 45 inch 4 sut",
   mm: "1372 = 1372 mm",
 };
 
