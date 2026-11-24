@@ -134,6 +134,17 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
         { key: "interlock", title: "Handle and interlock", apply: (s) => set(s, meet.id, { meshProfile: undefined }), on: (s) => placeOf(s, "sash-meet")?.meshProfile !== lockId },
         { key: "handle", title: "Handle on both sides", apply: (s) => set(s, meet.id, { meshProfile: lockId }), on: (s) => placeOf(s, "sash-meet")?.meshProfile === lockId },
       ];
+      // a slim interlock series: the mesh shutter is its mesh section all round, or some shops put the
+      // slim interlock on its meeting side too (founder 2026-11-24: "slim me bhi aise hi, 2 drawing")
+      const slimId = meet?.profile[caseOf(meet, vars)]?.id;
+      if (meet && slimId && kind(meet) === "slim-interlock") {
+        const plainMesh = tpl ? placeOf(tpl, "sash-meet")?.meshProfile : undefined;
+        const isSlim = (s: StudioSystem) => { const m = placeOf(s, "sash-meet")?.meshProfile; return !!m && findProfile(lib, m)?.kind === "slim-interlock"; };
+        return [
+          { key: "noslim", title: "Without slim interlock", apply: (s) => set(s, meet.id, { meshProfile: plainMesh }), on: (s) => !isSlim(s) },
+          { key: "slim", title: "With slim interlock", apply: (s) => set(s, meet.id, { meshProfile: slimId }), on: isSlim },
+        ];
+      }
       // a clip series: some shops clip the mesh shutter too
       const clip = draft.parts.find((p) => p.scope === "meeting" && p.enabled !== false && matches(p.when, vars));
       if (clip) return [
@@ -245,7 +256,12 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
       // on a choice card: the name alone, without its size, and no "where" line (the arrow says where)
       // and on every page without the series word ("Domal Glass Shutter" → "Glass Shutter"): the
       // series is already chosen (founder 2026-11-24)
-      const plain = nameOf(p, s).replace(/^(mini domal|domal|euro|gulf)\s+(\d+\s*(mm)?\s+)?/i, "");
+      let plain = nameOf(p, s).replace(/^(mini domal|domal|euro|gulf)\s+/i, "").replace(/^\d+\s*mm\s+/i, "");
+      // a slim interlock says so: "Slim Interlock (small)"; on a small card just "Slim Interlock"
+      if (profOf(p, s).prof?.kind === "slim-interlock") {
+        const size = /—\s*(small|big)\s*$/i.exec(plain)?.[1]?.toLowerCase();
+        plain = `Slim ${plain.replace(/\s*—.*$/, "").replace(/^slim\s+/i, "")}${size && !C ? ` (${size})` : ""}`;
+      }
       const name = C ? plain.replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "") : plain;
       const lines = wrap(name, C ? 8 : 15);
       const where = C ? "" : WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
