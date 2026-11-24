@@ -243,7 +243,8 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
       if (!p) return null;
       // on a choice card: the name alone, without its size, and no "where" line (the arrow says where)
-      const name = C ? nameOf(p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "") : nameOf(p, s);
+      // and without the series word ("Domal Mesh Shutter" → "Mesh Shutter"), so it fits the card
+      const name = C ? nameOf(p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "").replace(/^(mini domal|domal|euro|gulf)\s+(\d+\s*(mm)?\s+)?/i, "") : nameOf(p, s);
       const lines = wrap(name, C ? 8 : 15);
       const where = C ? "" : WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
       const top = py + shh + lh;
@@ -282,7 +283,11 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
           {block(T, VW / 2, 0, "below", [VW / 2, y0 + t / 2])}
           {block(L, side, sideY, [side + sw / 2, sideY + shh / 2], [x0 + t / 2, sideY + shh / 2])}
           {block(R, VW - side, sideY, [VW - side - sw / 2, sideY + shh / 2], [x0 + W - t / 2, sideY + shh / 2])}
-          {block(B, VW / 2, low, [VW / 2, low - 3], [VW / 2, y0 + H - t / 2])}
+          {(() => {
+            // a clip under the drawing on a small card: the bottom section moves aside to give it room
+            const bx = C && extra.length > 0 && !frame ? VW / 2 + (lockLeft ? -24 : 24) : VW / 2;
+            return block(B, bx, low, [bx, low - 3], [bx, y0 + H - t / 2]);
+          })()}
           {extra.slice(0, 1).map((p) => block(p, lockLeft ? VW - side : side, low, [lockLeft ? VW - side : side, low - 2], [clipX, y0 + H - 24 * k]))}
         </svg>
       </span>
