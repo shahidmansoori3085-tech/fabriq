@@ -39,5 +39,14 @@ for (const [sid, ft, want] of [
 check(pipeMeta([{ meta: { pipe_bearing: "15.5" } }]).pipe_bearing === "15.5", "an edited window keeps the job's pipes");
 setJobBarLengths({});
 
+// a founder's 6-window Domal job (2026-11-24): the cutter fills a pipe with one 56⅜″, three 29½″
+// and two 23″ — 16 pipes + a 9 ft piece of glass shutter, where the app had bought 17 + 4 ft
+{
+  const mk = (l: number, n: number) => Array.from({ length: n }, (_, i) => ({ sectionId: "domal_glass_shutter", length: Math.round(l * 25400), itemId: "W", role: `p${l}-${i}`, angle: 45 as const, label: "" }));
+  const g = stockGroups("domal_glass_shutter", packSection("domal_glass_shutter", [...mk(56.375, 36), ...mk(29.5, 18), ...mk(24, 6), ...mk(23, 12)]));
+  const ft = g.reduce((a, x) => a + x.full * x.ft + x.pieces.reduce((s, p) => s + p, 0), 0);
+  check(ft <= 16 * 16 + 9, `6-window Domal glass shutter: ${JSON.stringify(g)}, want 16 pipes + 9 ft at most`);
+}
+
 if (fails) process.exit(1);
 console.log("pipe lengths: typed, stepped by the foot, the piece is what the cuts need ✓");
