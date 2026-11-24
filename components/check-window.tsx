@@ -243,8 +243,10 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
       if (!p) return null;
       // on a choice card: the name alone, without its size, and no "where" line (the arrow says where)
-      // and without the series word ("Domal Mesh Shutter" → "Mesh Shutter"), so it fits the card
-      const name = C ? nameOf(p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "").replace(/^(mini domal|domal|euro|gulf)\s+(\d+\s*(mm)?\s+)?/i, "") : nameOf(p, s);
+      // and on every page without the series word ("Domal Glass Shutter" → "Glass Shutter"): the
+      // series is already chosen (founder 2026-11-24)
+      const plain = nameOf(p, s).replace(/^(mini domal|domal|euro|gulf)\s+(\d+\s*(mm)?\s+)?/i, "");
+      const name = C ? plain.replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "") : plain;
       const lines = wrap(name, C ? 8 : 15);
       const where = C ? "" : WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
       const top = py + shh + lh;
