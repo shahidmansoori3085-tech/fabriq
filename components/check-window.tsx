@@ -177,7 +177,9 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   /** The frame or the shutter drawn as it is built — aluminium pipes, their 45° or 90° joints,
    *  the glass or mesh in it — with each side's section placed beside that side. */
   const uid = useId().replace(/:/g, "");
-  const Board = ({ s, bare }: { s: StudioSystem; bare?: boolean }) => {
+  /** compact: the smaller drawing on each of two choice cards; mark: the sections that differ,
+   *  shown in the accent colour (founder 2026-11-24: "aasani se pata chal sake kya fark hai") */
+  const Board = ({ s, compact, mark }: { s: StudioSystem; compact?: boolean; mark?: Set<string> }) => {
     const v = look(s);
     const ps = pieces(s);
     const by = (pl: string) => ps.find((p) => p.place === pl);
@@ -189,54 +191,60 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
     const R = frame ? by("frame-right") : by(lockLeft ? "sash-meet" : "sash-lock");
     const extra = ps.filter((p) => ![T, B, L, R].includes(p));
     const fill = at.kind === "shutter" ? mix[at.index] ?? "G" : "G";
-    const built = (width?: number) => (
-      <Built frame={frame} fill={fill} lockLeft={lockLeft} meshClip={extra.length > 0 && !frame} width={width}
-        mitreTB={mitre(T, s)} mitreLR={mitre(L, s)} sidesFull={frame ? !mitre(T, s) : true} />
-    );
-    // the small picture of one way, for the side-by-side choice
-    if (bare) return <span className="flex justify-center">{built(frame ? 132 : 92)}</span>;
-
-    const sz = frame ? BUILT.frame : BUILT.shutter;
-    const VW = 340, x0 = (VW - sz.W) / 2, y0 = 96, midY = y0 + sz.H / 2, low = y0 + sz.H + 26;
-    const clipX = lockLeft ? x0 + sz.W + 4.5 : x0 - 3.5;
-    const VH = low + 92;
+    const C = !!compact;
+    const base = frame ? BUILT.frame : BUILT.shutter;
+    const k = C ? (frame ? 0.5 : 0.6) : 1;
+    const W = base.W * k, H = base.H * k, t = base.t * k;
+    // the section drawing, the words and the spacing — smaller on a choice card
+    const sw = C ? 44 : 64, shh = C ? 28 : 42, fName = C ? 10 : 11, fWhere = C ? 8.5 : 9.5, lh = C ? 11 : 12;
+    const VW = C ? 180 : 340, side = C ? 30 : 46, x0 = (VW - W) / 2;
+    const y0 = shh + 2 * lh + lh + (C ? 18 : 30), midY = y0 + H / 2, low = y0 + H + (C ? 16 : 26);
+    const clipX = lockLeft ? x0 + (base.W + 4.5) * k : x0 - 3.5 * k;
+    const VH = low + shh + 3 * lh + 8;
     /** a section: its drawing, its name and where it sits — and an arrow to its pipe (no sizes:
      *  founder 2026-11-24 "ye naap hata do"). `from` "below": the arrow leaves from under the words. */
     const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
       if (!p) return null;
-      const lines = wrap(nameOf(p, s));
-      const small = [WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim()];
-      const end = py + 54 + (lines.length + small.length - 1) * 12;
-      const start: [number, number] = from === "below" ? [cx, end + 6] : from;
+      const lines = wrap(nameOf(p, s), C ? 10 : 15);
+      const where = WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
+      const top = py + shh + lh;
+      const end = top + lines.length * lh;
+      const start: [number, number] = from === "below" ? [cx, end + 5] : from;
+      const hot = mark?.has(p.id);
+      const ink = hot ? "var(--accent)" : "#334155";
       return (
         <g key={p.id}>
-          <foreignObject x={cx - 32} y={py} width={64} height={42}>
-            <div className="[&_img]:mix-blend-multiply" style={{ width: 64, height: 42 }}><SectionSketch p={profOf(p, s).prof} tracks={tracks} plain /></div>
+          <foreignObject x={cx - sw / 2} y={py} width={sw} height={shh}>
+            <div className="[&_img]:mix-blend-multiply" style={{ width: sw, height: shh }}><SectionSketch p={profOf(p, s).prof} tracks={tracks} plain /></div>
           </foreignObject>
-          {lines.map((ln, i) => <text key={i} x={cx} y={py + 54 + i * 12} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0f172a">{ln}</text>)}
-          {small.map((ln, i) => (
-            <text key={`w${i}`} x={cx} y={py + 54 + (lines.length + i) * 12} textAnchor="middle" fontSize={9.5} fill="#64748b">{ln}</text>
-          ))}
-          <circle cx={start[0]} cy={start[1]} r={1.6} fill="#334155" />
-          <line x1={start[0]} y1={start[1]} x2={to[0]} y2={to[1]} stroke="#334155" strokeWidth={0.9} markerEnd={`url(#arrow${uid})`} />
+          {lines.map((ln, i) => <text key={i} x={cx} y={top + i * lh} textAnchor="middle" fontSize={fName} fontWeight={700} fill={hot ? "var(--accent)" : "#0f172a"}>{ln}</text>)}
+          <text x={cx} y={end} textAnchor="middle" fontSize={fWhere} fill="#64748b">{where}</text>
+          <circle cx={start[0]} cy={start[1]} r={1.6} fill={ink} />
+          <line x1={start[0]} y1={start[1]} x2={to[0]} y2={to[1]} stroke={ink} strokeWidth={hot ? 1.3 : 0.9} markerEnd={`url(#${hot ? "arrowHot" : "arrow"}${uid})`} />
         </g>
       );
     };
+    const sideY = midY - shh / 2 - lh;
     return (
-      <span className="block px-1 pb-2 pt-1">
-        <svg viewBox={`0 0 ${VW} ${VH}`} className="mx-auto block w-full" style={{ maxWidth: 380 }} role="img" aria-label={title}>
+      <span className={C ? "block w-full" : "block px-1 pb-2 pt-1"}>
+        <svg viewBox={`0 0 ${VW} ${VH}`} className="mx-auto block w-full" style={{ maxWidth: C ? 220 : 380 }} role="img" aria-label={title}>
           <defs>
             <marker id={`arrow${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={6} markerHeight={6} orient="auto">
               <path d="M0 0.6L8 4L0 7.4z" fill="#334155" />
             </marker>
+            <marker id={`arrowHot${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={5} markerHeight={5} orient="auto">
+              <path d="M0 0.6L8 4L0 7.4z" fill="var(--accent)" />
+            </marker>
           </defs>
-          <Built frame={frame} fill={fill} lockLeft={lockLeft} meshClip={extra.length > 0 && !frame} at={{ x: x0, y: y0 }}
-            mitreTB={mitre(T, s)} mitreLR={mitre(L, s)} sidesFull={frame ? !mitre(T, s) : true} />
-          {block(T, VW / 2, 0, "below", [VW / 2, y0 + sz.t / 2])}
-          {block(L, 46, midY - 52, [78, midY - 31], [x0 + sz.t / 2, midY - 31])}
-          {block(R, VW - 46, midY - 52, [VW - 78, midY - 31], [x0 + sz.W - sz.t / 2, midY - 31])}
-          {block(B, VW / 2, low, [VW / 2, low - 3], [VW / 2, y0 + sz.H - sz.t / 2])}
-          {extra.slice(0, 1).map((p) => block(p, lockLeft ? VW - 46 : 46, low, [lockLeft ? VW - 46 : 46, low - 2], [clipX, y0 + sz.H - 24]))}
+          <g transform={`translate(${x0} ${y0}) scale(${k})`}>
+            <Built frame={frame} fill={fill} lockLeft={lockLeft} meshClip={extra.length > 0 && !frame} at={{ x: 0, y: 0 }}
+              mitreTB={mitre(T, s)} mitreLR={mitre(L, s)} sidesFull={frame ? !mitre(T, s) : true} />
+          </g>
+          {block(T, VW / 2, 0, "below", [VW / 2, y0 + t / 2])}
+          {block(L, side, sideY, [side + sw / 2, sideY + shh / 2], [x0 + t / 2, sideY + shh / 2])}
+          {block(R, VW - side, sideY, [VW - side - sw / 2, sideY + shh / 2], [x0 + W - t / 2, sideY + shh / 2])}
+          {block(B, VW / 2, low, [VW / 2, low - 3], [VW / 2, y0 + H - t / 2])}
+          {extra.slice(0, 1).map((p) => block(p, lockLeft ? VW - side : side, low, [lockLeft ? VW - side : side, low - 2], [clipX, y0 + H - 24 * k]))}
         </svg>
       </span>
     );
@@ -258,21 +266,14 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
             const on = v.on(draft);
             return (
               <button key={v.key} type="button" role="radio" aria-checked={on} onClick={() => setDraft(v.apply(draft))}
-                className="card flex flex-col items-center gap-2 px-2 pb-2.5 pt-3 text-center"
+                className="card flex flex-col items-center gap-1.5 px-1 pb-2.5 pt-2 text-center"
                 style={on ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)", background: "var(--accent-soft)" } : undefined}>
-                <Board s={v.apply(draft)} bare />
-                {/* what this way has that the other does not: that section's picture and name */}
+                {/* the whole drawing, the section this way has that the other does not in colour */}
                 {(() => {
                   const mine = v.apply(draft), other = variants.find((x) => x !== v)!.apply(draft);
                   const otherIds = new Map(pieces(other).map((p) => [p.id, profOf(p, other).id]));
-                  const diff = pieces(mine).filter((p) => otherIds.get(p.id) !== profOf(p, mine).id);
-                  if (!diff.length) return null;
-                  return diff.slice(0, 1).map((p) => (
-                    <span key={p.id} className="flex items-center gap-1 text-left">
-                      {pic(p, mine)}
-                      <span className="text-[11px] font-semibold leading-tight" style={{ color: "var(--ink-2)" }}>{nameOf(p, mine)}</span>
-                    </span>
-                  ));
+                  const diff = new Set(pieces(mine).filter((p) => otherIds.get(p.id) !== profOf(p, mine).id).map((p) => p.id));
+                  return <Board s={mine} compact mark={diff} />;
                 })()}
                 <span className="flex items-start gap-1.5">
                   <span className="mt-px grid h-4 w-4 shrink-0 place-items-center rounded-full" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--line)"}` }}>
@@ -289,9 +290,10 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
         const on = true;
         return (
           <div key="board" className="card overflow-hidden">
-            <Board s={draft} />
+            {/* two ways: the cards above are the drawing, so no second one here */}
+            {!variants.length && <Board s={draft} />}
             {on && (
-              <div className="border-t px-4 py-2" style={{ borderColor: "var(--line)" }}>
+              <div className={variants.length ? "px-4 py-2" : "border-t px-4 py-2"} style={{ borderColor: "var(--line)" }}>
                 <button type="button" onClick={() => setChanging(pieces(draft).map((p) => p.id))}
                   className="flex w-full items-center justify-between py-1.5 text-sm font-semibold" style={{ color: "var(--ink-2)" }}>
                   Change a section
@@ -414,7 +416,8 @@ function Built({ frame, fill, lockLeft, meshClip, mitreTB, mitreLR, sidesFull, w
 /** A name over two short lines at most, for the narrow side columns. */
 function wrap(name: string, max = 15): string[] {
   const lines: string[] = [];
-  for (const w of name.split(" ")) {
+  // a size such as "2½ × ¾" stays on one line
+  for (const w of name.replace(/ × /g, " × ").split(" ")) {
     const last = lines[lines.length - 1];
     if (last && (last + " " + w).length <= max) lines[lines.length - 1] = last + " " + w;
     else lines.push(w);
