@@ -193,32 +193,34 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
     const fill = at.kind === "shutter" ? mix[at.index] ?? "G" : "G";
     const C = !!compact;
     const base = frame ? BUILT.frame : BUILT.shutter;
-    const k = C ? (frame ? 0.5 : 0.6) : 1;
+    const k = C ? (frame ? 0.55 : 0.62) : 1;
     const W = base.W * k, H = base.H * k, t = base.t * k;
     // the section drawing, the words and the spacing — smaller on a choice card
-    const sw = C ? 44 : 64, shh = C ? 28 : 42, fName = C ? 10 : 11, fWhere = C ? 8.5 : 9.5, lh = C ? 11 : 12;
+    const sw = C ? 46 : 64, shh = C ? 28 : 42, fName = C ? 10.5 : 11, fWhere = 9.5, lh = 12;
     const VW = C ? 180 : 340, side = C ? 30 : 46, x0 = (VW - W) / 2;
-    const y0 = shh + 2 * lh + lh + (C ? 18 : 30), midY = y0 + H / 2, low = y0 + H + (C ? 16 : 26);
+    const y0 = C ? shh + 2 * lh + 16 : shh + 3 * lh + 30, midY = y0 + H / 2, low = y0 + H + (C ? 16 : 26);
     const clipX = lockLeft ? x0 + (base.W + 4.5) * k : x0 - 3.5 * k;
-    const VH = low + shh + 3 * lh + 8;
+    const VH = C ? low + shh + 2 * lh + 4 : low + shh + 3 * lh + 8;
     /** a section: its drawing, its name and where it sits — and an arrow to its pipe (no sizes:
      *  founder 2026-11-24 "ye naap hata do"). `from` "below": the arrow leaves from under the words. */
     const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
       if (!p) return null;
-      const lines = wrap(nameOf(p, s), C ? 10 : 15);
-      const where = WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
+      // on a choice card: the name alone, without its size, and no "where" line (the arrow says where)
+      const name = C ? nameOf(p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "") : nameOf(p, s);
+      const lines = wrap(name, C ? 8 : 15);
+      const where = C ? "" : WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
       const top = py + shh + lh;
-      const end = top + lines.length * lh;
+      const end = top + (C ? lines.length - 1 : lines.length) * lh;
       const start: [number, number] = from === "below" ? [cx, end + 5] : from;
       const hot = mark?.has(p.id);
-      const ink = hot ? "var(--accent)" : "#334155";
+      const ink = hot ? "var(--accent)" : C ? "#94a3b8" : "#334155";
       return (
         <g key={p.id}>
           <foreignObject x={cx - sw / 2} y={py} width={sw} height={shh}>
             <div className="[&_img]:mix-blend-multiply" style={{ width: sw, height: shh }}><SectionSketch p={profOf(p, s).prof} tracks={tracks} plain /></div>
           </foreignObject>
           {lines.map((ln, i) => <text key={i} x={cx} y={top + i * lh} textAnchor="middle" fontSize={fName} fontWeight={700} fill={hot ? "var(--accent)" : "#0f172a"}>{ln}</text>)}
-          <text x={cx} y={end} textAnchor="middle" fontSize={fWhere} fill="#64748b">{where}</text>
+          {where && <text x={cx} y={end} textAnchor="middle" fontSize={fWhere} fill="#64748b">{where}</text>}
           <circle cx={start[0]} cy={start[1]} r={1.6} fill={ink} />
           <line x1={start[0]} y1={start[1]} x2={to[0]} y2={to[1]} stroke={ink} strokeWidth={hot ? 1.3 : 0.9} markerEnd={`url(#${hot ? "arrowHot" : "arrow"}${uid})`} />
         </g>
@@ -230,7 +232,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
         <svg viewBox={`0 0 ${VW} ${VH}`} className="mx-auto block w-full" style={{ maxWidth: C ? 220 : 380 }} role="img" aria-label={title}>
           <defs>
             <marker id={`arrow${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={6} markerHeight={6} orient="auto">
-              <path d="M0 0.6L8 4L0 7.4z" fill="#334155" />
+              <path d="M0 0.6L8 4L0 7.4z" fill={C ? "#94a3b8" : "#334155"} />
             </marker>
             <marker id={`arrowHot${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={5} markerHeight={5} orient="auto">
               <path d="M0 0.6L8 4L0 7.4z" fill="var(--accent)" />
