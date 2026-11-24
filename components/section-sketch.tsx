@@ -14,7 +14,14 @@ import type { ProfileDef } from "../lib/studio/model";
 import { shapeOf, type Shape } from "../lib/studio/shapes";
 import { hasImage, imageSrc } from "./section-profiles";
 
-export default function SectionSketch({ p, tracks = 2 }: { p: ProfileDef | undefined; tracks?: number }) {
+export default function SectionSketch({ p, tracks = 2, plain }: {
+  p: ProfileDef | undefined; tracks?: number;
+  /** just the shape: no size marks, no background (the check-your-window pages) */
+  plain?: boolean;
+}) {
+  // plain: the traced shape first, since a catalogue photo has its sizes printed on it
+  const traced = plain ? shapeOf(p) : undefined;
+  if (traced) return <RealSection s={resized(traced, p)} plain />;
   // 1. If we have the cropped catalogue photo PNG, show the real photo
   if (p?.id && hasImage(p.id)) {
     return (
@@ -32,10 +39,10 @@ export default function SectionSketch({ p, tracks = 2 }: { p: ProfileDef | undef
 
   // 2. If we have the traced vector CAD die shape, render it full-scale
   const real = shapeOf(p);
-  if (real) return <RealSection s={resized(real, p)} />;
+  if (real) return <RealSection s={resized(real, p)} plain={plain} />;
 
   // 3. Fallback: parametric architectural vector sketch
-  return <GuideSketch p={p} tracks={tracks} />;
+  return <GuideSketch p={p} tracks={tracks} plain={plain} />;
 }
 
 /**
@@ -54,7 +61,7 @@ function resized(s: Shape, p: ProfileDef | undefined): Shape {
 }
 
 /** The section exactly as the catalogue draws it — traced, to scale, in mm. */
-function RealSection({ s }: { s: Shape }) {
+function RealSection({ s, plain }: { s: Shape; plain?: boolean }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const { w, h } = s;
   const big = Math.max(w, h);
@@ -64,13 +71,13 @@ function RealSection({ s }: { s: Shape }) {
   const lw = Math.max(0.7, big / 110);
   // room for the size numbers below and to the right, so nothing is cut off
   const x0 = -pad * 0.5, y0 = -pad * 0.5;
-  const vw = w + pad * 0.35 + fs * 1.05 + fs * 0.95 - x0;
-  const vh = h + pad * 0.35 + fs * 1.05 + fs * 0.4 - y0;
+  const vw = plain ? w + pad : w + pad * 0.35 + fs * 1.05 + fs * 0.95 - x0;
+  const vh = plain ? h + pad : h + pad * 0.35 + fs * 1.05 + fs * 0.4 - y0;
 
   return (
     <svg
       viewBox={`${x0} ${y0} ${vw} ${vh}`}
-      className="h-full w-full bg-white"
+      className={plain ? "h-full w-full" : "h-full w-full bg-white"}
       role="img"
       aria-label={`Section ${s.code}, ${w} by ${h} mm`}
     >
@@ -83,13 +90,13 @@ function RealSection({ s }: { s: Shape }) {
       </defs>
 
       {/* Grid background subtle */}
-      <rect
+      {!plain && <rect
         x={x0}
         y={y0}
         width={vw}
         height={vh}
         fill="#f8fafc"
-      />
+      />}
 
       {/* Extrusion profile */}
       <path
@@ -102,7 +109,7 @@ function RealSection({ s }: { s: Shape }) {
       />
 
       {/* Dimensions in mm */}
-      <g
+      {!plain && <g
         stroke="#2563eb"
         strokeWidth={lw * 0.85}
         fill="#2563eb"
@@ -129,14 +136,14 @@ function RealSection({ s }: { s: Shape }) {
         >
           {h}
         </text>
-      </g>
+      </g>}
 
     </svg>
   );
 }
 
 /** Architectural parametric extrusion sketch for profiles without CAD shapes */
-function GuideSketch({ p, tracks = 2 }: { p: ProfileDef | undefined; tracks?: number }) {
+function GuideSketch({ p, tracks = 2, plain }: { p: ProfileDef | undefined; tracks?: number; plain?: boolean }) {
   const nums = (p?.size ?? "").split(/[×x*]/).map((s) => parseFloat(s)).filter((n) => n > 0);
   const known = nums.length === 2;
   const kind = p?.kind ?? "other";
@@ -260,21 +267,21 @@ function GuideSketch({ p, tracks = 2 }: { p: ProfileDef | undefined; tracks?: nu
 
   return (
     <svg
-      viewBox={`${-pad * 0.5} ${-pad * 0.5} ${w + pad * 1.8} ${h + pad * 1.8}`}
-      className="h-full w-full bg-white"
+      viewBox={plain ? `${-pad * 0.5} ${-pad * 0.5} ${w + pad} ${h + pad}` : `${-pad * 0.5} ${-pad * 0.5} ${w + pad * 1.8} ${h + pad * 1.8}`}
+      className={plain ? "h-full w-full" : "h-full w-full bg-white"}
       role="img"
       aria-label={known ? `Section ${w} by ${h} mm` : "Section size not known"}
     >
-      <rect
+      {!plain && <rect
         x={-pad * 0.5}
         y={-pad * 0.5}
         width={w + pad * 1.8}
         height={h + pad * 1.8}
         fill="#f8fafc"
-      />
+      />}
       {content}
 
-      {known && (
+      {known && !plain && (
         <g
           stroke="#2563eb"
           strokeWidth={sw * 0.7}

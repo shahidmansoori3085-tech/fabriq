@@ -38,7 +38,7 @@ const caseOf = (p: PartDef, vars: Record<string, string>) => Math.max(0, p.profi
 const placeOf = (sys: StudioSystem, place: string) => sys.parts.find((p) => p.place === place && p.enabled !== false);
 const WHERE: Record<string, string> = {
   "frame-top": "Top", "frame-bottom": "Bottom", "frame-left": "Left side", "frame-right": "Right side",
-  "sash-top": "Top", "sash-bottom": "Bottom", "sash-lock": "Handle side", "sash-meet": "Meeting side", meeting: "Where shutters meet",
+  "sash-top": "Top", "sash-bottom": "Bottom", "sash-lock": "Handle side", "sash-meet": "Meeting side", meeting: "Meeting side",
 };
 
 interface Variant { key: string; title: string; apply: (s: StudioSystem) => StudioSystem; on: (s: StudioSystem) => boolean }
@@ -169,31 +169,18 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
   const nameOf = (p: PartDef, s: StudioSystem) => { const { id, prof } = profOf(p, s); return shopName(prof?.name ?? id); };
   // the section's own drawing beside its name (founder 2026-11-24: "kaise pata chalega kahan kya lagega")
   const pic = (p: PartDef, s: StudioSystem) => (
-    <span className="h-11 w-14 shrink-0 overflow-hidden">
-      <SectionSketch p={profOf(p, s).prof} tracks={tracks} />
-    </span>
-  );
-
-  /** One side of the board: the section's drawing, its name, where it sits and its cut. */
-  const Side = ({ p, s, cut }: { p?: PartDef; s: StudioSystem; cut?: string }) => !p ? <span /> : (
-    <span className="flex min-w-0 flex-col items-center text-center">
-      <span className="h-12 w-16 overflow-hidden">
-        <SectionSketch p={profOf(p, s).prof} tracks={tracks} />
-      </span>
-      <span className="mt-1 block max-w-[112px] text-[12px] font-bold leading-tight">{nameOf(p, s)}</span>
-      <span className="block text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>
-        {WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim()}{cut ? ` · ${cut}` : ""}
-      </span>
+    <span className="h-11 w-14 shrink-0 overflow-hidden [&_.bg-white]:!bg-transparent [&_img]:mix-blend-multiply">
+      <SectionSketch p={profOf(p, s).prof} tracks={tracks} plain />
     </span>
   );
 
   /** The frame or the shutter drawn as it is built — aluminium pipes, their 45° or 90° joints,
    *  the glass or mesh in it — with each side's section placed beside that side. */
+  const uid = useId().replace(/:/g, "");
   const Board = ({ s, bare }: { s: StudioSystem; bare?: boolean }) => {
     const v = look(s);
     const ps = pieces(s);
     const by = (pl: string) => ps.find((p) => p.place === pl);
-    const cut = (p?: PartDef) => (p ? v.labels[p.id]?.value : undefined);
     const frame = at.kind === "frame";
     const sh = at.kind === "shutter" ? v.geo.shutters[at.index] : undefined;
     const lockLeft = sh?.lockSide !== "right";
@@ -208,20 +195,49 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
     );
     // the small picture of one way, for the side-by-side choice
     if (bare) return <span className="flex justify-center">{built(frame ? 132 : 92)}</span>;
+
+    const sz = frame ? BUILT.frame : BUILT.shutter;
+    const VW = 340, x0 = (VW - sz.W) / 2, y0 = 96, midY = y0 + sz.H / 2, low = y0 + sz.H + 26;
+    const clipX = lockLeft ? x0 + sz.W + 4.5 : x0 - 3.5;
+    const VH = low + 92;
+    /** a section: its drawing, its name and where it sits — and an arrow to its pipe (no sizes:
+     *  founder 2026-11-24 "ye naap hata do"). `from` "below": the arrow leaves from under the words. */
+    const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
+      if (!p) return null;
+      const lines = wrap(nameOf(p, s));
+      const small = [WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim()];
+      const end = py + 54 + (lines.length + small.length - 1) * 12;
+      const start: [number, number] = from === "below" ? [cx, end + 6] : from;
+      return (
+        <g key={p.id}>
+          <foreignObject x={cx - 32} y={py} width={64} height={42}>
+            <div className="[&_img]:mix-blend-multiply" style={{ width: 64, height: 42 }}><SectionSketch p={profOf(p, s).prof} tracks={tracks} plain /></div>
+          </foreignObject>
+          {lines.map((ln, i) => <text key={i} x={cx} y={py + 54 + i * 12} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0f172a">{ln}</text>)}
+          {small.map((ln, i) => (
+            <text key={`w${i}`} x={cx} y={py + 54 + (lines.length + i) * 12} textAnchor="middle" fontSize={9.5} fill="#64748b">{ln}</text>
+          ))}
+          <circle cx={start[0]} cy={start[1]} r={1.6} fill="#334155" />
+          <line x1={start[0]} y1={start[1]} x2={to[0]} y2={to[1]} stroke="#334155" strokeWidth={0.9} markerEnd={`url(#arrow${uid})`} />
+        </g>
+      );
+    };
     return (
-      <span className="block px-2 pb-3 pt-2">
-        <span className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 gap-y-2">
-          <span /><Side p={T} s={s} cut={cut(T)} /><span />
-          <Side p={L} s={s} cut={cut(L)} />
-          {built()}
-          <Side p={R} s={s} cut={cut(R)} />
-          <span /><Side p={B} s={s} cut={cut(B)} /><span />
-        </span>
-        {extra.length > 0 && (
-          <span className="mt-2 flex justify-center gap-4 border-t pt-2" style={{ borderColor: "var(--line)" }}>
-            {extra.map((p) => <Side key={p.id} p={p} s={s} cut={cut(p)} />)}
-          </span>
-        )}
+      <span className="block px-1 pb-2 pt-1">
+        <svg viewBox={`0 0 ${VW} ${VH}`} className="mx-auto block w-full" style={{ maxWidth: 380 }} role="img" aria-label={title}>
+          <defs>
+            <marker id={`arrow${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={6} markerHeight={6} orient="auto">
+              <path d="M0 0.6L8 4L0 7.4z" fill="#334155" />
+            </marker>
+          </defs>
+          <Built frame={frame} fill={fill} lockLeft={lockLeft} meshClip={extra.length > 0 && !frame} at={{ x: x0, y: y0 }}
+            mitreTB={mitre(T, s)} mitreLR={mitre(L, s)} sidesFull={frame ? !mitre(T, s) : true} />
+          {block(T, VW / 2, 0, "below", [VW / 2, y0 + sz.t / 2])}
+          {block(L, 46, midY - 52, [78, midY - 31], [x0 + sz.t / 2, midY - 31])}
+          {block(R, VW - 46, midY - 52, [VW - 78, midY - 31], [x0 + sz.W - sz.t / 2, midY - 31])}
+          {block(B, VW / 2, low, [VW / 2, low - 3], [VW / 2, y0 + sz.H - sz.t / 2])}
+          {extra.slice(0, 1).map((p) => block(p, lockLeft ? VW - 46 : 46, low, [lockLeft ? VW - 46 : 46, low - 2], [clipX, y0 + sz.H - 24]))}
+        </svg>
       </span>
     );
   };
@@ -337,11 +353,17 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, onDone }:
 /** The frame or a shutter as built: four aluminium pipes (mitred at 45°, or butted at 90° with the
  *  sides running through), glass with a sheen or mesh, the handle on its side and the interlock
  *  clip where shutters meet. */
-function Built({ frame, fill, lockLeft, meshClip, mitreTB, mitreLR, sidesFull, width }: {
+/** The drawn size of a frame or a shutter (and its pipe), shared by the drawing and its arrows. */
+const BUILT = { frame: { W: 150, H: 118, t: 13 }, shutter: { W: 104, H: 150, t: 11 } };
+
+function Built({ frame, fill, lockLeft, meshClip, mitreTB, mitreLR, sidesFull, width, at }: {
   frame: boolean; fill: string; lockLeft: boolean; meshClip: boolean; mitreTB: boolean; mitreLR: boolean; sidesFull: boolean; width?: number;
+  /** drawn inside a bigger drawing, its top-left corner here */
+  at?: { x: number; y: number };
 }) {
   const id = useId().replace(/:/g, "");
-  const W = frame ? 150 : 104, H = frame ? 118 : 150, t = frame ? 13 : 11, x = 6, y = 6;
+  const { W, H, t } = frame ? BUILT.frame : BUILT.shutter;
+  const x = at?.x ?? 6, y = at?.y ?? 6;
   const miter = mitreTB || mitreLR;
   // a pipe: mitred trapezoid at 45°, else a rectangle (sides through at 90° on a Normal frame)
   const top = miter ? `${x},${y} ${x + W},${y} ${x + W - t},${y + t} ${x + t},${y + t}`
@@ -353,8 +375,8 @@ function Built({ frame, fill, lockLeft, meshClip, mitreTB, mitreLR, sidesFull, w
   const right = miter ? `${x + W},${y} ${x + W},${y + H} ${x + W - t},${y + H - t} ${x + W - t},${y + t}`
     : sidesFull ? `${x + W - t},${y} ${x + W},${y} ${x + W},${y + H} ${x + W - t},${y + H}` : `${x + W - t},${y + t} ${x + W},${y + t} ${x + W},${y + H - t} ${x + W - t},${y + H - t}`;
   const ix = x + t, iy = y + t, iw = W - 2 * t, ih = H - 2 * t;
-  return (
-    <svg viewBox={`0 0 ${W + 12 + (meshClip ? 8 : 0)} ${H + 12}`} className="block" style={{ width: width ?? (frame ? 150 : 108) }} role="img" aria-label={frame ? "Frame" : "Shutter"}>
+  const body = (
+    <>
       <defs>
         <linearGradient id={`h${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f8fafc" /><stop offset=".45" stopColor="#cbd5e1" /><stop offset="1" stopColor="#94a3b8" /></linearGradient>
         <linearGradient id={`v${id}`} x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#f8fafc" /><stop offset=".45" stopColor="#cbd5e1" /><stop offset="1" stopColor="#94a3b8" /></linearGradient>
@@ -379,6 +401,23 @@ function Built({ frame, fill, lockLeft, meshClip, mitreTB, mitreLR, sidesFull, w
       {!frame && <rect x={lockLeft ? x + 2.5 : x + W - t + 2.5} y={y + H / 2 - 12} width={t - 5} height={24} rx={2.5} fill="#334155" />}
       {/* the interlock clip where it meets the next shutter */}
       {!frame && meshClip && <rect x={lockLeft ? x + W + 2 : x - 6} y={y + 8} width={5} height={H - 16} rx={1.5} fill="#475569" />}
+    </>
+  );
+  if (at) return <g>{body}</g>;
+  return (
+    <svg viewBox={`0 0 ${W + 12 + (meshClip ? 8 : 0)} ${H + 12}`} className="block" style={{ width: width ?? (frame ? 150 : 108) }} role="img" aria-label={frame ? "Frame" : "Shutter"}>
+      {body}
     </svg>
   );
+}
+
+/** A name over two short lines at most, for the narrow side columns. */
+function wrap(name: string, max = 15): string[] {
+  const lines: string[] = [];
+  for (const w of name.split(" ")) {
+    const last = lines[lines.length - 1];
+    if (last && (last + " " + w).length <= max) lines[lines.length - 1] = last + " " + w;
+    else lines.push(w);
+  }
+  return lines.length > 2 ? [lines[0], lines.slice(1).join(" ")] : lines;
 }
