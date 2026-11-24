@@ -227,6 +227,68 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     const R = frame ? by("frame-right") : by(lockLeft ? "sash-meet" : "sash-lock");
     const extra = ps.filter((p) => ![T, B, L, R].includes(p));
     const fill = at.kind === "shutter" ? mix[at.index] ?? "G" : "G";
+    // a choice card: the drawing with the part that differs lit up, and under it each section
+    // once with where it goes — no repeated names, no arrows across a small card
+    // (founder 2026-11-24: "conjusted lag raha hai, clean karo, aasani se samajh aaye")
+    if (compact) {
+      const sz = frame ? BUILT.frame : BUILT.shutter, pad = 8;
+      const clip = extra.length > 0 && !frame;
+      const sides = [T, B, L, R].filter((p): p is PartDef => !!p);
+      const all = [...sides, ...extra.slice(0, 1)];
+      const rectOf = (p: PartDef): [number, number, number, number] | null => {
+        const x = pad, y = pad, { W, H, t } = sz;
+        if (p === T) return [x, y, W, t];
+        if (p === B) return [x, y + H - t, W, t];
+        if (p === L) return [x, y, t, H];
+        if (p === R) return [x + W - t, y, t, H];
+        if (p === extra[0] && clip) return [lockLeft ? x + W + 2 : x - 6, y + 8, 5, H - 16];
+        return null;
+      };
+      const SHORT: Record<string, string> = {
+        "frame-top": "Top", "frame-bottom": "Bottom", "frame-left": "Sides", "frame-right": "Sides",
+        "sash-top": "Top", "sash-bottom": "Bottom", "sash-lock": "Handle side", "sash-meet": "Meeting side", meeting: "Clip on meeting side",
+      };
+      const groups: { id: string; p: PartDef; parts: PartDef[] }[] = [];
+      for (const p of all) {
+        const id = profOf(p, s).id;
+        const g = groups.find((x) => x.id === id && p.scope !== "meeting" && x.p.scope !== "meeting");
+        if (g) g.parts.push(p); else groups.push({ id, p, parts: [p] });
+      }
+      const whereOf = (parts: PartDef[]) => sides.length === 4 && sides.every((q) => parts.includes(q))
+        ? "All 4 sides"
+        : [...new Set(parts.map((q) => SHORT[q.place ?? ""] ?? ""))].filter(Boolean)
+          .reduce<string[]>((acc, w) => (/^(Handle|Meeting) side$/.test(w) && acc.some((x) => /^(Handle|Meeting) side$/.test(x))
+            ? acc.map((x) => (/^(Handle|Meeting) side$/.test(x) ? "Both sides" : x)) : [...acc, w]), [])
+          .map((w, i) => (i ? w.toLowerCase() : w)).join(", ");
+      return (
+        <span className="flex w-full flex-col items-center gap-2">
+          <svg viewBox={`0 0 ${sz.W + 2 * pad} ${sz.H + 2 * pad}`} className="block" style={{ width: frame ? 120 : 76 }} role="img" aria-label={title}>
+            <Built frame={frame} fill={fill} lockLeft={lockLeft} meshClip={clip} at={{ x: pad, y: pad }}
+              mitreTB={mitre(T, s)} mitreLR={mitre(L, s)} sidesFull={frame ? !mitre(T, s) : true} />
+            {all.filter((p) => mark?.has(p.id)).map((p) => {
+              const r = rectOf(p);
+              return r && <rect key={p.id} x={r[0]} y={r[1]} width={r[2]} height={r[3]} rx={1} fill="var(--accent)" fillOpacity={0.45} stroke="var(--accent)" strokeWidth={1.6} />;
+            })}
+          </svg>
+          <span className="flex w-full flex-col gap-1.5 px-1.5 text-left">
+            {groups.map((g) => {
+              const hot = g.parts.some((p) => mark?.has(p.id));
+              return (
+                <span key={g.p.id} className="flex items-center gap-1.5">
+                  <span className="h-7 w-11 shrink-0 [&_img]:mix-blend-multiply"><SectionSketch p={profOf(g.p, s).prof} tracks={tracks} plain /></span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-[11.5px] font-bold" style={{ color: hot ? "var(--accent)" : "var(--ink)" }}>
+                      {nameOf(g.p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "")}
+                    </span>
+                    <span className="block text-[10.5px]" style={{ color: "var(--ink-3)" }}>{whereOf(g.parts)}</span>
+                  </span>
+                </span>
+              );
+            })}
+          </span>
+        </span>
+      );
+    }
     const C = !!compact;
     const base = frame ? BUILT.frame : BUILT.shutter;
     // a frame card: the window big, the track sections small (founder 2026-11-24)
@@ -240,12 +302,26 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
     const VH = C ? low + shh + 2 * lh + 4 : low + shh + 3 * lh + 8;
     /** a section: its drawing, its name and where it sits — and an arrow to its pipe (no sizes:
      *  founder 2026-11-24 "ye naap hata do"). `from` "below": the arrow leaves from under the words. */
+    // a section on more than one side is shown once, saying all the sides it goes on
+    // (founder 2026-11-24: the same name four times looked crowded)
+    const order = [T, B, L, R].filter((p): p is PartDef => !!p);
+    const same = (a: PartDef, b: PartDef) => profOf(a, s).id === profOf(b, s).id;
+    const shownHere = (p: PartDef) => p.scope === "meeting" || order.find((q) => same(q, p)) === p;
+    const whereAll = (p: PartDef) => {
+      if (p.scope === "meeting") return WHERE[p.place ?? ""] ?? "";
+      const g = order.filter((q) => same(q, p));
+      if (g.length === 4) return "All 4 sides";
+      const words = g.map((q) => WHERE[q.place ?? ""] ?? "");
+      const both = !!L && !!R && g.includes(L) && g.includes(R);
+      const list = both ? [...words.filter((w) => !/side$/i.test(w)), "Both sides"] : words;
+      return list.filter(Boolean).map((w, i) => (i ? w.toLowerCase() : w)).join(", ");
+    };
     const block = (p: PartDef | undefined, cx: number, py: number, from: [number, number] | "below", to: [number, number]) => {
-      if (!p) return null;
+      if (!p || !shownHere(p)) return null;
       // on a choice card: the name alone, without its size, and no "where" line (the arrow says where)
       const name = C ? nameOf(p, s).replace(/\s+[\d½¼¾⅛.]+\s*×\s*[\d½¼¾⅛.]+.*$/, "") : nameOf(p, s);
       const lines = wrap(name, C ? 8 : 15);
-      const where = C ? "" : WHERE[p.place ?? ""] ?? p.role.replace(/\{[a-z]+\}/g, "").trim();
+      const where = C ? "" : whereAll(p) || p.role.replace(/\{[a-z]+\}/g, "").trim();
       const top = py + shh + lh;
       const end = top + (C ? lines.length - 1 : lines.length) * lh;
       const start: [number, number] = from === "below" ? [cx, end + 5] : from;
@@ -264,9 +340,13 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
       );
     };
     const sideY = midY - shh / 2 - lh;
+    // nothing under the drawing (the bottom said once above, the clip at the side): no empty space
+    const clipSide = lockLeft ? R : L;
+    const lowUsed = (B && shownHere(B)) || (extra.length > 0 && !!clipSide && shownHere(clipSide));
+    const VB = lowUsed ? VH : y0 + H + 14;
     return (
       <span className={C ? "block w-full" : "block px-1 pb-2 pt-1"}>
-        <svg viewBox={`0 0 ${VW} ${VH}`} className="mx-auto block w-full" style={{ maxWidth: C ? 220 : 380 }} role="img" aria-label={title}>
+        <svg viewBox={`0 0 ${VW} ${VB}`} className="mx-auto block w-full" style={{ maxWidth: C ? 220 : 380 }} role="img" aria-label={title}>
           <defs>
             <marker id={`arrow${uid}`} viewBox="0 0 8 8" refX={7.5} refY={4} markerWidth={6} markerHeight={6} orient="auto">
               <path d="M0 0.6L8 4L0 7.4z" fill={C ? "#94a3b8" : "#334155"} />
@@ -283,7 +363,13 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
           {block(L, side, sideY, [side + sw / 2, sideY + shh / 2], [x0 + t / 2, sideY + shh / 2])}
           {block(R, VW - side, sideY, [VW - side - sw / 2, sideY + shh / 2], [x0 + W - t / 2, sideY + shh / 2])}
           {block(B, VW / 2, low, [VW / 2, low - 3], [VW / 2, y0 + H - t / 2])}
-          {extra.slice(0, 1).map((p) => block(p, lockLeft ? VW - side : side, low, [lockLeft ? VW - side : side, low - 2], [clipX, y0 + H - 24 * k]))}
+          {extra.slice(0, 1).map((p) => {
+            // the clip's own side is free (its section said once already): put the clip there, a short arrow across
+            const sideP = lockLeft ? R : L;
+            const cx = lockLeft ? VW - side : side;
+            if (!sideP || !shownHere(sideP)) return block(p, cx, sideY, [lockLeft ? cx - sw / 2 : cx + sw / 2, sideY + shh / 2], [clipX, sideY + shh / 2]);
+            return block(p, cx, low, [cx, low - 2], [clipX, y0 + H - 24 * k]);
+          })}
         </svg>
       </span>
     );
@@ -313,7 +399,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, all, onDo
                   const diff = new Set(pieces(mine).filter((p) => otherIds.get(p.id) !== profOf(p, mine).id).map((p) => p.id));
                   return <Board s={mine} compact mark={diff} />;
                 })()}
-                <span className="flex items-start gap-1.5">
+                <span className="mt-auto flex items-start gap-1.5 pt-0.5">
                   <span className="mt-px grid h-4 w-4 shrink-0 place-items-center rounded-full" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--line)"}` }}>
                     {on && <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />}
                   </span>
