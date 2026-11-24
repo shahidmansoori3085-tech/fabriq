@@ -16,6 +16,20 @@ const nextConfig: NextConfig = {
   // an old one after a deploy.
   async headers() {
     return [
+      // Safety on every page (2026-11-24 security check): no other site may show the app inside
+      // its own page (clickjacking), the browser takes each file for what it says it is, other
+      // sites are not told which page linked to them, and the camera, microphone and location
+      // stay off (the app never asks for them; sharing keeps working).
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [
