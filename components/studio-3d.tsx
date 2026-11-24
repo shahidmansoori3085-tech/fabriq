@@ -17,8 +17,8 @@
 import { useEffect, useMemo, useState, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { TrackballControls, ContactShadows } from "@react-three/drei";
-import type { TrackballControls as TrackballImpl } from "three-stdlib";
+import { OrbitControls, ContactShadows } from "@react-three/drei";
+import type { OrbitControls as OrbitImpl } from "three-stdlib";
 import * as THREE from "three";
 import type { Member, WindowGeo } from "../lib/studio/geometry";
 import type { Pick } from "./studio-drawing";
@@ -179,8 +179,10 @@ export default function Window3D({
 }) {
   const [mode, setMode] = useState<"corner" | "sliding" | "cutface" | "meeting" | "full">("corner");
   const [spin, setSpin] = useState(false);
+  /** bumped on every view button, so the same view can be asked for again */
+  const [viewAsk, setViewAsk] = useState(0);
   const [finish, setFinish] = useState<FinishId>("anthracite");
-  const controlsRef = useRef<TrackballImpl>(null);
+  const controlsRef = useRef<OrbitImpl>(null);
 
   const { W, H } = g;
   const frameDepth = Math.max(45, ...g.frame.map((m) => m.depth ?? 0));
@@ -519,6 +521,8 @@ export default function Window3D({
   const fullTarget = useMemo(() => [W / 2, H / 2, -frameDepth / 2] as [number, number, number], [W, H, frameDepth]);
   const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    // a finger that moved was turning the window, not tapping a piece
+    if (e.delta > 8) return;
     onPick(p);
   };
 
@@ -530,6 +534,11 @@ export default function Window3D({
 
   const setViewPreset = (nextMode: "corner" | "sliding" | "cutface" | "meeting" | "full") => {
     setMode(nextMode);
+    setViewAsk((k) => k + 1);
+  };
+  /** Puts the camera where the view wants it; run by <ApplyView> inside the canvas, after the
+   *  view's own controls exist. The full window is framed whole, whatever its size. */
+  const placeView = (nextMode: typeof mode, aspect: number) => {
     if (!controlsRef.current) return;
     if (cut && nextMode !== "full") {
       // the cutaway of the chosen window: corner from above, the sill run, or straight into the cut
@@ -548,8 +557,12 @@ export default function Window3D({
       controlsRef.current.object.position.set(480, 75, 45);
       controlsRef.current.target.set(240, 65, 40);
     } else {
-      controlsRef.current.object.position.set(W * 0.5 + big * 0.55, H * 0.55 + big * 0.18, big * 1.45);
+      // far enough that the whole window and a margin fit the canvas, both ways
+      const cam = controlsRef.current.object as THREE.PerspectiveCamera;
+      const half = Math.tan(((cam.fov ?? 34) * Math.PI) / 360);
+      const dist = (Math.max(H, W / Math.max(0.3, aspect)) * 0.62) / half;
       controlsRef.current.target.set(W / 2, H / 2, -frameDepth / 2);
+      controlsRef.current.object.position.set(W / 2 + dist * 0.26, H / 2 + dist * 0.12, -frameDepth / 2 + dist * 0.96);
     }
     controlsRef.current.object.up.set(0, 1, 0);
     controlsRef.current.update();
@@ -560,7 +573,8 @@ export default function Window3D({
       {/* Top Floating Controls Bar */}
       <div className="absolute top-2.5 inset-x-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Mode Selector */}
-        <div className="pointer-events-auto flex items-center gap-1 rounded-lg bg-white/90 p-1 shadow-sm backdrop-blur-md border border-stone-200/80">
+        {/* five views do not fit a phone: the row scrolls sideways instead of cutting "Full Window" off */}
+        <div className="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-white/90 p-1 shadow-sm backdrop-blur-md border border-stone-200/80 [scrollbar-width:none] [&>button]:shrink-0">
           <button
             type="button"
             onClick={() => setViewPreset("corner")}
@@ -655,9 +669,10 @@ export default function Window3D({
           position: cut ? CUT_VIEWS.corner[0] : [310, 240, 260],
           fov: 34,
           near: 5,
-          far: 3000,
+          // a big window seen whole sits several metres away
+          far: 30000,
         }}
-        style={{ height: 440 }}
+        style={{ height: 440, touchAction: "none" }}
         onPointerMissed={() => onPick(null)}
       >
         <StudioLight />
@@ -779,23 +794,26 @@ export default function Window3D({
 
             {/* Ground Contact Shadow */}
             <ContactShadows position={[140, -1, (cut ? cut.trackW : cornerData?.fDepth ?? 60) / 2]} scale={440} blur={2.4} opacity={0.45} far={320} />
-            <TrackballControls
+            <OrbitControls
               ref={controlsRef}
               target={cutTarget}
-              rotateSpeed={3}
-              zoomSpeed={1.4}
-              panSpeed={0.9}
-              staticMoving
+              rotateSpeed={0.75}
+              zoomSpeed={1}
+              panSpeed={0.8}
+              enableDamping
+              dampingFactor={0.12}
+              screenSpacePanning
               minDistance={40}
               maxDistance={1400}
             />
             <Spin on={spin} controls={controlsRef} />
+            <ApplyView ask={viewAsk} place={(a) => placeView(mode, a)} />
           </group>
         )}
 
         {mode === "full" && (
           <group>
-            {fullItems.map(({ key, geo, m }) => (
+            {fullItems.filter(({ m }) => m.shutter == null || !g.sash.includes(m)).map(({ key, geo, m }) => (
               <mesh
                 key={key}
                 geometry={geo}
@@ -808,15 +826,27 @@ export default function Window3D({
                 ? 6
                 : (-frameDepth * (s.track + 0.5)) / Math.max(1, tracks);
               const p = s.pane;
+              // sliding: along its track, as far as the frame lets it — a tap sends it away from its
+              // handle side; casement: on its hinges, outwards
+              const margin = W * 0.03;
+              const lo = margin - s.x, hi = W - s.w - margin - s.x;
+              const away = s.lockSide === "left" ? 1 : -1;
+              const reach = (d: number) => Math.min(Math.max(d * s.w * 0.8, lo), hi);
+              const slide = Math.abs(reach(away)) > s.w * 0.25 ? reach(away) : reach(-away);
               return (
-                <mesh
-                  key={`g${s.index}`}
-                  position={[p.x + p.w / 2, H - (p.y + p.h / 2), center]}
-                  material={s.kind === "J" ? meshMat : glassMat}
-                  onClick={click({ type: "shutter", index: s.index })}
-                >
-                  <boxGeometry args={[p.w + 10, p.h + 10, s.kind === "J" ? 1 : 5]} />
-                </mesh>
+                <MovableShutter key={`sh${s.index}-${W}-${H}`} onHold={(h) => { if (controlsRef.current) controlsRef.current.enabled = !h; }} planeZ={center}
+                  slide={g.casement ? undefined : { full: slide, lo, hi }}
+                  swing={g.casement ? { x: s.hinge === "right" ? s.x + s.w : s.x, z: center + 30, dir: s.hinge === "right" ? 1 : -1, width: s.w } : undefined}>
+                  {fullItems.filter(({ m }) => m.shutter === s.index && g.sash.includes(m)).map(({ key, geo }) => (
+                    <mesh key={key} geometry={geo} material={powderCoatMat} />
+                  ))}
+                  <mesh
+                    position={[p.x + p.w / 2, H - (p.y + p.h / 2), center]}
+                    material={s.kind === "J" ? meshMat : glassMat}
+                  >
+                    <boxGeometry args={[p.w + 10, p.h + 10, s.kind === "J" ? 1 : 5]} />
+                  </mesh>
+                </MovableShutter>
               );
             })}
             <ContactShadows
@@ -826,17 +856,20 @@ export default function Window3D({
               opacity={0.35}
               far={big}
             />
-            <TrackballControls
+            <OrbitControls
               ref={controlsRef}
               target={fullTarget}
-              rotateSpeed={3}
-              zoomSpeed={1.4}
-              panSpeed={0.9}
-              staticMoving
+              rotateSpeed={0.75}
+              zoomSpeed={1}
+              panSpeed={0.8}
+              enableDamping
+              dampingFactor={0.12}
+              screenSpacePanning
               minDistance={big * 0.15}
               maxDistance={big * 5}
             />
             <Spin on={spin} controls={controlsRef} />
+            <ApplyView ask={viewAsk} place={(a) => placeView("full", a)} />
           </group>
         )}
       </Canvas>
@@ -869,7 +902,7 @@ export default function Window3D({
                 ? "Patio cutaway • Sill track, runner rail, rollers & double glazing"
                 : mode === "cutface"
                 ? "Cutface Inspection: Exposed internal extrusion chambers & hollows"
-                : "Full window 3D • Tap any piece to inspect section"}
+                : g.casement ? "Tap a shutter to open it, or pull it open with a finger" : "Tap a shutter to slide it, or drag it where you want"}
             </span>
           </div>
         )}
@@ -881,8 +914,94 @@ export default function Window3D({
   );
 }
 
+/**
+ * A shutter of the full window (founder 2026-11-23, Vaibhav ji's idea): a tap slides it open along
+ * its track (or swings a casement open), a second tap closes it; a finger on it drags it anywhere
+ * the frame lets it go. While a shutter is held, the view does not turn.
+ */
+function MovableShutter({ onHold, planeZ, slide, swing, children }: {
+  /** a shutter is being held: the view must not turn meanwhile */
+  onHold: (held: boolean) => void;
+  /** the depth the shutter moves in, to read the finger's position on */
+  planeZ: number;
+  slide?: { full: number; lo: number; hi: number };
+  swing?: { x: number; z: number; dir: 1 | -1; width: number };
+  children: React.ReactNode;
+}) {
+  const outer = useRef<THREE.Group>(null);
+  /** where the shutter is going: a slide in mm, or a swing angle */
+  const goal = useRef(0);
+  const MAX_SWING = 1.35;
+  const held = useRef<{ x: number; from: number; px: number; py: number; moved: boolean } | null>(null);
+  useFrame((_, dt) => {
+    const o = outer.current;
+    if (!o) return;
+    // a held shutter follows the finger closely; a tapped one eases there
+    const k = 1 - Math.exp(-dt * (held.current ? 24 : 6));
+    if (swing) o.rotation.y += (goal.current * swing.dir - o.rotation.y) * k;
+    else o.position.x += (goal.current - o.position.x) * k;
+  });
+  const xOn = (e: ThreeEvent<PointerEvent>) => {
+    const r = e.ray, d = r.direction.z;
+    return Math.abs(d) < 1e-6 ? e.point.x : r.origin.x + ((planeZ - r.origin.z) / d) * r.direction.x;
+  };
+  const down = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    (e.target as unknown as Element).setPointerCapture?.(e.pointerId);
+    onHold(true);
+    held.current = { x: xOn(e), from: goal.current, px: e.nativeEvent.clientX, py: e.nativeEvent.clientY, moved: false };
+  };
+  const move = (e: ThreeEvent<PointerEvent>) => {
+    const h = held.current;
+    if (!h) return;
+    e.stopPropagation();
+    if (Math.hypot(e.nativeEvent.clientX - h.px, e.nativeEvent.clientY - h.py) > 8) h.moved = true;
+    if (!h.moved) return;
+    const dx = xOn(e) - h.x;
+    if (slide) goal.current = Math.min(Math.max(h.from + dx, slide.lo), slide.hi);
+    // a swing opens as far as the finger pulls the free edge across
+    else if (swing) goal.current = Math.min(Math.max(h.from + (-swing.dir * dx) / (swing.width * 0.6), 0), MAX_SWING);
+  };
+  const up = (e: ThreeEvent<PointerEvent>) => {
+    const h = held.current;
+    if (!h) return;
+    e.stopPropagation();
+    (e.target as unknown as Element).releasePointerCapture?.(e.pointerId);
+    onHold(false);
+    held.current = null;
+    if (h.moved) return;
+    // a tap: open fully, or close what is open
+    const opened = slide ? Math.abs(goal.current) > 1 : goal.current > 0.05;
+    goal.current = opened ? 0 : slide ? slide.full : MAX_SWING * 0.9;
+  };
+  const handlers = { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up,
+    onClick: (e: ThreeEvent<MouseEvent>) => e.stopPropagation() };
+  // a swing turns about the hinge line, so the group sits on it and its pieces sit back
+  return swing ? (
+    <group ref={outer} position={[swing.x, 0, swing.z]} {...handlers}>
+      <group position={[-swing.x, 0, -swing.z]}>{children}</group>
+    </group>
+  ) : (
+    <group ref={outer} {...handlers}>{children}</group>
+  );
+}
+
+/** Sets the view's camera when the view is opened (and when it is asked for again). */
+function ApplyView({ ask, place }: { ask: number; place: (aspect: number) => void }) {
+  const size = useThree((st) => st.size);
+  const run = useRef(place);
+  useEffect(() => { run.current = place; });
+  useEffect(() => {
+    if (ask === 0) return;
+    run.current(size.width / Math.max(1, size.height));
+    // only when a view is asked for, not on every resize
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ask]);
+  return null;
+}
+
 /** Turns the camera slowly round the model while 360° is on (the shop can still drag, move and zoom). */
-function Spin({ on, controls }: { on: boolean; controls: RefObject<TrackballImpl | null> }) {
+function Spin({ on, controls }: { on: boolean; controls: RefObject<OrbitImpl | null> }) {
   useFrame((_, dt) => {
     const c = controls.current; if (!on || !c) return;
     const cam = c.object, off = cam.position.clone().sub(c.target);

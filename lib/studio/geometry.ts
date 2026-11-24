@@ -164,8 +164,24 @@ export function windowGeometry(
         stops: fM.stops, axis: [mx, 0, mx + mF, 0], shape: fM.shape, flip: fM.part.flipSection, angle: 90, face: mF, depth: fM.depth });
     }
   }
+  // Where each sliding shutter stands when closed. When the glass shutters alone close the
+  // window (2 glass + 1 mesh: each glass half the width), they take the two ends and a mesh
+  // shutter stands over a glass one on its own track — spreading all three evenly drew one
+  // shutter whole and the others half hidden (founder 2026-11-23: "ek shutter itna bada kyu").
+  const glassAt = mix.flatMap((k, i) => (k === "J" ? [] : [i]));
+  const meshAt = mix.flatMap((k, i) => (k === "J" ? [i] : []));
+  const glassCloses = !casement && meshAt.length > 0 && glassAt.length >= 2 && shutterW * glassAt.length >= (x1 - x0) * 0.95;
+  const slotX = (k: number, of: number) => (of <= 1 ? x0 : x0 + (k * (x1 - x0 - shutterW)) / (of - 1));
+  const closedX = (i: number) => {
+    const g = glassAt.indexOf(i);
+    if (g >= 0) return slotX(g, glassAt.length);
+    // a mesh shutter: over the glass shutters, from the last one back
+    const m = meshAt.indexOf(i);
+    return slotX(glassAt.length - 1 - (m % glassAt.length), glassAt.length);
+  };
   for (let i = 0; i < n; i++) {
-    const x = casement ? l + i * (cellW + mF) - (shutterW - cellW) / 2 : n === 1 ? (W - shutterW) / 2 : x0 + (i * (x1 - x0 - shutterW)) / (n - 1);
+    const x = casement ? l + i * (cellW + mF) - (shutterW - cellW) / 2 : n === 1 ? (W - shutterW) / 2
+      : glassCloses ? closedX(i) : x0 + (i * (x1 - x0 - shutterW)) / (n - 1);
     const y = (H - shutterH) / 2;
     const w = shutterW, h = shutterH;
     const hinge: "left" | "right" = n === 1 || i < n / 2 ? "left" : "right";

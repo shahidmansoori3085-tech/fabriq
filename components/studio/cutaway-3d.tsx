@@ -138,7 +138,7 @@ export function CutawayScene({ cut, g, mats, pick, onPick, hideUprights }: {
   }, [cut, g, mats, hideUprights]);
 
   const edges = useMemo(() => parts.filter((p) => p.metal).map((p) => ({ key: p.key, geo: new THREE.EdgesGeometry(p.geo, 25) })), [parts]);
-  const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onPick(p); };
+  const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta <= 8) onPick(p); };
 
   return (
     <group>
@@ -195,7 +195,7 @@ export function MeetingScene({ cut, meeting, g, mats, pick, onPick }: {
   }, [cut, meeting, g, mats]);
 
   const edges = useMemo(() => parts.filter((p) => p.metal).map((p) => ({ key: p.key, geo: new THREE.EdgesGeometry(p.geo, 25) })), [parts]);
-  const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onPick(p); };
+  const click = (p: Pick) => (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta <= 8) onPick(p); };
   return (
     <group>
       {parts.map((p) => {

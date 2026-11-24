@@ -58,8 +58,9 @@ export default function WindowDrawing({ g, unit, pick, onPick, compact, labels, 
     <polygon key={key} points={pts(m.poly)} fill="var(--accent)" fillOpacity={0.32} pointerEvents="none" />
   );
 
-  // back tracks first, so the front shutter laps over the one behind it
-  const order = [...g.shutters].sort((a, b) => b.track - a.track || a.index - b.index);
+  // back tracks first, so the front shutter laps over the one behind it; a mesh shutter is drawn
+  // last, so a window's mesh is seen even where it stands over a glass shutter
+  const order = [...g.shutters].sort((a, b) => Number(a.kind === "J") - Number(b.kind === "J") || b.track - a.track || a.index - b.index);
 
   // sliding shutters are clipped to the opening (they run behind the frame);
   // casement sashes lap over the frame and are drawn on top of it
