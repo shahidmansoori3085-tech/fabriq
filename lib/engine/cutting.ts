@@ -158,12 +158,21 @@ function searchLeast(sorted: CutPiece[], full: Um, cap: Um, piece: boolean, beat
     if (known !== undefined) return known;
     const floor = atLeast(left);
     let best: number[][] | null = null;
-    eachLoad(left, true, (take) => {
-      if (best && best.length <= floor) return;
-      const load = [...take];
-      const rest = pipesFor(left.map((c, i) => c - load[i]));
+    // the fullest loads first, as a cutter fills a pipe: a good packing comes at once, and it
+    // rules out most of the others (2026-11-24: a 6-window Domal job ran out of search before
+    // finding 16 pipes + 8 ft)
+    const loads: { load: number[]; used: Um }[] = [];
+    eachLoad(left, true, (take, used) => { loads.push({ load: [...take], used }); });
+    loads.sort((a, b) => b.used - a.used);
+    for (const { load } of loads) {
+      if (best && best.length <= floor) break;
+      if (steps > SEARCH_STEPS) break;
+      const after = left.map((c, i) => c - load[i]);
+      // a load whose rest can at best tie the packing found already is not worth working out
+      if (best && atLeast(after) + 1 >= best.length) continue;
+      const rest = pipesFor(after);
       if (rest && (!best || rest.length + 1 < best.length)) best = [load, ...rest];
-    });
+    }
     if (steps > SEARCH_STEPS) return null;
     memo.set(key, best);
     return best;
@@ -191,6 +200,85 @@ function searchLeast(sorted: CutPiece[], full: Um, cap: Um, piece: boolean, beat
     const pieces = load.flatMap((c, i) => sorted.slice(next[i], (next[i] += c)));
     return { pieces, used: pieces.reduce((a, p) => a + p.length, 0) + (pieces.length - 1) * KERF };
   });
+}
+
+/**
+ * The cutter's way: every pipe takes the mix of the lengths left that fills it most (2026-11-24,
+ * a 6-window Domal job: one 56⅜″ with three 29½″ and two 23″ fills a 16 ft pipe to ⅛″ — the
+ * piece-by-piece orders missed it and bought a pipe more than the mistry). The least-filled
+ * pipe is left for last, so it becomes the cut piece.
+ */
+function fullest(sorted: CutPiece[], cap: Um, work = { n: 0 }): OpenBar[] {
+  const kinds: Um[] = [], left: number[] = [];
+  for (const p of sorted) {
+    if (kinds[kinds.length - 1] === p.length) left[left.length - 1]++;
+    else { kinds.push(p.length); left.push(1); }
+  }
+  const next = kinds.map((k) => sorted.findIndex((p) => p.length === k));
+  const bars: OpenBar[] = [];
+  while (left.some((c) => c > 0)) {
+    let best: number[] | null = null, bestUsed = -1, nodes = 0;
+    const take = left.map(() => 0);
+    // as the cutter does: the longest piece left goes on this pipe, the short ones fill round it
+    const first = left.findIndex((c) => c > 0);
+    const at = (i: number, used: Um, n: number) => {
+      if (++nodes > 20_000) return;
+      if (i === kinds.length) {
+        if (n && used > bestUsed) { bestUsed = used; best = [...take]; }
+        return;
+      }
+      const room = cap - used + (n ? 0 : KERF);
+      for (let c = Math.min(left[i], Math.floor(room / (kinds[i] + KERF))); c >= (i === first ? 1 : 0); c--) {
+        take[i] = c;
+        at(i + 1, c ? used + c * (kinds[i] + KERF) - (n ? 0 : KERF) : used, n + c);
+      }
+      take[i] = 0;
+    };
+    at(0, 0, 0);
+    work.n += nodes;
+    const load: number[] = best ?? left.map((c, i) => (i === left.findIndex((x) => x > 0) ? 1 : 0));
+    const pieces = load.flatMap((c, i) => sorted.slice(next[i], (next[i] += c)));
+    load.forEach((c, i) => { left[i] -= c; });
+    bars.push({ pieces, used: pieces.reduce((a, p) => a + p.length, 0) + (pieces.length - 1) * KERF });
+  }
+  return bars;
+}
+
+/**
+ * The cutter's way with the cut piece chosen first: for each short load (the shortest first),
+ * the rest go on whole pipes the fullest way. Gives every try to `take`. A job of few lengths
+ * often fills its whole pipes exactly once the right pieces are kept for the short one.
+ */
+function fullestWithPiece(sorted: CutPiece[], cap: Um, full: Um, take: (bars: OpenBar[]) => void) {
+  const kinds: Um[] = [], count: number[] = [];
+  for (const p of sorted) {
+    if (kinds[kinds.length - 1] === p.length) count[count.length - 1]++;
+    else { kinds.push(p.length); count.push(1); }
+  }
+  const loads: { load: number[]; used: Um }[] = [];
+  const cur = count.map(() => 0);
+  let nodes = 0;
+  const at = (i: number, used: Um, n: number) => {
+    if (++nodes > 20_000) return;
+    if (i === kinds.length) { if (n) loads.push({ load: [...cur], used }); return; }
+    const room = full - used + (n ? 0 : KERF);
+    for (let c = Math.min(count[i], Math.floor(room / (kinds[i] + KERF))); c >= 0; c--) {
+      cur[i] = c;
+      at(i + 1, c ? used + c * (kinds[i] + KERF) - (n ? 0 : KERF) : used, n + c);
+    }
+    cur[i] = 0;
+  };
+  at(0, 0, 0);
+  loads.sort((a, b) => a.used - b.used);
+  // a job of many lengths stops early: the whole search after this still has its turn
+  const work = { n: nodes };
+  for (const { load, used } of loads.slice(0, 300)) {
+    if (work.n > 2_000_000) break;
+    const next = kinds.map((k) => sorted.findIndex((p) => p.length === k));
+    const short = new Set(load.flatMap((c, i) => sorted.slice(next[i], next[i] + c)));
+    const rest = sorted.filter((p) => !short.has(p));
+    take([...(rest.length ? fullest(rest, cap, work) : []), { pieces: [...short], used }]);
+  }
 }
 
 /**
@@ -226,11 +314,13 @@ export function packSection(sectionId: string, pieces: CutPiece[]): PackedBar[] 
     if (st < bestStock || sc > bestScore + 1e-9) { best = bars; bestStock = st; bestScore = sc; }
   };
   consider(fill(sorted, cap, true));
+  consider(fullest(sorted, cap));
 
   // Nothing to gain once the stock equals the plain floor of the lengths.
   const total = sorted.reduce((a, p) => a + p.length, 0);
   const unit = piece ? FOOT : barFull;
   const floor = Math.ceil(total / unit) * unit;
+  if (piece && bestStock > floor && sorted.length > 1) fullestWithPiece(sorted, cap, barFull, consider);
   if (bestStock > floor && sorted.length > 1) {
     const rnd = seeded(`${sectionId}:${sorted.map((p) => p.length).join(",")}`);
     const tries = sorted.length <= 60 ? 400 : sorted.length <= 200 ? 150 : 50;

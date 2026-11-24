@@ -7,6 +7,7 @@ import { buildJobItem } from "../../lib/engine/quick-item";
 import { readPipeFt, stepPipeFt, pipeText, pipeMark } from "../../lib/engine/pipe";
 import { setJobBarLengths, jobBarLengths, pipeMeta } from "../../lib/engine/sections";
 import { feet } from "../../lib/engine/units";
+import { packSection, stockGroups } from "../../lib/engine/cutting";
 
 let fails = 0;
 const check = (ok: boolean, msg: string) => { if (!ok) { fails++; console.error("FAIL", msg); } };
