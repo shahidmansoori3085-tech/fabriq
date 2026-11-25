@@ -2,7 +2,7 @@
 /**
  * Check your window (founder 2026-11-24): after the window's questions, the shop sees how it
  * will be built — the frame first, then every shutter on its own page — with the section's
- * name on all four sides. "Correct, next" goes on; "Change" swaps any side's section. Where
+ * name on all four sides. the button under it ("Frame sahi hai, aage"…) goes on; "Change" swaps any side's section. Where
  * shops differ (a mesh shutter with or without its interlock clip; Normal: both sides handle on
  * a mesh shutter, a handle on top instead of the bearing, the bottom section on top of a
  * 3-track frame) both ways are drawn side by side and the shop taps its own.
@@ -184,6 +184,11 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
     return `Shutter ${n} (${mix[at.index] === "S" ? "sheet" : "glass"}) me yahi section lagte hain?`;
   })();
   useEffect(() => { onQuestion?.(question); }, [question, onQuestion]);
+  /** the go-on button says what this page settled (founder 2026-11-25: "page ke hisaab se likho") */
+  const next = last ? "Sahi hai, ab naap daaliye"
+    : variants.length ? "Isi tarah banta hai, aage"
+    : at.kind === "frame" ? "Frame sahi hai, aage"
+    : `Shutter ${at.index + 1} sahi hai, aage`;
   const group = groupOf(at);
 
   /** the pieces drawn on this page */
@@ -407,7 +412,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
       <div className="flex gap-2">
         {page > 0 && <button type="button" className="btn-ghost px-4 py-3.5 text-sm" onClick={() => setPage((p) => p - 1)}>Back</button>}
         <button type="button" className="btn-primary flex-1 py-3.5 text-base" onClick={() => (last ? finish() : setPage((p) => p + 1))}>
-          {last ? "Correct, go to size" : "Correct, next"}
+          {next}
         </button>
       </div>
 
