@@ -9,7 +9,7 @@
  * What it picks is saved in its own copy of the series, so every list follows it; each question
  * says for itself whether to remember the answer or ask again next time.
  */
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { PartDef, StudioSystem } from "@/lib/studio/model";
 import { computeSizes, jobVars, matches } from "@/lib/studio/evaluate";
 import { windowGeometry } from "@/lib/studio/geometry";
@@ -23,7 +23,8 @@ import { SectionPicker } from "@/components/studio/pickers";
 import SectionSketch from "@/components/section-sketch";
 import { Sheet } from "@/components/studio-ui";
 
-const KEY = "fabriq.checkSeries";
+// v2 (2026-11-25): Ask again became the default, so every phone starts fresh and is asked again
+const KEY = "fabriq.checkSeries.v2";
 type Mode = "saved" | "ask";
 /** A series' questions: the frame's, the glass shutter's and the mesh shutter's. */
 type Group = "frame" | "glass" | "mesh";
@@ -61,7 +62,9 @@ interface Variant { key: string; title: string; apply: (s: StudioSystem) => Stud
 
 type Page = { kind: "frame" } | { kind: "shutter"; index: number };
 
-export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutter, all, onDone }: {
+export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutter, all, onQuestion, onDone }: {
+  /** the question this page asks, for the page heading (founder 2026-11-25) */
+  onQuestion?: (q: string) => void;
   /** each shutter's own picks (a small slim interlock on one shutter, a big one on the next) */
   perShutter?: Record<string, string>[];
   /** every page, also the questions already answered for good ("Check this window's pipes") */
@@ -80,7 +83,8 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
   const [memo] = useState<Memo | undefined>(() => readMemo(base));
   /** each question's "next time": keep this answer, or ask again */
   const [asks, setAsks] = useState<Partial<Record<Group, Mode>>>(() => ({
-    frame: memo?.frame === "ask" ? "ask" : "saved", glass: memo?.glass === "ask" ? "ask" : "saved", mesh: memo?.mesh === "ask" ? "ask" : "saved",
+    // Ask again unless the shop chose to remember (founder 2026-11-25)
+    frame: memo?.frame === "saved" ? "saved" : "ask", glass: memo?.glass === "saved" ? "saved" : "ask", mesh: memo?.mesh === "saved" ? "saved" : "ask",
   }));
   const [changing, setChanging] = useState<string[] | null>(null);
   const [picking, setPicking] = useState<PartDef | null>(null);
@@ -165,6 +169,21 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
     return [];
   };
   const variants = variantsFor(at);
+  /** what this page asks, plainly: its own question where shops differ, else "are these right?" */
+  const question = ((): string => {
+    const keys = variants.map((v) => v.key).join(",");
+    if (at.kind === "frame") return keys ? "Frame ke upar kaunsa section lagta hai?" : "Frame me yahi section lagte hain?";
+    const n = at.index + 1;
+    if (isMesh(at.index)) {
+      if (keys.includes("interlock")) return "Jali shutter ki interlock wali side me kya lagta hai?";
+      if (keys.includes("noclip")) return "Jali shutter par interlock patti lagti hai?";
+      if (keys.includes("noslim")) return "Jali shutter par slim interlock lagta hai?";
+      return `Shutter ${n} (jali) me yahi section lagte hain?`;
+    }
+    if (keys.includes("bearing")) return "Shutter ke upar bearing lagta hai ya handle?";
+    return `Shutter ${n} (${mix[at.index] === "S" ? "sheet" : "glass"}) me yahi section lagte hain?`;
+  })();
+  useEffect(() => { onQuestion?.(question); }, [question, onQuestion]);
   const group = groupOf(at);
 
   /** the pieces drawn on this page */
@@ -198,7 +217,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
     const next: Memo = { ...(memo ?? {}) };
     for (const p of pages) {
       const g = groupOf(p);
-      if (g) next[g] = variantsFor(p).length ? asks[g] ?? "saved" : "none";
+      if (g) next[g] = variantsFor(p).length ? asks[g] ?? "ask" : "none";
     }
     writeMemo(base, next);
     if (JSON.stringify(draft) === JSON.stringify(withJoint(structuredClone(start)))) { onDone(null); return; }
@@ -322,9 +341,6 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
         <h2 className="text-[19px] font-bold">{title}</h2>
         <span className="text-xs font-semibold" style={{ color: "var(--ink-3)" }}>{page + 1} of {pages.length}</span>
       </div>
-      <p className="-mt-2 text-sm" style={{ color: "var(--ink-3)" }}>
-        {variants.length ? "Shops make this two ways. Tap yours." : "Check the section on every side."}
-      </p>
       {variants.length > 0 && (
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={title}>
           {variants.map((v) => {
@@ -357,7 +373,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
           <span className="text-sm font-semibold" style={{ color: "var(--ink-2)" }}>Next time</span>
           <div className="flex rounded-full p-0.5" style={{ background: "var(--line)" }} role="radiogroup" aria-label="Next time">
             {([["saved", "Remember this"], ["ask", "Ask again"]] as const).map(([v, label]) => {
-              const on = (asks[group] ?? "saved") === v;
+              const on = (asks[group] ?? "ask") === v;
               return (
                 <button key={v} type="button" role="radio" aria-checked={on} onClick={() => setAsks((a) => ({ ...a, [group]: v }))}
                   className="rounded-full px-3 py-1.5 text-[13px] font-semibold"

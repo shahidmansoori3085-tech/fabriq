@@ -806,33 +806,38 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   return [...head, "tracks", ...mixStep, ...opening, "domalFix", ...checkStep(o), "size"];
 }
 
+/**
+ * Each question as a fabricator says it at the counter, in Hinglish (founder 2026-11-25: "sawal
+ * aisa pucho ki fabricator aasani se pakad le", e.g. "Shutter me interlock wali side kya lagega?").
+ * The choices under it answer it; no other line is needed.
+ */
 const STEP_TITLE: Record<StepId, string> = {
-  type: "What are you making?",
-  kind: "Window type",
-  studioOpts: "Sections",
-  meet: "Interlock",
-  system: "Window system",
-  normalSection: "Shutter size",
-  opening: "Window opening",
-  tracks: "Tracks",
-  mix: "Shutters",
-  domalFix: "Fixed glass on top?",
-  zType: "Casement type",
-  zDir: "Where is the fixed glass?",
-  zSash: "How many shutters open?",
-  zProfile: "Section",
-  doorSys: "Door type",
-  doorCenters: "How many center rails?",
-  zDoorCenters: "How many center rails?",
-  doorFrame: "Frame (chaukhat) too?",
-  doorSection: "Shutter section?",
-  partSys: "Partition type",
-  partDoor: "Door in the partition?",
-  partDoorSize: "Door size",
-  size: "Enter your sizes",
-  partBays: "Vertical lines (khadi)",
-  partRows: "Horizontal lines (leti)",
-  check: "Check your window",
+  type: "Kya banana hai?",
+  kind: "Window kaunsi hai?",
+  studioOpts: "Kaunsa section lagega?",
+  meet: "Shutter me interlock wali side kya lagega?",
+  system: "Window kis series me banegi?",
+  normalSection: "Shutter kis pipe ka banega?",
+  opening: "Window kitni khulegi?",
+  tracks: "Frame kitne track ka hai?",
+  mix: "Kitne glass, kitne jali shutter?",
+  domalFix: "Upar fix glass lagega?",
+  zType: "Window khulegi ya fix rahegi?",
+  zDir: "Fix glass kis taraf lagega?",
+  zSash: "Kitne shutter khulenge?",
+  zProfile: "Z section kaunsa lagega?",
+  doorSys: "Door kaunsa banega?",
+  doorCenters: "Door me kitne center lagenge?",
+  zDoorCenters: "Door me kitne center lagenge?",
+  doorFrame: "Chaukhat bhi banani hai?",
+  doorSection: "Door ka shutter kis pipe ka banega?",
+  partSys: "Partition kaunsa banega?",
+  partDoor: "Partition me door lagega?",
+  partDoorSize: "Door ka naap kya hai?",
+  size: "Naap daaliye",
+  partBays: "Khadi pipe kitni doori par?",
+  partRows: "Leti pipe kitni doori par?",
+  check: "Apni window check kijiye",
 };
 
 /** The built-in series a sliding window's choice comes from ("normal-18", "domal-27"…), when its
@@ -854,9 +859,9 @@ const checkStep = (o: Opts): StepId[] => {
 /** The size screen names what is measured, so a partition's size never
  *  reads like the door size asked just before it. */
 function sizeTitle(type: OpeningType, o: Opts): string {
-  if (type === "partition") return "Overall partition size";
-  if (type === "door") return o.doorSys === "normal" && o.chokhat !== "needed" ? "Frame opening size" : "Door size";
-  return "Window size";
+  if (type === "partition") return "Partition ka poora naap daaliye";
+  if (type === "door") return o.doorSys === "normal" && o.chokhat !== "needed" ? "Chaukhat ka khula naap daaliye" : "Door ka naap daaliye";
+  return "Window ka naap daaliye";
 }
 
 const SAMPLE_SIZE: Record<OpeningType, [number, number]> = { window: [6, 5], door: [3, 7], partition: [10, 8] };
@@ -942,6 +947,8 @@ function JobScreen({
   /** The exact size of the item being edited, with the boxes it was shown as —
    *  the boxes are rounded to the sut, so an untouched size keeps its real value. */
   const [editDims, setEditDims] = useState<{ w: string; h: string; wu: Um; hu: Um } | null>(null);
+  /** the check page's own question, for the heading */
+  const [checkQ, setCheckQ] = useState<string | null>(null);
   /** said once when a typed size switched the unit by itself */
   const [unitNote, setUnitNote] = useState<string | null>(null);
 
@@ -1286,7 +1293,7 @@ function JobScreen({
               {/* what is being made is named once its questions are answered — before that it would name defaults */}
               {i >= steps.indexOf("size") ? liveLabel : flow.editing ? `Editing ${flow.editing}` : `New ${type}`} · Step {i + 1}
             </div>
-            <h1 className="truncate text-lg font-bold">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Shutters on each side?" : STEP_TITLE[flow.step]}</h1>
+            <h1 className="text-lg font-bold leading-snug">{flow.step === "size" ? sizeTitle(type, o) : flow.step === "zSash" && zMiddle ? "Har taraf kitne shutter?" : flow.step === "check" && checkQ ? checkQ : STEP_TITLE[flow.step]}</h1>
           </div>
           <button onClick={leave} className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>Cancel</button>
         </div>
@@ -1399,9 +1406,8 @@ function JobScreen({
               {list.map((c) => (
                 <Choice key={c.key} wide selected={cur?.key === c.key}
                   onClick={() => choose({ studioSw: JSON.stringify({ ...sw, ...c.sw }), studioPer: JSON.stringify(c.per) })}
-                  title={c.title} sub={[...o.mix].filter((k) => k !== "J").length < 2
-                    ? (c.key === "clip" ? "Glass shutter section on all sides. The mesh shutter has no interlock." : "Slim interlock on the glass shutter. The mesh shutter has no interlock.")
-                    : c.key === "clip" ? "Shutter section on both sides, joined by an interlock clip" : c.key === "mixed" ? "A different slim interlock on each shutter" : "Slim interlock on both shutters, no clip"}
+                  // the section drawings and the name answer it; no line under (founder 2026-11-25)
+                  title={c.title}
                   picture={<span className="flex h-14 w-24 items-center justify-center gap-1">{c.pics.map((id) => { const sh = shapeOf(BUILT_IN_PROFILES.find((p) => p.id === id)); return sh ? <span key={id} className="block h-14 w-11"><MiniSection s={sh} /></span> : null; })}</span>} />
               ))}
             </div>
@@ -1454,11 +1460,10 @@ function JobScreen({
 
         {flow.step === "opening" && (
           <div className="flex flex-col gap-2">
-            {([["50", "50% opening", "Every shutter is half the window."], ["66", "66% opening", "The shutters share the window width. Two thirds of it opens."]] as const).map(([v, title, sub]) => (
+            {([["50", "50% opening", "Har shutter = window ka ½"], ["66", "66% opening", "Har shutter = window ka ⅓"]] as const).map(([v, title, sub]) => (
               <Choice key={v} wide selected={o.opening === v} onClick={() => choose({ opening: v })} title={title} sub={sub}
-                picture={<span className="block text-2xl font-extrabold tabnum" style={{ color: "var(--accent)" }}>{v}%</span>} />
+                picture={<OpeningPic share={v === "66"} />} />
             ))}
-            <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>Asked once. It is kept for your next windows.</p>
           </div>
         )}
 
@@ -1659,7 +1664,7 @@ function JobScreen({
           if (!b || !sys) return null;
           return (
             <CheckWindow key={`${o.sys}-${o.tracks}-${o.mix}`} sys={sys} base={b} tracks={parseInt(o.tracks, 10) || 2} mix={o.mix}
-              switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}} all={o.checkAgain === "1"}
+              switches={o.sys.startsWith("studio:") ? parseSw(o.studioSw) : {}} all={o.checkAgain === "1"} onQuestion={setCheckQ}
               perShutter={o.sys.startsWith("studio:") ? (() => { try { return JSON.parse(o.studioPer) as Record<string, string>[]; } catch { return []; } })() : []}
               onDone={(sysId) => {
                 // straight on to the size: the steps may have just dropped "check" (choices saved)
@@ -1762,7 +1767,7 @@ function JobScreen({
       {items.length === 0 ? (
         /* first screen: what are you making — tap one to start */
         <div className="card flex flex-col gap-4 p-4">
-          <h1 className="text-xl font-bold">What are you making?</h1>
+          <h1 className="text-xl font-bold">Kya banana hai?</h1>
           <TypeCards onPick={startType} big />
         </div>
       ) : (
@@ -2111,6 +2116,34 @@ function UnitPicker({ unit, onChange, note }: { unit: SizeUnit; onChange: (u: Si
       {note && <div className="text-xs font-bold tabnum" style={{ color: "var(--accent)" }} role="status">{note}</div>}
       <div className="text-xs font-semibold tabnum" style={{ color: "var(--ink-2)" }}>{UNIT_HELP[unit]}</div>
     </div>
+  );
+}
+
+/**
+ * The 50% / 66% opening drawn (founder 2026-11-25: "drawing ke saath pucho"): the window open as
+ * far as it goes, its three glass shutters slid together to one side. 50%: each is half the window,
+ * so half opens. 66%: each is a third (with its overlap), so two thirds open.
+ */
+function OpeningPic({ share }: { share: boolean }) {
+  // the window open as far as it goes: its three shutters stacked on the right, the open part green
+  const W = 120, H = 70, x0 = 2, y0 = 2, f = 5;
+  const inner = W - 2 * f;
+  const sw = share ? inner / 3 + 3 : inner / 2;
+  const openW = inner - sw;
+  const top = y0 + f, h = H - 2 * f;
+  return (
+    <svg viewBox={`0 0 ${W + 4} ${H + 4}`} width={96} height={57} role="img" aria-label={share ? "66% opening" : "50% opening"}>
+      <rect x={x0} y={y0} width={W} height={H} rx={2} fill="#cbd5e1" stroke="#475569" strokeWidth={1.4} />
+      <rect x={x0 + f} y={top} width={openW} height={h} fill="#dcfce7" stroke="#16a34a" strokeWidth={1} strokeDasharray="3 2" />
+      <text x={x0 + f + openW / 2} y={top + h / 2 + 2} textAnchor="middle" fontSize={15} fontWeight={800} fill="#15803d">{share ? "66%" : "50%"}</text>
+      <text x={x0 + f + openW / 2} y={top + h / 2 + 14} textAnchor="middle" fontSize={9} fontWeight={700} fill="#15803d">khula</text>
+      {[2, 1, 0].map((k) => (
+        <g key={k}>
+          <rect x={x0 + f + openW + k * 0} y={top} width={sw} height={h} fill={["#93c5fd", "#bfdbfe", "#dbeafe"][k]} stroke="#1d4ed8" strokeWidth={1} opacity={k ? 0.9 : 1} transform={`translate(${-k * 3} 0)`} />
+        </g>
+      ))}
+      <text x={x0 + f + openW + sw / 2} y={top + h / 2 + 3} textAnchor="middle" fontSize={8} fontWeight={700} fill="#1e3a8a">3 shutter</text>
+    </svg>
   );
 }
 
