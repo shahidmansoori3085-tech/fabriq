@@ -186,7 +186,7 @@ export function CheckWindow({ sys: start, base, tracks, mix, switches, perShutte
   useEffect(() => { onQuestion?.(question); }, [question, onQuestion]);
   /** the go-on button says what this page settled (founder 2026-11-25: "page ke hisaab se likho") */
   const next = last ? "Sahi hai, ab naap daaliye"
-    : variants.length ? "Isi tarah banta hai, aage"
+    : variants.length ? "Correct, next"
     : at.kind === "frame" ? "Frame sahi hai, aage"
     : `Shutter ${at.index + 1} sahi hai, aage`;
   const group = groupOf(at);
