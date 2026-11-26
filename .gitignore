@@ -45,3 +45,6 @@ next-env.d.ts
 .env*
 
 /evals/sheets/out
+
+# written at build time
+/public/version.json

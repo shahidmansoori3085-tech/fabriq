@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BUILD_ID } from "@/lib/build-id";
 import {
   formatFtInSut, formatFtIn, toFeet, feet, sqft, openingWarning, parseSizeIn, formatSizeIn, type SizeUnit, type Um,
 } from "@/lib/engine/units";
@@ -786,7 +787,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
     const st = studioSystem(o.sys.slice(7));
     const opts: StepId[] = st && otherSwitches(st).length ? ["studioOpts"] : [];
     const meet: StepId[] = st && meetChoices(st, o.tracks, o.mix, parseSw(o.studioSw)).length > 1 ? ["meet"] : [];
-    const opening: StepId[] = st && glassOf(o.mix) >= 3 && canShare(st) && !o.opening ? ["opening"] : [];
+    const opening: StepId[] = st && glassOf(o.mix) >= 3 && canShare(st) && openingOpen(o) ? ["opening"] : [];
     return [...head, ...opts, "tracks", "mix", ...opening, ...meet, ...(takesFixTop(st) ? ["domalFix" as const] : []), ...checkStep(o), "size"];
   }
   if (o.sys === "z_section") {
@@ -802,7 +803,7 @@ function stepsFor(type: OpeningType, o: Opts): StepId[] {
   // Normal sliding: glass or mesh uses the same aluminium, so it is not
   // asked — each track count takes its usual set (3 track = 2 glass + 1 mesh).
   const mixStep: StepId[] = o.sys === "domal" || o.tracks === "3" ? ["mix"] : [];
-  const opening: StepId[] = mixStep.length && glassOf(o.mix) >= 3 && !o.opening ? ["opening"] : [];
+  const opening: StepId[] = mixStep.length && glassOf(o.mix) >= 3 && openingOpen(o) ? ["opening"] : [];
   return [...head, "tracks", ...mixStep, ...opening, "domalFix", ...checkStep(o), "size"];
 }
 
@@ -839,6 +840,48 @@ const STEP_TITLE: Record<StepId, string> = {
   partRows: "Leti pipe kitni doori par?",
   check: "Apni window check kijiye",
 };
+
+/**
+ * The 50% / 66% opening question: asked every time unless the shop chose "Remember this" on it
+ * (founder 2026-11-26: "Ask again default, ab sabko dikhe" — a new key, so every phone is asked).
+ */
+const OPENING_KEY = "fabriq.openingAsk.v1";
+function openingMemo(): "saved" | "ask" {
+  try { return localStorage.getItem(OPENING_KEY) === "saved" ? "saved" : "ask"; } catch { return "ask"; }
+}
+const openingOpen = (o: Opts) => !o.opening || openingMemo() !== "saved";
+/** the "Next time" picked on the page, kept until a choice is made (saving it at once would drop the
+ *  page from the steps while the shop is still on it) */
+const PENDING_KEY = "fabriq.openingAsk.pending";
+function holdOpeningMemo(x: "saved" | "ask") {
+  try { sessionStorage.setItem(PENDING_KEY, x); } catch { /* fine */ }
+}
+function keepOpeningMemo() {
+  try {
+    const x = sessionStorage.getItem(PENDING_KEY);
+    if (x === "saved" || x === "ask") localStorage.setItem(OPENING_KEY, x);
+    sessionStorage.removeItem(PENDING_KEY);
+  } catch { /* fine */ }
+}
+/** The question's own "Next time", as on the check pages. */
+function OpeningNextTime() {
+  const [v, setV] = useState<"saved" | "ask">(openingMemo);
+  const pick = (x: "saved" | "ask") => { setV(x); holdOpeningMemo(x); };
+  return (
+    <div className="flex items-center justify-between gap-3 px-1">
+      <span className="text-sm font-semibold" style={{ color: "var(--ink-2)" }}>Next time</span>
+      <div className="flex rounded-full p-0.5" style={{ background: "var(--line)" }} role="radiogroup" aria-label="Next time">
+        {([["saved", "Remember this"], ["ask", "Ask again"]] as const).map(([x, label]) => (
+          <button key={x} type="button" role="radio" aria-checked={v === x} onClick={() => pick(x)}
+            className="rounded-full px-3 py-1.5 text-[13px] font-semibold"
+            style={v === x ? { background: "var(--card, #fff)", color: "var(--ink)", boxShadow: "0 1px 2px rgba(15,23,42,.12)" } : { color: "var(--ink-3)" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** The built-in series a sliding window's choice comes from ("normal-18", "domal-27"…), when its
  *  pipes can be checked before the size (founder 2026-11-24). */
@@ -922,6 +965,34 @@ function JobScreen({
   /** `start` is the screen the flow opened on — Back from it leaves the flow,
    *  never steps into a question that was answered before it opened. */
   const [flow, setFlow] = useState<{ step: StepId; editing: string | null; start: StepId } | null>(null);
+  /**
+   * A new version went live while this app sat open in the background (founder 2026-11-26: "purana
+   * version hi chalta rehta hai"). When the app comes back, or every 20 minutes, it asks /version.json;
+   * if the build changed it reloads at once — unless a window is being added, then it offers Update.
+   */
+  const [newVersion, setNewVersion] = useState(false);
+  const inFlow = useRef(false);
+  useEffect(() => { inFlow.current = !!flow; }, [flow]);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" || BUILD_ID === "dev") return;
+    let busy = false;
+    const check = async () => {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const r = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+        const { build } = (await r.json()) as { build?: string };
+        if (build && build !== BUILD_ID) {
+          if (inFlow.current) setNewVersion(true); else window.location.reload();
+        }
+      } catch { /* offline: keep working */ } finally { busy = false; }
+    };
+    const onShow = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", onShow);
+    window.addEventListener("focus", onShow);
+    const t = window.setInterval(check, 20 * 60 * 1000);
+    return () => { document.removeEventListener("visibilitychange", onShow); window.removeEventListener("focus", onShow); window.clearInterval(t); };
+  }, []);
   /** the window-system list's tab: all, or one kind */
   const [sysTab, setSysTab] = useState<string>("all");
   /** systems the shop pinned to the top of the list (this phone) */
@@ -1285,6 +1356,12 @@ function JobScreen({
 
     return (
       <div className="flex flex-col gap-4">
+        {newVersion && (
+          <div className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl px-4 py-3 shadow-lg" style={{ background: "#111827", color: "#fff" }} role="status">
+            <span className="text-sm font-semibold">Naya version aaya hai</span>
+            <button type="button" onClick={() => window.location.reload()} className="rounded-xl px-4 py-2 text-sm font-bold" style={{ background: "var(--accent)", color: "#fff" }}>Update</button>
+          </div>
+        )}
         {/* header: back · title · progress */}
         <div className="flex items-center gap-3 py-1">
           <button onClick={back} aria-label="Back" className="btn-ghost grid h-10 w-10 shrink-0 place-items-center text-lg">←</button>
@@ -1460,8 +1537,10 @@ function JobScreen({
 
         {flow.step === "opening" && (
           <div className="flex flex-col gap-2">
+            {/* above the choices: a choice moves on at once */}
+            <OpeningNextTime />
             {([["50", "50% opening", "Har shutter = window ka ½"], ["66", "66% opening", "Har shutter = window ka ⅓"]] as const).map(([v, title, sub]) => (
-              <Choice key={v} wide selected={o.opening === v} onClick={() => choose({ opening: v })} title={title} sub={sub}
+              <Choice key={v} wide selected={o.opening === v} onClick={() => { choose({ opening: v }); setTimeout(keepOpeningMemo, 50); }} title={title} sub={sub}
                 picture={<OpeningPic share={v === "66"} />} />
             ))}
           </div>
