@@ -5,6 +5,6 @@ const fs = require("fs");
 const path = require("path");
 const id = (process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now())).slice(0, 12);
 const root = path.join(__dirname, "..");
-fs.writeFileSync(path.join(root, "lib", "build-id.ts"), `// written by scripts/build-id.cjs before each build\nexport const BUILD_ID = ${JSON.stringify(id)};\n`);
+fs.writeFileSync(path.join(root, "lib", "build-id.ts"), `// written by scripts/build-id.cjs before each build\nexport const BUILD_ID: string = ${JSON.stringify(id)};\n`);
 fs.writeFileSync(path.join(root, "public", "version.json"), JSON.stringify({ build: id }) + "\n");
 console.log("build id", id);
