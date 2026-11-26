@@ -10,6 +10,7 @@ import { registerStudioSystems, studioJobOf } from "../../lib/studio/runtime";
 import { registerProfiles } from "../../lib/studio/store";
 import { TEMPLATES, withJoint } from "../../lib/studio/templates";
 import { jobMeta } from "../../lib/engine/sections";
+import { evaluate as evaluateStudio } from "../../lib/studio/evaluate";
 import { feet } from "../../lib/engine/units";
 
 let fails = 0;
@@ -37,6 +38,23 @@ check(dom.filter((p) => /^domal_(frame|frame_2t|glass_shutter|jali_shutter)$/.te
 check(dom.filter((p) => p.sectionId === "domal_interlock" || p.sectionId === "partition_frame").every((p) => p.angle !== 45), "Domal interlock and fixed-top SP stay 90°");
 const z = estimate([buildJobItem(1, "window", feet(5), feet(4), 1, { system: "z_section", zType: "openable", zSize: "light", zSashCount: "2" })]).pieces;
 check(z.filter((p) => /^z_(outer|pipe)_/.test(p.sectionId)).every((p) => p.angle === 45), "Z frame and sashes at 45°");
+
+// a mesh shutter's mesh follows its own meeting side (2026-11-26): slim on the glass leaves the
+// mesh as the clip layout; slim put on the mesh too sizes it as the slim
+{
+  const d27 = TEMPLATES.find((t) => t.id === "domal-27")!;
+  const mesh = (s: typeof d27, sw: Record<string, string>) => {
+    const r = evaluateStudio(s, { id: "W", W: 72 * 25400, H: 48 * 25400, qty: 1, tracks: 3, mix: "GGJ", switches: sw });
+    return [r.panels.find((p) => p.kind === "glass")!.w, r.panels.find((p) => p.kind === "jali")!.w];
+  };
+  const [gClip, mClip] = mesh(d27, { meet: "clip" });
+  const [gSlim, mSlim] = mesh(d27, { meet: "slim", pick_shutterMeet: "el27_slim" });
+  const onMesh = { ...d27, parts: d27.parts.map((p) => (p.place === "sash-meet" ? { ...p, meshProfile: "el27_slim" } : p)) };
+  const [, mBoth] = mesh(onMesh, { meet: "slim", pick_shutterMeet: "el27_slim" });
+  check(gClip === mClip, `clip: mesh = glass (${mClip} vs ${gClip})`);
+  check(mSlim === mClip && gSlim > mSlim, `slim on glass only: mesh stays the clip size (${mSlim}, glass ${gSlim})`);
+  check(mBoth === gSlim, `slim on the mesh too: mesh = slim glass size (${mBoth} vs ${gSlim})`);
+}
 
 if (fails) process.exit(1);
 console.log("job choices: 45° and pipes kept on edit, system defaults honoured, Domal / Z mitres shown ✓");

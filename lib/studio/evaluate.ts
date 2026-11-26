@@ -112,6 +112,37 @@ export function computeSizes(sys: StudioSystem, job: StudioJob): { values: Recor
   return { values, trace };
 }
 
+/**
+ * A mesh shutter's mesh size (2026-11-26). It follows THE MESH SHUTTER'S meeting side, not the
+ * glass shutters': with a slim interlock on the glass, the mesh shutter is still its mesh section
+ * all round, so its mesh is sized as the "clip" layout (shutter section both sides) — or as the
+ * slim, when the shop puts the slim on the mesh too. The mesh goes as far into its section as the
+ * glass does: traced OMEO 2046 (glass) and 2081 (mesh) have their 16 mm slots 32.9 and 33.2 mm
+ * deep with the gasket grooves at the same place — 0.3 mm a side, under a sut.
+ * `vars` are the window's choices, `real` its sizes. Null when the series has nothing to switch.
+ */
+export function meshInfill(sys: StudioSystem, vars: Record<string, string>, real: Record<string, Um | null>): { w: Um; h: Um } | null {
+  const meetSwitch = sys.switches.find((x) => x.id === "meet");
+  if (!meetSwitch) return null;
+  const pickSwitch = sys.switches.find((x) => x.id === "pick_shutterMeet");
+  const meetPart = sys.parts.find((x) => x.enabled !== false && x.scope === "shutter" && x.place === "sash-meet");
+  const meshMeet = meetPart?.meshProfile;
+  const meshSlim = !!meshMeet && sys.profiles.find((x) => x.id === meshMeet)?.kind === "slim-interlock";
+  const layout: Record<string, string> | null = meshSlim
+    ? { meet: "slim", ...(pickSwitch?.options.some((o) => o.value === meshMeet) ? { pick_shutterMeet: meshMeet! } : {}) }
+    : meetSwitch.options.some((o) => o.value === "clip") ? { meet: "clip" } : null;
+  if (!layout) return null;
+  const v = { ...vars, ...layout };
+  const one = (id: string) => {
+    const s = sys.sizes.find((x) => x.id === id);
+    const c = s?.cases.find((x) => matches(x.when, v));
+    const base = c ? real[c.base] : null;
+    return !c || base == null || c.add === null ? null : Math.round((base * (c.num ?? 1) + (c.pre ?? 0)) / (c.den ?? 1)) + c.add;
+  };
+  const w = one(sys.infill.w), h = one(sys.infill.h);
+  return w == null || h == null ? null : { w, h };
+}
+
 /** Build the full result. Throws StudioUnknownError if a needed size is unknown. */
 export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown?: boolean } = {}): StudioResult {
   const vars = jobVars(sys, job);
@@ -185,9 +216,13 @@ export function evaluate(sys: StudioSystem, job: StudioJob, opts: { allowUnknown
   const panels: StudioResult["panels"] = [];
   const sizeFor = (i: number) => {
     const own = job.perShutter?.[i];
-    if (!own || !Object.keys(own).length) return { w: len(sys.infill.w), h: len(sys.infill.h) };
-    const v = computeSizes(sys, { ...job, switches: { ...(job.switches ?? {}), ...own } }).values;
-    return { w: v[sys.infill.w] ?? 0, h: v[sys.infill.h] ?? 0 };
+    const sw = { ...(job.switches ?? {}), ...(own ?? {}) };
+    const real = own && Object.keys(own).length ? computeSizes(sys, { ...job, switches: sw }).values : values;
+    if (kinds[i] === "jali") {
+      const m = meshInfill(sys, { ...vars, ...sw }, real);
+      if (m) return m;
+    }
+    return { w: real[sys.infill.w] ?? 0, h: real[sys.infill.h] ?? 0 };
   };
   for (const kind of ["glass", "jali", "sheet"] as ShutterKind[]) {
     const groups = new Map<string, { w: Um; h: Um; n: number }>();

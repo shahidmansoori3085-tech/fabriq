@@ -9,7 +9,7 @@ import type { Um } from "../../lib/engine/units";
 import { useEffect, useRef, useState } from "react";
 import type { StudioSystem } from "../../lib/studio/model";
 import type { WindowGeo, Member } from "../../lib/studio/geometry";
-import { matches } from "../../lib/studio/evaluate";
+import { matches, meshInfill } from "../../lib/studio/evaluate";
 import { findProfile, type StudioLibrary } from "../../lib/studio/store";
 import { fmtLen, shopName, type StudioUnit } from "../../lib/studio/format";
 import type { Pick } from "../studio-drawing";
@@ -201,12 +201,24 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   onChangePipe: (partId: string) => void;
 }) {
   const labels = pipeLabels(sys, lib, vars, values, unit, geo);
+  // a mesh shutter's pipes by their own sections (founder 2026-11-26): its mesh section where it has
+  // one, and on the meeting side what the cuts use there (the slim only when the shop put it on mesh)
+  const lockPart = sys.parts.find((x) => x.place === "sash-lock" && x.enabled !== false);
+  const meshSys: StudioSystem = { ...sys, parts: sys.parts.map((p) => {
+    if (p.scope !== "shutter") return p;
+    if (p.meshProfile) return { ...p, profile: [{ id: p.meshProfile }] };
+    const main = (p.profile.find((c) => matches(c.when, vars)) ?? p.profile[p.profile.length - 1])?.id ?? "";
+    const slim = findProfile(lib, main)?.kind === "slim-interlock";
+    const lockMain = lockPart && ((lockPart.profile.find((c) => matches(c.when, vars)) ?? lockPart.profile[lockPart.profile.length - 1])?.id);
+    return slim && lockPart ? { ...p, profile: [{ id: lockPart.meshProfile ?? lockMain ?? main }] } : p;
+  }) };
+  const meshLabels = pipeLabels(meshSys, lib, vars, values, unit, geo);
   /** These pipes as a plain list: name and cut, a tap opens Change. */
-  const sections = (ms: Member[]) => {
+  const sections = (ms: Member[], lab = labels) => {
     const seen = new Set<string>();
     const ORDER = ["frame-top", "frame-bottom", "frame-left", "frame-right", "sash-lock", "sash-meet", "sash-top", "sash-bottom", "meeting"];
     const rowsOf = ms.filter((m) => (seen.has(m.partId) ? false : (seen.add(m.partId), true))).sort((x, y) => ORDER.indexOf(x.place) - ORDER.indexOf(y.place)).map((m) => {
-      return { m, name: labels[m.partId]?.name ?? "Pipe", where: labels[m.partId]?.where, value: labels[m.partId]?.value ?? "—" };
+      return { m, name: lab[m.partId]?.name ?? "Pipe", where: lab[m.partId]?.where, value: lab[m.partId]?.value ?? "—" };
     });
     return (
       <div className="border-t" style={{ borderColor: "var(--line)" }}>
@@ -262,6 +274,9 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
   const len = (um: Um | null | undefined) => (um != null ? fmtLen(um, unit).replace(/~/g, "") : "—");
   const fill = (k: string) => (k === "J" ? "Mesh" : k === "S" ? "Sheet" : "Glass");
   const pane = `${len(values[sys.infill.w])} × ${len(values[sys.infill.h])}`;
+  // the mesh is sized by the mesh shutter's own meeting side
+  const meshSize = meshInfill(sys, vars, values);
+  const meshPane = meshSize ? `${len(meshSize.w)} × ${len(meshSize.h)}` : pane;
   const CARD: React.CSSProperties = { borderRadius: 22, background: "var(--surface)", border: "1px solid var(--line)",
     boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 8px 24px -8px rgba(15,23,42,.14)" };
   const head = (title: string, right?: React.ReactNode) => (
@@ -326,7 +341,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                   ))}
                 </div>
                 <div className="mx-3 rounded-2xl px-1" style={{ background: "linear-gradient(180deg, var(--surface-2), var(--surface))", border: "1px solid var(--line)" }}>
-                  <ShutterSketch geo={geo} index={s.index} kind={k} labels={labels} pane={pane} pick={pick} onPick={onPick} />
+                  <ShutterSketch geo={geo} index={s.index} kind={k} labels={mesh ? meshLabels : labels} pane={mesh ? meshPane : pane} pick={pick} onPick={onPick} />
                 </div>
                 {/* a mesh shutter: the shop's own way, plain to see and one tap to change */}
                 {mesh && (bombay || clip) && (
@@ -358,7 +373,7 @@ export function WindowParts({ sys, lib, unit, geo, values, vars, mix, pick, onPi
                     )}
                   </div>
                 )}
-                {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)])}
+                {sections([...geo.sash.filter((m) => m.shutter === s.index), ...geo.patti.filter((m) => m.shutter === s.index)], mesh ? meshLabels : labels)}
               </div>
             );
           })}
